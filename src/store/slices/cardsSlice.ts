@@ -2,12 +2,10 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
 export interface Card {
 	id: string;
-	title: string;
 	recipient: string;
 	message: string;
-	design: string;
-	isSent: boolean;
-	sentDate?: string;
+	isCompleted: boolean;
+	completedDate?: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -48,12 +46,10 @@ export const fetchCards = createAsyncThunk(
 				resolve([
 					{
 						id: "1",
-						title: "Merry Christmas",
 						recipient: "Mom & Dad",
 						message:
 							"Wishing you a wonderful holiday season filled with joy and love.",
-						design: "christmas-tree",
-						isSent: false,
+						isCompleted: false,
 						createdAt: new Date().toISOString(),
 						updatedAt: new Date().toISOString(),
 					},
@@ -103,12 +99,12 @@ export const deleteCard = createAsyncThunk(
 	}
 );
 
-export const sendCard = createAsyncThunk(
-	"cards/sendCard",
+export const toggleCardCompletion = createAsyncThunk(
+	"cards/toggleCardCompletion",
 	async (cardId: string) => {
 		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		return { cardId, sentDate: new Date().toISOString() };
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		return cardId;
 	}
 );
 
@@ -184,21 +180,26 @@ const cardsSlice = createSlice({
 				state.error = action.error.message || "Failed to delete card";
 			})
 			// Send card
-			.addCase(sendCard.pending, (state) => {
+			.addCase(toggleCardCompletion.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(sendCard.fulfilled, (state, action) => {
+			.addCase(toggleCardCompletion.fulfilled, (state, action) => {
 				state.loading = false;
-				const card = state.cards.find((c) => c.id === action.payload.cardId);
+				const card = state.cards.find((c) => c.id === action.payload);
 				if (card) {
-					card.isSent = true;
-					card.sentDate = action.payload.sentDate;
+					card.isCompleted = !card.isCompleted;
+					if (card.isCompleted) {
+						card.completedDate = new Date().toISOString();
+					} else {
+						card.completedDate = undefined;
+					}
 				}
 			})
-			.addCase(sendCard.rejected, (state, action) => {
+			.addCase(toggleCardCompletion.rejected, (state, action) => {
 				state.loading = false;
-				state.error = action.error.message || "Failed to send card";
+				state.error =
+					action.error.message || "Failed to toggle card completion";
 			});
 	},
 });

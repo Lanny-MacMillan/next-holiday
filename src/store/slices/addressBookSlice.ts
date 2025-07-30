@@ -3,9 +3,13 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 export interface Contact {
 	id: string;
 	name: string;
-	email: string;
+	email?: string;
 	phone?: string;
-	address?: string;
+	streetAddress?: string;
+	city?: string;
+	state?: string;
+	zipCode?: string;
+	relationship?: string;
 	notes?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -50,7 +54,11 @@ export const fetchContacts = createAsyncThunk(
 						name: "John Doe",
 						email: "john@example.com",
 						phone: "+1234567890",
-						address: "123 Main St, City, State",
+						streetAddress: "123 Main St",
+						city: "New York",
+						state: "NY",
+						zipCode: "10001",
+						relationship: "Friend",
 						notes: "Family friend",
 						createdAt: new Date().toISOString(),
 						updatedAt: new Date().toISOString(),

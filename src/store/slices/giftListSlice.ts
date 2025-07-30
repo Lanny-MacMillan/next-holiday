@@ -6,9 +6,10 @@ export interface Gift {
 	description?: string;
 	price: number;
 	recipient: string;
-	isPurchased: boolean;
-	purchasedDate?: string;
+	isCompleted: boolean;
+	completedDate?: string;
 	store?: string;
+	productLink?: string;
 	notes?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -54,7 +55,7 @@ export const fetchGifts = createAsyncThunk(
 						description: "Noise-cancelling wireless headphones",
 						price: 199.99,
 						recipient: "Dad",
-						isPurchased: false,
+						isCompleted: false,
 						store: "Best Buy",
 						notes: "He mentioned wanting new headphones",
 						createdAt: new Date().toISOString(),
@@ -106,12 +107,12 @@ export const deleteGift = createAsyncThunk(
 	}
 );
 
-export const markGiftAsPurchased = createAsyncThunk(
-	"giftList/markGiftAsPurchased",
+export const toggleGiftCompletion = createAsyncThunk(
+	"giftList/toggleGiftCompletion",
 	async (giftId: string) => {
 		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		return { giftId, purchasedDate: new Date().toISOString() };
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		return giftId;
 	}
 );
 
@@ -187,22 +188,26 @@ const giftListSlice = createSlice({
 				state.error = action.error.message || "Failed to delete gift";
 			})
 			// Mark gift as purchased
-			.addCase(markGiftAsPurchased.pending, (state) => {
+			.addCase(toggleGiftCompletion.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(markGiftAsPurchased.fulfilled, (state, action) => {
+			.addCase(toggleGiftCompletion.fulfilled, (state, action) => {
 				state.loading = false;
-				const gift = state.gifts.find((g) => g.id === action.payload.giftId);
+				const gift = state.gifts.find((g) => g.id === action.payload);
 				if (gift) {
-					gift.isPurchased = true;
-					gift.purchasedDate = action.payload.purchasedDate;
+					gift.isCompleted = !gift.isCompleted;
+					if (gift.isCompleted) {
+						gift.completedDate = new Date().toISOString();
+					} else {
+						gift.completedDate = undefined;
+					}
 				}
 			})
-			.addCase(markGiftAsPurchased.rejected, (state, action) => {
+			.addCase(toggleGiftCompletion.rejected, (state, action) => {
 				state.loading = false;
 				state.error =
-					action.error.message || "Failed to mark gift as purchased";
+					action.error.message || "Failed to toggle gift completion";
 			});
 	},
 });
