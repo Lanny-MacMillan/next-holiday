@@ -1,74 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-
-const addressBook = [
-	{ id: 1, name: "Alice Smith" },
-	{ id: 2, name: "Bob Johnson" },
-	{ id: 3, name: "Charlie Brown" },
-];
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+	fetchGifts,
+	addGift,
+	updateGift,
+	deleteGift,
+	markGiftAsPurchased,
+	Gift,
+} from "@/store/slices/giftListSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 
 export default function GiftListPage() {
-	const [people, setPeople] = useState([
-		{
-			id: 1,
-			name: "Alice Smith",
-			gifts: [{ id: 1, text: "Book", done: false, url: undefined }],
-		},
-	]);
-	const [newName, setNewName] = useState("");
-	const [showBook, setShowBook] = useState(false);
-	const [giftInputs, setGiftInputs] = useState<{ [key: number]: string }>({});
-	const [giftUrlInputs, setGiftUrlInputs] = useState<{ [key: number]: string }>(
-		{}
+	const dispatch = useAppDispatch();
+	const { gifts, loading, error } = useAppSelector(
+		(state: any) => state.giftList
 	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	function addPerson(name: string) {
-		setPeople((prev) => [...prev, { id: Date.now(), name, gifts: [] }]);
-		setNewName("");
+	const [form, setForm] = useState({
+		name: "",
+		description: "",
+		price: "",
+		recipient: "",
+		store: "",
+		notes: "",
+	});
+	const [showAddressBook, setShowAddressBook] = useState(false);
+
+	useEffect(() => {
+		// Fetch gifts and contacts when component mounts
+		dispatch(fetchGifts());
+		dispatch(fetchContacts());
+	}, [dispatch]);
+
+	function handleAddGift(e: React.FormEvent) {
+		e.preventDefault();
+		if (!form.name.trim() || !form.recipient.trim()) return;
+
+		const newGift: Omit<Gift, "id" | "createdAt" | "updatedAt"> = {
+			name: form.name,
+			description: form.description || undefined,
+			price: parseFloat(form.price) || 0,
+			recipient: form.recipient,
+			isPurchased: false,
+			store: form.store || undefined,
+			notes: form.notes || undefined,
+		};
+
+		dispatch(addGift(newGift));
+		setForm({
+			name: "",
+			description: "",
+			price: "",
+			recipient: "",
+			store: "",
+			notes: "",
+		});
 	}
 
-	function addFromBook(person: { id: number; name: string }) {
-		if (!people.some((p) => p.name === person.name)) {
-			setPeople((prev) => [
-				...prev,
-				{ id: Date.now(), name: person.name, gifts: [] },
-			]);
-		}
-		setShowBook(false);
+	function handleMarkAsPurchased(giftId: string) {
+		dispatch(markGiftAsPurchased(giftId));
 	}
 
-	function addGift(personId: number, text: string, url?: string) {
-		setPeople((prev) =>
-			prev.map((p) =>
-				p.id === personId
-					? {
-							...p,
-							gifts: [
-								...p.gifts,
-								{ id: Date.now(), text, url: url || undefined, done: false },
-							],
-					  }
-					: p
-			)
-		);
-		setGiftInputs((gi) => ({ ...gi, [personId]: "" }));
-		setGiftUrlInputs((gi) => ({ ...gi, [personId]: "" }));
+	function handleDeleteGift(giftId: string) {
+		dispatch(deleteGift(giftId));
 	}
 
-	function toggleGift(personId: number, giftId: number) {
-		setPeople((prev) =>
-			prev.map((p) =>
-				p.id === personId
-					? {
-							...p,
-							gifts: p.gifts.map((g) =>
-								g.id === giftId ? { ...g, done: !g.done } : g
-							),
-					  }
-					: p
-			)
+	function addFromAddressBook(contact: any) {
+		setForm((prev) => ({
+			...prev,
+			recipient: contact.name,
+		}));
+		setShowAddressBook(false);
+	}
+
+	if (loading) {
+		return (
+			<div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+					<p className="text-gray-600">Loading gifts...</p>
+				</div>
+			</div>
 		);
 	}
 
@@ -82,138 +98,169 @@ export default function GiftListPage() {
 				>
 					← Back
 				</Link>
+				{error && (
+					<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+						{error}
+					</div>
+				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
 				<form
-					className="flex gap-2 mb-2"
-					onSubmit={(e) => {
-						e.preventDefault();
-						if (newName.trim()) addPerson(newName.trim());
-					}}
+					className="bg-white rounded shadow p-4 mb-4"
+					onSubmit={handleAddGift}
 				>
-					<input
-						className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-						placeholder="Add person manually..."
-						value={newName}
-						onChange={(e) => setNewName(e.target.value)}
-					/>
-					<button
-						type="submit"
-						className="bg-yellow-500 text-white px-4 py-2 rounded"
-					>
-						Add
-					</button>
-				</form>
-				<button
-					className="text-yellow-600 underline text-sm mb-2"
-					onClick={() => setShowBook((v) => !v)}
-				>
-					{showBook ? "Hide" : "Select from Address Book"}
-				</button>
-				{showBook && (
-					<div className="bg-white rounded shadow p-4 mb-2">
-						<h2 className="font-semibold mb-2">Address Book</h2>
-						<ul>
-							{addressBook.map((person) => (
-								<li
-									key={person.id}
-									className="flex justify-between items-center mb-1"
-								>
-									<span>{person.name}</span>
+					<h2 className="font-semibold mb-2">Add New Gift</h2>
+					<div className="flex flex-col gap-2">
+						<input
+							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+							placeholder="Gift Name*"
+							value={form.name}
+							onChange={(e) =>
+								setForm((prev) => ({ ...prev, name: e.target.value }))
+							}
+							required
+						/>
+						<div className="flex gap-2">
+							<input
+								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+								placeholder="Recipient*"
+								value={form.recipient}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, recipient: e.target.value }))
+								}
+								required
+							/>
+							<button
+								type="button"
+								onClick={() => setShowAddressBook(!showAddressBook)}
+								className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
+							>
+								📖
+							</button>
+						</div>
+						{showAddressBook && (
+							<div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
+								<h4 className="text-sm font-medium mb-1">From Address Book:</h4>
+								{contacts.map((contact: any) => (
 									<button
-										className="text-yellow-500 hover:underline text-xs"
-										onClick={() => addFromBook(person)}
+										key={contact.id}
+										type="button"
+										onClick={() => addFromAddressBook(contact)}
+										className="block w-full text-left text-sm p-1 hover:bg-blue-100 rounded"
 									>
-										Add
+										{contact.name}
 									</button>
+								))}
+							</div>
+						)}
+						<input
+							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+							placeholder="Description"
+							value={form.description}
+							onChange={(e) =>
+								setForm((prev) => ({ ...prev, description: e.target.value }))
+							}
+						/>
+						<div className="flex gap-2">
+							<input
+								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+								placeholder="Price"
+								type="number"
+								step="0.01"
+								value={form.price}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, price: e.target.value }))
+								}
+							/>
+							<input
+								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+								placeholder="Store"
+								value={form.store}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, store: e.target.value }))
+								}
+							/>
+						</div>
+						<textarea
+							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+							placeholder="Notes"
+							value={form.notes}
+							onChange={(e) =>
+								setForm((prev) => ({ ...prev, notes: e.target.value }))
+							}
+							rows={2}
+						/>
+						<button
+							type="submit"
+							className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
+							disabled={loading}
+						>
+							{loading ? "Adding..." : "Add Gift"}
+						</button>
+					</div>
+				</form>
+
+				<div className="bg-white rounded shadow">
+					<h3 className="font-semibold p-4 border-b">Gifts ({gifts.length})</h3>
+					{gifts.length === 0 ? (
+						<div className="p-4 text-center text-gray-500">
+							No gifts yet. Add your first gift above!
+						</div>
+					) : (
+						<ul className="divide-y">
+							{gifts.map((gift: Gift) => (
+								<li key={gift.id} className="flex items-center px-4 py-3 gap-3">
+									<div className="flex-1">
+										<div className="font-semibold text-gray-900">
+											{gift.name}
+										</div>
+										<div className="text-sm text-gray-600">
+											For: {gift.recipient}
+										</div>
+										{gift.description && (
+											<div className="text-xs text-gray-500">
+												{gift.description}
+											</div>
+										)}
+										<div className="flex gap-4 text-xs text-gray-500 mt-1">
+											{gift.price > 0 && <span>${gift.price.toFixed(2)}</span>}
+											{gift.store && <span>Store: {gift.store}</span>}
+										</div>
+										{gift.notes && (
+											<div className="text-xs text-gray-500 mt-1">
+												{gift.notes}
+											</div>
+										)}
+										{gift.isPurchased && gift.purchasedDate && (
+											<div className="text-xs text-green-600 mt-1">
+												Purchased:{" "}
+												{new Date(gift.purchasedDate).toLocaleDateString()}
+											</div>
+										)}
+									</div>
+									<div className="flex gap-2">
+										{!gift.isPurchased && (
+											<button
+												onClick={() => handleMarkAsPurchased(gift.id)}
+												className="text-green-500 hover:text-green-700 text-sm"
+												disabled={loading}
+											>
+												Buy
+											</button>
+										)}
+										<button
+											onClick={() => handleDeleteGift(gift.id)}
+											className="text-red-500 hover:text-red-700 text-sm"
+											disabled={loading}
+										>
+											Delete
+										</button>
+									</div>
 								</li>
 							))}
 						</ul>
-					</div>
-				)}
-				<ul className="divide-y bg-white rounded shadow">
-					{people.map((person) => (
-						<li key={person.id} className="px-4 py-3">
-							<div className="font-semibold text-gray-900 mb-1">
-								{person.name}
-							</div>
-							<ul className="mb-2">
-								{person.gifts.map((gift) => (
-									<li key={gift.id} className="flex items-center mb-1">
-										<input
-											type="checkbox"
-											checked={gift.done}
-											onChange={() => toggleGift(person.id, gift.id)}
-											className="mr-2 accent-yellow-500"
-										/>
-										{gift.url ? (
-											<a
-												href={gift.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												className={
-													gift.done
-														? "line-through text-gray-400 hover:underline"
-														: "text-yellow-700 hover:underline"
-												}
-											>
-												{gift.text}
-											</a>
-										) : (
-											<span
-												className={
-													gift.done
-														? "line-through text-gray-400"
-														: "text-gray-900"
-												}
-											>
-												{gift.text}
-											</span>
-										)}
-									</li>
-								))}
-							</ul>
-							<form
-								className="flex gap-2"
-								onSubmit={(e) => {
-									e.preventDefault();
-									const text = giftInputs[person.id]?.trim();
-									const url = giftUrlInputs[person.id]?.trim();
-									if (text) addGift(person.id, text, url);
-								}}
-							>
-								<input
-									className="flex-1 border rounded px-2 py-1 text-sm text-gray-900 placeholder-gray-700"
-									placeholder="Add gift idea..."
-									value={giftInputs[person.id] || ""}
-									onChange={(e) =>
-										setGiftInputs((gi) => ({
-											...gi,
-											[person.id]: e.target.value,
-										}))
-									}
-								/>
-								<input
-									className="flex-1 border rounded px-2 py-1 text-sm text-gray-900 placeholder-gray-700"
-									placeholder="Optional link (e.g. https://amazon.com)"
-									value={giftUrlInputs[person.id] || ""}
-									onChange={(e) =>
-										setGiftUrlInputs((gi) => ({
-											...gi,
-											[person.id]: e.target.value,
-										}))
-									}
-								/>
-								<button
-									type="submit"
-									className="bg-yellow-500 text-white px-3 py-1 rounded text-sm"
-								>
-									Add
-								</button>
-							</form>
-						</li>
-					))}
-				</ul>
+					)}
+				</div>
 			</main>
 		</div>
 	);

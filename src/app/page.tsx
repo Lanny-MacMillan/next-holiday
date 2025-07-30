@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import ReduxExample from "@/components/ReduxExample";
+import ReduxTest from "@/components/ReduxTest";
 
 export default function Home() {
 	// Placeholder: In a real app, progress would be dynamic
@@ -81,6 +83,12 @@ export default function Home() {
 					</li>
 				</ul>
 			</main>
+			<div className="w-full max-w-4xl mt-8">
+				<ReduxExample />
+				<div className="mt-8">
+					<ReduxTest />
+				</div>
+			</div>
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-400 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday
 			</footer>

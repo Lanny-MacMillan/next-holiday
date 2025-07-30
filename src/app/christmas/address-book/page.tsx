@@ -1,49 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-
-const placeholderContacts = [
-	{
-		id: 1,
-		name: "Alice Smith",
-		address: "123 Candy Cane Ln, North Pole",
-		phone: "555-1234",
-		relationship: "Friend",
-		image: "https://randomuser.me/api/portraits/women/1.jpg",
-	},
-	{
-		id: 2,
-		name: "Bob Johnson",
-		address: "456 Snowman Ave, Wintertown",
-		phone: "555-5678",
-		relationship: "Cousin",
-		image: "https://randomuser.me/api/portraits/men/2.jpg",
-	},
-];
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+	fetchContacts,
+	addContact,
+	updateContact,
+	deleteContact,
+	Contact,
+} from "@/store/slices/addressBookSlice";
 
 export default function AddressBookPage() {
-	const [contacts, setContacts] = useState(placeholderContacts);
+	const dispatch = useAppDispatch();
+	const { contacts, loading, error } = useAppSelector(
+		(state: any) => state.addressBook
+	);
+
 	const [form, setForm] = useState({
 		name: "",
-		address: "",
+		email: "",
 		phone: "",
-		relationship: "",
-		image: "",
+		address: "",
+		notes: "",
 	});
 
-	function addContact(e: React.FormEvent) {
+	useEffect(() => {
+		// Fetch contacts when component mounts
+		dispatch(fetchContacts());
+	}, [dispatch]);
+
+	function handleAddContact(e: React.FormEvent) {
 		e.preventDefault();
-		if (!form.name.trim()) return;
-		setContacts((prev) => [
-			...prev,
-			{
-				...form,
-				id: Date.now(),
-				image: form.image || "https://randomuser.me/api/portraits/lego/1.jpg",
-			},
-		]);
-		setForm({ name: "", address: "", phone: "", relationship: "", image: "" });
+		if (!form.name.trim() || !form.email.trim()) return;
+
+		const newContact: Omit<Contact, "id" | "createdAt" | "updatedAt"> = {
+			name: form.name,
+			email: form.email,
+			phone: form.phone || undefined,
+			address: form.address || undefined,
+			notes: form.notes || undefined,
+		};
+
+		dispatch(addContact(newContact));
+		setForm({ name: "", email: "", phone: "", address: "", notes: "" });
+	}
+
+	function handleDeleteContact(contactId: string) {
+		dispatch(deleteContact(contactId));
+	}
+
+	if (loading) {
+		return (
+			<div className="min-h-screen bg-gradient-to-b from-pink-50 to-white flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+					<p className="text-gray-600">Loading contacts...</p>
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -56,11 +71,16 @@ export default function AddressBookPage() {
 				>
 					← Back
 				</Link>
+				{error && (
+					<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+						{error}
+					</div>
+				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
 				<form
 					className="bg-white rounded shadow p-4 mb-4"
-					onSubmit={addContact}
+					onSubmit={handleAddContact}
 				>
 					<h2 className="font-semibold mb-2">Add New Contact</h2>
 					<div className="flex flex-col gap-2">
@@ -73,11 +93,13 @@ export default function AddressBookPage() {
 						/>
 						<input
 							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Address"
-							value={form.address}
+							placeholder="Email*"
+							type="email"
+							value={form.email}
 							onChange={(e) =>
-								setForm((f) => ({ ...f, address: e.target.value }))
+								setForm((f) => ({ ...f, email: e.target.value }))
 							}
+							required
 						/>
 						<input
 							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
@@ -89,45 +111,84 @@ export default function AddressBookPage() {
 						/>
 						<input
 							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Relationship"
-							value={form.relationship}
+							placeholder="Address"
+							value={form.address}
 							onChange={(e) =>
-								setForm((f) => ({ ...f, relationship: e.target.value }))
+								setForm((f) => ({ ...f, address: e.target.value }))
 							}
 						/>
-						<input
+						<textarea
 							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Image URL (optional)"
-							value={form.image}
+							placeholder="Notes"
+							value={form.notes}
 							onChange={(e) =>
-								setForm((f) => ({ ...f, image: e.target.value }))
+								setForm((f) => ({ ...f, notes: e.target.value }))
 							}
+							rows={3}
 						/>
 						<button
 							type="submit"
-							className="bg-pink-500 text-white px-4 py-2 rounded mt-2"
+							className="bg-pink-500 text-white px-4 py-2 rounded mt-2 hover:bg-pink-600 transition-colors"
+							disabled={loading}
 						>
-							Add Contact
+							{loading ? "Adding..." : "Add Contact"}
 						</button>
 					</div>
 				</form>
-				<ul className="divide-y bg-white rounded shadow">
-					{contacts.map((c) => (
-						<li key={c.id} className="flex items-center px-4 py-3 gap-4">
-							<img
-								src={c.image}
-								alt={c.name}
-								className="w-12 h-12 rounded-full object-cover border"
-							/>
-							<div className="flex-1">
-								<div className="font-semibold text-gray-900">{c.name}</div>
-								<div className="text-xs text-gray-500">{c.relationship}</div>
-								<div className="text-xs text-gray-500">{c.address}</div>
-								<div className="text-xs text-gray-500">{c.phone}</div>
-							</div>
-						</li>
-					))}
-				</ul>
+
+				<div className="bg-white rounded shadow">
+					<h3 className="font-semibold p-4 border-b">
+						Contacts ({contacts.length})
+					</h3>
+					{contacts.length === 0 ? (
+						<div className="p-4 text-center text-gray-500">
+							No contacts yet. Add your first contact above!
+						</div>
+					) : (
+						<ul className="divide-y">
+							{contacts.map((contact: Contact) => (
+								<li
+									key={contact.id}
+									className="flex items-center px-4 py-3 gap-4"
+								>
+									<div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
+										<span className="text-pink-600 font-semibold">
+											{contact.name.charAt(0).toUpperCase()}
+										</span>
+									</div>
+									<div className="flex-1">
+										<div className="font-semibold text-gray-900">
+											{contact.name}
+										</div>
+										<div className="text-sm text-gray-600">{contact.email}</div>
+										{contact.phone && (
+											<div className="text-xs text-gray-500">
+												{contact.phone}
+											</div>
+										)}
+										{contact.address && (
+											<div className="text-xs text-gray-500">
+												{contact.address}
+											</div>
+										)}
+										{contact.notes && (
+											<div className="text-xs text-gray-500 mt-1">
+												{contact.notes}
+											</div>
+										)}
+									</div>
+									<button
+										onClick={() => handleDeleteContact(contact.id)}
+										className="text-red-500 hover:text-red-700 text-sm"
+										disabled={loading}
+									>
+										Delete
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
 			</main>
 		</div>
 	);
