@@ -30,29 +30,16 @@ const initialState: GiftListState = {
 
 // Async thunks
 export const fetchGifts = createAsyncThunk(
-  'giftList/fetchGifts',
-  async () => {
-    // Simulate API call
-    const response = await new Promise<Gift[]>((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            name: 'Wireless Headphones',
-            description: 'Noise-cancelling wireless headphones',
-            price: 199.99,
-            recipient: 'Dad',
-            isPurchased: false,
-            store: 'Best Buy',
-            notes: 'He mentioned wanting new headphones',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ]);
-      }, 1000);
-    });
-    return response;
-  }
+	"giftList/fetchGifts",
+	async () => {
+		// Simulate API call
+		const response = await new Promise<Gift[]>((resolve) => {
+			setTimeout(() => {
+				resolve([]); // Start with empty list
+			}, 500);
+		});
+		return response;
+	}
 );
 
 export const addGift = createAsyncThunk(

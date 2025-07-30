@@ -29,39 +29,16 @@ const initialState: TasksState = {
 
 // Async thunks
 export const fetchTasks = createAsyncThunk(
-  'tasks/fetchTasks',
-  async () => {
-    // Simulate API call
-    const response = await new Promise<Task[]>((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            title: 'Buy Christmas tree',
-            description: 'Get a 7ft artificial tree',
-            priority: 'high',
-            isCompleted: false,
-            dueDate: '2024-12-15',
-            category: 'shopping',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            title: 'Wrap presents',
-            description: 'Wrap all purchased gifts',
-            priority: 'medium',
-            isCompleted: false,
-            dueDate: '2024-12-24',
-            category: 'other',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ]);
-      }, 1000);
-    });
-    return response;
-  }
+	"tasks/fetchTasks",
+	async () => {
+		// Simulate API call
+		const response = await new Promise<Task[]>((resolve) => {
+			setTimeout(() => {
+				resolve([]); // Start with empty list
+			}, 500);
+		});
+		return response;
+	}
 );
 
 export const addTask = createAsyncThunk(
