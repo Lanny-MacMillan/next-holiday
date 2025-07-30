@@ -12,6 +12,8 @@ import {
 	Task,
 } from "@/store/slices/tasksSlice";
 
+type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
+
 export default function TasksPage() {
 	const dispatch = useAppDispatch();
 	const { tasks, loading, error, initialized } = useAppSelector(
@@ -21,15 +23,18 @@ export default function TasksPage() {
 	const [form, setForm] = useState({
 		title: "",
 		description: "",
-		priority: "medium" as "low" | "medium" | "high",
-		category: "other" as
-			| "shopping"
-			| "decorating"
-			| "cooking"
-			| "cleaning"
-			| "other",
-		dueDate: "",
+		priority: "medium",
 		assignedTo: "",
+		category: "",
+		dueDate: "",
+	});
+	const [sortBy, setSortBy] = useState<SortOption>("none");
+	const [deleteConfirm, setDeleteConfirm] = useState<{
+		show: boolean;
+		taskId: string | null;
+	}>({
+		show: false,
+		taskId: null,
 	});
 
 	useEffect(() => {
@@ -44,11 +49,11 @@ export default function TasksPage() {
 		const newTask: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
 			title: form.title,
 			description: form.description || undefined,
-			priority: form.priority,
-			isCompleted: false,
-			dueDate: form.dueDate || undefined,
-			category: form.category,
+			priority: form.priority as "low" | "medium" | "high",
 			assignedTo: form.assignedTo || undefined,
+			category: form.category || undefined,
+			dueDate: form.dueDate || undefined,
+			isCompleted: false,
 		};
 
 		dispatch(addTask(newTask));
@@ -56,9 +61,9 @@ export default function TasksPage() {
 			title: "",
 			description: "",
 			priority: "medium",
-			category: "other",
-			dueDate: "",
 			assignedTo: "",
+			category: "",
+			dueDate: "",
 		});
 	}
 
@@ -67,29 +72,66 @@ export default function TasksPage() {
 	}
 
 	function handleDeleteTask(taskId: string) {
-		dispatch(deleteTask(taskId));
+		setDeleteConfirm({ show: true, taskId });
 	}
 
-	const incompleteTasks = tasks.filter((task: Task) => !task.isCompleted);
-	const completedTasks = tasks.filter((task: Task) => task.isCompleted);
+	function confirmDelete() {
+		if (deleteConfirm.taskId) {
+			dispatch(deleteTask(deleteConfirm.taskId));
+			setDeleteConfirm({ show: false, taskId: null });
+		}
+	}
+
+	function cancelDelete() {
+		setDeleteConfirm({ show: false, taskId: null });
+	}
+
+	function sortTasks(tasksToSort: Task[]): Task[] {
+		switch (sortBy) {
+			case "priority":
+				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				return [...tasksToSort].sort(
+					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+				);
+			case "dateDue":
+				return [...tasksToSort].sort((a, b) => {
+					if (!a.dueDate && !b.dueDate) return 0;
+					if (!a.dueDate) return 1;
+					if (!b.dueDate) return -1;
+					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+				});
+			case "assignedTo":
+				return [...tasksToSort].sort((a, b) =>
+					(a.assignedTo || "").localeCompare(b.assignedTo || "")
+				);
+			case "category":
+				return [...tasksToSort].sort((a, b) =>
+					(a.category || "").localeCompare(b.category || "")
+				);
+			default:
+				return tasksToSort;
+		}
+	}
 
 	if (loading && !initialized) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
+			<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
 					<p className="text-gray-600">Loading tasks...</p>
 				</div>
 			</div>
 		);
 	}
 
+	const sortedTasks = sortTasks(tasks);
+	const incompleteTasks = sortedTasks.filter((task: Task) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: Task) => task.isCompleted);
+
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center p-4 sm:p-8 font-sans">
 			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-2xl font-bold mb-2 text-gray-900">
-					Holiday To-Do List
-				</h1>
+				<h1 className="text-2xl font-bold mb-2 text-gray-900">To-Do List</h1>
 				<Link
 					href="/christmas"
 					className="text-blue-500 text-sm hover:underline mb-2"
@@ -120,7 +162,7 @@ export default function TasksPage() {
 						/>
 						<textarea
 							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Description (optional)"
+							placeholder="Description"
 							value={form.description}
 							onChange={(e) =>
 								setForm((prev) => ({ ...prev, description: e.target.value }))
@@ -132,60 +174,107 @@ export default function TasksPage() {
 								className="flex-1 border rounded px-3 py-2 text-gray-900"
 								value={form.priority}
 								onChange={(e) =>
-									setForm((prev) => ({
-										...prev,
-										priority: e.target.value as any,
-									}))
+									setForm((prev) => ({ ...prev, priority: e.target.value }))
 								}
 							>
-								<option value="low">🟢 Low Priority</option>
-								<option value="medium">🟡 Medium Priority</option>
-								<option value="high">🔴 High Priority</option>
+								<option value="low">Low Priority</option>
+								<option value="medium">Medium Priority</option>
+								<option value="high">High Priority</option>
 							</select>
-							<select
-								className="flex-1 border rounded px-3 py-2 text-gray-900"
-								value={form.category}
-								onChange={(e) =>
-									setForm((prev) => ({
-										...prev,
-										category: e.target.value as any,
-									}))
-								}
-							>
-								<option value="shopping">🛒 Shopping</option>
-								<option value="decorating">🎄 Decorating</option>
-								<option value="cooking">👨‍🍳 Cooking</option>
-								<option value="cleaning">🧹 Cleaning</option>
-								<option value="other">📝 Other</option>
-							</select>
-						</div>
-						<div className="flex gap-2">
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900"
-								type="date"
-								value={form.dueDate}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, dueDate: e.target.value }))
-								}
-							/>
 							<input
 								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Assigned to"
+								placeholder="Assigned To"
 								value={form.assignedTo}
 								onChange={(e) =>
 									setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
 								}
 							/>
 						</div>
+						<div className="flex gap-2">
+							<input
+								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+								placeholder="Category"
+								value={form.category}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, category: e.target.value }))
+								}
+							/>
+							<input
+								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+								placeholder="Due Date"
+								type="date"
+								value={form.dueDate}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, dueDate: e.target.value }))
+								}
+							/>
+						</div>
 						<button
 							type="submit"
-							className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+							className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
 							disabled={loading}
 						>
 							{loading ? "Adding..." : "Add Task"}
 						</button>
 					</div>
 				</form>
+
+				{/* Sort Controls */}
+				<div className="bg-white rounded shadow p-4">
+					<h3 className="font-semibold mb-2">Sort By</h3>
+					<div className="flex flex-wrap gap-2">
+						<button
+							onClick={() => setSortBy("none")}
+							className={`px-3 py-1 rounded text-sm ${
+								sortBy === "none"
+									? "bg-green-500 text-white"
+									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+							}`}
+						>
+							None
+						</button>
+						<button
+							onClick={() => setSortBy("priority")}
+							className={`px-3 py-1 rounded text-sm ${
+								sortBy === "priority"
+									? "bg-green-500 text-white"
+									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+							}`}
+						>
+							Priority
+						</button>
+						<button
+							onClick={() => setSortBy("dateDue")}
+							className={`px-3 py-1 rounded text-sm ${
+								sortBy === "dateDue"
+									? "bg-green-500 text-white"
+									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+							}`}
+						>
+							Date Due
+						</button>
+						<button
+							onClick={() => setSortBy("assignedTo")}
+							className={`px-3 py-1 rounded text-sm ${
+								sortBy === "assignedTo"
+									? "bg-green-500 text-white"
+									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+							}`}
+						>
+							Assigned To
+						</button>
+						<button
+							onClick={() => setSortBy("category")}
+							className={`px-3 py-1 rounded text-sm ${
+								sortBy === "category"
+									? "bg-green-500 text-white"
+									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+							}`}
+						>
+							Category
+						</button>
+					</div>
+				</div>
 
 				<div>
 					<h2 className="font-semibold text-gray-900 mb-2">
@@ -194,30 +283,30 @@ export default function TasksPage() {
 					<div className="bg-white rounded shadow">
 						{incompleteTasks.length === 0 ? (
 							<div className="px-4 py-3 text-gray-400 text-center">
-								All done! 🎉
+								All tasks completed! 🎉
 							</div>
 						) : (
 							<ul className="divide-y">
 								{incompleteTasks.map((task: Task) => (
 									<li
 										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50"
+										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50"
 										onClick={() => handleToggleTask(task.id)}
 									>
 										<input
 											type="checkbox"
 											checked={task.isCompleted}
 											readOnly
-											className="mr-3 accent-blue-500"
+											className="mr-3 accent-green-500"
 										/>
 										<div className="flex-1">
 											<div className="text-gray-900">{task.title}</div>
 											{task.description && (
-												<div className="text-xs text-gray-500">
+												<div className="text-xs text-gray-500 mt-1">
 													{task.description}
 												</div>
 											)}
-											<div className="flex gap-2 text-xs text-gray-400 mt-1">
+											<div className="flex gap-4 text-xs text-gray-500 mt-1">
 												<span
 													className={`px-2 py-1 rounded ${
 														task.priority === "high"
@@ -229,17 +318,13 @@ export default function TasksPage() {
 												>
 													{task.priority}
 												</span>
-												<span className="px-2 py-1 rounded bg-gray-100">
-													{task.category}
-												</span>
-												{task.dueDate && (
-													<span className="px-2 py-1 rounded bg-blue-100 text-blue-700">
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
 												{task.assignedTo && (
-													<span className="px-2 py-1 rounded bg-purple-100 text-purple-700">
-														{task.assignedTo}
+													<span>Assigned: {task.assignedTo}</span>
+												)}
+												{task.category && <span>{task.category}</span>}
+												{task.dueDate && (
+													<span>
+														Due: {new Date(task.dueDate).toLocaleDateString()}
 													</span>
 												)}
 											</div>
@@ -275,14 +360,14 @@ export default function TasksPage() {
 								{completedTasks.map((task: Task) => (
 									<li
 										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 opacity-60"
+										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 opacity-60"
 										onClick={() => handleToggleTask(task.id)}
 									>
 										<input
 											type="checkbox"
 											checked={task.isCompleted}
 											readOnly
-											className="mr-3 accent-blue-500"
+											className="mr-3 accent-green-500"
 										/>
 										<div className="flex-1">
 											<div className="line-through text-gray-400">
@@ -291,6 +376,12 @@ export default function TasksPage() {
 											{task.description && (
 												<div className="text-xs text-gray-400 line-through">
 													{task.description}
+												</div>
+											)}
+											{task.completedDate && (
+												<div className="text-xs text-green-600 mt-1">
+													Completed:{" "}
+													{new Date(task.completedDate).toLocaleDateString()}
 												</div>
 											)}
 										</div>
@@ -311,6 +402,33 @@ export default function TasksPage() {
 					</div>
 				</div>
 			</main>
+
+			{/* Delete Confirmation Modal */}
+			{deleteConfirm.show && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+						<h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+						<p className="text-gray-600 mb-6">
+							Are you sure you want to delete this task? This action cannot be
+							undone.
+						</p>
+						<div className="flex gap-3">
+							<button
+								onClick={cancelDelete}
+								className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								onClick={confirmDelete}
+								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+							>
+								Delete
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

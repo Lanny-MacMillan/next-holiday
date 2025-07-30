@@ -88,7 +88,8 @@ export default function ReduxExample() {
 					)}
 					{cards.length > 0 && (
 						<p>
-							<strong>Card:</strong> {cards[0].title} for {cards[0].recipient}
+							<strong>Card:</strong> To {cards[0].recipient} (
+							{cards[0].isCompleted ? "Completed" : "Pending"})
 						</p>
 					)}
 					{gifts.length > 0 && (

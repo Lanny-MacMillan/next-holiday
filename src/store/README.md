@@ -30,15 +30,16 @@ src/store/
 ### Cards Slice
 
 - Manage greeting cards
-- Send card functionality
-- Design and recipient tracking
+- Track card completion status
+- Recipient and message management
 - Async operations for card management
 
 ### Gift List Slice
 
-- Track gift purchases
-- Mark gifts as purchased
+- Track gift completion status
+- Mark gifts as completed
 - Price and store information
+- Product link management
 - Recipient management
 
 ### Tasks Slice
@@ -95,7 +96,7 @@ Each slice provides the following async thunks:
 - `addCard(card)` - Add new card
 - `updateCard(card)` - Update existing card
 - `deleteCard(id)` - Delete card
-- `sendCard(id)` - Mark card as sent
+- `toggleCardCompletion(id)` - Toggle card completion status
 
 **Gift List:**
 
@@ -103,7 +104,7 @@ Each slice provides the following async thunks:
 - `addGift(gift)` - Add new gift
 - `updateGift(gift)` - Update existing gift
 - `deleteGift(id)` - Delete gift
-- `markGiftAsPurchased(id)` - Mark gift as purchased
+- `toggleGiftCompletion(id)` - Toggle gift completion status
 
 **Tasks:**
 
@@ -128,6 +129,7 @@ interface RootState {
 		loading: boolean;
 		error: string | null;
 		selectedCard: Card | null;
+		initialized: boolean;
 	};
 	giftList: {
 		gifts: Gift[];

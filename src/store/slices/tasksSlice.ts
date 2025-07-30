@@ -6,8 +6,9 @@ export interface Task {
 	description?: string;
 	priority: "low" | "medium" | "high";
 	isCompleted: boolean;
+	completedDate?: string;
 	dueDate?: string;
-	category: "shopping" | "decorating" | "cooking" | "cleaning" | "other";
+	category?: string;
 	assignedTo?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -205,6 +206,11 @@ const tasksSlice = createSlice({
 				const task = state.tasks.find((t) => t.id === action.payload);
 				if (task) {
 					task.isCompleted = !task.isCompleted;
+					if (task.isCompleted) {
+						task.completedDate = new Date().toISOString();
+					} else {
+						task.completedDate = undefined;
+					}
 				}
 			})
 			.addCase(toggleTaskCompletion.rejected, (state, action) => {
