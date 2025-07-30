@@ -15,7 +15,9 @@ import { fetchContacts } from "@/store/slices/addressBookSlice";
 
 export default function CardsPage() {
 	const dispatch = useAppDispatch();
-	const { cards, loading, error } = useAppSelector((state: any) => state.cards);
+	const { cards, loading, error, initialized } = useAppSelector(
+		(state: any) => state.cards
+	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
 	const [form, setForm] = useState({
@@ -69,7 +71,7 @@ export default function CardsPage() {
 		setShowAddressBook(false);
 	}
 
-	if (loading) {
+	if (loading && !initialized) {
 		return (
 			<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
 				<div className="text-center">

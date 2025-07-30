@@ -11,18 +11,26 @@ export default function ReduxExample() {
 	const dispatch = useAppDispatch();
 
 	// Select state from different slices
-	const { contacts, loading: contactsLoading } = useAppSelector(
-		(state: any) => state.addressBook
-	);
-	const { cards, loading: cardsLoading } = useAppSelector(
-		(state: any) => state.cards
-	);
-	const { gifts, loading: giftsLoading } = useAppSelector(
-		(state: any) => state.giftList
-	);
-	const { tasks, loading: tasksLoading } = useAppSelector(
-		(state: any) => state.tasks
-	);
+	const {
+		contacts,
+		loading: contactsLoading,
+		initialized: contactsInitialized,
+	} = useAppSelector((state: any) => state.addressBook);
+	const {
+		cards,
+		loading: cardsLoading,
+		initialized: cardsInitialized,
+	} = useAppSelector((state: any) => state.cards);
+	const {
+		gifts,
+		loading: giftsLoading,
+		initialized: giftsInitialized,
+	} = useAppSelector((state: any) => state.giftList);
+	const {
+		tasks,
+		loading: tasksLoading,
+		initialized: tasksInitialized,
+	} = useAppSelector((state: any) => state.tasks);
 
 	useEffect(() => {
 		// Fetch data when component mounts
@@ -33,7 +41,10 @@ export default function ReduxExample() {
 	}, [dispatch]);
 
 	const isLoading =
-		contactsLoading || cardsLoading || giftsLoading || tasksLoading;
+		(contactsLoading && !contactsInitialized) ||
+		(cardsLoading && !cardsInitialized) ||
+		(giftsLoading && !giftsInitialized) ||
+		(tasksLoading && !tasksInitialized);
 
 	if (isLoading) {
 		return <div className="p-4">Loading Redux data...</div>;
@@ -41,7 +52,9 @@ export default function ReduxExample() {
 
 	return (
 		<div className="p-4 space-y-6">
-			<h2 className="text-2xl font-bold">Redux Store Example</h2>
+			<h2 className="text-2xl font-bold text-purple-800">
+				Redux Store Example
+			</h2>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<div className="bg-blue-50 p-4 rounded-lg">
@@ -65,9 +78,9 @@ export default function ReduxExample() {
 				</div>
 			</div>
 
-			<div className="bg-gray-50 p-4 rounded-lg">
-				<h3 className="font-semibold mb-2">Sample Data</h3>
-				<div className="text-sm space-y-2">
+			<div className="bg-purple-50 p-4 rounded-lg">
+				<h3 className="font-semibold mb-2 text-purple-800">Sample Data</h3>
+				<div className="text-sm text-purple-600 space-y-2">
 					{contacts.length > 0 && (
 						<p>
 							<strong>Contact:</strong> {contacts[0].name} ({contacts[0].email})

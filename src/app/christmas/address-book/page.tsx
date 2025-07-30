@@ -13,7 +13,7 @@ import {
 
 export default function AddressBookPage() {
 	const dispatch = useAppDispatch();
-	const { contacts, loading, error } = useAppSelector(
+	const { contacts, loading, error, initialized } = useAppSelector(
 		(state: any) => state.addressBook
 	);
 
@@ -50,7 +50,7 @@ export default function AddressBookPage() {
 		dispatch(deleteContact(contactId));
 	}
 
-	if (loading) {
+	if (loading && !initialized) {
 		return (
 			<div className="min-h-screen bg-gradient-to-b from-pink-50 to-white flex items-center justify-center">
 				<div className="text-center">

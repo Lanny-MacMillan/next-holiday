@@ -15,7 +15,7 @@ import { fetchContacts } from "@/store/slices/addressBookSlice";
 
 export default function GiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error } = useAppSelector(
+	const { gifts, loading, error, initialized } = useAppSelector(
 		(state: any) => state.giftList
 	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
@@ -77,7 +77,7 @@ export default function GiftListPage() {
 		setShowAddressBook(false);
 	}
 
-	if (loading) {
+	if (loading && !initialized) {
 		return (
 			<div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white flex items-center justify-center">
 				<div className="text-center">

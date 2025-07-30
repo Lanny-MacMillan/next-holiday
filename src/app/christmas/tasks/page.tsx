@@ -14,7 +14,9 @@ import {
 
 export default function TasksPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error } = useAppSelector((state: any) => state.tasks);
+	const { tasks, loading, error, initialized } = useAppSelector(
+		(state: any) => state.tasks
+	);
 
 	const [form, setForm] = useState({
 		title: "",
@@ -71,7 +73,7 @@ export default function TasksPage() {
 	const incompleteTasks = tasks.filter((task: Task) => !task.isCompleted);
 	const completedTasks = tasks.filter((task: Task) => task.isCompleted);
 
-	if (loading) {
+	if (loading && !initialized) {
 		return (
 			<div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
 				<div className="text-center">

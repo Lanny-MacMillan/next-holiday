@@ -17,6 +17,7 @@ interface CardsState {
 	loading: boolean;
 	error: string | null;
 	selectedCard: Card | null;
+	initialized: boolean;
 }
 
 const initialState: CardsState = {
@@ -24,18 +25,44 @@ const initialState: CardsState = {
 	loading: false,
 	error: null,
 	selectedCard: null,
+	initialized: false,
 };
 
 // Async thunks
-export const fetchCards = createAsyncThunk("cards/fetchCards", async () => {
-	// Simulate API call
-	const response = await new Promise<Card[]>((resolve) => {
-		setTimeout(() => {
-			resolve([]); // Start with empty list
-		}, 500);
-	});
-	return response;
-});
+export const fetchCards = createAsyncThunk(
+	"cards/fetchCards",
+	async (_, { getState }) => {
+		// Get current state to check if we already have data
+		const state = getState() as any;
+		const currentCards = state.cards.cards;
+		const isInitialized = state.cards.initialized;
+
+		// Only fetch if we haven't initialized yet
+		if (isInitialized) {
+			return currentCards;
+		}
+
+		// Simulate API call
+		const response = await new Promise<Card[]>((resolve) => {
+			setTimeout(() => {
+				resolve([
+					{
+						id: "1",
+						title: "Merry Christmas",
+						recipient: "Mom & Dad",
+						message:
+							"Wishing you a wonderful holiday season filled with joy and love.",
+						design: "christmas-tree",
+						isSent: false,
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					},
+				]);
+			}, 1000);
+		});
+		return response;
+	}
+);
 
 export const addCard = createAsyncThunk(
 	"cards/addCard",
@@ -106,6 +133,7 @@ const cardsSlice = createSlice({
 			.addCase(fetchCards.fulfilled, (state, action) => {
 				state.loading = false;
 				state.cards = action.payload;
+				state.initialized = true; // Set initialized to true on successful fetch
 			})
 			.addCase(fetchCards.rejected, (state, action) => {
 				state.loading = false;

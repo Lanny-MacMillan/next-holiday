@@ -16,6 +16,7 @@ interface AddressBookState {
 	loading: boolean;
 	error: string | null;
 	selectedContact: Contact | null;
+	initialized: boolean;
 }
 
 const initialState: AddressBookState = {
@@ -23,17 +24,39 @@ const initialState: AddressBookState = {
 	loading: false,
 	error: null,
 	selectedContact: null,
+	initialized: false,
 };
 
 // Async thunks
 export const fetchContacts = createAsyncThunk(
 	"addressBook/fetchContacts",
-	async () => {
+	async (_, { getState }) => {
+		// Get current state to check if we already have data
+		const state = getState() as any;
+		const currentContacts = state.addressBook.contacts;
+		const isInitialized = state.addressBook.initialized;
+
+		// Only fetch if we haven't initialized yet
+		if (isInitialized) {
+			return currentContacts;
+		}
+
 		// Simulate API call
 		const response = await new Promise<Contact[]>((resolve) => {
 			setTimeout(() => {
-				resolve([]); // Start with empty list
-			}, 500);
+				resolve([
+					{
+						id: "1",
+						name: "John Doe",
+						email: "john@example.com",
+						phone: "+1234567890",
+						address: "123 Main St, City, State",
+						notes: "Family friend",
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					},
+				]);
+			}, 1000);
 		});
 		return response;
 	}
@@ -99,6 +122,7 @@ const addressBookSlice = createSlice({
 			.addCase(fetchContacts.fulfilled, (state, action) => {
 				state.loading = false;
 				state.contacts = action.payload;
+				state.initialized = true; // Set initialized to true on successful fetch
 			})
 			.addCase(fetchContacts.rejected, (state, action) => {
 				state.loading = false;
