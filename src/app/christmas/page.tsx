@@ -11,7 +11,7 @@ import { fetchContacts } from "@/store/slices/addressBookSlice";
 const subsections = [
 	{
 		name: "Cards",
-		description: "Send festive greetings",
+		description: "Track your holiday cards",
 		href: "/christmas/cards",
 		sliceKey: "cards",
 	},

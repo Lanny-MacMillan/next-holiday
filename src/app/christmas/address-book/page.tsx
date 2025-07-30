@@ -110,6 +110,7 @@ export default function AddressBookPage() {
 		show: false,
 		contactId: null,
 	});
+	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
 		// Fetch contacts when component mounts
@@ -183,6 +184,17 @@ export default function AddressBookPage() {
 			dispatch(addContact(contactData));
 		}
 
+		resetForm();
+		setShowForm(false);
+	}
+
+	function openForm() {
+		setShowForm(true);
+		resetForm();
+	}
+
+	function closeForm() {
+		setShowForm(false);
 		resetForm();
 	}
 
@@ -289,199 +301,12 @@ export default function AddressBookPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<form
-					className="bg-white rounded shadow p-4 mb-4"
-					onSubmit={handleAddContact}
+				<button
+					onClick={openForm}
+					className="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600 transition-colors"
 				>
-					<h2 className="font-semibold mb-2">
-						{editingContact ? "Edit Contact" : "Add New Contact"}
-					</h2>
-					<div className="flex flex-col gap-2">
-						<div>
-							<input
-								className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
-									formErrors.name ? "border-red-500" : ""
-								}`}
-								placeholder="Name*"
-								value={form.name}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, name: e.target.value }))
-								}
-								required
-							/>
-							{formErrors.name && (
-								<div className="text-red-500 text-xs mt-1">
-									{formErrors.name}
-								</div>
-							)}
-						</div>
-						<div>
-							<input
-								className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
-									formErrors.email ? "border-red-500" : ""
-								}`}
-								placeholder="Email (optional)"
-								type="email"
-								value={form.email}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, email: e.target.value }))
-								}
-							/>
-							{formErrors.email && (
-								<div className="text-red-500 text-xs mt-1">
-									{formErrors.email}
-								</div>
-							)}
-						</div>
-						<div>
-							<input
-								className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
-									formErrors.phone ? "border-red-500" : ""
-								}`}
-								placeholder="Phone*"
-								value={form.phone}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, phone: e.target.value }))
-								}
-								required
-							/>
-							{formErrors.phone && (
-								<div className="text-red-500 text-xs mt-1">
-									{formErrors.phone}
-								</div>
-							)}
-						</div>
-						<div>
-							<input
-								className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
-									formErrors.streetAddress ? "border-red-500" : ""
-								}`}
-								placeholder="Street Address*"
-								value={form.streetAddress}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, streetAddress: e.target.value }))
-								}
-								required
-							/>
-							{formErrors.streetAddress && (
-								<div className="text-red-500 text-xs mt-1">
-									{formErrors.streetAddress}
-								</div>
-							)}
-						</div>
-						<div className="flex gap-2">
-							<div className="flex-1">
-								<input
-									className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
-										formErrors.city ? "border-red-500" : ""
-									}`}
-									placeholder="City*"
-									value={form.city}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, city: e.target.value }))
-									}
-									required
-								/>
-								{formErrors.city && (
-									<div className="text-red-500 text-xs mt-1">
-										{formErrors.city}
-									</div>
-								)}
-							</div>
-							<div className="flex-1">
-								<select
-									className={`border rounded px-3 py-2 text-gray-900 w-full ${
-										formErrors.state ? "border-red-500" : ""
-									}`}
-									value={form.state}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, state: e.target.value }))
-									}
-									required
-								>
-									<option value="">State*</option>
-									{usStates.map((state) => (
-										<option key={state.value} value={state.value}>
-											{state.label}
-										</option>
-									))}
-								</select>
-								{formErrors.state && (
-									<div className="text-red-500 text-xs mt-1">
-										{formErrors.state}
-									</div>
-								)}
-							</div>
-						</div>
-						<div>
-							<input
-								className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
-									formErrors.zipCode ? "border-red-500" : ""
-								}`}
-								placeholder="Zip Code*"
-								value={form.zipCode}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, zipCode: e.target.value }))
-								}
-								required
-							/>
-							{formErrors.zipCode && (
-								<div className="text-red-500 text-xs mt-1">
-									{formErrors.zipCode}
-								</div>
-							)}
-						</div>
-						<select
-							className="border rounded px-3 py-2 text-gray-900"
-							value={form.relationship}
-							onChange={(e) =>
-								setForm((f) => ({ ...f, relationship: e.target.value }))
-							}
-						>
-							<option value="">Select Relationship (Optional)</option>
-							{Object.entries(relationshipGroups).map(([group, options]) => (
-								<optgroup key={group} label={group}>
-									{options.map((option) => (
-										<option key={option} value={option}>
-											{option}
-										</option>
-									))}
-								</optgroup>
-							))}
-						</select>
-						<textarea
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Notes"
-							value={form.notes}
-							onChange={(e) =>
-								setForm((f) => ({ ...f, notes: e.target.value }))
-							}
-							rows={2}
-						/>
-						<div className="flex gap-2">
-							<button
-								type="submit"
-								className="flex-1 bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600 transition-colors"
-								disabled={loading}
-							>
-								{loading
-									? "Saving..."
-									: editingContact
-									? "Update Contact"
-									: "Add Contact"}
-							</button>
-							{editingContact && (
-								<button
-									type="button"
-									onClick={handleCancelEdit}
-									className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-								>
-									Cancel
-								</button>
-							)}
-						</div>
-					</div>
-				</form>
+					Add New Contact
+				</button>
 
 				{/* Sort Controls */}
 				<div className="bg-white rounded shadow p-4">
@@ -622,6 +447,208 @@ export default function AddressBookPage() {
 					)}
 				</div>
 			</main>
+
+			{/* Form Modal */}
+			{showForm && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">
+								{editingContact ? "Edit Contact" : "Add New Contact"}
+							</h3>
+							<button
+								onClick={closeForm}
+								className="text-gray-400 hover:text-gray-600 text-xl"
+							>
+								×
+							</button>
+						</div>
+						<form onSubmit={handleAddContact} className="space-y-4">
+							<div>
+								<input
+									className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
+										formErrors.name ? "border-red-500" : ""
+									}`}
+									placeholder="Name*"
+									value={form.name}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, name: e.target.value }))
+									}
+									required
+								/>
+								{formErrors.name && (
+									<div className="text-red-500 text-xs mt-1">
+										{formErrors.name}
+									</div>
+								)}
+							</div>
+							<div>
+								<input
+									className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
+										formErrors.email ? "border-red-500" : ""
+									}`}
+									placeholder="Email (optional)"
+									type="email"
+									value={form.email}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, email: e.target.value }))
+									}
+								/>
+								{formErrors.email && (
+									<div className="text-red-500 text-xs mt-1">
+										{formErrors.email}
+									</div>
+								)}
+							</div>
+							<div>
+								<input
+									className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
+										formErrors.phone ? "border-red-500" : ""
+									}`}
+									placeholder="Phone*"
+									value={form.phone}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, phone: e.target.value }))
+									}
+									required
+								/>
+								{formErrors.phone && (
+									<div className="text-red-500 text-xs mt-1">
+										{formErrors.phone}
+									</div>
+								)}
+							</div>
+							<div>
+								<input
+									className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
+										formErrors.streetAddress ? "border-red-500" : ""
+									}`}
+									placeholder="Street Address*"
+									value={form.streetAddress}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, streetAddress: e.target.value }))
+									}
+									required
+								/>
+								{formErrors.streetAddress && (
+									<div className="text-red-500 text-xs mt-1">
+										{formErrors.streetAddress}
+									</div>
+								)}
+							</div>
+							<div className="flex gap-2">
+								<div className="flex-1">
+									<input
+										className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
+											formErrors.city ? "border-red-500" : ""
+										}`}
+										placeholder="City*"
+										value={form.city}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, city: e.target.value }))
+										}
+										required
+									/>
+									{formErrors.city && (
+										<div className="text-red-500 text-xs mt-1">
+											{formErrors.city}
+										</div>
+									)}
+								</div>
+								<div className="flex-1">
+									<select
+										className={`border rounded px-3 py-2 text-gray-900 w-full ${
+											formErrors.state ? "border-red-500" : ""
+										}`}
+										value={form.state}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, state: e.target.value }))
+										}
+										required
+									>
+										<option value="">State*</option>
+										{usStates.map((state) => (
+											<option key={state.value} value={state.value}>
+												{state.label}
+											</option>
+										))}
+									</select>
+									{formErrors.state && (
+										<div className="text-red-500 text-xs mt-1">
+											{formErrors.state}
+										</div>
+									)}
+								</div>
+							</div>
+							<div>
+								<input
+									className={`border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full ${
+										formErrors.zipCode ? "border-red-500" : ""
+									}`}
+									placeholder="Zip Code*"
+									value={form.zipCode}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, zipCode: e.target.value }))
+									}
+									required
+								/>
+								{formErrors.zipCode && (
+									<div className="text-red-500 text-xs mt-1">
+										{formErrors.zipCode}
+									</div>
+								)}
+							</div>
+							<select
+								className="border rounded px-3 py-2 text-gray-900 w-full"
+								value={form.relationship}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, relationship: e.target.value }))
+								}
+							>
+								<option value="">Select Relationship (Optional)</option>
+								{Object.entries(relationshipGroups).map(([group, options]) => (
+									<optgroup key={group} label={group}>
+										{options.map((option) => (
+											<option key={option} value={option}>
+												{option}
+											</option>
+										))}
+									</optgroup>
+								))}
+							</select>
+							<textarea
+								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								placeholder="Notes"
+								value={form.notes}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, notes: e.target.value }))
+								}
+								rows={2}
+							/>
+							<div className="flex gap-3 pt-2">
+								<button
+									type="button"
+									onClick={closeForm}
+									className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									className="flex-1 bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600 transition-colors"
+									disabled={loading}
+								>
+									{loading
+										? "Saving..."
+										: editingContact
+										? "Update Contact"
+										: "Add Contact"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 
 			{/* Delete Confirmation Modal */}
 			{deleteConfirm.show && (

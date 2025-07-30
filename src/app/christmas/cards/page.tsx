@@ -32,6 +32,7 @@ export default function CardsPage() {
 		show: false,
 		cardId: null,
 	});
+	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
 		// Fetch cards and contacts when component mounts
@@ -41,19 +42,27 @@ export default function CardsPage() {
 
 	function handleAddCard(e: React.FormEvent) {
 		e.preventDefault();
-		if (!form.recipient.trim()) return;
+		if (!form.recipient.trim() || !form.message.trim()) return;
 
 		const newCard: Omit<Card, "id" | "createdAt" | "updatedAt"> = {
 			recipient: form.recipient,
-			message: form.message || "Wishing you a wonderful holiday season!",
+			message: form.message,
 			isCompleted: false,
 		};
 
 		dispatch(addCard(newCard));
-		setForm({
-			recipient: "",
-			message: "",
-		});
+		setForm({ recipient: "", message: "" });
+		setShowForm(false);
+	}
+
+	function openForm() {
+		setShowForm(true);
+		setForm({ recipient: "", message: "" });
+	}
+
+	function closeForm() {
+		setShowForm(false);
+		setForm({ recipient: "", message: "" });
 	}
 
 	function handleToggleCard(cardId: string) {
@@ -114,63 +123,14 @@ export default function CardsPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<form
-					className="bg-white rounded shadow p-4 mb-4"
-					onSubmit={handleAddCard}
+				<button
+					onClick={openForm}
+					className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
 				>
-					<h2 className="font-semibold mb-2">Add New Card</h2>
-					<div className="flex flex-col gap-2">
-						<div className="flex gap-2">
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Recipient*"
-								value={form.recipient}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, recipient: e.target.value }))
-								}
-								required
-							/>
-							<button
-								type="button"
-								onClick={() => setShowAddressBook(!showAddressBook)}
-								className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
-							>
-								📖
-							</button>
-						</div>
-						{showAddressBook && (
-							<div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
-								<h4 className="text-sm font-medium mb-1">From Address Book:</h4>
-								{contacts.map((contact: any) => (
-									<button
-										key={contact.id}
-										type="button"
-										onClick={() => addFromAddressBook(contact)}
-										className="block w-full text-left text-sm p-1 hover:bg-blue-100 rounded"
-									>
-										{contact.name}
-									</button>
-								))}
-							</div>
-						)}
-						<textarea
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Message (optional)"
-							value={form.message}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, message: e.target.value }))
-							}
-							rows={3}
-						/>
-						<button
-							type="submit"
-							className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
-							disabled={loading}
-						>
-							{loading ? "Adding..." : "Add Card"}
-						</button>
-					</div>
-				</form>
+					Add New Card
+				</button>
+
+				{/* Sort Controls */}
 
 				<div>
 					<h2 className="font-semibold text-gray-900 mb-2">
@@ -276,6 +236,86 @@ export default function CardsPage() {
 					</div>
 				</div>
 			</main>
+
+			{/* Form Modal */}
+			{showForm && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Add New Card</h3>
+							<button
+								onClick={closeForm}
+								className="text-gray-400 hover:text-gray-600 text-xl"
+							>
+								×
+							</button>
+						</div>
+						<form onSubmit={handleAddCard} className="space-y-4">
+							<div className="flex gap-2">
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+									placeholder="Recipient*"
+									value={form.recipient}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, recipient: e.target.value }))
+									}
+									required
+								/>
+								<button
+									type="button"
+									onClick={() => setShowAddressBook(!showAddressBook)}
+									className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
+								>
+									📖
+								</button>
+							</div>
+							{showAddressBook && (
+								<div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
+									<h4 className="text-sm font-medium mb-1">
+										From Address Book:
+									</h4>
+									{contacts.map((contact: any) => (
+										<button
+											key={contact.id}
+											type="button"
+											onClick={() => addFromAddressBook(contact)}
+											className="block w-full text-left text-sm p-1 hover:bg-blue-100 rounded"
+										>
+											{contact.name}
+										</button>
+									))}
+								</div>
+							)}
+							<textarea
+								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								placeholder="Message*"
+								value={form.message}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, message: e.target.value }))
+								}
+								rows={3}
+								required
+							/>
+							<div className="flex gap-3 pt-2">
+								<button
+									type="button"
+									onClick={closeForm}
+									className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+									disabled={loading}
+								>
+									{loading ? "Adding..." : "Add Card"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 
 			{/* Delete Confirmation Modal */}
 			{deleteConfirm.show && (

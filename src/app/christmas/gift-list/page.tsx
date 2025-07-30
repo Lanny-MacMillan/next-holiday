@@ -40,6 +40,7 @@ export default function GiftListPage() {
 		show: false,
 		giftId: null,
 	});
+	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
 		// Fetch gifts and contacts when component mounts
@@ -63,6 +64,33 @@ export default function GiftListPage() {
 		};
 
 		dispatch(addGift(newGift));
+		setForm({
+			name: "",
+			description: "",
+			price: "",
+			recipient: "",
+			store: "",
+			productLink: "",
+			notes: "",
+		});
+		setShowForm(false);
+	}
+
+	function openForm() {
+		setShowForm(true);
+		setForm({
+			name: "",
+			description: "",
+			price: "",
+			recipient: "",
+			store: "",
+			productLink: "",
+			notes: "",
+		});
+	}
+
+	function closeForm() {
+		setShowForm(false);
 		setForm({
 			name: "",
 			description: "",
@@ -152,109 +180,12 @@ export default function GiftListPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<form
-					className="bg-white rounded shadow p-4 mb-4"
-					onSubmit={handleAddGift}
+				<button
+					onClick={openForm}
+					className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
 				>
-					<h2 className="font-semibold mb-2">Add New Gift</h2>
-					<div className="flex flex-col gap-2">
-						<input
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Gift Name*"
-							value={form.name}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, name: e.target.value }))
-							}
-							required
-						/>
-						<div className="flex gap-2">
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Recipient*"
-								value={form.recipient}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, recipient: e.target.value }))
-								}
-								required
-							/>
-							<button
-								type="button"
-								onClick={() => setShowAddressBook(!showAddressBook)}
-								className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
-							>
-								📖
-							</button>
-						</div>
-						{showAddressBook && (
-							<div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
-								<h4 className="text-sm font-medium mb-1">From Address Book:</h4>
-								{contacts.map((contact: any) => (
-									<button
-										key={contact.id}
-										type="button"
-										onClick={() => addFromAddressBook(contact)}
-										className="block w-full text-left text-sm p-1 hover:bg-blue-100 rounded"
-									>
-										{contact.name}
-									</button>
-								))}
-							</div>
-						)}
-						<input
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Description"
-							value={form.description}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, description: e.target.value }))
-							}
-						/>
-						<div className="flex gap-2">
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Price"
-								type="number"
-								step="0.01"
-								value={form.price}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, price: e.target.value }))
-								}
-							/>
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Store"
-								value={form.store}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, store: e.target.value }))
-								}
-							/>
-						</div>
-						<input
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Product Link (optional)"
-							type="url"
-							value={form.productLink}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, productLink: e.target.value }))
-							}
-						/>
-						<textarea
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Notes"
-							value={form.notes}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, notes: e.target.value }))
-							}
-							rows={2}
-						/>
-						<button
-							type="submit"
-							className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
-							disabled={loading}
-						>
-							{loading ? "Adding..." : "Add Gift"}
-						</button>
-					</div>
-				</form>
+					Add New Gift
+				</button>
 
 				{/* Sort Controls */}
 				<div className="bg-white rounded shadow p-4">
@@ -460,6 +391,131 @@ export default function GiftListPage() {
 					</div>
 				</div>
 			</main>
+
+			{/* Form Modal */}
+			{showForm && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Add New Gift</h3>
+							<button
+								onClick={closeForm}
+								className="text-gray-400 hover:text-gray-600 text-xl"
+							>
+								×
+							</button>
+						</div>
+						<form onSubmit={handleAddGift} className="space-y-4">
+							<input
+								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								placeholder="Gift Name*"
+								value={form.name}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, name: e.target.value }))
+								}
+								required
+							/>
+							<div className="flex gap-2">
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+									placeholder="Recipient*"
+									value={form.recipient}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, recipient: e.target.value }))
+									}
+									required
+								/>
+								<button
+									type="button"
+									onClick={() => setShowAddressBook(!showAddressBook)}
+									className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
+								>
+									📖
+								</button>
+							</div>
+							{showAddressBook && (
+								<div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
+									<h4 className="text-sm font-medium mb-1">
+										From Address Book:
+									</h4>
+									{contacts.map((contact: any) => (
+										<button
+											key={contact.id}
+											type="button"
+											onClick={() => addFromAddressBook(contact)}
+											className="block w-full text-left text-sm p-1 hover:bg-blue-100 rounded"
+										>
+											{contact.name}
+										</button>
+									))}
+								</div>
+							)}
+							<input
+								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								placeholder="Description"
+								value={form.description}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, description: e.target.value }))
+								}
+							/>
+							<div className="flex gap-2">
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+									placeholder="Price"
+									type="number"
+									step="0.01"
+									value={form.price}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, price: e.target.value }))
+									}
+								/>
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+									placeholder="Store"
+									value={form.store}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, store: e.target.value }))
+									}
+								/>
+							</div>
+							<input
+								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								placeholder="Product Link (optional)"
+								type="url"
+								value={form.productLink}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, productLink: e.target.value }))
+								}
+							/>
+							<textarea
+								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								placeholder="Notes"
+								value={form.notes}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, notes: e.target.value }))
+								}
+								rows={2}
+							/>
+							<div className="flex gap-3 pt-2">
+								<button
+									type="button"
+									onClick={closeForm}
+									className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									className="flex-1 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
+									disabled={loading}
+								>
+									{loading ? "Adding..." : "Add Gift"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 
 			{/* Delete Confirmation Modal */}
 			{deleteConfirm.show && (

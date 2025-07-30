@@ -36,6 +36,7 @@ export default function TasksPage() {
 		show: false,
 		taskId: null,
 	});
+	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
 		// Fetch tasks when component mounts
@@ -57,6 +58,31 @@ export default function TasksPage() {
 		};
 
 		dispatch(addTask(newTask));
+		setForm({
+			title: "",
+			description: "",
+			priority: "medium",
+			assignedTo: "",
+			category: "",
+			dueDate: "",
+		});
+		setShowForm(false);
+	}
+
+	function openForm() {
+		setShowForm(true);
+		setForm({
+			title: "",
+			description: "",
+			priority: "medium",
+			assignedTo: "",
+			category: "",
+			dueDate: "",
+		});
+	}
+
+	function closeForm() {
+		setShowForm(false);
 		setForm({
 			title: "",
 			description: "",
@@ -145,79 +171,12 @@ export default function TasksPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<form
-					className="bg-white rounded shadow p-4 mb-4"
-					onSubmit={handleAddTask}
+				<button
+					onClick={openForm}
+					className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
 				>
-					<h2 className="font-semibold mb-2">Add New Task</h2>
-					<div className="flex flex-col gap-2">
-						<input
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Task Title*"
-							value={form.title}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, title: e.target.value }))
-							}
-							required
-						/>
-						<textarea
-							className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-							placeholder="Description"
-							value={form.description}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, description: e.target.value }))
-							}
-							rows={2}
-						/>
-						<div className="flex gap-2">
-							<select
-								className="flex-1 border rounded px-3 py-2 text-gray-900"
-								value={form.priority}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, priority: e.target.value }))
-								}
-							>
-								<option value="low">Low Priority</option>
-								<option value="medium">Medium Priority</option>
-								<option value="high">High Priority</option>
-							</select>
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Assigned To"
-								value={form.assignedTo}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
-								}
-							/>
-						</div>
-						<div className="flex gap-2">
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Category"
-								value={form.category}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, category: e.target.value }))
-								}
-							/>
-							<input
-								className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
-								placeholder="Due Date"
-								type="date"
-								value={form.dueDate}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, dueDate: e.target.value }))
-								}
-							/>
-						</div>
-						<button
-							type="submit"
-							className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
-							disabled={loading}
-						>
-							{loading ? "Adding..." : "Add Task"}
-						</button>
-					</div>
-				</form>
+					Add New Task
+				</button>
 
 				{/* Sort Controls */}
 				<div className="bg-white rounded shadow p-4">
