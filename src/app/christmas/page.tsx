@@ -66,40 +66,49 @@ export default function ChristmasPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-3xl font-bold mb-2 text-gray-900">Christmas</h1>
-				<p className="text-center text-gray-500">
+				<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
+					Christmas
+				</h1>
+				<p className="text-center text-gray-600 dark:text-gray-400">
 					Plan your Christmas with ease!
 				</p>
-				<Link href="/" className="mt-2 text-blue-500 text-sm hover:underline">
+				<Link
+					href="/"
+					className="mt-2 text-blue-600 text-sm hover:underline dark:text-blue-400"
+				>
 					← Back to Holidays
 				</Link>
 			</header>
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
-				<h2 className="text-xl font-semibold mb-2">Sections</h2>
+				<h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-white">
+					Sections
+				</h2>
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => (
 						<li key={section.name}>
 							<Link
 								href={section.href}
-								className="block bg-white rounded-2xl shadow-md p-5 transition hover:scale-[1.02] active:scale-100 border-l-4 border-green-400"
+								className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
 							>
 								<div className="flex items-center justify-between mb-1">
-									<h3 className="text-lg font-bold text-gray-900">
+									<h3 className="text-lg font-bold text-gray-800 dark:text-white">
 										{section.name}
 									</h3>
-									<span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+									<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
 										{getCount(section.sliceKey)}
 									</span>
 								</div>
-								<p className="text-gray-500 text-sm">{section.description}</p>
+								<p className="text-gray-600 dark:text-gray-400 text-sm">
+									{section.description}
+								</p>
 							</Link>
 						</li>
 					))}
 				</ul>
 			</main>
-			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-400 mt-8">
+			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday
 			</footer>
 		</div>

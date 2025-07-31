@@ -3,6 +3,8 @@ import addressBookReducer from "./slices/addressBookSlice";
 import cardsReducer from "./slices/cardsSlice";
 import giftListReducer from "./slices/giftListSlice";
 import tasksReducer from "./slices/tasksSlice";
+import userReducer from "./slices/userSlice";
+import themeReducer from "./slices/themeSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -10,11 +12,12 @@ export const store = configureStore({
 		cards: cardsReducer,
 		giftList: giftListReducer,
 		tasks: tasksReducer,
+		user: userReducer,
+		theme: themeReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({
 			serializableCheck: {
-				// Ignore these action types for serializable check
 				ignoredActions: ["persist/PERSIST"],
 			},
 		}),

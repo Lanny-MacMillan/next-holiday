@@ -47,40 +47,62 @@ export default function ReduxExample() {
 		(tasksLoading && !tasksInitialized);
 
 	if (isLoading) {
-		return <div className="p-4">Loading Redux data...</div>;
+		return (
+			<div className="p-4 text-gray-900 dark:text-white">
+				Loading Redux data...
+			</div>
+		);
 	}
 
 	return (
 		<div className="p-4 space-y-6">
-			<h2 className="text-2xl font-bold text-purple-800">
+			<h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300">
 				Redux Store Example
 			</h2>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-				<div className="bg-blue-50 p-4 rounded-lg">
-					<h3 className="font-semibold text-blue-800">Address Book</h3>
-					<p className="text-sm text-blue-600">{contacts.length} contacts</p>
+				<div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+					<h3 className="font-semibold text-blue-800 dark:text-blue-300">
+						Address Book
+					</h3>
+					<p className="text-sm text-blue-600 dark:text-blue-400">
+						{contacts.length} contacts
+					</p>
 				</div>
 
-				<div className="bg-green-50 p-4 rounded-lg">
-					<h3 className="font-semibold text-green-800">Cards</h3>
-					<p className="text-sm text-green-600">{cards.length} cards</p>
+				<div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
+					<h3 className="font-semibold text-green-800 dark:text-green-300">
+						Cards
+					</h3>
+					<p className="text-sm text-green-600 dark:text-green-400">
+						{cards.length} cards
+					</p>
 				</div>
 
-				<div className="bg-purple-50 p-4 rounded-lg">
-					<h3 className="font-semibold text-purple-800">Gift List</h3>
-					<p className="text-sm text-purple-600">{gifts.length} gifts</p>
+				<div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg">
+					<h3 className="font-semibold text-purple-800 dark:text-purple-300">
+						Gift List
+					</h3>
+					<p className="text-sm text-purple-600 dark:text-purple-400">
+						{gifts.length} gifts
+					</p>
 				</div>
 
-				<div className="bg-orange-50 p-4 rounded-lg">
-					<h3 className="font-semibold text-orange-800">Tasks</h3>
-					<p className="text-sm text-orange-600">{tasks.length} tasks</p>
+				<div className="bg-orange-50 dark:bg-orange-900/30 p-4 rounded-lg">
+					<h3 className="font-semibold text-orange-800 dark:text-orange-300">
+						Tasks
+					</h3>
+					<p className="text-sm text-orange-600 dark:text-orange-400">
+						{tasks.length} tasks
+					</p>
 				</div>
 			</div>
 
-			<div className="bg-purple-50 p-4 rounded-lg">
-				<h3 className="font-semibold mb-2 text-purple-800">Sample Data</h3>
-				<div className="text-sm text-purple-600 space-y-2">
+			<div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg">
+				<h3 className="font-semibold mb-2 text-purple-800 dark:text-purple-300">
+					Sample Data
+				</h3>
+				<div className="text-sm text-purple-600 dark:text-purple-400 space-y-2">
 					{contacts.length > 0 && (
 						<p>
 							<strong>Contact:</strong> {contacts[0].name} ({contacts[0].email})

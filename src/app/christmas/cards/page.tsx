@@ -94,10 +94,10 @@ export default function CardsPage() {
 
 	if (loading && !initialized) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
+			<div className="min-h-screen christmas-cards-gradient flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-					<p className="text-gray-600">Loading cards...</p>
+					<p className="text-gray-600 dark:text-gray-300">Loading cards...</p>
 				</div>
 			</div>
 		);
@@ -107,17 +107,19 @@ export default function CardsPage() {
 	const completedCards = cards.filter((card: Card) => card.isCompleted);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-2xl font-bold mb-2 text-gray-900">Holiday Cards</h1>
+				<h1 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">
+					Holiday Cards
+				</h1>
 				<Link
 					href="/christmas"
-					className="text-blue-500 text-sm hover:underline mb-2"
+					className="text-blue-600 text-sm hover:underline mb-2 dark:text-blue-400"
 				>
 					← Back
 				</Link>
 				{error && (
-					<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
 						{error}
 					</div>
 				)}
@@ -133,20 +135,20 @@ export default function CardsPage() {
 				{/* Sort Controls */}
 
 				<div>
-					<h2 className="font-semibold text-gray-900 mb-2">
+					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
 						Incomplete ({incompleteCards.length})
 					</h2>
-					<div className="bg-white rounded shadow">
+					<div className="card card-cards rounded shadow">
 						{incompleteCards.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 text-center">
+							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
 								All cards completed! 🎉
 							</div>
 						) : (
-							<ul className="divide-y">
+							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{incompleteCards.map((card: Card) => (
 									<li
 										key={card.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50"
+										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20"
 										onClick={() => handleToggleCard(card.id)}
 									>
 										<input
@@ -156,9 +158,11 @@ export default function CardsPage() {
 											className="mr-3 accent-green-500"
 										/>
 										<div className="flex-1">
-											<div className="text-gray-900">To: {card.recipient}</div>
+											<div className="text-gray-800 dark:text-white">
+												To: {card.recipient}
+											</div>
 											{card.message && (
-												<div className="text-xs text-gray-500 mt-1">
+												<div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
 													{card.message}
 												</div>
 											)}
@@ -168,7 +172,7 @@ export default function CardsPage() {
 												e.stopPropagation();
 												handleDeleteCard(card.id);
 											}}
-											className="text-red-500 hover:text-red-700 text-sm"
+											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
 											disabled={loading}
 										>
 											Delete
@@ -181,20 +185,20 @@ export default function CardsPage() {
 				</div>
 
 				<div>
-					<h2 className="font-semibold text-gray-400 mb-2">
+					<h2 className="font-semibold text-gray-600 dark:text-gray-500 mb-2">
 						Completed ({completedCards.length})
 					</h2>
-					<div className="bg-white rounded shadow">
+					<div className="card card-cards rounded shadow">
 						{completedCards.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 text-center">
+							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
 								No completed cards yet.
 							</div>
 						) : (
-							<ul className="divide-y">
+							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{completedCards.map((card: Card) => (
 									<li
 										key={card.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 opacity-60"
+										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 opacity-60"
 										onClick={() => handleToggleCard(card.id)}
 									>
 										<input
@@ -204,16 +208,16 @@ export default function CardsPage() {
 											className="mr-3 accent-green-500"
 										/>
 										<div className="flex-1">
-											<div className="line-through text-gray-400">
+											<div className="line-through text-gray-400 dark:text-gray-500">
 												To: {card.recipient}
 											</div>
 											{card.message && (
-												<div className="text-xs text-gray-400 line-through">
+												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
 													{card.message}
 												</div>
 											)}
 											{card.completedDate && (
-												<div className="text-xs text-green-600 mt-1">
+												<div className="text-xs text-green-600 dark:text-green-400 mt-1">
 													Completed:{" "}
 													{new Date(card.completedDate).toLocaleDateString()}
 												</div>
@@ -224,7 +228,7 @@ export default function CardsPage() {
 												e.stopPropagation();
 												handleDeleteCard(card.id);
 											}}
-											className="text-red-500 hover:text-red-700 text-sm"
+											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
 											disabled={loading}
 										>
 											Delete
@@ -240,12 +244,14 @@ export default function CardsPage() {
 			{/* Form Modal */}
 			{showForm && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+					<div className="card card-cards rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
 						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Add New Card</h3>
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+								Add New Card
+							</h3>
 							<button
 								onClick={closeForm}
-								className="text-gray-400 hover:text-gray-600 text-xl"
+								className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xl"
 							>
 								×
 							</button>
@@ -253,7 +259,7 @@ export default function CardsPage() {
 						<form onSubmit={handleAddCard} className="space-y-4">
 							<div className="flex gap-2">
 								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 placeholder-gray-700"
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 									placeholder="Recipient*"
 									value={form.recipient}
 									onChange={(e) =>
@@ -270,8 +276,8 @@ export default function CardsPage() {
 								</button>
 							</div>
 							{showAddressBook && (
-								<div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
-									<h4 className="text-sm font-medium mb-1">
+								<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
+									<h4 className="text-sm font-medium mb-1 text-gray-900 dark:text-white">
 										From Address Book:
 									</h4>
 									{contacts.map((contact: any) => (
@@ -279,7 +285,7 @@ export default function CardsPage() {
 											key={contact.id}
 											type="button"
 											onClick={() => addFromAddressBook(contact)}
-											className="block w-full text-left text-sm p-1 hover:bg-blue-100 rounded"
+											className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
 										>
 											{contact.name}
 										</button>
@@ -287,7 +293,7 @@ export default function CardsPage() {
 								</div>
 							)}
 							<textarea
-								className="border rounded px-3 py-2 text-gray-900 placeholder-gray-700 w-full"
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="Message*"
 								value={form.message}
 								onChange={(e) =>
@@ -300,7 +306,7 @@ export default function CardsPage() {
 								<button
 									type="button"
 									onClick={closeForm}
-									className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 								>
 									Cancel
 								</button>
@@ -320,16 +326,18 @@ export default function CardsPage() {
 			{/* Delete Confirmation Modal */}
 			{deleteConfirm.show && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
-						<p className="text-gray-600 mb-6">
+					<div className="card card-cards rounded-lg p-6 max-w-sm mx-4">
+						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+							Confirm Delete
+						</h3>
+						<p className="text-gray-600 dark:text-gray-300 mb-6">
 							Are you sure you want to delete this card? This action cannot be
 							undone.
 						</p>
 						<div className="flex gap-3">
 							<button
 								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 							>
 								Cancel
 							</button>
