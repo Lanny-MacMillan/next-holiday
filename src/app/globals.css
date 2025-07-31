@@ -149,6 +149,23 @@ body {
 	color: rgb(156, 163, 175) !important;
 }
 
+/* Toggle button background overrides */
+.bg-gray-400 {
+	background-color: rgb(156, 163, 175) !important;
+}
+
+.dark .bg-gray-400 {
+	background-color: rgb(156, 163, 175) !important;
+}
+
+.bg-blue-600 {
+	background-color: rgb(37, 99, 235) !important;
+}
+
+.dark .bg-blue-600 {
+	background-color: rgb(37, 99, 235) !important;
+}
+
 /* Card styling for that Radix UI layered effect */
 .card {
 	background: rgb(var(--color-card-background));

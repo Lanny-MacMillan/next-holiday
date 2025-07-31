@@ -36,7 +36,7 @@ export default function SettingsPage() {
 				<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
 					Settings
 				</h1>
-				<p className="text-center text-gray-600 dark:text-gray-400">
+				<p className="text-center text-gray-800 dark:text-gray-400">
 					Manage your account and preferences
 				</p>
 				<Link href="/" className="mt-2 text-blue-600 text-sm hover:underline">
@@ -59,33 +59,33 @@ export default function SettingsPage() {
 									className="w-16 h-16 rounded-full"
 								/>
 								<div>
-									<p className="text-sm text-gray-500 dark:text-gray-400">
+									<p className="text-sm text-gray-800 dark:text-gray-400">
 										Profile Picture
 									</p>
 								</div>
 							</div>
 						)}
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								Name
 							</label>
-							<p className="mt-1 text-sm text-gray-900 dark:text-white">
+							<p className="mt-1 text-sm text-gray-800 dark:text-white">
 								{user?.name || "Not provided"}
 							</p>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								Email
 							</label>
-							<p className="mt-1 text-sm text-gray-900 dark:text-white">
+							<p className="mt-1 text-sm text-gray-800 dark:text-white">
 								{user?.email || "Not provided"}
 							</p>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								User ID
 							</label>
-							<p className="mt-1 text-sm text-gray-500 dark:text-gray-400 font-mono">
+							<p className="mt-1 text-sm text-gray-800 dark:text-gray-400 font-mono">
 								{user?.sub || "Not available"}
 							</p>
 						</div>
@@ -100,10 +100,10 @@ export default function SettingsPage() {
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
 							<div>
-								<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
 									Dark Mode
 								</label>
-								<p className="text-xs text-gray-500 dark:text-gray-400">
+								<p className="text-xs text-gray-800 dark:text-gray-400">
 									Switch between light and dark themes
 								</p>
 							</div>
@@ -115,7 +115,7 @@ export default function SettingsPage() {
 									)
 								}
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-									localSettings.theme === "dark" ? "bg-blue-600" : "bg-gray-200"
+									localSettings.theme === "dark" ? "bg-blue-600" : "bg-gray-400"
 								}`}
 							>
 								<span
@@ -137,7 +137,7 @@ export default function SettingsPage() {
 					</h2>
 					<div className="space-y-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								Default Holiday
 							</label>
 							<select
@@ -145,7 +145,7 @@ export default function SettingsPage() {
 								onChange={(e) =>
 									handleSettingChange("defaultHoliday", e.target.value)
 								}
-								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
 							>
 								<option value="Christmas">Christmas</option>
 								<option value="Hanukkah">Hanukkah</option>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								Gift Budget Limit ($)
 							</label>
 							<input
@@ -169,13 +169,13 @@ export default function SettingsPage() {
 										parseInt(e.target.value)
 									)
 								}
-								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
 								min="0"
 								step="50"
 							/>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								Preferred Greeting Style
 							</label>
 							<select
@@ -183,7 +183,7 @@ export default function SettingsPage() {
 								onChange={(e) =>
 									handleSettingChange("greetingStyle", e.target.value)
 								}
-								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
 							>
 								<option value="formal">Formal</option>
 								<option value="informal">Informal</option>
@@ -200,10 +200,10 @@ export default function SettingsPage() {
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
 							<div>
-								<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
 									Reminders
 								</label>
-								<p className="text-xs text-gray-500 dark:text-gray-400">
+								<p className="text-xs text-gray-800 dark:text-gray-400">
 									Get reminded about upcoming tasks and events
 								</p>
 							</div>
@@ -217,7 +217,7 @@ export default function SettingsPage() {
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 									localSettings.notifications.reminders
 										? "bg-blue-600"
-										: "bg-gray-200"
+										: "bg-gray-400"
 								}`}
 							>
 								<span
@@ -231,10 +231,10 @@ export default function SettingsPage() {
 						</div>
 						<div className="flex items-center justify-between">
 							<div>
-								<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
 									Shipping Alerts
 								</label>
-								<p className="text-xs text-gray-500 dark:text-gray-400">
+								<p className="text-xs text-gray-800 dark:text-gray-400">
 									Get notified about gift shipping status
 								</p>
 							</div>
@@ -248,7 +248,7 @@ export default function SettingsPage() {
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 									localSettings.notifications.shippingAlerts
 										? "bg-blue-600"
-										: "bg-gray-200"
+										: "bg-gray-400"
 								}`}
 							>
 								<span
@@ -262,10 +262,10 @@ export default function SettingsPage() {
 						</div>
 						<div className="flex items-center justify-between">
 							<div>
-								<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
 									Upcoming Events
 								</label>
-								<p className="text-xs text-gray-500 dark:text-gray-400">
+								<p className="text-xs text-gray-800 dark:text-gray-400">
 									Get notified about upcoming holiday events
 								</p>
 							</div>
@@ -279,7 +279,7 @@ export default function SettingsPage() {
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 									localSettings.notifications.upcomingEvents
 										? "bg-blue-600"
-										: "bg-gray-200"
+										: "bg-gray-400"
 								}`}
 							>
 								<span

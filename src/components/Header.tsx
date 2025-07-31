@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
@@ -9,6 +9,22 @@ export default function Header() {
 	const { logout } = useAuth0();
 	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [isDarkMode, setIsDarkMode] = useState(false);
+
+	useEffect(() => {
+		const checkTheme = () => {
+			setIsDarkMode(document.documentElement.classList.contains("dark"));
+		};
+
+		checkTheme();
+		const observer = new MutationObserver(checkTheme);
+		observer.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["class"],
+		});
+
+		return () => observer.disconnect();
+	}, []);
 
 	const handleLogout = () => {
 		logout({ logoutParams: { returnTo: window.location.origin } });
@@ -62,17 +78,26 @@ export default function Header() {
 
 							{/* Dropdown menu */}
 							{isMenuOpen && (
-								<div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+								<div
+									className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 focus:outline-none z-50"
+									style={{
+										backgroundColor: isDarkMode
+											? "rgb(20, 20, 20)"
+											: "rgb(255, 255, 255)",
+										backdropFilter: "none",
+										opacity: "1",
+									}}
+								>
 									<div className="py-1">
 										<button
 											onClick={handleSettings}
-											className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+											className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
 										>
 											Settings
 										</button>
 										<button
 											onClick={handleLogout}
-											className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+											className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
 										>
 											Logout
 										</button>
