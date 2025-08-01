@@ -1,11 +1,33 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import ReduxExample from "@/components/ReduxExample";
+import { useAppSelector } from "@/store/hooks";
+// import ReduxExample from "@/components/ReduxExample";
 // import ReduxTest from "@/components/ReduxTest";
 
 export default function Home() {
-	// Placeholder: In a real app, progress would be dynamic
-	const christmasProgress = 0.4; // 40% complete
+	// Get state from all Redux slices
+	const cards = useAppSelector((state) => state.cards.cards);
+	const gifts = useAppSelector((state) => state.giftList.gifts);
+	const tasks = useAppSelector((state) => state.tasks.tasks);
+	const contacts = useAppSelector((state) => state.addressBook.contacts);
+
+	// Calculate active (incomplete) items from each section
+	const activeCards = cards.filter((card) => !card.isCompleted).length;
+	const activeGifts = gifts.filter((gift) => !gift.isCompleted).length;
+	const activeTasks = tasks.filter((task) => !task.isCompleted).length;
+	const totalContacts = contacts.length; // Address book doesn't have completion status, so count all
+
+	// Calculate total items and completed items
+	const totalItems = cards.length + gifts.length + tasks.length + totalContacts;
+	const completedItems =
+		cards.filter((card) => card.isCompleted).length +
+		gifts.filter((gift) => gift.isCompleted).length +
+		tasks.filter((task) => task.isCompleted).length;
+
+	// Calculate progress (avoid division by zero)
+	const christmasProgress = totalItems > 0 ? completedItems / totalItems : 0;
 
 	return (
 		<div className="min-h-screen christmas-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -80,9 +102,35 @@ export default function Home() {
 											style={{ width: `${christmasProgress * 100}%` }}
 										/>
 									</div>
-									<span className="text-xs text-gray-500 dark:text-gray-500">
-										{Math.round(christmasProgress * 100)}% complete
-									</span>
+									<div className="flex justify-between items-center mt-1">
+										<span className="text-xs text-gray-500 dark:text-gray-500">
+											{Math.round(christmasProgress * 100)}% complete
+										</span>
+										<span className="text-xs text-gray-500 dark:text-gray-500">
+											{completedItems}/{totalItems} items
+										</span>
+									</div>
+									{/* Show active items breakdown */}
+									<div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+										{activeCards > 0 && `${activeCards} cards`}
+										{activeGifts > 0 &&
+											`${
+												activeGifts > 0 && activeCards > 0 ? ", " : ""
+											}${activeGifts} gifts`}
+										{activeTasks > 0 &&
+											`${
+												activeTasks > 0 && (activeCards > 0 || activeGifts > 0)
+													? ", "
+													: ""
+											}${activeTasks} tasks`}
+										{totalContacts > 0 &&
+											`${
+												totalContacts > 0 &&
+												(activeCards > 0 || activeGifts > 0 || activeTasks > 0)
+													? ", "
+													: ""
+											}${totalContacts} contacts`}
+									</div>
 								</div>
 								<span className="ml-2 text-2xl text-gray-300 dark:text-gray-600">
 									→
