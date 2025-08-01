@@ -13,6 +13,16 @@ export default function Home() {
 	const tasks = useAppSelector((state) => state.tasks.tasks);
 	const contacts = useAppSelector((state) => state.addressBook.contacts);
 
+	// Get loading states
+	const cardsLoading = useAppSelector((state) => state.cards.loading);
+	const giftsLoading = useAppSelector((state) => state.giftList.loading);
+	const tasksLoading = useAppSelector((state) => state.tasks.loading);
+	const contactsLoading = useAppSelector((state) => state.addressBook.loading);
+
+	// Check if any data is still loading
+	const isLoading =
+		cardsLoading || giftsLoading || tasksLoading || contactsLoading;
+
 	// Calculate active (incomplete) items from each section
 	const activeCards = cards.filter((card) => !card.isCompleted).length;
 	const activeGifts = gifts.filter((gift) => !gift.isCompleted).length;
@@ -28,6 +38,20 @@ export default function Home() {
 
 	// Calculate progress (avoid division by zero)
 	const christmasProgress = totalItems > 0 ? completedItems / totalItems : 0;
+
+	// Show loading state while data is being fetched
+	if (isLoading) {
+		return (
+			<div className="min-h-screen christmas-gradient flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+					<p className="text-gray-600 dark:text-gray-300">
+						Loading your holiday data...
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-screen christmas-gradient flex flex-col items-center p-4 sm:p-8 font-sans">

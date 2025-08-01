@@ -35,10 +35,13 @@ export default function CardsPage() {
 	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
-		// Fetch cards and contacts when component mounts
-		dispatch(fetchCards());
+		// Fetch cards and contacts when component mounts if not already initialized
+		if (!initialized) {
+			dispatch(fetchCards());
+		}
+		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch]);
+	}, [dispatch, initialized]);
 
 	function handleAddCard(e: React.FormEvent) {
 		e.preventDefault();
@@ -108,16 +111,18 @@ export default function CardsPage() {
 
 	return (
 		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">
-					Holiday Cards
-				</h1>
-				<Link
-					href="/christmas"
-					className="text-blue-600 text-sm hover:underline mb-2 dark:text-blue-400"
-				>
-					← Back
-				</Link>
+			<header className="w-full max-w-md py-6">
+				<div className="flex items-center justify-center relative">
+					<Link
+						href="/christmas"
+						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+					>
+						←
+					</Link>
+					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+						Holiday Cards
+					</h1>
+				</div>
 				{error && (
 					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
 						{error}

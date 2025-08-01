@@ -12,6 +12,7 @@ import {
 	Gift,
 } from "@/store/slices/giftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { BudgetDisplay } from "@/components/BudgetDisplay";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
@@ -43,10 +44,13 @@ export default function GiftListPage() {
 	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
-		// Fetch gifts and contacts when component mounts
-		dispatch(fetchGifts());
+		// Fetch gifts and contacts when component mounts if not already initialized
+		if (!initialized) {
+			dispatch(fetchGifts());
+		}
+		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch]);
+	}, [dispatch, initialized]);
 
 	function handleAddGift(e: React.FormEvent) {
 		e.preventDefault();
@@ -165,16 +169,18 @@ export default function GiftListPage() {
 
 	return (
 		<div className="min-h-screen christmas-gifts-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">
-					Gift List
-				</h1>
-				<Link
-					href="/christmas"
-					className="text-blue-600 text-sm hover:underline mb-2 dark:text-blue-400"
-				>
-					← Back
-				</Link>
+			<header className="w-full max-w-md py-6">
+				<div className="flex items-center justify-center relative">
+					<Link
+						href="/christmas"
+						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+					>
+						←
+					</Link>
+					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+						Gift List
+					</h1>
+				</div>
 				{error && (
 					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
 						{error}
@@ -182,6 +188,9 @@ export default function GiftListPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
+				{/* Budget Display */}
+				<BudgetDisplay />
+
 				<button
 					onClick={openForm}
 					className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"

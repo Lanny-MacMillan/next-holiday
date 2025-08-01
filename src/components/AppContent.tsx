@@ -7,6 +7,7 @@ import { initializeTheme } from "@/store/slices/themeSlice";
 import AuthWrapper from "./AuthWrapper";
 import Header from "./Header";
 import Login from "./Login";
+import DataInitializer from "./DataInitializer";
 
 export default function AppContent() {
 	const { isAuthenticated, isLoading } = useAuth0();
@@ -52,6 +53,7 @@ export default function AppContent() {
 
 	return (
 		<>
+			<DataInitializer />
 			<Header />
 			<AuthWrapper>{/* Your existing app content will go here */}</AuthWrapper>
 		</>

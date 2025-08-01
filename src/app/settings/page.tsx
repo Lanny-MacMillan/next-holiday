@@ -3,7 +3,7 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -11,6 +11,24 @@ export default function SettingsPage() {
 	const dispatch = useAppDispatch();
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const [localSettings, setLocalSettings] = useState(settings);
+	const [imageError, setImageError] = useState(false);
+
+	// Reset image error when user changes
+	useEffect(() => {
+		setImageError(false);
+	}, [user?.picture]);
+
+	function getInitials(name: string): string {
+		const words = name
+			.trim()
+			.split(" ")
+			.filter((word) => word.length > 0);
+		if (words.length === 0) return "";
+		if (words.length === 1) return words[0].charAt(0).toUpperCase();
+		return (
+			words[0].charAt(0) + words[words.length - 1].charAt(0)
+		).toUpperCase();
+	}
 
 	const handleSettingChange = (key: string, value: any) => {
 		const newSettings = { ...localSettings };
@@ -51,20 +69,27 @@ export default function SettingsPage() {
 						👤 User Information
 					</h2>
 					<div className="space-y-4">
-						{user?.picture && (
-							<div className="flex items-center space-x-4">
+						<div className="flex items-center space-x-4">
+							{user?.picture && !imageError ? (
 								<img
 									src={user.picture}
 									alt="Profile"
 									className="w-16 h-16 rounded-full"
+									onError={() => setImageError(true)}
 								/>
-								<div>
-									<p className="text-sm text-gray-800 dark:text-gray-400">
-										Profile Picture
-									</p>
+							) : (
+								<div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+									<span className="text-blue-600 dark:text-blue-300 font-semibold text-lg">
+										{getInitials(user?.name || "User")}
+									</span>
 								</div>
+							)}
+							<div>
+								<p className="text-sm text-gray-800 dark:text-gray-400">
+									Profile Picture
+								</p>
 							</div>
-						)}
+						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
 								Name
