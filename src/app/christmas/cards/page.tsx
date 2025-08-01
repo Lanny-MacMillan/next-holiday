@@ -128,6 +128,7 @@ export default function CardsPage() {
 				<button
 					onClick={openForm}
 					className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+					style={{ backgroundColor: "#ef4444", color: "white" }}
 				>
 					Add New Card
 				</button>
@@ -246,12 +247,16 @@ export default function CardsPage() {
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="card card-cards rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
 						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+							<h3
+								className="text-lg font-semibold text-gray-900 dark:text-white"
+								style={{ color: "#111827" }}
+							>
 								Add New Card
 							</h3>
 							<button
 								onClick={closeForm}
-								className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xl"
+								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+								style={{ color: "#4b5563" }}
 							>
 								×
 							</button>
@@ -259,25 +264,30 @@ export default function CardsPage() {
 						<form onSubmit={handleAddCard} className="space-y-4">
 							<div className="flex gap-2">
 								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 									placeholder="Recipient*"
 									value={form.recipient}
 									onChange={(e) =>
 										setForm((prev) => ({ ...prev, recipient: e.target.value }))
 									}
 									required
+									style={{ color: "#111827", backgroundColor: "white" }}
 								/>
 								<button
 									type="button"
 									onClick={() => setShowAddressBook(!showAddressBook)}
-									className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
+									className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
+									style={{ backgroundColor: "#3b82f6", color: "white" }}
 								>
 									📖
 								</button>
 							</div>
 							{showAddressBook && (
 								<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
-									<h4 className="text-sm font-medium mb-1 text-gray-900 dark:text-white">
+									<h4
+										className="text-sm font-medium mb-1 text-gray-900 dark:text-white"
+										style={{ color: "#111827" }}
+									>
 										From Address Book:
 									</h4>
 									{contacts.map((contact: any) => (
@@ -286,6 +296,7 @@ export default function CardsPage() {
 											type="button"
 											onClick={() => addFromAddressBook(contact)}
 											className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
+											style={{ color: "#111827" }}
 										>
 											{contact.name}
 										</button>
@@ -293,7 +304,7 @@ export default function CardsPage() {
 								</div>
 							)}
 							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="Message*"
 								value={form.message}
 								onChange={(e) =>
@@ -301,12 +312,14 @@ export default function CardsPage() {
 								}
 								rows={3}
 								required
+								style={{ color: "#111827", backgroundColor: "white" }}
 							/>
 							<div className="flex gap-3 pt-2">
 								<button
 									type="button"
 									onClick={closeForm}
 									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+									style={{ color: "#374151", borderColor: "#d1d5db" }}
 								>
 									Cancel
 								</button>
@@ -314,6 +327,7 @@ export default function CardsPage() {
 									type="submit"
 									className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
 									disabled={loading}
+									style={{ backgroundColor: "#ef4444", color: "white" }}
 								>
 									{loading ? "Adding..." : "Add Card"}
 								</button>
@@ -327,10 +341,16 @@ export default function CardsPage() {
 			{deleteConfirm.show && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="card card-cards rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+						<h3
+							className="text-lg font-semibold mb-4 text-gray-900 dark:text-white"
+							style={{ color: "#111827" }}
+						>
 							Confirm Delete
 						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-6">
+						<p
+							className="text-gray-600 dark:text-gray-300 mb-6"
+							style={{ color: "#4b5563" }}
+						>
 							Are you sure you want to delete this card? This action cannot be
 							undone.
 						</p>
@@ -338,12 +358,14 @@ export default function CardsPage() {
 							<button
 								onClick={cancelDelete}
 								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+								style={{ color: "#374151", borderColor: "#d1d5db" }}
 							>
 								Cancel
 							</button>
 							<button
 								onClick={confirmDelete}
 								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+								style={{ backgroundColor: "#ef4444", color: "white" }}
 							>
 								Delete
 							</button>

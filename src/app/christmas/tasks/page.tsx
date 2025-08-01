@@ -176,6 +176,7 @@ export default function TasksPage() {
 				<button
 					onClick={openForm}
 					className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+					style={{ backgroundColor: "#22c55e", color: "white" }}
 				>
 					Add New Task
 				</button>
@@ -367,6 +368,113 @@ export default function TasksPage() {
 					</div>
 				</div>
 			</main>
+
+			{/* Form Modal */}
+			{showForm && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="card card-tasks rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+						<div className="flex justify-between items-center mb-4">
+							<h3
+								className="text-lg font-semibold text-gray-900 dark:text-white"
+								style={{ color: "#111827" }}
+							>
+								Add New Task
+							</h3>
+							<button
+								onClick={closeForm}
+								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+								style={{ color: "#4b5563" }}
+							>
+								×
+							</button>
+						</div>
+						<form onSubmit={handleAddTask} className="space-y-4">
+							<input
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								placeholder="Task Title*"
+								value={form.title}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, title: e.target.value }))
+								}
+								required
+								style={{ color: "#111827", backgroundColor: "white" }}
+							/>
+							<textarea
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								placeholder="Description"
+								value={form.description}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, description: e.target.value }))
+								}
+								rows={2}
+								style={{ color: "#111827", backgroundColor: "white" }}
+							/>
+							<div className="flex gap-2">
+								<select
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									value={form.priority}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, priority: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								>
+									<option value="low">Low Priority</option>
+									<option value="medium">Medium Priority</option>
+									<option value="high">High Priority</option>
+								</select>
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									placeholder="Assigned To"
+									value={form.assignedTo}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								/>
+							</div>
+							<div className="flex gap-2">
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									placeholder="Category"
+									value={form.category}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, category: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								/>
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									placeholder="Due Date"
+									type="date"
+									value={form.dueDate}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, dueDate: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								/>
+							</div>
+							<div className="flex gap-3 pt-2">
+								<button
+									type="button"
+									onClick={closeForm}
+									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+									style={{ color: "#374151", borderColor: "#d1d5db" }}
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									className="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+									disabled={loading}
+									style={{ backgroundColor: "#22c55e", color: "white" }}
+								>
+									{loading ? "Adding..." : "Add Task"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 
 			{/* Delete Confirmation Modal */}
 			{deleteConfirm.show && (

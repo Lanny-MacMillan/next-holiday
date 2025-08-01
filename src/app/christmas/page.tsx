@@ -37,6 +37,7 @@ const subsections = [
 
 export default function ChristmasPage() {
 	const dispatch = useAppDispatch();
+
 	const cards = useAppSelector((state: any) => state.cards.cards);
 	const gifts = useAppSelector((state: any) => state.giftList.gifts);
 	const tasks = useAppSelector((state: any) => state.tasks.tasks);
@@ -50,19 +51,39 @@ export default function ChristmasPage() {
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
-	function getCount(sliceKey: string): number {
+	function getProgressData(sliceKey: string): {
+		total: number;
+		completed: number;
+		progress: number;
+	} {
+		let total = 0;
+		let completed = 0;
+
 		switch (sliceKey) {
 			case "cards":
-				return cards.length;
+				total = cards.length;
+				completed = cards.filter((card: any) => card.isCompleted).length;
+				break;
 			case "giftList":
-				return gifts.length;
+				total = gifts.length;
+				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
 			case "tasks":
-				return tasks.length;
+				total = tasks.length;
+				completed = tasks.filter((task: any) => task.isCompleted).length;
+				break;
 			case "addressBook":
-				return contacts.length;
+				total = contacts.length;
+				completed = 0; // Address book doesn't have completion status
+				break;
 			default:
-				return 0;
+				total = 0;
+				completed = 0;
 		}
+
+		const progress = total > 0 ? completed / total : 0;
+
+		return { total, completed, progress };
 	}
 
 	return (
@@ -86,26 +107,48 @@ export default function ChristmasPage() {
 					Sections
 				</h2>
 				<ul className="flex flex-col gap-4">
-					{subsections.map((section) => (
-						<li key={section.name}>
-							<Link
-								href={section.href}
-								className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
-							>
-								<div className="flex items-center justify-between mb-1">
-									<h3 className="text-lg font-bold text-gray-800 dark:text-white">
-										{section.name}
-									</h3>
-									<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
-										{getCount(section.sliceKey)}
-									</span>
-								</div>
-								<p className="text-gray-600 dark:text-gray-400 text-sm">
-									{section.description}
-								</p>
-							</Link>
-						</li>
-					))}
+					{subsections.map((section) => {
+						const { total, completed, progress } = getProgressData(
+							section.sliceKey
+						);
+
+						return (
+							<li key={section.name}>
+								<Link
+									href={section.href}
+									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
+								>
+									<div className="flex items-center justify-between mb-1">
+										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
+											{section.name}
+										</h3>
+										<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
+											{total}
+										</span>
+									</div>
+									<p className="text-gray-600 dark:text-gray-400 text-sm">
+										{section.description}
+									</p>
+									{/* Progress bar */}
+									<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+										<div
+											className="bg-green-400 dark:bg-green-500 h-2 rounded-full transition-all"
+											style={{ width: `${progress * 100}%` }}
+										/>
+									</div>
+									{/* Progress text */}
+									<div className="flex justify-between items-center mt-1">
+										<span className="text-xs text-gray-500 dark:text-gray-500">
+											{Math.round(progress * 100)}% complete
+										</span>
+										<span className="text-xs text-gray-500 dark:text-gray-500">
+											{completed}/{total} items
+										</span>
+									</div>
+								</Link>
+							</li>
+						);
+					})}
 				</ul>
 			</main>
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">

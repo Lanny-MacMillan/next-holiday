@@ -185,6 +185,7 @@ export default function GiftListPage() {
 				<button
 					onClick={openForm}
 					className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
+					style={{ backgroundColor: "#eab308", color: "white" }}
 				>
 					Add New Gift
 				</button>
@@ -403,47 +404,57 @@ export default function GiftListPage() {
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="card card-gifts rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
 						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+							<h3
+								className="text-lg font-semibold text-gray-900 dark:text-white"
+								style={{ color: "#111827" }}
+							>
 								Add New Gift
 							</h3>
 							<button
 								onClick={closeForm}
-								className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xl"
+								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+								style={{ color: "#4b5563" }}
 							>
 								×
 							</button>
 						</div>
 						<form onSubmit={handleAddGift} className="space-y-4">
 							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="Gift Name*"
 								value={form.name}
 								onChange={(e) =>
 									setForm((prev) => ({ ...prev, name: e.target.value }))
 								}
 								required
+								style={{ color: "#111827", backgroundColor: "white" }}
 							/>
 							<div className="flex gap-2">
 								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 									placeholder="Recipient*"
 									value={form.recipient}
 									onChange={(e) =>
 										setForm((prev) => ({ ...prev, recipient: e.target.value }))
 									}
 									required
+									style={{ color: "#111827", backgroundColor: "white" }}
 								/>
 								<button
 									type="button"
 									onClick={() => setShowAddressBook(!showAddressBook)}
-									className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
+									className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
+									style={{ backgroundColor: "#3b82f6", color: "white" }}
 								>
 									📖
 								</button>
 							</div>
 							{showAddressBook && (
 								<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
-									<h4 className="text-sm font-medium mb-1 text-gray-900 dark:text-white">
+									<h4
+										className="text-sm font-medium mb-1 text-gray-900 dark:text-white"
+										style={{ color: "#111827" }}
+									>
 										From Address Book:
 									</h4>
 									{contacts.map((contact: any) => (
@@ -452,6 +463,7 @@ export default function GiftListPage() {
 											type="button"
 											onClick={() => addFromAddressBook(contact)}
 											className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
+											style={{ color: "#111827" }}
 										>
 											{contact.name}
 										</button>
@@ -459,16 +471,17 @@ export default function GiftListPage() {
 								</div>
 							)}
 							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="Description"
 								value={form.description}
 								onChange={(e) =>
 									setForm((prev) => ({ ...prev, description: e.target.value }))
 								}
+								style={{ color: "#111827", backgroundColor: "white" }}
 							/>
 							<div className="flex gap-2">
 								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 									placeholder="Price"
 									type="number"
 									step="0.01"
@@ -476,39 +489,44 @@ export default function GiftListPage() {
 									onChange={(e) =>
 										setForm((prev) => ({ ...prev, price: e.target.value }))
 									}
+									style={{ color: "#111827", backgroundColor: "white" }}
 								/>
 								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 									placeholder="Store"
 									value={form.store}
 									onChange={(e) =>
 										setForm((prev) => ({ ...prev, store: e.target.value }))
 									}
+									style={{ color: "#111827", backgroundColor: "white" }}
 								/>
 							</div>
 							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="Product Link (optional)"
 								type="url"
 								value={form.productLink}
 								onChange={(e) =>
 									setForm((prev) => ({ ...prev, productLink: e.target.value }))
 								}
+								style={{ color: "#111827", backgroundColor: "white" }}
 							/>
 							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-700 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="Notes"
 								value={form.notes}
 								onChange={(e) =>
 									setForm((prev) => ({ ...prev, notes: e.target.value }))
 								}
 								rows={2}
+								style={{ color: "#111827", backgroundColor: "white" }}
 							/>
 							<div className="flex gap-3 pt-2">
 								<button
 									type="button"
 									onClick={closeForm}
 									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+									style={{ color: "#374151", borderColor: "#d1d5db" }}
 								>
 									Cancel
 								</button>
@@ -516,6 +534,7 @@ export default function GiftListPage() {
 									type="submit"
 									className="flex-1 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
 									disabled={loading}
+									style={{ backgroundColor: "#eab308", color: "white" }}
 								>
 									{loading ? "Adding..." : "Add Gift"}
 								</button>
