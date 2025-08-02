@@ -9,6 +9,9 @@ import countdownReducer from "./slices/countdownSlice";
 import hanukkahGiftListReducer from "./slices/hanukkahGiftListSlice";
 import hanukkahTasksReducer from "./slices/hanukkahTasksSlice";
 import hanukkahCountdownReducer from "./slices/hanukkahCountdownSlice";
+import kwanzaaGiftListReducer from "./slices/kwanzaaGiftListSlice";
+import kwanzaaTasksReducer from "./slices/kwanzaaTasksSlice";
+import kwanzaaCountdownReducer from "./slices/kwanzaaCountdownSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -22,6 +25,9 @@ export const store = configureStore({
 		hanukkahGiftList: hanukkahGiftListReducer,
 		hanukkahTasks: hanukkahTasksReducer,
 		hanukkahCountdown: hanukkahCountdownReducer,
+		kwanzaaGiftList: kwanzaaGiftListReducer,
+		kwanzaaTasks: kwanzaaTasksReducer,
+		kwanzaaCountdown: kwanzaaCountdownReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

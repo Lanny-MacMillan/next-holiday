@@ -12,6 +12,11 @@ import {
 	clearHanukkahCountdown,
 	updateHanukkahCountdown,
 } from "@/store/slices/hanukkahCountdownSlice";
+import {
+	setKwanzaaCountdown,
+	clearKwanzaaCountdown,
+	updateKwanzaaCountdown,
+} from "@/store/slices/kwanzaaCountdownSlice";
 import DatePickerModal from "./DatePickerModal";
 
 interface CountdownTimerProps {
@@ -26,9 +31,15 @@ export default function CountdownTimer({
 	const dispatch = useAppDispatch();
 
 	// Determine which countdown slice to use based on holiday
-	const countdownState = useAppSelector((state) =>
-		holiday === "Hanukkah" ? state.hanukkahCountdown : state.countdown
-	);
+	const countdownState = useAppSelector((state) => {
+		if (holiday === "Hanukkah") {
+			return state.hanukkahCountdown;
+		} else if (holiday === "Kwanzaa") {
+			return state.kwanzaaCountdown;
+		} else {
+			return state.countdown;
+		}
+	});
 	const { targetDate, isActive } = countdownState;
 
 	const [timeLeft, setTimeLeft] = useState<{
@@ -91,6 +102,8 @@ export default function CountdownTimer({
 	const handleSetCountdown = (date: string) => {
 		if (holiday === "Hanukkah") {
 			dispatch(setHanukkahCountdown(date));
+		} else if (holiday === "Kwanzaa") {
+			dispatch(setKwanzaaCountdown(date));
 		} else {
 			dispatch(setCountdown(date));
 		}
@@ -100,6 +113,8 @@ export default function CountdownTimer({
 	const handleUpdateCountdown = (date: string) => {
 		if (holiday === "Hanukkah") {
 			dispatch(updateHanukkahCountdown(date));
+		} else if (holiday === "Kwanzaa") {
+			dispatch(updateKwanzaaCountdown(date));
 		} else {
 			dispatch(updateCountdown(date));
 		}
@@ -109,6 +124,8 @@ export default function CountdownTimer({
 	const handleClearCountdown = () => {
 		if (holiday === "Hanukkah") {
 			dispatch(clearHanukkahCountdown());
+		} else if (holiday === "Kwanzaa") {
+			dispatch(clearKwanzaaCountdown());
 		} else {
 			dispatch(clearCountdown());
 		}
@@ -137,6 +154,8 @@ export default function CountdownTimer({
 		switch (holiday) {
 			case "Hanukkah":
 				return "Hanukkah is here! 🕯️";
+			case "Kwanzaa":
+				return "Kwanzaa is here! 🕯️";
 			case "Christmas":
 				return "Christmas is here! 🎄";
 			default:

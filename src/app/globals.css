@@ -454,3 +454,22 @@ body {
 		rgb(10, 20, 15) 100%
 	);
 }
+
+/* Kwanzaa-themed gradient backgrounds */
+.kwanzaa-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(254, 242, 242) 0%,
+		rgb(254, 226, 226) 50%,
+		rgb(254, 242, 242) 100%
+	);
+}
+
+.dark .kwanzaa-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 10, 10) 0%,
+		rgb(15, 8, 8) 50%,
+		rgb(20, 10, 10) 100%
+	);
+}
