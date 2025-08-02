@@ -36,6 +36,11 @@ export default function Header() {
 		setIsMenuOpen(false);
 	};
 
+	const handleAddressBook = () => {
+		router.push("/address-book");
+		setIsMenuOpen(false);
+	};
+
 	return (
 		<header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,6 +99,12 @@ export default function Header() {
 											className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
 										>
 											Settings
+										</button>
+										<button
+											onClick={handleAddressBook}
+											className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+										>
+											Address Book
 										</button>
 										<button
 											onClick={handleLogout}

@@ -6,7 +6,6 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
 
 const subsections = [
@@ -28,12 +27,6 @@ const subsections = [
 		href: "/christmas/tasks",
 		sliceKey: "tasks",
 	},
-	{
-		name: "Address Book",
-		description: "Keep track of all your loved ones",
-		href: "/christmas/address-book",
-		sliceKey: "addressBook",
-	},
 ];
 
 export default function ChristmasPage() {
@@ -42,7 +35,6 @@ export default function ChristmasPage() {
 	const cards = useAppSelector((state: any) => state.cards.cards);
 	const gifts = useAppSelector((state: any) => state.giftList.gifts);
 	const tasks = useAppSelector((state: any) => state.tasks.tasks);
-	const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
 	useEffect(() => {
 		// Fetch all data when component mounts if not already initialized
@@ -50,7 +42,6 @@ export default function ChristmasPage() {
 		dispatch(fetchCards());
 		dispatch(fetchGifts());
 		dispatch(fetchTasks());
-		dispatch(fetchContacts());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string): {
@@ -73,10 +64,6 @@ export default function ChristmasPage() {
 			case "tasks":
 				total = tasks.length;
 				completed = tasks.filter((task: any) => task.isCompleted).length;
-				break;
-			case "addressBook":
-				total = contacts.length;
-				completed = 0; // Address book doesn't have completion status
 				break;
 			default:
 				total = 0;
