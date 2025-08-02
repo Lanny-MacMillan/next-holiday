@@ -10,11 +10,33 @@ interface BudgetInfo {
 	progressBarColor: string;
 }
 
-export function useBudgetInfo(): BudgetInfo {
-	const { settings } = useAppSelector((state: any) => state.theme);
-	const { gifts } = useAppSelector((state: any) => state.giftList);
+interface BudgetDisplayProps {
+	holiday?: string;
+}
 
-	const budgetLimit = settings.giftBudgetLimit || 0;
+export function useBudgetInfo(holiday?: string): BudgetInfo {
+	const { settings } = useAppSelector((state: any) => state.theme);
+
+	// Determine which gift list to use based on holiday
+	let gifts: any[] = [];
+	if (holiday === "Hanukkah") {
+		gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
+	} else {
+		gifts = useAppSelector((state: any) => state.giftList.gifts);
+	}
+
+	// Get budget limit based on holiday
+	let budgetLimit = 0;
+	if (holiday) {
+		const holidayChoice = settings.holidayChoices?.find(
+			(choice: { holiday: string; budget: number }) =>
+				choice.holiday === holiday
+		);
+		budgetLimit = holidayChoice?.budget || 0;
+	} else {
+		budgetLimit = settings.giftBudgetLimit || 0;
+	}
+
 	// Calculate total spent from all gifts (both completed and incomplete)
 	const totalSpent = gifts.reduce((sum: number, gift: any) => {
 		return sum + (gift.price || 0);
@@ -58,17 +80,19 @@ export function useBudgetInfo(): BudgetInfo {
 	};
 }
 
-export function BudgetDisplay() {
-	const budgetInfo = useBudgetInfo();
+export function BudgetDisplay({ holiday }: BudgetDisplayProps) {
+	const budgetInfo = useBudgetInfo(holiday);
 
 	if (budgetInfo.budgetLimit === 0) {
 		return null; // Don't show if no budget is set
 	}
 
+	const displayTitle = holiday ? `${holiday} Budget` : "Gift Budget";
+
 	return (
 		<div className={`card rounded-lg p-4 mb-4 ${budgetInfo.colorClass}`}>
 			<div className="flex justify-between items-center mb-2">
-				<h3 className="font-semibold">Gift Budget</h3>
+				<h3 className="font-semibold">{displayTitle}</h3>
 				<span className="text-sm font-medium">{budgetInfo.statusText}</span>
 			</div>
 			<div className="flex justify-between items-center text-sm">

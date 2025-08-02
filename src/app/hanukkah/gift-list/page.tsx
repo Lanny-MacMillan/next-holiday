@@ -12,7 +12,7 @@ import {
 	HanukkahGift,
 } from "@/store/slices/hanukkahGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { HanukkahBudgetDisplay } from "@/components/HanukkahBudgetDisplay";
+import { BudgetDisplay } from "@/components/BudgetDisplay";
 import SortModal from "@/components/SortModal";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
@@ -206,7 +206,7 @@ export default function HanukkahGiftListPage() {
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
 				{/* Budget Display */}
-				<HanukkahBudgetDisplay />
+				<BudgetDisplay holiday="Hanukkah" />
 
 				<button
 					onClick={openForm}

@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import CountdownTimer from "@/components/CountdownTimer";
-import HanukkahCountdownTimer from "@/components/HanukkahCountdownTimer";
 // import ReduxExample from "@/components/ReduxExample";
 // import ReduxTest from "@/components/ReduxTest";
 
@@ -214,7 +213,7 @@ export default function Home() {
 									</div>
 									{/* Countdown Timer - positioned on the right */}
 									<div className="flex flex-col items-end gap-2 z-20 relative">
-										<HanukkahCountdownTimer className="" />
+										<CountdownTimer className="" holiday="Hanukkah" />
 										<span className="text-2xl text-gray-300 dark:text-gray-600">
 											→
 										</span>

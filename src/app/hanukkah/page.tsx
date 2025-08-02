@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchHanukkahGifts } from "@/store/slices/hanukkahGiftListSlice";
 import { fetchHanukkahTasks } from "@/store/slices/hanukkahTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { HanukkahBudgetDisplay } from "@/components/HanukkahBudgetDisplay";
+import { BudgetDisplay } from "@/components/BudgetDisplay";
 
 const subsections = [
 	{
@@ -136,7 +136,9 @@ export default function HanukkahPage() {
 									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
 								>
 									{/* Budget Display for Gift List */}
-									{section.sliceKey === "giftList" && <HanukkahBudgetDisplay />}
+									{section.sliceKey === "giftList" && (
+										<BudgetDisplay holiday="Hanukkah" />
+									)}
 
 									<div className="flex items-center justify-between mb-1">
 										<h3 className="text-lg font-bold text-gray-800 dark:text-white">

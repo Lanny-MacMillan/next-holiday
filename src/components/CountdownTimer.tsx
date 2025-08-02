@@ -7,17 +7,30 @@ import {
 	clearCountdown,
 	updateCountdown,
 } from "@/store/slices/countdownSlice";
+import {
+	setHanukkahCountdown,
+	clearHanukkahCountdown,
+	updateHanukkahCountdown,
+} from "@/store/slices/hanukkahCountdownSlice";
 import DatePickerModal from "./DatePickerModal";
 
 interface CountdownTimerProps {
 	className?: string;
+	holiday?: string;
 }
 
 export default function CountdownTimer({
 	className = "",
+	holiday,
 }: CountdownTimerProps) {
 	const dispatch = useAppDispatch();
-	const { targetDate, isActive } = useAppSelector((state) => state.countdown);
+
+	// Determine which countdown slice to use based on holiday
+	const countdownState = useAppSelector((state) =>
+		holiday === "Hanukkah" ? state.hanukkahCountdown : state.countdown
+	);
+	const { targetDate, isActive } = countdownState;
+
 	const [timeLeft, setTimeLeft] = useState<{
 		days: number;
 		hours: number;
@@ -76,17 +89,29 @@ export default function CountdownTimer({
 	};
 
 	const handleSetCountdown = (date: string) => {
-		dispatch(setCountdown(date));
+		if (holiday === "Hanukkah") {
+			dispatch(setHanukkahCountdown(date));
+		} else {
+			dispatch(setCountdown(date));
+		}
 		setShowDatePicker(false);
 	};
 
 	const handleUpdateCountdown = (date: string) => {
-		dispatch(updateCountdown(date));
+		if (holiday === "Hanukkah") {
+			dispatch(updateHanukkahCountdown(date));
+		} else {
+			dispatch(updateCountdown(date));
+		}
 		setShowDatePicker(false);
 	};
 
 	const handleClearCountdown = () => {
-		dispatch(clearCountdown());
+		if (holiday === "Hanukkah") {
+			dispatch(clearHanukkahCountdown());
+		} else {
+			dispatch(clearCountdown());
+		}
 		setShowDatePicker(false);
 	};
 
@@ -94,6 +119,28 @@ export default function CountdownTimer({
 		e.stopPropagation();
 		if (isActive) {
 			setShowDatePicker(true);
+		}
+	};
+
+	// Get holiday-specific completion message
+	const getCompletionMessage = () => {
+		if (
+			!timeLeft ||
+			timeLeft.days > 0 ||
+			timeLeft.hours > 0 ||
+			timeLeft.minutes > 0 ||
+			timeLeft.seconds > 0
+		) {
+			return null;
+		}
+
+		switch (holiday) {
+			case "Hanukkah":
+				return "Hanukkah is here! 🕯️";
+			case "Christmas":
+				return "Christmas is here! 🎄";
+			default:
+				return "The holiday is here!";
 		}
 	};
 
@@ -125,6 +172,36 @@ export default function CountdownTimer({
 				className={`${className} text-xs text-gray-500 dark:text-gray-400 relative z-20`}
 			>
 				Calculating...
+			</div>
+		);
+	}
+
+	const completionMessage = getCompletionMessage();
+	const isExpired =
+		timeLeft.days === 0 &&
+		timeLeft.hours === 0 &&
+		timeLeft.minutes === 0 &&
+		timeLeft.seconds === 0;
+
+	// Show completion message but still allow editing
+	if (completionMessage) {
+		return (
+			<div className={`${className} relative z-20`}>
+				<button
+					onClick={handleCountdownClick}
+					className="text-xs text-red-500 cursor-pointer transition-colors font-medium"
+					title="Click to edit or delete countdown"
+				>
+					{completionMessage}
+				</button>
+				<DatePickerModal
+					isOpen={showDatePicker}
+					onClose={() => setShowDatePicker(false)}
+					onDateSelect={handleUpdateCountdown}
+					title="Update Countdown Date"
+					currentDate={targetDate || ""}
+					onDelete={handleClearCountdown}
+				/>
 			</div>
 		);
 	}
