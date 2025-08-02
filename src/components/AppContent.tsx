@@ -8,8 +8,13 @@ import AuthWrapper from "./AuthWrapper";
 import Header from "./Header";
 import Login from "./Login";
 import DataInitializer from "./DataInitializer";
+import { ReactNode } from "react";
 
-export default function AppContent() {
+interface AppContentProps {
+	children: ReactNode;
+}
+
+export default function AppContent({ children }: AppContentProps) {
 	const { isAuthenticated, isLoading } = useAuth0();
 	const dispatch = useAppDispatch();
 	const { settings, initialized } = useAppSelector((state: any) => state.theme);
@@ -55,7 +60,7 @@ export default function AppContent() {
 		<>
 			<DataInitializer />
 			<Header />
-			<AuthWrapper>{/* Your existing app content will go here */}</AuthWrapper>
+			<AuthWrapper>{children}</AuthWrapper>
 		</>
 	);
 }

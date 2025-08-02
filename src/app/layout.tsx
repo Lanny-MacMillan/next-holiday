@@ -22,8 +22,7 @@ export default function RootLayout({
 			<body className={inter.className}>
 				<Auth0ProviderWrapper>
 					<ReduxProvider>
-						<AppContent />
-						{children}
+						<AppContent>{children}</AppContent>
 					</ReduxProvider>
 				</Auth0ProviderWrapper>
 			</body>
