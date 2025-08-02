@@ -10,6 +10,7 @@ import {
 	deleteContact,
 	Contact,
 } from "@/store/slices/addressBookSlice";
+import SortModal from "@/components/SortModal";
 
 type SortOption = "a-z" | "z-a" | "relationship" | "location" | "none";
 
@@ -111,6 +112,7 @@ export default function AddressBookPage() {
 		contactId: null,
 	});
 	const [showForm, setShowForm] = useState(false);
+	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
 		// Fetch contacts when component mounts if not already initialized
@@ -301,6 +303,17 @@ export default function AddressBookPage() {
 					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
 						Address Book
 					</h1>
+					<button
+						onClick={() => setShowSortModal(true)}
+						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+						title="Sort contacts"
+					>
+						<div className="flex flex-col gap-0.5">
+							<div className="w-4 h-0.5 bg-current"></div>
+							<div className="w-3 h-0.5 bg-current ml-1"></div>
+							<div className="w-2 h-0.5 bg-current ml-2"></div>
+						</div>
+					</button>
 				</div>
 				{error && (
 					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
@@ -315,64 +328,15 @@ export default function AddressBookPage() {
 				>
 					Add New Contact
 				</button>
-
-				{/* Sort Controls */}
-				<div className="card card-address rounded shadow p-4">
-					<h3 className="font-semibold mb-2 text-gray-800 dark:text-white">
-						Sort By
-					</h3>
-					<div className="flex flex-wrap gap-2">
-						<button
-							onClick={() => setSortBy("none")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "none"
-									? "bg-pink-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							None
-						</button>
-						<button
-							onClick={() => setSortBy("a-z")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "a-z"
-									? "bg-pink-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							A-Z
-						</button>
-						<button
-							onClick={() => setSortBy("z-a")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "z-a"
-									? "bg-pink-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Z-A
-						</button>
-						<button
-							onClick={() => setSortBy("relationship")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "relationship"
-									? "bg-pink-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Relationship
-						</button>
-						<button
-							onClick={() => setSortBy("location")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "location"
-									? "bg-pink-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Location
-						</button>
-					</div>
+				<div className="flex items-center justify-center">
+					{sortBy !== "none" && (
+						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
+							{sortBy === "a-z" && "Sorted A-Z"}
+							{sortBy === "z-a" && "Sorted Z-A"}
+							{sortBy === "relationship" && "Sorted by Relationship"}
+							{sortBy === "location" && "Sorted by Location"}
+						</div>
+					)}
 				</div>
 
 				<div className="card card-address rounded shadow">
@@ -696,6 +660,24 @@ export default function AddressBookPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "a-z", label: "A-Z" },
+					{ value: "z-a", label: "Z-A" },
+					{ value: "relationship", label: "Relationship" },
+					{ value: "location", label: "Location" },
+				]}
+				title="Sort Contacts"
+			/>
 		</div>
 	);
 }

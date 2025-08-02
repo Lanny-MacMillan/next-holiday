@@ -5,6 +5,7 @@ import giftListReducer from "./slices/giftListSlice";
 import tasksReducer from "./slices/tasksSlice";
 import userReducer from "./slices/userSlice";
 import themeReducer from "./slices/themeSlice";
+import countdownReducer from "./slices/countdownSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
 		tasks: tasksReducer,
 		user: userReducer,
 		theme: themeReducer,
+		countdown: countdownReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

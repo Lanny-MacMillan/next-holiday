@@ -7,6 +7,7 @@ interface BudgetInfo {
 	percentageUsed: number;
 	colorClass: string;
 	statusText: string;
+	progressBarColor: string;
 }
 
 export function useBudgetInfo(): BudgetInfo {
@@ -24,21 +25,26 @@ export function useBudgetInfo(): BudgetInfo {
 
 	let colorClass = "";
 	let statusText = "";
+	let progressBarColor = "";
 
 	if (percentageUsed <= 50) {
 		colorClass =
 			"text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30";
 		statusText = "Plenty of budget left";
+		progressBarColor = "bg-green-500";
 	} else if (percentageUsed <= 75) {
 		colorClass =
-			"text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30";
+			"text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800/30";
 		statusText = "Budget getting tight";
+		progressBarColor = "bg-yellow-500";
 	} else if (percentageUsed <= 100) {
 		colorClass = "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30";
 		statusText = "Almost out of budget";
+		progressBarColor = "bg-red-500";
 	} else {
 		colorClass = "text-red-800 dark:text-red-300 bg-red-200 dark:bg-red-900/50";
 		statusText = "Over budget!";
+		progressBarColor = "bg-red-700";
 	}
 
 	return {
@@ -48,6 +54,7 @@ export function useBudgetInfo(): BudgetInfo {
 		percentageUsed,
 		colorClass,
 		statusText,
+		progressBarColor,
 	};
 }
 
@@ -87,15 +94,7 @@ export function BudgetDisplay() {
 				</div>
 				<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 border border-gray-300 dark:border-gray-600">
 					<div
-						className={`h-2 rounded-full transition-all ${
-							budgetInfo.percentageUsed <= 50
-								? "bg-green-500"
-								: budgetInfo.percentageUsed <= 75
-								? "bg-yellow-500"
-								: budgetInfo.percentageUsed <= 100
-								? "bg-red-500"
-								: "bg-red-700"
-						}`}
+						className={`h-2 rounded-full transition-all ${budgetInfo.progressBarColor}`}
 						style={{ width: `${Math.min(budgetInfo.percentageUsed, 100)}%` }}
 					/>
 				</div>

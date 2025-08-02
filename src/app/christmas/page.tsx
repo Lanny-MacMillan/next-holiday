@@ -11,16 +11,16 @@ import { BudgetDisplay } from "@/components/BudgetDisplay";
 
 const subsections = [
 	{
-		name: "Cards",
-		description: "Track your holiday cards",
-		href: "/christmas/cards",
-		sliceKey: "cards",
-	},
-	{
 		name: "Gift List",
 		description: "Track your gift ideas",
 		href: "/christmas/gift-list",
 		sliceKey: "giftList",
+	},
+	{
+		name: "Cards",
+		description: "Track your holiday cards",
+		href: "/christmas/cards",
+		sliceKey: "cards",
 	},
 	{
 		name: "Tasks",

@@ -13,6 +13,7 @@ import {
 } from "@/store/slices/giftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
+import SortModal from "@/components/SortModal";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
@@ -34,6 +35,7 @@ export default function GiftListPage() {
 	});
 	const [showAddressBook, setShowAddressBook] = useState(false);
 	const [sortBy, setSortBy] = useState<SortOption>("none");
+	const [showSortModal, setShowSortModal] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		giftId: string | null;
@@ -180,6 +182,17 @@ export default function GiftListPage() {
 					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
 						Gift List
 					</h1>
+					<button
+						onClick={() => setShowSortModal(true)}
+						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+						title="Sort gifts"
+					>
+						<div className="flex flex-col gap-0.5">
+							<div className="w-4 h-0.5 bg-current"></div>
+							<div className="w-3 h-0.5 bg-current ml-1"></div>
+							<div className="w-2 h-0.5 bg-current ml-2"></div>
+						</div>
+					</button>
 				</div>
 				{error && (
 					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
@@ -198,64 +211,15 @@ export default function GiftListPage() {
 				>
 					Add New Gift
 				</button>
-
-				{/* Sort Controls */}
-				<div className="card card-gifts rounded shadow p-4">
-					<h3 className="font-semibold mb-2 text-gray-800 dark:text-white">
-						Sort By
-					</h3>
-					<div className="flex flex-wrap gap-2">
-						<button
-							onClick={() => setSortBy("none")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "none"
-									? "bg-yellow-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							None
-						</button>
-						<button
-							onClick={() => setSortBy("recipient")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "recipient"
-									? "bg-yellow-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Recipient
-						</button>
-						<button
-							onClick={() => setSortBy("store")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "store"
-									? "bg-yellow-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Store
-						</button>
-						<button
-							onClick={() => setSortBy("price-high")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "price-high"
-									? "bg-yellow-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Price: High to Low
-						</button>
-						<button
-							onClick={() => setSortBy("price-low")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "price-low"
-									? "bg-yellow-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Price: Low to High
-						</button>
-					</div>
+				<div className="flex items-center justify-center">
+					{sortBy !== "none" && (
+						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
+							{sortBy === "recipient" && "Sorted by Recipient"}
+							{sortBy === "store" && "Sorted by Store"}
+							{sortBy === "price-high" && "Sorted by Price (High to Low)"}
+							{sortBy === "price-low" && "Sorted by Price (Low to High)"}
+						</div>
+					)}
 				</div>
 
 				<div>
@@ -581,6 +545,24 @@ export default function GiftListPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "recipient", label: "Recipient" },
+					{ value: "store", label: "Store" },
+					{ value: "price-high", label: "Price: High to Low" },
+					{ value: "price-low", label: "Price: Low to High" },
+				]}
+				title="Sort Gifts"
+			/>
 		</div>
 	);
 }

@@ -11,6 +11,7 @@ import {
 	toggleTaskCompletion,
 	Task,
 } from "@/store/slices/tasksSlice";
+import SortModal from "@/components/SortModal";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -37,6 +38,7 @@ export default function TasksPage() {
 		taskId: null,
 	});
 	const [showForm, setShowForm] = useState(false);
+	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
 		// Fetch tasks when component mounts if not already initialized
@@ -169,6 +171,17 @@ export default function TasksPage() {
 					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
 						To-Do List
 					</h1>
+					<button
+						onClick={() => setShowSortModal(true)}
+						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+						title="Sort tasks"
+					>
+						<div className="flex flex-col gap-0.5">
+							<div className="w-4 h-0.5 bg-current"></div>
+							<div className="w-3 h-0.5 bg-current ml-1"></div>
+							<div className="w-2 h-0.5 bg-current ml-2"></div>
+						</div>
+					</button>
 				</div>
 				{error && (
 					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
@@ -184,64 +197,15 @@ export default function TasksPage() {
 				>
 					Add New Task
 				</button>
-
-				{/* Sort Controls */}
-				<div className="card card-tasks rounded shadow p-4">
-					<h3 className="font-semibold mb-2 text-gray-800 dark:text-white">
-						Sort By
-					</h3>
-					<div className="flex flex-wrap gap-2">
-						<button
-							onClick={() => setSortBy("none")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "none"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							None
-						</button>
-						<button
-							onClick={() => setSortBy("priority")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "priority"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Priority
-						</button>
-						<button
-							onClick={() => setSortBy("dateDue")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "dateDue"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Date Due
-						</button>
-						<button
-							onClick={() => setSortBy("assignedTo")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "assignedTo"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Assigned To
-						</button>
-						<button
-							onClick={() => setSortBy("category")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "category"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-							}`}
-						>
-							Category
-						</button>
-					</div>
+				<div className="flex items-center justify-center">
+					{sortBy !== "none" && (
+						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
+							{sortBy === "priority" && "Sorted by Priority"}
+							{sortBy === "dateDue" && "Sorted by Date Due"}
+							{sortBy === "assignedTo" && "Sorted by Assigned To"}
+							{sortBy === "category" && "Sorted by Category"}
+						</div>
+					)}
 				</div>
 
 				<div>
@@ -508,6 +472,24 @@ export default function TasksPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "priority", label: "Priority" },
+					{ value: "dateDue", label: "Date Due" },
+					{ value: "assignedTo", label: "Assigned To" },
+					{ value: "category", label: "Category" },
+				]}
+				title="Sort Tasks"
+			/>
 		</div>
 	);
 }
