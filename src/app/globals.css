@@ -208,6 +208,14 @@ body {
 	color: rgb(74, 222, 128) !important;
 }
 
+.text-blue-500 {
+	color: rgb(59, 130, 246) !important;
+}
+
+.dark .text-blue-400 {
+	color: rgb(96, 165, 250) !important;
+}
+
 /* Modal text color overrides */
 .text-gray-600 {
 	color: rgb(75, 85, 99) !important;

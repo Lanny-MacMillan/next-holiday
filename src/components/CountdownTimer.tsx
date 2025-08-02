@@ -105,7 +105,7 @@ export default function CountdownTimer({
 						e.stopPropagation();
 						setShowDatePicker(true);
 					}}
-					className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+					className="text-xs text-blue-500 dark:text-blue-400 font-medium"
 				>
 					Set Countdown
 				</button>

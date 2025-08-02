@@ -2,9 +2,8 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface UserSettings {
 	theme: "light" | "dark";
-	defaultHoliday: string;
+	holidayChoices: Array<{ holiday: string; budget: number }>;
 	giftBudgetLimit: number;
-	greetingStyle: "formal" | "informal";
 	notifications: {
 		reminders: boolean;
 		shippingAlerts: boolean;
@@ -20,9 +19,8 @@ interface ThemeState {
 const initialState: ThemeState = {
 	settings: {
 		theme: "light",
-		defaultHoliday: "Christmas",
+		holidayChoices: [{ holiday: "Christmas", budget: 500 }],
 		giftBudgetLimit: 500,
-		greetingStyle: "informal",
 		notifications: {
 			reminders: true,
 			shippingAlerts: true,

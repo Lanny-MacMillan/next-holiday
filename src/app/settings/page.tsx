@@ -50,16 +50,31 @@ export default function SettingsPage() {
 
 	return (
 		<div className="min-h-screen christmas-settings-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-2xl py-6 flex flex-col items-center">
+			<header className="w-full max-w-2xl py-6 flex flex-col items-center relative">
+				<Link
+					href="/"
+					className="absolute left-0 top-10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+				>
+					<svg
+						className="w-6 h-6"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M15 19l-7-7 7-7"
+						/>
+					</svg>
+				</Link>
 				<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
 					Settings
 				</h1>
 				<p className="text-center text-gray-800 dark:text-gray-400">
 					Manage your account and preferences
 				</p>
-				<Link href="/" className="mt-2 text-blue-600 text-sm hover:underline">
-					← Back to Home
-				</Link>
 			</header>
 
 			<main className="w-full max-w-2xl flex flex-col gap-8">
@@ -163,56 +178,119 @@ export default function SettingsPage() {
 					<div className="space-y-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-								Default Holiday
+								Holiday Choices & Budgets
 							</label>
-							<select
-								value={localSettings.defaultHoliday}
-								onChange={(e) =>
-									handleSettingChange("defaultHoliday", e.target.value)
-								}
-								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-							>
-								<option value="Christmas">Christmas</option>
-								<option value="Hanukkah">Hanukkah</option>
-								<option value="Kwanzaa">Kwanzaa</option>
-								<option value="New Year">New Year</option>
-								<option value="Valentine's Day">Valentine's Day</option>
-								<option value="Easter">Easter</option>
-								<option value="Thanksgiving">Thanksgiving</option>
-							</select>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-								Gift Budget Limit ($)
-							</label>
-							<input
-								type="number"
-								value={localSettings.giftBudgetLimit}
-								onChange={(e) =>
-									handleSettingChange(
-										"giftBudgetLimit",
-										parseInt(e.target.value)
-									)
-								}
-								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-								min="0"
-								step="50"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-								Preferred Greeting Style
-							</label>
-							<select
-								value={localSettings.greetingStyle}
-								onChange={(e) =>
-									handleSettingChange("greetingStyle", e.target.value)
-								}
-								className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-							>
-								<option value="formal">Formal</option>
-								<option value="informal">Informal</option>
-							</select>
+							<p className="text-xs text-gray-800 dark:text-gray-400 mb-2">
+								Select holidays and set individual budget limits
+							</p>
+							<div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+								{[
+									"Christmas",
+									"Hanukkah",
+									"Kwanzaa",
+									"New Year",
+									"Valentine's Day",
+									"Easter",
+									"Thanksgiving",
+									"Halloween",
+									"Mother's Day",
+									"Father's Day",
+									"Birthday",
+									"Anniversary",
+									"Fourth of July",
+									"Graduation",
+									"Baby Shower",
+									"Wedding",
+								].map((holiday) => {
+									const isSelected = localSettings.holidayChoices?.some(
+										(choice: { holiday: string; budget: number }) =>
+											choice.holiday === holiday
+									);
+									const selectedChoice = localSettings.holidayChoices?.find(
+										(choice: { holiday: string; budget: number }) =>
+											choice.holiday === holiday
+									);
+									const budget = selectedChoice?.budget || 500;
+
+									return (
+										<div
+											key={holiday}
+											className={`p-3 rounded border transition-colors ${
+												isSelected
+													? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+													: "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+											}`}
+										>
+											<div className="flex items-center justify-between">
+												<div className="flex items-center space-x-3">
+													<input
+														type="checkbox"
+														checked={isSelected}
+														onChange={(e) => {
+															const currentChoices =
+																localSettings.holidayChoices || [];
+															let newChoices;
+															if (e.target.checked) {
+																newChoices = [
+																	...currentChoices,
+																	{ holiday, budget: 500 },
+																];
+															} else {
+																newChoices = currentChoices.filter(
+																	(choice: {
+																		holiday: string;
+																		budget: number;
+																	}) => choice.holiday !== holiday
+																);
+															}
+															handleSettingChange("holidayChoices", newChoices);
+														}}
+														className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+													/>
+													<span className="text-sm font-medium text-gray-800 dark:text-white">
+														{holiday}
+													</span>
+												</div>
+												{isSelected && (
+													<div className="flex items-center space-x-2">
+														<span className="text-xs text-gray-600 dark:text-gray-400">
+															Budget:
+														</span>
+														<input
+															type="number"
+															value={budget}
+															onChange={(e) => {
+																const newBudget = parseInt(e.target.value) || 0;
+																const currentChoices =
+																	localSettings.holidayChoices || [];
+																const newChoices = currentChoices.map(
+																	(choice: {
+																		holiday: string;
+																		budget: number;
+																	}) =>
+																		choice.holiday === holiday
+																			? { ...choice, budget: newBudget }
+																			: choice
+																);
+																handleSettingChange(
+																	"holidayChoices",
+																	newChoices
+																);
+															}}
+															className="w-20 text-xs rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-2 py-1"
+															min="0"
+															step="50"
+														/>
+														<span className="text-xs text-gray-600 dark:text-gray-400">
+															$
+														</span>
+													</div>
+												)}
+											</div>
+										</div>
+									);
+								})}
+							</div>
 						</div>
 					</div>
 				</div>
