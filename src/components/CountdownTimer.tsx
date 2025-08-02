@@ -17,6 +17,11 @@ import {
 	clearKwanzaaCountdown,
 	updateKwanzaaCountdown,
 } from "@/store/slices/kwanzaaCountdownSlice";
+import {
+	setNewYearCountdown,
+	clearNewYearCountdown,
+	updateNewYearCountdown,
+} from "@/store/slices/newYearCountdownSlice";
 import DatePickerModal from "./DatePickerModal";
 
 interface CountdownTimerProps {
@@ -36,6 +41,8 @@ export default function CountdownTimer({
 			return state.hanukkahCountdown;
 		} else if (holiday === "Kwanzaa") {
 			return state.kwanzaaCountdown;
+		} else if (holiday === "New Year") {
+			return state.newYearCountdown;
 		} else {
 			return state.countdown;
 		}
@@ -104,6 +111,8 @@ export default function CountdownTimer({
 			dispatch(setHanukkahCountdown(date));
 		} else if (holiday === "Kwanzaa") {
 			dispatch(setKwanzaaCountdown(date));
+		} else if (holiday === "New Year") {
+			dispatch(setNewYearCountdown(date));
 		} else {
 			dispatch(setCountdown(date));
 		}
@@ -115,6 +124,8 @@ export default function CountdownTimer({
 			dispatch(updateHanukkahCountdown(date));
 		} else if (holiday === "Kwanzaa") {
 			dispatch(updateKwanzaaCountdown(date));
+		} else if (holiday === "New Year") {
+			dispatch(updateNewYearCountdown(date));
 		} else {
 			dispatch(updateCountdown(date));
 		}
@@ -126,6 +137,8 @@ export default function CountdownTimer({
 			dispatch(clearHanukkahCountdown());
 		} else if (holiday === "Kwanzaa") {
 			dispatch(clearKwanzaaCountdown());
+		} else if (holiday === "New Year") {
+			dispatch(clearNewYearCountdown());
 		} else {
 			dispatch(clearCountdown());
 		}
@@ -158,6 +171,8 @@ export default function CountdownTimer({
 				return "Kwanzaa is here! 🕯️";
 			case "Christmas":
 				return "Christmas is here! 🎄";
+			case "New Year":
+				return "New Year is here! 🎆";
 			default:
 				return "The holiday is here!";
 		}

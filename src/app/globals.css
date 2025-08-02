@@ -473,3 +473,22 @@ body {
 		rgb(20, 10, 10) 100%
 	);
 }
+
+/* New Year-themed gradient backgrounds */
+.new-year-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(255, 251, 235) 0%,
+		rgb(254, 243, 199) 50%,
+		rgb(255, 251, 235) 100%
+	);
+}
+
+.dark .new-year-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 15, 8) 0%,
+		rgb(15, 10, 5) 50%,
+		rgb(20, 15, 8) 100%
+	);
+}
