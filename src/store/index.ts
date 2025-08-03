@@ -15,6 +15,12 @@ import kwanzaaCountdownReducer from "./slices/kwanzaaCountdownSlice";
 import newYearGiftListReducer from "./slices/newYearGiftListSlice";
 import newYearTasksReducer from "./slices/newYearTasksSlice";
 import newYearCountdownReducer from "./slices/newYearCountdownSlice";
+import valentinesGiftListReducer from "./slices/valentinesGiftListSlice";
+import valentinesTasksReducer from "./slices/valentinesTasksSlice";
+import valentinesCountdownReducer from "./slices/valentinesCountdownSlice";
+import easterGiftListReducer from "./slices/easterGiftListSlice";
+import easterTasksReducer from "./slices/easterTasksSlice";
+import easterCountdownReducer from "./slices/easterCountdownSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -34,6 +40,12 @@ export const store = configureStore({
 		newYearGiftList: newYearGiftListReducer,
 		newYearTasks: newYearTasksReducer,
 		newYearCountdown: newYearCountdownReducer,
+		valentinesGiftList: valentinesGiftListReducer,
+		valentinesTasks: valentinesTasksReducer,
+		valentinesCountdown: valentinesCountdownReducer,
+		easterGiftList: easterGiftListReducer,
+		easterTasks: easterTasksReducer,
+		easterCountdown: easterCountdownReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

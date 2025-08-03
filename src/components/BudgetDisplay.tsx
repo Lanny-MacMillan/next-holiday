@@ -21,6 +21,8 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 	let gifts: any[] = [];
 	if (holiday === "Hanukkah") {
 		gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
+	} else if (holiday === "Valentine's Day") {
+		gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
 	} else {
 		gifts = useAppSelector((state: any) => state.giftList.gifts);
 	}

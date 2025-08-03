@@ -276,6 +276,10 @@ body {
 	border-left: 4px solid rgb(var(--color-purple-500));
 }
 
+.card-valentines {
+	border-left: 4px solid rgb(var(--color-pink-500));
+}
+
 /* Modal overlay styles to prevent background hover effects */
 .modal-open {
 	overflow: hidden;
@@ -490,5 +494,43 @@ body {
 		rgb(20, 15, 8) 0%,
 		rgb(15, 10, 5) 50%,
 		rgb(20, 15, 8) 100%
+	);
+}
+
+/* Valentine's Day-themed gradient backgrounds */
+.valentines-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(253, 242, 248) 0%,
+		rgb(252, 231, 243) 50%,
+		rgb(253, 242, 248) 100%
+	);
+}
+
+.dark .valentines-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 10, 15) 0%,
+		rgb(15, 8, 12) 50%,
+		rgb(20, 10, 15) 100%
+	);
+}
+
+/* Easter-themed gradient backgrounds */
+.easter-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(250, 245, 255) 0%,
+		rgb(245, 240, 250) 50%,
+		rgb(250, 245, 255) 100%
+	);
+}
+
+.dark .easter-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 15, 25) 0%,
+		rgb(15, 10, 20) 50%,
+		rgb(20, 15, 25) 100%
 	);
 }

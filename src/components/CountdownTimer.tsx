@@ -22,6 +22,16 @@ import {
 	clearNewYearCountdown,
 	updateNewYearCountdown,
 } from "@/store/slices/newYearCountdownSlice";
+import {
+	setValentinesCountdown,
+	clearValentinesCountdown,
+	updateValentinesCountdown,
+} from "@/store/slices/valentinesCountdownSlice";
+import {
+	setEasterCountdown,
+	clearEasterCountdown,
+	updateEasterCountdown,
+} from "@/store/slices/easterCountdownSlice";
 import DatePickerModal from "./DatePickerModal";
 
 interface CountdownTimerProps {
@@ -43,6 +53,10 @@ export default function CountdownTimer({
 			return state.kwanzaaCountdown;
 		} else if (holiday === "New Year") {
 			return state.newYearCountdown;
+		} else if (holiday === "Valentine's Day") {
+			return state.valentinesCountdown;
+		} else if (holiday === "Easter") {
+			return state.easterCountdown;
 		} else {
 			return state.countdown;
 		}
@@ -113,6 +127,10 @@ export default function CountdownTimer({
 			dispatch(setKwanzaaCountdown(date));
 		} else if (holiday === "New Year") {
 			dispatch(setNewYearCountdown(date));
+		} else if (holiday === "Valentine's Day") {
+			dispatch(setValentinesCountdown(date));
+		} else if (holiday === "Easter") {
+			dispatch(setEasterCountdown(date));
 		} else {
 			dispatch(setCountdown(date));
 		}
@@ -126,6 +144,10 @@ export default function CountdownTimer({
 			dispatch(updateKwanzaaCountdown(date));
 		} else if (holiday === "New Year") {
 			dispatch(updateNewYearCountdown(date));
+		} else if (holiday === "Valentine's Day") {
+			dispatch(updateValentinesCountdown(date));
+		} else if (holiday === "Easter") {
+			dispatch(updateEasterCountdown(date));
 		} else {
 			dispatch(updateCountdown(date));
 		}
@@ -139,6 +161,10 @@ export default function CountdownTimer({
 			dispatch(clearKwanzaaCountdown());
 		} else if (holiday === "New Year") {
 			dispatch(clearNewYearCountdown());
+		} else if (holiday === "Valentine's Day") {
+			dispatch(clearValentinesCountdown());
+		} else if (holiday === "Easter") {
+			dispatch(clearEasterCountdown());
 		} else {
 			dispatch(clearCountdown());
 		}
@@ -173,6 +199,10 @@ export default function CountdownTimer({
 				return "Christmas is here! 🎄";
 			case "New Year":
 				return "New Year is here! 🎆";
+			case "Valentine's Day":
+				return "Valentine's Day is here! 💕";
+			case "Easter":
+				return "Easter is here! 🐰";
 			default:
 				return "The holiday is here!";
 		}
