@@ -7,7 +7,7 @@ import { initializeTheme } from "@/store/slices/themeSlice";
 import AuthWrapper from "./auth/AuthWrapper";
 import Header from "./common/Header";
 import Login from "./auth/Login";
-import DataInitializer from "./redux/DataInitializer";
+import DataInitializer from "./DataInitializer";
 import { ReactNode } from "react";
 
 interface AppContentProps {

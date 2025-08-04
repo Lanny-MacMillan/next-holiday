@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchEasterGifts } from "@/store/slices/easterGiftListSlice";
 import { fetchEasterTasks } from "@/store/slices/easterTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
 
 const subsections = [
 	{
@@ -127,17 +127,28 @@ export default function EasterPage() {
 							section.category
 						);
 
+						// Use GiftListCard for gift list sections
+						if (section.sliceKey === "giftList") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Easter"
+										href={section.href}
+										theme={{
+											primaryColor: "#a855f7", // Purple for Easter
+											accentColor: "#eab308",
+										}}
+									/>
+								</li>
+							);
+						}
+
 						return (
 							<li key={section.name}>
 								<Link
 									href={section.href}
 									className="block card rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
 								>
-									{/* Budget Display for Gift List */}
-									{section.sliceKey === "giftList" && (
-										<BudgetDisplay holiday="Easter" />
-									)}
-
 									<div className="flex items-center justify-between">
 										<div className="flex-1">
 											<h3 className="text-lg font-bold text-gray-800 dark:text-white">

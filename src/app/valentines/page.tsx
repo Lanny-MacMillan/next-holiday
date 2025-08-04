@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchValentinesGifts } from "@/store/slices/valentinesGiftListSlice";
 import { fetchValentinesTasks } from "@/store/slices/valentinesTasksSlice";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
 
 const subsections = [
 	{
@@ -136,17 +136,28 @@ export default function ValentinesPage() {
 							section.sliceKey
 						);
 
+						// Use GiftListCard for gift list sections
+						if (section.sliceKey === "valentinesGiftList") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Valentine's Day"
+										href={section.href}
+										theme={{
+											primaryColor: "#ec4899", // Pink for Valentine's Day
+											accentColor: "#eab308",
+										}}
+									/>
+								</li>
+							);
+						}
+
 						return (
 							<li key={section.name}>
 								<Link
 									href={section.href}
 									className="block card card-valentines rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
 								>
-									{/* Budget Display for Gift List */}
-									{section.sliceKey === "valentinesGiftList" && (
-										<BudgetDisplay holiday="Valentine's Day" />
-									)}
-
 									<div className="flex items-center justify-between mb-1">
 										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
 											{section.name}

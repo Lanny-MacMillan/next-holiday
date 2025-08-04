@@ -34,6 +34,8 @@ export function useGiftListCardData(holiday?: string) {
 		gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
 	} else if (holiday === "Thanksgiving") {
 		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
+	} else if (holiday === "Easter") {
+		gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
 	} else {
 		gifts = useAppSelector((state: any) => state.giftList.gifts);
 	}

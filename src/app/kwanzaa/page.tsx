@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchKwanzaaGifts } from "@/store/slices/kwanzaaGiftListSlice";
 import { fetchKwanzaaTasks } from "@/store/slices/kwanzaaTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
 
 const subsections = [
 	{
@@ -129,17 +129,28 @@ export default function HanukkahPage() {
 							section.category
 						);
 
+						// Use GiftListCard for gift list sections
+						if (section.sliceKey === "giftList") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Kwanzaa"
+										href={section.href}
+										theme={{
+											primaryColor: "#dc2626", // Red for Kwanzaa
+											accentColor: "#eab308",
+										}}
+									/>
+								</li>
+							);
+						}
+
 						return (
 							<li key={section.name}>
 								<Link
 									href={section.href}
 									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
 								>
-									{/* Budget Display for Gift List */}
-									{section.sliceKey === "giftList" && (
-										<BudgetDisplay holiday="Kwanzaa" />
-									)}
-
 									<div className="flex items-center justify-between mb-1">
 										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
 											{section.name}
