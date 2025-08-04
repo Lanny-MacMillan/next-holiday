@@ -16,6 +16,7 @@ import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/EditTaskModal";
 import HolidayPageHeader from "@/components/HolidayPageHeader";
 import AddButton from "@/components/AddButton";
+import TaskSection from "@/components/TaskSection";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -184,52 +185,42 @@ export default function TasksPage() {
 					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete ({incompleteTasks.length})
-					</h2>
-					<div className="space-y-3">
-						{incompleteTasks.length === 0 ? (
-							<div className="card card-tasks rounded shadow px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All tasks completed! 🎉
-							</div>
-						) : (
-							incompleteTasks.map((task: Task) => (
-								<ToDoCard
-									key={task.id}
-									task={task}
-									onToggleComplete={handleToggleTask}
-									onDelete={handleDeleteTask}
-									onEdit={handleEditTask}
-								/>
-							))
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteTasks}
+					isCompleted={false}
+					emptyMessage="All tasks completed! 🎉"
+					completedMessage="All tasks completed! 🎉"
+					renderItem={(task: Task) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+						/>
+					)}
+					cardClassName="card-tasks"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed ({completedTasks.length})
-					</h2>
-					<div className="space-y-3">
-						{completedTasks.length === 0 ? (
-							<div className="card card-tasks rounded shadow px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed tasks yet.
-							</div>
-						) : (
-							completedTasks.map((task: Task) => (
-								<ToDoCard
-									key={task.id}
-									task={task}
-									onToggleComplete={handleToggleTask}
-									onDelete={handleDeleteTask}
-									onEdit={handleEditTask}
-									className="opacity-60"
-								/>
-							))
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Completed"
+					items={completedTasks}
+					isCompleted={true}
+					emptyMessage="No completed tasks yet."
+					completedMessage="No completed tasks yet."
+					renderItem={(task: Task) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							className="opacity-60"
+						/>
+					)}
+					cardClassName="card-tasks"
+				/>
 			</main>
 
 			{/* Form Modal */}

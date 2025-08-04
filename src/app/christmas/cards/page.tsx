@@ -16,6 +16,7 @@ import SortModal from "@/components/SortModal";
 import HolidayCard from "@/components/cards/card/HolidayCard";
 import HolidayPageHeader from "@/components/HolidayPageHeader";
 import AddButton from "@/components/AddButton";
+import TaskSection from "@/components/TaskSection";
 
 export default function CardsPage() {
 	const dispatch = useAppDispatch();
@@ -199,63 +200,49 @@ export default function CardsPage() {
 					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete ({incompleteCards.length})
-					</h2>
-					<div className="card card-cards rounded shadow">
-						{incompleteCards.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All cards completed! 🎉
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteCards.map((card: Card) => (
-									<HolidayCard
-										key={card.id}
-										card={card}
-										onToggle={handleToggleCard}
-										onEdit={(card) => {
-											handleEditCard(card);
-											setShowForm(true);
-										}}
-										onDelete={handleDeleteCard}
-										loading={loading}
-									/>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteCards}
+					isCompleted={false}
+					emptyMessage="All cards completed! 🎉"
+					completedMessage="All cards completed! 🎉"
+					renderItem={(card: Card) => (
+						<HolidayCard
+							key={card.id}
+							card={card}
+							onToggle={handleToggleCard}
+							onEdit={(card) => {
+								handleEditCard(card);
+								setShowForm(true);
+							}}
+							onDelete={handleDeleteCard}
+							loading={loading}
+						/>
+					)}
+					cardClassName="card-cards"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-600 dark:text-gray-500 mb-2">
-						Completed ({completedCards.length})
-					</h2>
-					<div className="card card-cards rounded shadow">
-						{completedCards.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed cards yet.
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedCards.map((card: Card) => (
-									<HolidayCard
-										key={card.id}
-										card={card}
-										onToggle={handleToggleCard}
-										onEdit={(card) => {
-											handleEditCard(card);
-											setShowForm(true);
-										}}
-										onDelete={handleDeleteCard}
-										loading={loading}
-									/>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Completed"
+					items={completedCards}
+					isCompleted={true}
+					emptyMessage="No completed cards yet."
+					completedMessage="No completed cards yet."
+					renderItem={(card: Card) => (
+						<HolidayCard
+							key={card.id}
+							card={card}
+							onToggle={handleToggleCard}
+							onEdit={(card) => {
+								handleEditCard(card);
+								setShowForm(true);
+							}}
+							onDelete={handleDeleteCard}
+							loading={loading}
+						/>
+					)}
+					cardClassName="card-cards"
+				/>
 			</main>
 
 			{/* Form Modal */}
