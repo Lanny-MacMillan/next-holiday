@@ -16,7 +16,7 @@ A reusable form modal component that can be configured for different holiday pag
 ### Basic Usage
 
 ```tsx
-import FormModal from "@/components/FormModal";
+import FormModal from "@/components/modals/FormModal";
 import { getFormConfig } from "@/config/formConfigs";
 
 // In your component

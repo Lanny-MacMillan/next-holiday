@@ -12,7 +12,7 @@ import {
 	clearEasterTaskError,
 } from "@/store/slices/easterTasksSlice";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import EditTaskModal from "@/components/EditTaskModal";
+import EditTaskModal from "@/components/modals/EditTaskModal";
 
 export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();

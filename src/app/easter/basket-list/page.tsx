@@ -12,7 +12,7 @@ import {
 	setSelectedEasterGift,
 	clearEasterError,
 } from "@/store/slices/easterGiftListSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 
 export default function EasterBasketListPage() {
 	const dispatch = useAppDispatch();

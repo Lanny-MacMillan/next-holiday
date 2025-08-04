@@ -11,13 +11,13 @@ import {
 	toggleTaskCompletion,
 	Task,
 } from "@/store/slices/tasksSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import EditTaskModal from "@/components/EditTaskModal";
-import HolidayPageHeader from "@/components/HolidayPageHeader";
-import AddButton from "@/components/AddButton";
-import TaskSection from "@/components/TaskSection";
-import FormModal from "@/components/FormModal";
+import EditTaskModal from "@/components/modals/EditTaskModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import FormModal from "@/components/modals/FormModal";
 import { getFormConfig } from "@/config/formConfigs";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";

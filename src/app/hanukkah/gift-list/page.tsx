@@ -12,8 +12,8 @@ import {
 	HanukkahGift,
 } from "@/store/slices/hanukkahGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
-import SortModal from "@/components/SortModal";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import SortModal from "@/components/modals/SortModal";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 

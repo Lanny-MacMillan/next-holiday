@@ -4,10 +4,10 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { initializeTheme } from "@/store/slices/themeSlice";
-import AuthWrapper from "./AuthWrapper";
-import Header from "./Header";
-import Login from "./Login";
-import DataInitializer from "./DataInitializer";
+import AuthWrapper from "./auth/AuthWrapper";
+import Header from "./common/Header";
+import Login from "./auth/Login";
+import DataInitializer from "./redux/DataInitializer";
 import { ReactNode } from "react";
 
 interface AppContentProps {

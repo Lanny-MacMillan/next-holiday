@@ -11,7 +11,7 @@ import {
 	toggleHanukkahTaskCompletion,
 	HanukkahTask,
 } from "@/store/slices/hanukkahTasksSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 

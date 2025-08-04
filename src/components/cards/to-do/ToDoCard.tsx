@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Task } from "@/store/slices/tasksSlice";
-import DeleteModal from "@/components/DeleteModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 export interface ToDoCardProps {

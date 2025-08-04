@@ -42,7 +42,7 @@ import {
 	clearThanksgivingCountdown,
 	updateThanksgivingCountdown,
 } from "@/store/slices/thanksgivingCountdownSlice";
-import DatePickerModal from "./DatePickerModal";
+import DatePickerModal from "../modals/DatePickerModal";
 
 interface CountdownTimerProps {
 	className?: string;

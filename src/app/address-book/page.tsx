@@ -10,7 +10,7 @@ import {
 	deleteContact,
 	Contact,
 } from "@/store/slices/addressBookSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 
 type SortOption = "a-z" | "z-a" | "relationship" | "location" | "none";
 

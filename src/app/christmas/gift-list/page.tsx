@@ -12,11 +12,11 @@ import {
 	Gift,
 } from "@/store/slices/giftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
-import SortModal from "@/components/SortModal";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
-import FormModal from "@/components/FormModal";
-import DeleteModal from "@/components/DeleteModal";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 

@@ -16,7 +16,7 @@ A reusable delete confirmation modal component that can be used across all holid
 ### Basic Usage
 
 ```tsx
-import DeleteModal from "@/components/DeleteModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 
 // In your component
 const [showDeleteModal, setShowDeleteModal] = useState(false);

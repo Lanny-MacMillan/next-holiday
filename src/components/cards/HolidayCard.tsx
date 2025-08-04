@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import CountdownTimer from "@/components/CountdownTimer";
+import CountdownTimer from "@/components/common/CountdownTimer";
 
 interface HolidayCardProps {
 	id: string;

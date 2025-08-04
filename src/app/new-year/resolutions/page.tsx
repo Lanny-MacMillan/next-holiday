@@ -11,7 +11,7 @@ import {
 	toggleNewYearTaskCompletion,
 	NewYearTask,
 } from "@/store/slices/newYearTasksSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 
 type SortOption = "priority" | "dueDate" | "title" | "none";
 

@@ -11,7 +11,7 @@ import {
 	toggleValentinesTaskCompletion,
 	setSelectedValentinesTask,
 } from "@/store/slices/valentinesTasksSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 
 export default function ValentinesDateIdeasPage() {
 	const dispatch = useAppDispatch();

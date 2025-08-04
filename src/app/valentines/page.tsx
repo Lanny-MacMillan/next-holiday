@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchValentinesGifts } from "@/store/slices/valentinesGiftListSlice";
 import { fetchValentinesTasks } from "@/store/slices/valentinesTasksSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 
 const subsections = [
 	{

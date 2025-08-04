@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchThanksgivingGifts } from "@/store/slices/thanksgivingGiftListSlice";
 import { fetchThanksgivingTasks } from "@/store/slices/thanksgivingTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 
 const subsections = [
 	{
@@ -51,7 +51,9 @@ export default function ThanksgivingPage() {
 	const dispatch = useAppDispatch();
 
 	const cards = useAppSelector((state: any) => state.cards.cards);
-	const gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
+	const gifts = useAppSelector(
+		(state: any) => state.thanksgivingGiftList.gifts
+	);
 	const tasks = useAppSelector((state: any) => state.thanksgivingTasks.tasks);
 	const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
@@ -76,7 +78,9 @@ export default function ThanksgivingPage() {
 					? tasks.filter((task: any) => task.category === category)
 					: tasks;
 				total = filteredTasks.length;
-				completed = filteredTasks.filter((task: any) => task.isCompleted).length;
+				completed = filteredTasks.filter(
+					(task: any) => task.isCompleted
+				).length;
 				break;
 			default:
 				total = 0;
@@ -94,8 +98,18 @@ export default function ThanksgivingPage() {
 					href="/"
 					className="absolute left-0 top-10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
 				>
-					<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+					<svg
+						className="w-6 h-6"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M15 19l-7-7 7-7"
+						/>
 					</svg>
 				</Link>
 				<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">

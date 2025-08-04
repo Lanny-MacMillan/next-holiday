@@ -1,4 +1,4 @@
-import { FormField } from "@/components/FormModal";
+import { FormField } from "@/components/modals/FormModal";
 
 export interface FormConfig {
 	title: string;

@@ -11,7 +11,7 @@ import {
 	toggleCardCompletion,
 	setSelectedCard,
 } from "@/store/slices/cardsSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 
 export default function ValentinesCardsPage() {
 	const dispatch = useAppDispatch();

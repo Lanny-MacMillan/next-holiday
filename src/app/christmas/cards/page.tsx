@@ -12,13 +12,13 @@ import {
 	Card,
 } from "@/store/slices/cardsSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 import HolidayCard from "@/components/cards/card/HolidayCard";
-import HolidayPageHeader from "@/components/HolidayPageHeader";
-import AddButton from "@/components/AddButton";
-import TaskSection from "@/components/TaskSection";
-import FormModal from "@/components/FormModal";
-import DeleteModal from "@/components/DeleteModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 

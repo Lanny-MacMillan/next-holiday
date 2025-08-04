@@ -11,7 +11,7 @@ import {
 	toggleKwanzaaTaskCompletion,
 	KwanzaaTask,
 } from "@/store/slices/kwanzaaTasksSlice";
-import SortModal from "@/components/SortModal";
+import SortModal from "@/components/modals/SortModal";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
