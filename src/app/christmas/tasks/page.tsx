@@ -12,6 +12,8 @@ import {
 	Task,
 } from "@/store/slices/tasksSlice";
 import SortModal from "@/components/SortModal";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
+import EditTaskModal from "@/components/EditTaskModal";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -30,15 +32,9 @@ export default function TasksPage() {
 		dueDate: "",
 	});
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<Task | null>(null);
 
 	useEffect(() => {
 		// Fetch tasks when component mounts if not already initialized
@@ -102,18 +98,24 @@ export default function TasksPage() {
 	}
 
 	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+		dispatch(deleteTask(taskId));
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	function handleEditTask(task: Task) {
+		setEditingTask(task);
+	}
+
+	function handleSaveEdit(
+		updatedTask: Omit<Task, "id" | "createdAt" | "updatedAt">
+	) {
+		if (editingTask) {
+			dispatch(updateTask({ ...editingTask, ...updatedTask }));
+			setEditingTask(null);
 		}
 	}
 
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
+	function handleCloseEdit() {
+		setEditingTask(null);
 	}
 
 	function sortTasks(tasksToSort: Task[]): Task[] {
@@ -212,70 +214,21 @@ export default function TasksPage() {
 					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
 						Incomplete ({incompleteTasks.length})
 					</h2>
-					<div className="card card-tasks rounded shadow">
+					<div className="space-y-3">
 						{incompleteTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
+							<div className="card card-tasks rounded shadow px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
 								All tasks completed! 🎉
 							</div>
 						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteTasks.map((task: Task) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-green-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-															: task.priority === "medium"
-															? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-															: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.assignedTo && (
-													<span>Assigned: {task.assignedTo}</span>
-												)}
-												{task.category && <span>{task.category}</span>}
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
+							incompleteTasks.map((task: Task) => (
+								<ToDoCard
+									key={task.id}
+									task={task}
+									onToggleComplete={handleToggleTask}
+									onDelete={handleDeleteTask}
+									onEdit={handleEditTask}
+								/>
+							))
 						)}
 					</div>
 				</div>
@@ -284,54 +237,22 @@ export default function TasksPage() {
 					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
 						Completed ({completedTasks.length})
 					</h2>
-					<div className="card card-tasks rounded shadow">
+					<div className="space-y-3">
 						{completedTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
+							<div className="card card-tasks rounded shadow px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
 								No completed tasks yet.
 							</div>
 						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedTasks.map((task: Task) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 opacity-60"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-green-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{task.description}
-												</div>
-											)}
-											{task.completedDate && (
-												<div className="text-xs text-green-600 dark:text-green-400 mt-1">
-													Completed:{" "}
-													{new Date(task.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
+							completedTasks.map((task: Task) => (
+								<ToDoCard
+									key={task.id}
+									task={task}
+									onToggleComplete={handleToggleTask}
+									onDelete={handleDeleteTask}
+									onEdit={handleEditTask}
+									className="opacity-60"
+								/>
+							))
 						)}
 					</div>
 				</div>
@@ -444,34 +365,14 @@ export default function TasksPage() {
 				</div>
 			)}
 
-			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-tasks rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							Confirm Delete
-						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-6">
-							Are you sure you want to delete this task? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			{/* Edit Task Modal */}
+			<EditTaskModal
+				isOpen={editingTask !== null}
+				task={editingTask}
+				onClose={handleCloseEdit}
+				onSave={handleSaveEdit}
+				loading={loading}
+			/>
 
 			{/* Sort Modal */}
 			<SortModal

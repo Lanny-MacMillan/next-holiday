@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 
-export interface TaskCardProps {
+export interface HolidayTaskCardProps {
 	holidayName: string;
 	sectionName: string;
 	description: string;
@@ -17,7 +17,7 @@ export interface TaskCardProps {
 	className?: string;
 }
 
-export default function TaskCard({
+export default function HolidayTaskCard({
 	holidayName,
 	sectionName,
 	description,
@@ -26,7 +26,7 @@ export default function TaskCard({
 	completedItems,
 	theme = {},
 	className = "",
-}: TaskCardProps) {
+}: HolidayTaskCardProps) {
 	const {
 		primaryColor = "#22c55e", // Default green
 		accentColor = "#eab308", // Default yellow

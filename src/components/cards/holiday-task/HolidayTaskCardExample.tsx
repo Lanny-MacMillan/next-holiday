@@ -1,11 +1,11 @@
 import React from "react";
-import TaskCard from "./TaskCard";
+import HolidayTaskCard from "./HolidayTaskCard";
 
-export default function TaskCardExample() {
+export default function HolidayTaskCardExample() {
 	return (
 		<div className="space-y-8 p-6">
 			<h2 className="text-2xl font-bold text-gray-800 mb-6">
-				TaskCard Component Examples
+				HolidayTaskCard Component Examples
 			</h2>
 
 			{/* Christmas Examples */}
@@ -14,7 +14,7 @@ export default function TaskCardExample() {
 					Christmas Theme
 				</h3>
 				<div className="space-y-4">
-					<TaskCard
+					<HolidayTaskCard
 						holidayName="Christmas"
 						sectionName="Cards"
 						description="Track your holiday cards"
@@ -26,7 +26,7 @@ export default function TaskCardExample() {
 							progressColor: "#22c55e",
 						}}
 					/>
-					<TaskCard
+					<HolidayTaskCard
 						holidayName="Christmas"
 						sectionName="Tasks"
 						description="Stay on top of your holiday to-dos"
@@ -47,7 +47,7 @@ export default function TaskCardExample() {
 					Valentine's Day Theme
 				</h3>
 				<div className="space-y-4">
-					<TaskCard
+					<HolidayTaskCard
 						holidayName="Valentine's Day"
 						sectionName="Cards"
 						description="Track your Valentine's cards"
@@ -59,7 +59,7 @@ export default function TaskCardExample() {
 							progressColor: "#ec4899",
 						}}
 					/>
-					<TaskCard
+					<HolidayTaskCard
 						holidayName="Valentine's Day"
 						sectionName="Tasks"
 						description="Stay on top of your Valentine's to-dos"

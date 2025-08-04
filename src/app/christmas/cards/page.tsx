@@ -23,6 +23,7 @@ export default function CardsPage() {
 
 	const [form, setForm] = useState({
 		recipient: "",
+		address: "",
 		message: "",
 	});
 	const [showAddressBook, setShowAddressBook] = useState(false);
@@ -34,6 +35,7 @@ export default function CardsPage() {
 		cardId: null,
 	});
 	const [showForm, setShowForm] = useState(false);
+	const [editingCard, setEditingCard] = useState<Card | null>(null);
 	const [sortBy, setSortBy] = useState<string>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 
@@ -50,29 +52,53 @@ export default function CardsPage() {
 		e.preventDefault();
 		if (!form.recipient.trim() || !form.message.trim()) return;
 
-		const newCard: Omit<Card, "id" | "createdAt" | "updatedAt"> = {
-			recipient: form.recipient,
-			message: form.message,
-			isCompleted: false,
-		};
+		if (editingCard) {
+			// Update existing card
+			const updatedCard: Card = {
+				...editingCard,
+				recipient: form.recipient,
+				address: form.address,
+				message: form.message,
+			};
+			dispatch(updateCard(updatedCard));
+			setEditingCard(null);
+		} else {
+			// Add new card
+			const newCard: Omit<Card, "id" | "createdAt" | "updatedAt"> = {
+				recipient: form.recipient,
+				address: form.address,
+				message: form.message,
+				isCompleted: false,
+			};
+			dispatch(addCard(newCard));
+		}
 
-		dispatch(addCard(newCard));
-		setForm({ recipient: "", message: "" });
+		setForm({ recipient: "", address: "", message: "" });
 		setShowForm(false);
 	}
 
 	function openForm() {
 		setShowForm(true);
-		setForm({ recipient: "", message: "" });
+		setForm({ recipient: "", address: "", message: "" });
 	}
 
 	function closeForm() {
 		setShowForm(false);
-		setForm({ recipient: "", message: "" });
+		setEditingCard(null);
+		setForm({ recipient: "", address: "", message: "" });
 	}
 
 	function handleToggleCard(cardId: string) {
 		dispatch(toggleCardCompletion(cardId));
+	}
+
+	function handleEditCard(card: Card) {
+		setEditingCard(card);
+		setForm({
+			recipient: card.recipient,
+			address: card.address || "",
+			message: card.message,
+		});
 	}
 
 	function handleDeleteCard(cardId: string) {
@@ -91,9 +117,20 @@ export default function CardsPage() {
 	}
 
 	function addFromAddressBook(contact: any) {
+		// Build full address from contact details
+		const addressParts = [
+			contact.streetAddress,
+			contact.city,
+			contact.state,
+			contact.zipCode,
+		].filter(Boolean);
+
+		const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : "";
+
 		setForm((prev) => ({
 			...prev,
 			recipient: contact.name,
+			address: fullAddress,
 		}));
 		setShowAddressBook(false);
 	}
@@ -103,6 +140,10 @@ export default function CardsPage() {
 			case "recipient":
 				return [...cardsToSort].sort((a, b) =>
 					a.recipient.localeCompare(b.recipient)
+				);
+			case "address":
+				return [...cardsToSort].sort((a, b) =>
+					(a.address || "").localeCompare(b.address || "")
 				);
 			case "message":
 				return [...cardsToSort].sort((a, b) =>
@@ -176,6 +217,7 @@ export default function CardsPage() {
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
 							{sortBy === "recipient" && "Sorted by Recipient"}
+							{sortBy === "address" && "Sorted by Address"}
 							{sortBy === "message" && "Sorted by Message"}
 							{sortBy === "date-created" && "Sorted by Date Created"}
 						</div>
@@ -211,22 +253,40 @@ export default function CardsPage() {
 											<div className="text-gray-800 dark:text-white">
 												To: {card.recipient}
 											</div>
+											{card.address && (
+												<div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+													📍 {card.address}
+												</div>
+											)}
 											{card.message && (
 												<div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
 													{card.message}
 												</div>
 											)}
 										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteCard(card.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
+										<div className="flex gap-2">
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleEditCard(card);
+													setShowForm(true);
+												}}
+												className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+												disabled={loading}
+											>
+												Edit
+											</button>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleDeleteCard(card.id);
+												}}
+												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+												disabled={loading}
+											>
+												Delete
+											</button>
+										</div>
 									</li>
 								))}
 							</ul>
@@ -261,6 +321,11 @@ export default function CardsPage() {
 											<div className="line-through text-gray-400 dark:text-gray-500">
 												To: {card.recipient}
 											</div>
+											{card.address && (
+												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
+													📍 {card.address}
+												</div>
+											)}
 											{card.message && (
 												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
 													{card.message}
@@ -273,16 +338,29 @@ export default function CardsPage() {
 												</div>
 											)}
 										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteCard(card.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
+										<div className="flex gap-2">
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleEditCard(card);
+													setShowForm(true);
+												}}
+												className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+												disabled={loading}
+											>
+												Edit
+											</button>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleDeleteCard(card.id);
+												}}
+												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+												disabled={loading}
+											>
+												Delete
+											</button>
+										</div>
 									</li>
 								))}
 							</ul>
@@ -300,7 +378,7 @@ export default function CardsPage() {
 								className="text-lg font-semibold text-gray-900 dark:text-white"
 								style={{ color: "#111827" }}
 							>
-								Add New Card
+								{editingCard ? "Edit Card" : "Add New Card"}
 							</h3>
 							<button
 								onClick={closeForm}
@@ -331,6 +409,15 @@ export default function CardsPage() {
 									📖
 								</button>
 							</div>
+							<input
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								placeholder="Address (optional)"
+								value={form.address}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, address: e.target.value }))
+								}
+								style={{ color: "#111827", backgroundColor: "white" }}
+							/>
 							{showAddressBook && (
 								<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
 									<h4
@@ -347,7 +434,13 @@ export default function CardsPage() {
 											className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
 											style={{ color: "#111827" }}
 										>
-											{contact.name}
+											<div className="font-medium">{contact.name}</div>
+											{contact.streetAddress && (
+												<div className="text-xs text-gray-500">
+													{contact.streetAddress}, {contact.city},{" "}
+													{contact.state} {contact.zipCode}
+												</div>
+											)}
 										</button>
 									))}
 								</div>
@@ -378,7 +471,13 @@ export default function CardsPage() {
 									disabled={loading}
 									style={{ backgroundColor: "#ef4444", color: "white" }}
 								>
-									{loading ? "Adding..." : "Add Card"}
+									{loading
+										? editingCard
+											? "Updating..."
+											: "Adding..."
+										: editingCard
+										? "Update Card"
+										: "Add Card"}
 								</button>
 							</div>
 						</form>
@@ -432,6 +531,7 @@ export default function CardsPage() {
 				sortOptions={[
 					{ value: "none", label: "None" },
 					{ value: "recipient", label: "Recipient" },
+					{ value: "address", label: "Address" },
 					{ value: "message", label: "Message" },
 					{ value: "date-created", label: "Date Created" },
 				]}

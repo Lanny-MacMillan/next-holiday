@@ -8,7 +8,7 @@ import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
 import GiftCard from "@/components/cards/gift/GiftCard";
-import TaskCard from "@/components/cards/task/TaskCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
 const subsections = [
 	{
@@ -116,16 +116,16 @@ export default function ChristmasPage() {
 										href={section.href}
 										theme={{
 											primaryColor: "#22c55e", // Green for Christmas
-											accentColor: "#eab308", // Yellow accent
+											accentColor: "#ea0808", // Yellow accent
 										}}
 									/>
 								</li>
 							);
 						} else {
-							// Use TaskCard for tasks and other sections
+							// Use HolidayTaskCard for tasks and other sections
 							return (
 								<li key={section.name}>
-									<TaskCard
+									<HolidayTaskCard
 										holidayName="Christmas"
 										sectionName={section.name}
 										description={section.description}
@@ -134,7 +134,7 @@ export default function ChristmasPage() {
 										completedItems={completed}
 										theme={{
 											primaryColor: "#22c55e", // Green for Christmas
-											accentColor: "#eab308", // Yellow accent
+											accentColor: "#ea0808", // Yellow accent
 											progressColor: "#22c55e", // Green for progress bar
 										}}
 									/>
