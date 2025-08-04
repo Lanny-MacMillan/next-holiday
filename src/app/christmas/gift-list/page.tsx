@@ -15,6 +15,10 @@ import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
 import SortModal from "@/components/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
+import FormModal from "@/components/FormModal";
+import DeleteModal from "@/components/DeleteModal";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
@@ -471,33 +475,13 @@ export default function GiftListPage() {
 			)}
 
 			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-gifts rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							Confirm Delete
-						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-6">
-							Are you sure you want to delete this gift? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				{...getDeleteConfig("gifts")}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={loading}
+			/>
 
 			{/* Sort Modal */}
 			<SortModal

@@ -17,6 +17,10 @@ import HolidayCard from "@/components/cards/card/HolidayCard";
 import HolidayPageHeader from "@/components/HolidayPageHeader";
 import AddButton from "@/components/AddButton";
 import TaskSection from "@/components/TaskSection";
+import FormModal from "@/components/FormModal";
+import DeleteModal from "@/components/DeleteModal";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 export default function CardsPage() {
 	const dispatch = useAppDispatch();
@@ -25,12 +29,6 @@ export default function CardsPage() {
 	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	const [form, setForm] = useState({
-		recipient: "",
-		address: "",
-		message: "",
-	});
-	const [showAddressBook, setShowAddressBook] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		cardId: string | null;
@@ -52,44 +50,40 @@ export default function CardsPage() {
 		dispatch(fetchContacts());
 	}, [dispatch, initialized]);
 
-	function handleAddCard(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.recipient.trim() || !form.message.trim()) return;
+	function handleAddCard(formValues: Record<string, any>) {
+		if (!formValues.recipient?.trim() || !formValues.message?.trim()) return;
 
 		if (editingCard) {
 			// Update existing card
 			const updatedCard: Card = {
 				...editingCard,
-				recipient: form.recipient,
-				address: form.address,
-				message: form.message,
+				recipient: formValues.recipient,
+				address: formValues.address || "",
+				message: formValues.message,
 			};
 			dispatch(updateCard(updatedCard));
 			setEditingCard(null);
 		} else {
 			// Add new card
 			const newCard: Omit<Card, "id" | "createdAt" | "updatedAt"> = {
-				recipient: form.recipient,
-				address: form.address,
-				message: form.message,
+				recipient: formValues.recipient,
+				address: formValues.address || "",
+				message: formValues.message,
 				isCompleted: false,
 			};
 			dispatch(addCard(newCard));
 		}
 
-		setForm({ recipient: "", address: "", message: "" });
 		setShowForm(false);
 	}
 
 	function openForm() {
 		setShowForm(true);
-		setForm({ recipient: "", address: "", message: "" });
 	}
 
 	function closeForm() {
 		setShowForm(false);
 		setEditingCard(null);
-		setForm({ recipient: "", address: "", message: "" });
 	}
 
 	function handleToggleCard(cardId: string) {
@@ -98,11 +92,7 @@ export default function CardsPage() {
 
 	function handleEditCard(card: Card) {
 		setEditingCard(card);
-		setForm({
-			recipient: card.recipient,
-			address: card.address || "",
-			message: card.message,
-		});
+		setShowForm(true);
 	}
 
 	function handleDeleteCard(cardId: string) {
@@ -118,25 +108,6 @@ export default function CardsPage() {
 
 	function cancelDelete() {
 		setDeleteConfirm({ show: false, cardId: null });
-	}
-
-	function addFromAddressBook(contact: any) {
-		// Build full address from contact details
-		const addressParts = [
-			contact.streetAddress,
-			contact.city,
-			contact.state,
-			contact.zipCode,
-		].filter(Boolean);
-
-		const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : "";
-
-		setForm((prev) => ({
-			...prev,
-			recipient: contact.name,
-			address: fullAddress,
-		}));
-		setShowAddressBook(false);
 	}
 
 	function sortCards(cardsToSort: Card[]): Card[] {
@@ -246,157 +217,49 @@ export default function CardsPage() {
 			</main>
 
 			{/* Form Modal */}
-			{showForm && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-cards rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-						<div className="flex justify-between items-center mb-4">
-							<h3
-								className="text-lg font-semibold text-gray-900 dark:text-white"
-								style={{ color: "#111827" }}
-							>
-								{editingCard ? "Edit Card" : "Add New Card"}
-							</h3>
-							<button
-								onClick={closeForm}
-								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-								style={{ color: "#4b5563" }}
-							>
-								×
-							</button>
-						</div>
-						<form onSubmit={handleAddCard} className="space-y-4">
-							<div className="flex gap-2">
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Recipient*"
-									value={form.recipient}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, recipient: e.target.value }))
-									}
-									required
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-								<button
-									type="button"
-									onClick={() => setShowAddressBook(!showAddressBook)}
-									className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
-									style={{ backgroundColor: "#3b82f6", color: "white" }}
-								>
-									📖
-								</button>
-							</div>
-							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Address (optional)"
-								value={form.address}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, address: e.target.value }))
-								}
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							{showAddressBook && (
-								<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
-									<h4
-										className="text-sm font-medium mb-1 text-gray-900 dark:text-white"
-										style={{ color: "#111827" }}
-									>
-										From Address Book:
-									</h4>
-									{contacts.map((contact: any) => (
-										<button
-											key={contact.id}
-											type="button"
-											onClick={() => addFromAddressBook(contact)}
-											className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
-											style={{ color: "#111827" }}
-										>
-											<div className="font-medium">{contact.name}</div>
-											{contact.streetAddress && (
-												<div className="text-xs text-gray-500">
-													{contact.streetAddress}, {contact.city},{" "}
-													{contact.state} {contact.zipCode}
-												</div>
-											)}
-										</button>
-									))}
-								</div>
-							)}
-							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Message*"
-								value={form.message}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, message: e.target.value }))
-								}
-								rows={3}
-								required
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<div className="flex gap-3 pt-2">
-								<button
-									type="button"
-									onClick={closeForm}
-									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-									style={{ color: "#374151", borderColor: "#d1d5db" }}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-									disabled={loading}
-									style={{ backgroundColor: "#ef4444", color: "white" }}
-								>
-									{loading
-										? editingCard
-											? "Updating..."
-											: "Adding..."
-										: editingCard
-										? "Update Card"
-										: "Add Card"}
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
+			<FormModal
+				isOpen={showForm}
+				title={editingCard ? "Edit Card" : "Add New Card"}
+				fields={getFormConfig("cards", editingCard ? "edit" : "add").fields}
+				initialValues={
+					editingCard
+						? {
+								recipient: editingCard.recipient,
+								address: editingCard.address || "",
+								message: editingCard.message,
+						  }
+						: {}
+				}
+				onSubmit={handleAddCard}
+				onClose={closeForm}
+				loading={loading}
+				submitText={
+					loading
+						? editingCard
+							? "Updating..."
+							: "Adding..."
+						: editingCard
+						? "Update Card"
+						: "Add Card"
+				}
+				cancelText="Cancel"
+				cardClassName="card card-cards"
+				submitButtonColor="#ef4444"
+				showAddressBook={true}
+				contacts={contacts}
+				onAddressBookSelect={(contact) => {
+					// The FormModal will handle the form values internally
+				}}
+			/>
 
 			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-cards rounded-lg p-6 max-w-sm mx-4">
-						<h3
-							className="text-lg font-semibold mb-4 text-gray-900 dark:text-white"
-							style={{ color: "#111827" }}
-						>
-							Confirm Delete
-						</h3>
-						<p
-							className="text-gray-600 dark:text-gray-300 mb-6"
-							style={{ color: "#4b5563" }}
-						>
-							Are you sure you want to delete this card? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-								style={{ color: "#374151", borderColor: "#d1d5db" }}
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-								style={{ backgroundColor: "#ef4444", color: "white" }}
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				{...getDeleteConfig("cards")}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={loading}
+			/>
 
 			{/* Sort Modal */}
 			<SortModal

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Task } from "@/store/slices/tasksSlice";
+import DeleteModal from "@/components/DeleteModal";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 export interface ToDoCardProps {
 	task: Task;
@@ -27,9 +29,12 @@ export default function ToDoCard({
 		setShowDeleteConfirm(true);
 	};
 
-	const confirmDelete = (e: React.MouseEvent) => {
-		e.stopPropagation();
+	const confirmDelete = () => {
 		onDelete(task.id);
+		setShowDeleteConfirm(false);
+	};
+
+	const cancelDelete = () => {
 		setShowDeleteConfirm(false);
 	};
 
@@ -61,35 +66,13 @@ export default function ToDoCard({
 			onClick={handleToggle}
 		>
 			{/* Delete Confirmation Modal */}
-			{showDeleteConfirm && (
-				<div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
-					<div className="bg-white dark:bg-gray-800 rounded-lg p-4 max-w-xs mx-4">
-						<h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
-							Delete Task?
-						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-							Are you sure you want to delete "{task.title}"?
-						</p>
-						<div className="flex gap-2">
-							<button
-								onClick={(e) => {
-									e.stopPropagation();
-									setShowDeleteConfirm(false);
-								}}
-								className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<DeleteModal
+				isOpen={showDeleteConfirm}
+				{...getDeleteConfig("tasks")}
+				itemName={task.title}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+			/>
 
 			{/* Main Card Content */}
 			<div className="flex items-start space-x-3">
