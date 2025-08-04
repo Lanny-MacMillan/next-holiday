@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 
 export interface GiftCardProps {
@@ -19,6 +20,7 @@ export interface GiftCardProps {
 		backgroundColor?: string;
 	};
 	className?: string;
+	href?: string; // Add href prop for navigation
 }
 
 export function useGiftCardData(holiday?: string) {
@@ -92,6 +94,7 @@ export default function GiftCard({
 	giftList,
 	theme = {},
 	className = "",
+	href,
 }: GiftCardProps) {
 	const {
 		primaryColor = "#22c55e", // Default green
@@ -113,13 +116,25 @@ export default function GiftCard({
 		return null; // Don't render if no data is available
 	}
 
-	const remaining = finalBudget.remaining;
-	const budgetPercentage = finalBudget.percentage;
-	const giftListPercentage = finalGiftList.percentage;
+	// Calculate remaining and percentages based on available data
+	const remaining =
+		holidayData?.budget?.remaining ?? finalBudget.total - finalBudget.spent;
+	const budgetPercentage =
+		holidayData?.budget?.percentage ??
+		(finalBudget.total > 0 ? (finalBudget.spent / finalBudget.total) * 100 : 0);
+	const giftListPercentage =
+		holidayData?.giftList?.percentage ??
+		(finalGiftList.totalItems > 0
+			? (finalGiftList.completedItems / finalGiftList.totalItems) * 100
+			: 0);
 
-	return (
+	// Generate href if not provided
+	const finalHref =
+		href || `/${holiday?.toLowerCase()}/gift-list` || "/gift-list";
+
+	const cardContent = (
 		<div
-			className={`max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden ${className}`}
+			className={`max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden transition hover:scale-[1.02] active:scale-100 ${className}`}
 			style={{
 				backgroundColor,
 				borderLeft: `4px solid ${primaryColor}`, // Green line on left edge
@@ -127,8 +142,8 @@ export default function GiftCard({
 		>
 			{/* Main card content */}
 			<div className="p-3">
-				{/* Budget Section - Updated to match Hanukkah design */}
-				<div className="mb-2">
+				{/* Budget Section */}
+				<div className="mb-4">
 					<div className="flex justify-between items-start mb-4">
 						<h3 className="font-bold text-gray-900 text-lg">
 							{displayHolidayName} Budget
@@ -159,7 +174,7 @@ export default function GiftCard({
 						</div>
 					</div>
 
-					{/* Progress bar */}
+					{/* Budget Progress bar */}
 					<div className="w-full bg-gray-200 rounded-full h-2 mb-2">
 						<div
 							className="h-2 rounded-full transition-all duration-300"
@@ -171,17 +186,23 @@ export default function GiftCard({
 					</div>
 				</div>
 
-				{/* Gift List Progress Section */}
-				<div className="mt-4">
-					{/* <div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold text-gray-900 text-sm">
-							Gift Progress
-						</h4>
-						<div className="text-sm text-gray-600">
-							{finalGiftList.completedItems}/{finalGiftList.totalItems}{" "}
-							completed
-						</div>
-					</div> */}
+				{/* Gift List Section */}
+				<div className="mt-6">
+					<div className="flex items-center justify-between mb-2">
+						<h4 className="font-bold text-gray-900 text-lg">Gift List</h4>
+						<span
+							className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+							style={{
+								backgroundColor: `${accentColor}20`,
+								color: accentColor,
+							}}
+						>
+							{finalGiftList.totalItems}
+						</span>
+					</div>
+					<p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+						Track your {displayHolidayName} gift ideas
+					</p>
 
 					{/* Gift List Progress bar */}
 					<div className="w-full bg-gray-200 rounded-full h-2 mb-2">
@@ -193,11 +214,27 @@ export default function GiftCard({
 							}}
 						></div>
 					</div>
-					{/* <div className="text-xs text-gray-600 text-center">
-						{Math.round(giftListPercentage)}% complete
-					</div> */}
+
+					{/* Progress text */}
+					<div className="flex justify-between items-center mt-1">
+						<span className="text-xs text-gray-500 dark:text-gray-500">
+							{Math.round(giftListPercentage)}% complete
+						</span>
+						<span className="text-xs text-gray-500 dark:text-gray-500">
+							{finalGiftList.completedItems}/{finalGiftList.totalItems} items
+						</span>
+					</div>
 				</div>
 			</div>
 		</div>
+	);
+
+	// Wrap in Link if href is provided
+	return href ? (
+		<Link href={finalHref} className="block">
+			{cardContent}
+		</Link>
+	) : (
+		cardContent
 	);
 }

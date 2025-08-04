@@ -8,6 +8,7 @@ import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
 import GiftCard from "@/components/cards/gift/GiftCard";
+import TaskCard from "@/components/cards/task/TaskCard";
 
 const subsections = [
 	{
@@ -15,18 +16,21 @@ const subsections = [
 		description: "Track your gift ideas",
 		href: "/christmas/gift-list",
 		sliceKey: "giftList",
+		type: "gift-list",
 	},
 	{
 		name: "Cards",
 		description: "Track your holiday cards",
 		href: "/christmas/cards",
 		sliceKey: "cards",
+		type: "task",
 	},
 	{
 		name: "Tasks",
 		description: "Stay on top of your holiday to-dos",
 		href: "/christmas/tasks",
 		sliceKey: "tasks",
+		type: "task",
 	},
 ];
 
@@ -103,53 +107,40 @@ export default function ChristmasPage() {
 							section.sliceKey
 						);
 
-						return (
-							<li key={section.name}>
-								<Link
-									href={section.href}
-									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
-								>
-									{/* Gift Card for Gift List */}
-									{section.sliceKey === "giftList" && (
-										<GiftCard
-											holiday="Christmas"
-											theme={{
-												primaryColor: "#22c55e", // Green for Christmas
-												accentColor: "#eab308", // Yellow accent
-											}}
-										/>
-									)}
-
-									<div className="flex items-center justify-between mb-1">
-										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
-											{section.name}
-										</h3>
-										<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
-											{total}
-										</span>
-									</div>
-									<p className="text-gray-600 dark:text-gray-400 text-sm">
-										{section.description}
-									</p>
-									{/* Progress bar */}
-									<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-										<div
-											className="bg-green-400 dark:bg-green-500 h-2 rounded-full transition-all"
-											style={{ width: `${progress * 100}%` }}
-										/>
-									</div>
-									{/* Progress text */}
-									<div className="flex justify-between items-center mt-1">
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{Math.round(progress * 100)}% complete
-										</span>
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{completed}/{total} items
-										</span>
-									</div>
-								</Link>
-							</li>
-						);
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
+							return (
+								<li key={section.name}>
+									<GiftCard
+										holiday="Christmas"
+										href={section.href}
+										theme={{
+											primaryColor: "#22c55e", // Green for Christmas
+											accentColor: "#eab308", // Yellow accent
+										}}
+									/>
+								</li>
+							);
+						} else {
+							// Use TaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<TaskCard
+										holidayName="Christmas"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#22c55e", // Green for Christmas
+											accentColor: "#eab308", // Yellow accent
+											progressColor: "#22c55e", // Green for progress bar
+										}}
+									/>
+								</li>
+							);
+						}
 					})}
 				</ul>
 			</main>
