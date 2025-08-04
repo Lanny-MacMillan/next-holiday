@@ -21,6 +21,12 @@ import valentinesCountdownReducer from "./slices/valentinesCountdownSlice";
 import easterGiftListReducer from "./slices/easterGiftListSlice";
 import easterTasksReducer from "./slices/easterTasksSlice";
 import easterCountdownReducer from "./slices/easterCountdownSlice";
+import halloweenGiftListReducer from "./slices/halloweenGiftListSlice";
+import halloweenTasksReducer from "./slices/halloweenTasksSlice";
+import halloweenCountdownReducer from "./slices/halloweenCountdownSlice";
+import thanksgivingGiftListReducer from "./slices/thanksgivingGiftListSlice";
+import thanksgivingTasksReducer from "./slices/thanksgivingTasksSlice";
+import thanksgivingCountdownReducer from "./slices/thanksgivingCountdownSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -46,6 +52,12 @@ export const store = configureStore({
 		easterGiftList: easterGiftListReducer,
 		easterTasks: easterTasksReducer,
 		easterCountdown: easterCountdownReducer,
+		halloweenGiftList: halloweenGiftListReducer,
+		halloweenTasks: halloweenTasksReducer,
+		halloweenCountdown: halloweenCountdownReducer,
+		thanksgivingGiftList: thanksgivingGiftListReducer,
+		thanksgivingTasks: thanksgivingTasksReducer,
+		thanksgivingCountdown: thanksgivingCountdownReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({
