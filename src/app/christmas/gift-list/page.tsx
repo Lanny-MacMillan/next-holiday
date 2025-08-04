@@ -240,19 +240,7 @@ export default function GiftListPage() {
 			<main className="w-full max-w-md flex flex-col gap-6">
 				{/* Gift Card Component */}
 				<GiftCard
-					holidayName="Christmas"
-					budget={{
-						spent: gifts.reduce(
-							(sum: number, gift: Gift) => sum + gift.price,
-							0
-						),
-						total: 500,
-					}}
-					giftList={{
-						totalItems: gifts.length,
-						completedItems: gifts.filter((gift: Gift) => gift.isCompleted)
-							.length,
-					}}
+					holiday="Christmas"
 					theme={{
 						primaryColor: "#22c55e", // Green for Christmas
 						accentColor: "#eab308", // Yellow accent

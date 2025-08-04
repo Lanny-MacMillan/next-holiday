@@ -7,6 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
+import GiftCard from "@/components/cards/gift/GiftCard";
 
 const subsections = [
 	{
@@ -108,9 +109,15 @@ export default function ChristmasPage() {
 									href={section.href}
 									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
 								>
-									{/* Budget Display for Gift List */}
+									{/* Gift Card for Gift List */}
 									{section.sliceKey === "giftList" && (
-										<BudgetDisplay holiday="Christmas" />
+										<GiftCard
+											holiday="Christmas"
+											theme={{
+												primaryColor: "#22c55e", // Green for Christmas
+												accentColor: "#eab308", // Yellow accent
+											}}
+										/>
 									)}
 
 									<div className="flex items-center justify-between mb-1">
