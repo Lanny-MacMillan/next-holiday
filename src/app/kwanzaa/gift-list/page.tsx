@@ -237,7 +237,7 @@ export default function KwanzaaGiftListPage() {
 							</div>
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteGifts.map((gift: HanukkahGift) => (
+								{incompleteGifts.map((gift: KwanzaaGift) => (
 									<li
 										key={gift.id}
 										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -314,7 +314,7 @@ export default function KwanzaaGiftListPage() {
 							</div>
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedGifts.map((gift: HanukkahGift) => (
+								{completedGifts.map((gift: KwanzaaGift) => (
 									<li
 										key={gift.id}
 										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"

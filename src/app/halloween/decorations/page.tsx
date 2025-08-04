@@ -55,13 +55,17 @@ export default function HalloweenDecorationsPage() {
 	const [form, setForm] = useState({
 		title: "",
 		description: "",
-		priority: "medium" as const,
+		priority: "medium" as "low" | "medium" | "high",
 		assignedTo: "",
 		category: "Decorations Checklist",
 		dueDate: "",
 		isCompleted: false,
 	});
 	const [sortBy, setSortBy] = useState<SortOption>("none");
+
+	const handleSortChange = (sortOption: string) => {
+		setSortBy(sortOption as SortOption);
+	};
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
@@ -95,7 +99,7 @@ export default function HalloweenDecorationsPage() {
 			setForm({
 				title: "",
 				description: "",
-				priority: "medium" as const,
+				priority: "medium" as "low" | "medium" | "high",
 				assignedTo: "",
 				category: "Decorations Checklist",
 				dueDate: "",
@@ -107,7 +111,7 @@ export default function HalloweenDecorationsPage() {
 
 	function addDefaultDecorationTasks() {
 		defaultDecorationTasks.forEach((task) => {
-			dispatch(addHalloweenTask(task));
+			dispatch(addHalloweenTask({ ...task, isCompleted: false }));
 		});
 		setShowDefaultTasks(false);
 	}
@@ -121,7 +125,7 @@ export default function HalloweenDecorationsPage() {
 		setForm({
 			title: "",
 			description: "",
-			priority: "medium" as const,
+			priority: "medium" as "low" | "medium" | "high",
 			assignedTo: "",
 			category: "Decorations Checklist",
 			dueDate: "",
@@ -495,7 +499,15 @@ export default function HalloweenDecorationsPage() {
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
 				sortBy={sortBy}
-				onSortChange={setSortBy}
+				onSortChange={handleSortChange}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "priority", label: "Priority" },
+					{ value: "dateDue", label: "Due Date" },
+					{ value: "assignedTo", label: "Assigned To" },
+					{ value: "category", label: "Category" },
+				]}
+				title="Sort Tasks"
 			/>
 
 			{/* Delete Confirmation Modal */}

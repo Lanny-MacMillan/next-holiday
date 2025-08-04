@@ -13,6 +13,7 @@ import {
 } from "@/store/slices/cardsSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/SortModal";
+import HolidayCard from "@/components/cards/card/HolidayCard";
 
 export default function CardsPage() {
 	const dispatch = useAppDispatch();
@@ -238,56 +239,17 @@ export default function CardsPage() {
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{incompleteCards.map((card: Card) => (
-									<li
+									<HolidayCard
 										key={card.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20"
-										onClick={() => handleToggleCard(card.id)}
-									>
-										<input
-											type="checkbox"
-											checked={card.isCompleted}
-											readOnly
-											className="mr-3 accent-green-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-800 dark:text-white">
-												To: {card.recipient}
-											</div>
-											{card.address && (
-												<div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-													📍 {card.address}
-												</div>
-											)}
-											{card.message && (
-												<div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-													{card.message}
-												</div>
-											)}
-										</div>
-										<div className="flex gap-2">
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleEditCard(card);
-													setShowForm(true);
-												}}
-												className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
-												disabled={loading}
-											>
-												Edit
-											</button>
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteCard(card.id);
-												}}
-												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-												disabled={loading}
-											>
-												Delete
-											</button>
-										</div>
-									</li>
+										card={card}
+										onToggle={handleToggleCard}
+										onEdit={(card) => {
+											handleEditCard(card);
+											setShowForm(true);
+										}}
+										onDelete={handleDeleteCard}
+										loading={loading}
+									/>
 								))}
 							</ul>
 						)}
@@ -306,62 +268,17 @@ export default function CardsPage() {
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{completedCards.map((card: Card) => (
-									<li
+									<HolidayCard
 										key={card.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 opacity-60"
-										onClick={() => handleToggleCard(card.id)}
-									>
-										<input
-											type="checkbox"
-											checked={card.isCompleted}
-											readOnly
-											className="mr-3 accent-green-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												To: {card.recipient}
-											</div>
-											{card.address && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													📍 {card.address}
-												</div>
-											)}
-											{card.message && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{card.message}
-												</div>
-											)}
-											{card.completedDate && (
-												<div className="text-xs text-green-600 dark:text-green-400 mt-1">
-													Completed:{" "}
-													{new Date(card.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<div className="flex gap-2">
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleEditCard(card);
-													setShowForm(true);
-												}}
-												className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
-												disabled={loading}
-											>
-												Edit
-											</button>
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteCard(card.id);
-												}}
-												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-												disabled={loading}
-											>
-												Delete
-											</button>
-										</div>
-									</li>
+										card={card}
+										onToggle={handleToggleCard}
+										onEdit={(card) => {
+											handleEditCard(card);
+											setShowForm(true);
+										}}
+										onDelete={handleDeleteCard}
+										loading={loading}
+									/>
 								))}
 							</ul>
 						)}

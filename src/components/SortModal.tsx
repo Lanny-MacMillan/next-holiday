@@ -8,7 +8,7 @@ interface SortModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	sortBy: SortOption;
-	onSortChange: (sortOption: SortOption) => void;
+	onSortChange: (sortOption: string) => void;
 	sortOptions: Array<{
 		value: SortOption;
 		label: string;
