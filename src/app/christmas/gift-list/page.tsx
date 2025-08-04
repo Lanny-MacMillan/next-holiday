@@ -14,6 +14,8 @@ import {
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
 import SortModal from "@/components/SortModal";
+import GiftCard from "@/components/cards/gift/GiftCard";
+import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
@@ -44,6 +46,7 @@ export default function GiftListPage() {
 		giftId: null,
 	});
 	const [showForm, setShowForm] = useState(false);
+	const [editingGift, setEditingGift] = useState<Gift | null>(null);
 
 	useEffect(() => {
 		// Fetch gifts and contacts when component mounts if not already initialized
@@ -58,18 +61,37 @@ export default function GiftListPage() {
 		e.preventDefault();
 		if (!form.name.trim() || !form.recipient.trim()) return;
 
-		const newGift: Omit<Gift, "id" | "createdAt" | "updatedAt"> = {
-			name: form.name,
-			description: form.description || undefined,
-			price: parseFloat(form.price) || 0,
-			recipient: form.recipient,
-			isCompleted: false,
-			store: form.store || undefined,
-			productLink: form.productLink || undefined,
-			notes: form.notes || undefined,
-		};
+		if (editingGift) {
+			// Update existing gift
+			const updatedGift: Gift = {
+				...editingGift,
+				name: form.name,
+				description: form.description || undefined,
+				price: parseFloat(form.price) || 0,
+				recipient: form.recipient,
+				store: form.store || undefined,
+				productLink: form.productLink || undefined,
+				notes: form.notes || undefined,
+			};
 
-		dispatch(addGift(newGift));
+			dispatch(updateGift(updatedGift));
+			setEditingGift(null);
+		} else {
+			// Add new gift
+			const newGift: Omit<Gift, "id" | "createdAt" | "updatedAt"> = {
+				name: form.name,
+				description: form.description || undefined,
+				price: parseFloat(form.price) || 0,
+				recipient: form.recipient,
+				isCompleted: false,
+				store: form.store || undefined,
+				productLink: form.productLink || undefined,
+				notes: form.notes || undefined,
+			};
+
+			dispatch(addGift(newGift));
+		}
+
 		setForm({
 			name: "",
 			description: "",
@@ -97,6 +119,7 @@ export default function GiftListPage() {
 
 	function closeForm() {
 		setShowForm(false);
+		setEditingGift(null);
 		setForm({
 			name: "",
 			description: "",
@@ -114,6 +137,20 @@ export default function GiftListPage() {
 
 	function handleDeleteGift(giftId: string) {
 		setDeleteConfirm({ show: true, giftId });
+	}
+
+	function handleEditGift(gift: Gift) {
+		setEditingGift(gift);
+		setForm({
+			name: gift.name,
+			description: gift.description || "",
+			price: gift.price.toString(),
+			recipient: gift.recipient,
+			store: gift.store || "",
+			productLink: gift.productLink || "",
+			notes: gift.notes || "",
+		});
+		setShowForm(true);
 	}
 
 	function confirmDelete() {
@@ -201,8 +238,26 @@ export default function GiftListPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				{/* Budget Display */}
-				<BudgetDisplay />
+				{/* Gift Card Component */}
+				<GiftCard
+					holidayName="Christmas"
+					budget={{
+						spent: gifts.reduce(
+							(sum: number, gift: Gift) => sum + gift.price,
+							0
+						),
+						total: 500,
+					}}
+					giftList={{
+						totalItems: gifts.length,
+						completedItems: gifts.filter((gift: Gift) => gift.isCompleted)
+							.length,
+					}}
+					theme={{
+						primaryColor: "#22c55e", // Green for Christmas
+						accentColor: "#eab308", // Yellow accent
+					}}
+				/>
 
 				<button
 					onClick={openForm}
@@ -234,65 +289,18 @@ export default function GiftListPage() {
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{incompleteGifts.map((gift: Gift) => (
-									<li
+									<GiftCardItem
 										key={gift.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
-										onClick={() => handleToggleGift(gift.id)}
-									>
-										<input
-											type="checkbox"
-											checked={gift.isCompleted}
-											readOnly
-											className="mr-3 accent-yellow-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{gift.name}
-											</div>
-											<div className="text-sm text-gray-600 dark:text-gray-300">
-												For: {gift.recipient}
-											</div>
-											{gift.description && (
-												<div className="text-xs text-gray-500 dark:text-gray-400">
-													{gift.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												{gift.price > 0 && (
-													<span>${gift.price.toFixed(2)}</span>
-												)}
-												{gift.store && <span>Store: {gift.store}</span>}
-											</div>
-											{gift.notes && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													{gift.notes}
-												</div>
-											)}
-										</div>
-										<div className="flex flex-col gap-1">
-											{gift.productLink && (
-												<a
-													href={gift.productLink}
-													target="_blank"
-													rel="noopener noreferrer"
-													onClick={(e) => e.stopPropagation()}
-													className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
-												>
-													🔗 Link
-												</a>
-											)}
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteGift(gift.id);
-												}}
-												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-												disabled={loading}
-											>
-												Delete
-											</button>
-										</div>
-									</li>
+										gift={gift}
+										isCompleted={false}
+										onToggle={handleToggleGift}
+										onEdit={handleEditGift}
+										onDelete={handleDeleteGift}
+										loading={loading}
+										theme={{
+											accentColor: "#eab308", // Yellow for Christmas
+										}}
+									/>
 								))}
 							</ul>
 						)}
@@ -311,60 +319,18 @@ export default function GiftListPage() {
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{completedGifts.map((gift: Gift) => (
-									<li
+									<GiftCardItem
 										key={gift.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 opacity-60"
-										onClick={() => handleToggleGift(gift.id)}
-									>
-										<input
-											type="checkbox"
-											checked={gift.isCompleted}
-											readOnly
-											className="mr-3 accent-yellow-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												{gift.name}
-											</div>
-											<div className="text-sm text-gray-400 dark:text-gray-500 line-through">
-												For: {gift.recipient}
-											</div>
-											{gift.description && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{gift.description}
-												</div>
-											)}
-											{gift.completedDate && (
-												<div className="text-xs text-green-600 dark:text-green-400 mt-1">
-													Completed:{" "}
-													{new Date(gift.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<div className="flex flex-col gap-1">
-											{gift.productLink && (
-												<a
-													href={gift.productLink}
-													target="_blank"
-													rel="noopener noreferrer"
-													onClick={(e) => e.stopPropagation()}
-													className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
-												>
-													🔗 Link
-												</a>
-											)}
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteGift(gift.id);
-												}}
-												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-												disabled={loading}
-											>
-												Delete
-											</button>
-										</div>
-									</li>
+										gift={gift}
+										isCompleted={true}
+										onToggle={handleToggleGift}
+										onEdit={handleEditGift}
+										onDelete={handleDeleteGift}
+										loading={loading}
+										theme={{
+											accentColor: "#eab308", // Yellow for Christmas
+										}}
+									/>
 								))}
 							</ul>
 						)}
@@ -381,7 +347,7 @@ export default function GiftListPage() {
 								className="text-lg font-semibold text-gray-900 dark:text-white"
 								style={{ color: "#111827" }}
 							>
-								Add New Gift
+								{editingGift ? "Edit Gift" : "Add New Gift"}
 							</h3>
 							<button
 								onClick={closeForm}
@@ -509,7 +475,13 @@ export default function GiftListPage() {
 									disabled={loading}
 									style={{ backgroundColor: "#eab308", color: "white" }}
 								>
-									{loading ? "Adding..." : "Add Gift"}
+									{loading
+										? editingGift
+											? "Updating..."
+											: "Adding..."
+										: editingGift
+										? "Update Gift"
+										: "Add Gift"}
 								</button>
 							</div>
 						</form>

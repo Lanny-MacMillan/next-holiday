@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import CountdownTimer from "@/components/CountdownTimer";
-import HolidayCard from "@/components/HolidayCard";
+import HolidayCard from "@/components/cards/HolidayCard";
 import { holidayData } from "@/data/holidayData";
 // import ReduxExample from "@/components/ReduxExample";
 // import ReduxTest from "@/components/ReduxTest";
