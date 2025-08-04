@@ -2,7 +2,7 @@
 
 Modular, reusable components for displaying gift information across different holidays.
 
-## GiftCard Component
+## GiftListCard Component
 
 A component for displaying gift budget and list summary information.
 
@@ -17,7 +17,7 @@ A component for displaying gift budget and list summary information.
 ## Props
 
 ```typescript
-interface GiftCardProps {
+interface GiftListCardProps {
 	holidayName: string; // Name of the holiday (e.g., "Christmas")
 	budget: {
 		spent: number; // Amount spent on gifts
@@ -42,9 +42,9 @@ interface GiftCardProps {
 ### Basic Usage
 
 ```tsx
-import GiftCard from "@/components/cards/gift/GiftCard";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
 
-<GiftCard
+<GiftListCard
 	holidayName="Christmas"
 	budget={{
 		spent: 199.99,
@@ -60,7 +60,7 @@ import GiftCard from "@/components/cards/gift/GiftCard";
 ### With Custom Theme
 
 ```tsx
-<GiftCard
+<GiftListCard
 	holidayName="Valentine's Day"
 	budget={{
 		spent: 150.5,
@@ -84,7 +84,7 @@ import { useAppSelector } from "@/store/hooks";
 
 const gifts = useAppSelector((state: any) => state.giftList.gifts);
 
-<GiftCard
+<GiftListCard
 	holidayName="Christmas"
 	budget={{
 		spent: gifts.reduce((sum: number, gift: Gift) => sum + gift.price, 0),

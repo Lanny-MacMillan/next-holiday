@@ -1,12 +1,12 @@
 import React from "react";
-import GiftCard from "./GiftCard";
+import GiftListCard from "./GiftListCard";
 
-// Example usage of the GiftCard component for different holidays
+// Example usage of the GiftListCard component for different holidays
 export default function GiftCardExample() {
 	return (
 		<div className="space-y-8 p-6">
 			<h2 className="text-2xl font-bold text-gray-800 mb-6">
-				GiftCard Component Examples
+				GiftListCard Component Examples
 			</h2>
 
 			{/* Christmas Example */}
@@ -14,7 +14,7 @@ export default function GiftCardExample() {
 				<h3 className="text-lg font-semibold text-gray-700 mb-4">
 					Christmas Theme
 				</h3>
-				<GiftCard
+				<GiftListCard
 					holidayName="Christmas"
 					budget={{
 						spent: 199.99,
@@ -36,7 +36,7 @@ export default function GiftCardExample() {
 				<h3 className="text-lg font-semibold text-gray-700 mb-4">
 					Valentine's Day Theme
 				</h3>
-				<GiftCard
+				<GiftListCard
 					holidayName="Valentine's Day"
 					budget={{
 						spent: 150.5,
@@ -58,7 +58,7 @@ export default function GiftCardExample() {
 				<h3 className="text-lg font-semibold text-gray-700 mb-4">
 					Halloween Theme
 				</h3>
-				<GiftCard
+				<GiftListCard
 					holidayName="Halloween"
 					budget={{
 						spent: 75.25,
@@ -80,7 +80,7 @@ export default function GiftCardExample() {
 				<h3 className="text-lg font-semibold text-gray-700 mb-4">
 					Easter Theme
 				</h3>
-				<GiftCard
+				<GiftListCard
 					holidayName="Easter"
 					budget={{
 						spent: 45.0,

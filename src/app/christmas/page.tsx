@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
-import GiftCard from "@/components/cards/gift/GiftCard";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
 const subsections = [
@@ -111,7 +111,7 @@ export default function ChristmasPage() {
 						if (section.type === "gift-list") {
 							return (
 								<li key={section.name}>
-									<GiftCard
+									<GiftListCard
 										holiday="Christmas"
 										href={section.href}
 										theme={{

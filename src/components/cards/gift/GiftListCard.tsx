@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 
-export interface GiftCardProps {
+export interface GiftListCardProps {
 	holiday?: string;
 	holidayName?: string; // For backward compatibility
 	budget?: {
@@ -23,7 +23,7 @@ export interface GiftCardProps {
 	href?: string; // Add href prop for navigation
 }
 
-export function useGiftCardData(holiday?: string) {
+export function useGiftListCardData(holiday?: string) {
 	// Determine which gift list to use based on holiday
 	let gifts: any[] = [];
 	if (holiday === "Hanukkah") {
@@ -87,7 +87,7 @@ export function useGiftCardData(holiday?: string) {
 	};
 }
 
-export default function GiftCard({
+export default function GiftListCard({
 	holiday,
 	holidayName,
 	budget,
@@ -95,7 +95,7 @@ export default function GiftCard({
 	theme = {},
 	className = "",
 	href,
-}: GiftCardProps) {
+}: GiftListCardProps) {
 	const {
 		primaryColor = "#22c55e", // Default green
 		accentColor = "#eab308", // Default yellow
@@ -103,7 +103,7 @@ export default function GiftCard({
 	} = theme;
 
 	// Use holiday-specific data if holiday prop is provided, otherwise use passed props
-	const holidayData = holiday ? useGiftCardData(holiday) : null;
+	const holidayData = holiday ? useGiftListCardData(holiday) : null;
 
 	const finalBudget = holidayData?.budget || budget;
 	const finalGiftList = holidayData?.giftList || giftList;
@@ -193,8 +193,8 @@ export default function GiftCard({
 						<span
 							className="text-xs font-medium px-2.5 py-0.5 rounded-full"
 							style={{
-								backgroundColor: `${accentColor}20`,
-								color: accentColor,
+								backgroundColor: `${primaryColor}20`,
+								color: primaryColor,
 							}}
 						>
 							{finalGiftList.totalItems}
@@ -210,7 +210,7 @@ export default function GiftCard({
 							className="h-2 rounded-full transition-all duration-300"
 							style={{
 								width: `${Math.min(giftListPercentage, 100)}%`,
-								backgroundColor: accentColor,
+								backgroundColor: primaryColor,
 							}}
 						></div>
 					</div>
