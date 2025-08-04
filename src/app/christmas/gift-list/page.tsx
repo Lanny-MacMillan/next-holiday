@@ -14,7 +14,6 @@ import {
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/BudgetDisplay";
 import SortModal from "@/components/SortModal";
-import GiftCard from "@/components/cards/gift/GiftCard";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
@@ -238,14 +237,8 @@ export default function GiftListPage() {
 				)}
 			</header>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				{/* Gift Card Component */}
-				<GiftCard
-					holiday="Christmas"
-					theme={{
-						primaryColor: "#22c55e", // Green for Christmas
-						accentColor: "#eab308", // Yellow accent
-					}}
-				/>
+				{/* Budget Display */}
+				<BudgetDisplay holiday="Christmas" />
 
 				<button
 					onClick={openForm}
