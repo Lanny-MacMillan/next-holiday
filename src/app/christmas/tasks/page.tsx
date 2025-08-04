@@ -14,6 +14,8 @@ import {
 import SortModal from "@/components/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/EditTaskModal";
+import HolidayPageHeader from "@/components/HolidayPageHeader";
+import AddButton from "@/components/AddButton";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -162,43 +164,15 @@ export default function TasksPage() {
 
 	return (
 		<div className="min-h-screen christmas-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/christmas"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						To-Do List
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-						title="Sort tasks"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
+			<HolidayPageHeader
+				title="To-Do List"
+				backHref="/christmas"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort tasks"
+				error={error}
+			/>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<button
-					onClick={openForm}
-					className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
-					style={{ backgroundColor: "#22c55e", color: "white" }}
-				>
-					Add New Task
-				</button>
+				<AddButton title="Task" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

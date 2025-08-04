@@ -14,6 +14,8 @@ import {
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/SortModal";
 import HolidayCard from "@/components/cards/card/HolidayCard";
+import HolidayPageHeader from "@/components/HolidayPageHeader";
+import AddButton from "@/components/AddButton";
 
 export default function CardsPage() {
 	const dispatch = useAppDispatch();
@@ -177,43 +179,15 @@ export default function CardsPage() {
 
 	return (
 		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/christmas"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Holiday Cards
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-						title="Sort cards"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
+			<HolidayPageHeader
+				title="Holiday Cards"
+				backHref="/christmas"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort cards"
+				error={error}
+			/>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<button
-					onClick={openForm}
-					className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-					style={{ backgroundColor: "#ef4444", color: "white" }}
-				>
-					Add New Card
-				</button>
+				<AddButton title="Card" onClick={openForm} color="red" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -224,8 +198,6 @@ export default function CardsPage() {
 						</div>
 					)}
 				</div>
-
-				{/* Sort Controls */}
 
 				<div>
 					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
