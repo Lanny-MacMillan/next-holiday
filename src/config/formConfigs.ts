@@ -134,7 +134,7 @@ export const giftsFormConfig: FormConfig = {
 	],
 	submitText: "Add Gift",
 	cancelText: "Cancel",
-	cardClassName: "card card-gifts",
+	cardClassName: "card",
 	submitButtonColor: "#eab308", // Yellow
 	showAddressBook: true,
 };

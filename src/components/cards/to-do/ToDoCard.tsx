@@ -9,6 +9,11 @@ export interface ToDoCardProps {
 	onDelete: (taskId: string) => void;
 	onEdit: (task: Task) => void;
 	className?: string;
+	theme?: {
+		accentColor?: string;
+		hoverColor?: string;
+	};
+	borderColor?: string; // Border color for the left border
 }
 
 export default function ToDoCard({
@@ -17,8 +22,18 @@ export default function ToDoCard({
 	onDelete,
 	onEdit,
 	className = "",
+	theme = {},
+	borderColor,
 }: ToDoCardProps) {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+	const accentColor = theme.accentColor;
+	const hoverColor = theme.hoverColor || "hover:shadow-md";
+
+	// Apply border color if provided
+	const borderStyle = borderColor
+		? { borderLeft: `4px solid ${borderColor}` }
+		: {};
 
 	const handleToggle = () => {
 		onToggleComplete(task.id);
@@ -62,7 +77,8 @@ export default function ToDoCard({
 
 	return (
 		<div
-			className={`relative card card-tasks p-4 cursor-pointer hover:shadow-md transition-shadow ${className}`}
+			className={`relative card card-tasks p-4 cursor-pointer ${hoverColor} transition-shadow ${className}`}
+			style={borderStyle}
 			onClick={handleToggle}
 		>
 			{/* Delete Confirmation Modal */}
@@ -81,7 +97,8 @@ export default function ToDoCard({
 					type="checkbox"
 					checked={task.isCompleted}
 					readOnly
-					className="mt-1 mr-3 accent-orange-500"
+					className="mt-1 mr-3"
+					style={{ accentColor }}
 				/>
 
 				{/* Task Content */}

@@ -17,6 +17,7 @@ import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
@@ -167,8 +168,9 @@ export default function GiftListPage() {
 			onDelete={handleDeleteGift}
 			loading={loading}
 			theme={{
-				accentColor: "#eab308", // Yellow for Christmas
+				accentColor: "#22c55e", // Green for Christmas
 			}}
+			borderColor="rgb(var(--color-green-500))" // Green border for Christmas
 		/>
 	);
 
@@ -182,8 +184,9 @@ export default function GiftListPage() {
 			onDelete={handleDeleteGift}
 			loading={loading}
 			theme={{
-				accentColor: "#eab308", // Yellow for Christmas
+				accentColor: "#22c55e", // Green for Christmas
 			}}
+			borderColor="rgb(var(--color-green-500))" // Green border for Christmas
 		/>
 	);
 
@@ -259,7 +262,7 @@ export default function GiftListPage() {
 				{/* Budget Display */}
 				<BudgetDisplay holiday="Christmas" />
 
-				<AddButton title="Gift" onClick={openForm} color="yellow" />
+				<AddButton title="Gift" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -278,7 +281,6 @@ export default function GiftListPage() {
 					emptyMessage="All gifts completed! 🎉"
 					completedMessage=""
 					renderItem={renderGiftItem}
-					cardClassName="card-gifts"
 				/>
 
 				<TaskSection
@@ -288,7 +290,6 @@ export default function GiftListPage() {
 					emptyMessage="No completed gifts yet."
 					completedMessage=""
 					renderItem={renderCompletedGiftItem}
-					cardClassName="card-gifts"
 				/>
 			</main>
 
@@ -303,8 +304,8 @@ export default function GiftListPage() {
 				loading={loading}
 				submitText={editingGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
-				cardClassName="card card-gifts"
-				submitButtonColor="#eab308"
+				cardClassName="card"
+				submitButtonColor="#22c55e"
 				showAddressBook={true}
 				contacts={contacts}
 			/>

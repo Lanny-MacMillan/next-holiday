@@ -116,7 +116,7 @@ export default function ChristmasPage() {
 										href={section.href}
 										theme={{
 											primaryColor: "#22c55e", // Green for Christmas
-											accentColor: "#ea0808", // Yellow accent
+											accentColor: "#22c55e", // Green accent
 										}}
 									/>
 								</li>
@@ -134,7 +134,7 @@ export default function ChristmasPage() {
 										completedItems={completed}
 										theme={{
 											primaryColor: "#22c55e", // Green for Christmas
-											accentColor: "#ea0808", // Yellow accent
+											accentColor: "#22c55e", // Green accent
 											progressColor: "#22c55e", // Green for progress bar
 										}}
 									/>

@@ -12,6 +12,7 @@ export interface GiftCardItemProps {
 		accentColor?: string;
 		hoverColor?: string;
 	};
+	borderColor?: string; // Border color for the left border
 }
 
 export default function GiftCardItem({
@@ -22,19 +23,25 @@ export default function GiftCardItem({
 	onDelete,
 	loading = false,
 	theme = {},
+	borderColor,
 }: GiftCardItemProps) {
-	const {
-		accentColor = "#eab308",
-		hoverColor = "hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
-	} = theme;
+	const accentColor = theme.accentColor;
+	const hoverColor =
+		theme.hoverColor || "hover:bg-yellow-50 dark:hover:bg-yellow-900/20";
 
 	const baseClasses = `flex items-center px-4 py-3 cursor-pointer ${hoverColor}`;
 	const completedClasses = isCompleted ? "opacity-60" : "";
+
+	// Apply border color if provided
+	const borderStyle = borderColor
+		? { borderLeft: `4px solid ${borderColor}` }
+		: {};
 
 	return (
 		<li
 			key={gift.id}
 			className={`${baseClasses} ${completedClasses}`}
+			style={borderStyle}
 			onClick={() => onToggle(gift.id)}
 		>
 			<input

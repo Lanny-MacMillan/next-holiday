@@ -168,6 +168,7 @@ export default function HanukkahGiftListPage() {
 				accentColor: "#3b82f6",
 				hoverColor: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
 			}}
+			borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
 		/>
 	);
 
@@ -184,6 +185,7 @@ export default function HanukkahGiftListPage() {
 				accentColor: "#3b82f6",
 				hoverColor: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
 			}}
+			borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
 		/>
 	);
 
@@ -262,7 +264,6 @@ export default function HanukkahGiftListPage() {
 					emptyMessage="All gifts completed! 🕯️"
 					completedMessage=""
 					renderItem={renderGiftItem}
-					cardClassName="card-gifts border-l-4 border-l-blue-500"
 				/>
 
 				<TaskSection
@@ -272,7 +273,6 @@ export default function HanukkahGiftListPage() {
 					emptyMessage="No completed gifts yet."
 					completedMessage="No completed gifts yet. Start checking off your gifts to see them here! 🕯️"
 					renderItem={renderCompletedGiftItem}
-					cardClassName="card-gifts border-l-4 border-l-blue-500"
 				/>
 			</main>
 
@@ -287,7 +287,7 @@ export default function HanukkahGiftListPage() {
 				loading={loading}
 				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
-				cardClassName="card card-gifts"
+				cardClassName="card"
 				submitButtonColor="#3b82f6"
 				showAddressBook={true}
 				contacts={contacts}
@@ -302,7 +302,7 @@ export default function HanukkahGiftListPage() {
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
 				loading={loading}
-				cardClassName="card card-gifts"
+				cardClassName="card"
 				confirmText="Delete"
 				cancelText="Cancel"
 				confirmButtonColor="#ef4444"

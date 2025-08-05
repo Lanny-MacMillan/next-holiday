@@ -11,65 +11,65 @@ import {
 	toggleEasterTaskCompletion,
 	clearEasterTaskError,
 } from "@/store/slices/easterTasksSlice";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 
 export default function EasterEventsPage() {
 	const dispatch = useAppDispatch();
 	const tasks = useAppSelector((state) => state.easterTasks.tasks);
 	const error = useAppSelector((state) => state.easterTasks.error);
+	const loading = useAppSelector((state) => state.easterTasks.loading);
 
 	// Filter tasks for Events category
 	const eventTasks = tasks.filter((task) => task.category === "Events");
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
-	const [formData, setFormData] = useState({
-		title: "",
-		description: "",
-		priority: "medium" as "low" | "medium" | "high",
-		dueDate: "",
-		notes: "",
-	});
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
 	useEffect(() => {
 		dispatch(fetchEasterTasks());
 	}, [dispatch]);
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const handleSubmit = async (values: Record<string, any>) => {
 		if (editingTask) {
-			await dispatch(updateEasterTask({ ...editingTask, ...formData }));
+			await dispatch(updateEasterTask({ ...editingTask, ...values }));
 			setEditingTask(null);
 		} else {
 			await dispatch(
-				addEasterTask({ ...formData, isCompleted: false, category: "Events" })
+				addEasterTask({
+					...values,
+					isCompleted: false,
+					category: "Events",
+					title: values.title || "",
+					priority: values.priority || "medium",
+				})
 			);
 		}
-		setFormData({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
 		setShowAddForm(false);
 	};
 
 	const handleEdit = (task: any) => {
 		setEditingTask(task);
-		setFormData({
-			title: task.title,
-			description: task.description || "",
-			priority: task.priority,
-			dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
-			notes: task.notes || "",
-		});
 		setShowAddForm(true);
 	};
 
-	const handleDelete = async (taskId: string) => {
-		if (confirm("Are you sure you want to delete this event?")) {
-			await dispatch(deleteEasterTask(taskId));
+	const handleDelete = (task: any) => {
+		setTaskToDelete(task);
+		setShowDeleteModal(true);
+	};
+
+	const confirmDelete = async () => {
+		if (taskToDelete) {
+			await dispatch(deleteEasterTask(taskToDelete.id));
+			setTaskToDelete(null);
 		}
+		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
@@ -78,366 +78,130 @@ export default function EasterEventsPage() {
 
 	return (
 		<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/easter"
-						className="absolute left-0 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							Easter Events
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Plan your Easter events and celebrations
-						</p>
-					</div>
-				</div>
-			</header>
+			<HolidayPageHeader
+				title="Easter Events"
+				backHref="/easter"
+				error={error}
+			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
-				<button
+				<AddButton
+					title="Event"
 					onClick={() => setShowAddForm(true)}
-					className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors"
-					style={{ backgroundColor: "#a855f7", color: "white" }}
-				>
-					Add New Event
-				</button>
+					color="purple"
+				/>
 
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-						{error}
-						<button
-							onClick={() => dispatch(clearEasterTaskError())}
-							className="float-right font-bold"
-						>
-							×
-						</button>
-					</div>
-				)}
+				<TaskSection
+					title="Incomplete"
+					items={eventTasks.filter((task) => !task.isCompleted)}
+					isCompleted={false}
+					emptyMessage="All events completed! 🎉"
+					completedMessage=""
+					renderItem={(task) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleCompletion}
+							onDelete={handleDelete}
+							onEdit={handleEdit}
+						/>
+					)}
+					cardClassName="card-tasks"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete ({eventTasks.filter((task) => !task.isCompleted).length})
-					</h2>
-					<div className="card rounded-lg shadow">
-						{eventTasks.filter((task) => !task.isCompleted).length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All events completed! 🎉
-							</div>
-						) : (
-							<div className="space-y-4 p-4">
-								{eventTasks
-									.filter((task) => !task.isCompleted)
-									.map((task) => (
-										<div key={task.id} className="card rounded-lg p-4">
-											<div className="flex items-start justify-between">
-												<div className="flex-1">
-													<div className="flex items-center gap-2">
-														<input
-															type="checkbox"
-															checked={task.isCompleted}
-															onChange={() => handleToggleCompletion(task.id)}
-															className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-														/>
-														<h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-															{task.title}
-														</h3>
-													</div>
-													{task.description && (
-														<p className="text-gray-600 dark:text-gray-400 mt-1">
-															{task.description}
-														</p>
-													)}
-													<div className="mt-2 flex flex-wrap gap-2 text-sm">
-														<span
-															className={`px-2 py-1 rounded-full text-xs font-medium ${
-																task.priority === "high"
-																	? "text-red-600 dark:text-red-400"
-																	: task.priority === "medium"
-																	? "text-yellow-600 dark:text-yellow-400"
-																	: "text-green-600 dark:text-green-400"
-															} bg-opacity-10`}
-														>
-															{task.priority.charAt(0).toUpperCase() +
-																task.priority.slice(1)}{" "}
-															Priority
-														</span>
-														{task.dueDate && (
-															<span className="text-gray-500 dark:text-gray-400">
-																Due:{" "}
-																{new Date(task.dueDate).toLocaleDateString()}
-															</span>
-														)}
-													</div>
-													{task.notes && (
-														<div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-															<span className="font-medium">Notes:</span>{" "}
-															{task.notes}
-														</div>
-													)}
-												</div>
-												<div className="flex gap-2 ml-4">
-													<button
-														onClick={() => handleEdit(task)}
-														className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-													>
-														Edit
-													</button>
-													<button
-														onClick={() => handleDelete(task.id)}
-														className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-													>
-														Delete
-													</button>
-												</div>
-											</div>
-										</div>
-									))}
-							</div>
-						)}
-					</div>
-				</div>
-
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed ({eventTasks.filter((task) => task.isCompleted).length})
-					</h2>
-					<div className="card rounded-lg shadow">
-						{eventTasks.filter((task) => task.isCompleted).length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed events yet.
-							</div>
-						) : (
-							<div className="space-y-4 p-4">
-								{eventTasks
-									.filter((task) => task.isCompleted)
-									.map((task) => (
-										<div
-											key={task.id}
-											className="card rounded-lg p-4 opacity-60"
-										>
-											<div className="flex items-start justify-between">
-												<div className="flex-1">
-													<div className="flex items-center gap-2">
-														<input
-															type="checkbox"
-															checked={task.isCompleted}
-															onChange={() => handleToggleCompletion(task.id)}
-															className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-														/>
-														<h3 className="text-lg font-semibold line-through text-gray-500 dark:text-gray-400">
-															{task.title}
-														</h3>
-													</div>
-													{task.description && (
-														<p className="text-gray-500 dark:text-gray-400 mt-1 line-through">
-															{task.description}
-														</p>
-													)}
-													<div className="mt-2 flex flex-wrap gap-2 text-sm">
-														<span
-															className={`px-2 py-1 rounded-full text-xs font-medium ${
-																task.priority === "high"
-																	? "text-red-600 dark:text-red-400"
-																	: task.priority === "medium"
-																	? "text-yellow-600 dark:text-yellow-400"
-																	: "text-green-600 dark:text-green-400"
-															} bg-opacity-10`}
-														>
-															{task.priority.charAt(0).toUpperCase() +
-																task.priority.slice(1)}{" "}
-															Priority
-														</span>
-														{task.dueDate && (
-															<span className="text-gray-500 dark:text-gray-400">
-																Due:{" "}
-																{new Date(task.dueDate).toLocaleDateString()}
-															</span>
-														)}
-													</div>
-													{task.notes && (
-														<div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-															<span className="font-medium">Notes:</span>{" "}
-															{task.notes}
-														</div>
-													)}
-													{task.completedDate && (
-														<div className="text-sm text-green-600 dark:text-green-400 mt-1">
-															Completed:{" "}
-															{new Date(
-																task.completedDate
-															).toLocaleDateString()}
-														</div>
-													)}
-												</div>
-												<div className="flex gap-2 ml-4">
-													<button
-														onClick={() => handleEdit(task)}
-														className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-													>
-														Edit
-													</button>
-													<button
-														onClick={() => handleDelete(task.id)}
-														className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-													>
-														Delete
-													</button>
-												</div>
-											</div>
-										</div>
-									))}
-							</div>
-						)}
-					</div>
-				</div>
-
-				{eventTasks.length > 0 && (
-					<div className="card rounded-lg p-4">
-						<h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">
-							Events Summary
-						</h3>
-						<div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-							<div>Total Events: {eventTasks.length}</div>
-							<div>
-								Completed: {eventTasks.filter((t) => t.isCompleted).length}
-							</div>
-							<div>
-								High Priority:{" "}
-								{eventTasks.filter((t) => t.priority === "high").length}
-							</div>
-							<div>
-								Medium Priority:{" "}
-								{eventTasks.filter((t) => t.priority === "medium").length}
-							</div>
-							<div>
-								Low Priority:{" "}
-								{eventTasks.filter((t) => t.priority === "low").length}
-							</div>
-						</div>
-					</div>
-				)}
+				<TaskSection
+					title="Completed"
+					items={eventTasks.filter((task) => task.isCompleted)}
+					isCompleted={true}
+					emptyMessage="No completed events yet."
+					completedMessage=""
+					renderItem={(task) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleCompletion}
+							onDelete={handleDelete}
+							onEdit={handleEdit}
+							className="opacity-60"
+						/>
+					)}
+					cardClassName="card-tasks"
+				/>
 			</main>
 
 			{/* Form Modal */}
-			{showAddForm && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-gifts rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-						<div className="flex justify-between items-center mb-4">
-							<h3
-								className="text-lg font-semibold text-gray-900 dark:text-white"
-								style={{ color: "#111827" }}
-							>
-								{editingTask ? "Edit Event" : "Add New Event"}
-							</h3>
-							<button
-								onClick={() => {
-									setShowAddForm(false);
-									setEditingTask(null);
-									setFormData({
-										title: "",
-										description: "",
-										priority: "medium",
-										dueDate: "",
-										notes: "",
-									});
-								}}
-								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-								style={{ color: "#4b5563" }}
-							>
-								×
-							</button>
-						</div>
-						<form onSubmit={handleSubmit} className="space-y-4">
-							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Event Title*"
-								value={formData.title}
-								onChange={(e) =>
-									setFormData({ ...formData, title: e.target.value })
-								}
-								required
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Description"
-								value={formData.description}
-								onChange={(e) =>
-									setFormData({ ...formData, description: e.target.value })
-								}
-								rows={3}
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<div className="flex gap-2">
-								<select
-									value={formData.priority}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											priority: e.target.value as "low" | "medium" | "high",
-										})
-									}
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									style={{ color: "#111827", backgroundColor: "white" }}
-								>
-									<option value="low">Low Priority</option>
-									<option value="medium">Medium Priority</option>
-									<option value="high">High Priority</option>
-								</select>
-								<input
-									type="date"
-									value={formData.dueDate}
-									onChange={(e) =>
-										setFormData({ ...formData, dueDate: e.target.value })
-									}
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-							</div>
-							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Notes"
-								value={formData.notes}
-								onChange={(e) =>
-									setFormData({ ...formData, notes: e.target.value })
-								}
-								rows={2}
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<div className="flex gap-2">
-								<button
-									type="submit"
-									className="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-md transition-colors"
-									style={{ backgroundColor: "#a855f7", color: "white" }}
-								>
-									{editingTask ? "Update Event" : "Add Event"}
-								</button>
-								<button
-									type="button"
-									onClick={() => {
-										setShowAddForm(false);
-										setEditingTask(null);
-										setFormData({
-											title: "",
-											description: "",
-											priority: "medium",
-											dueDate: "",
-											notes: "",
-										});
-									}}
-									className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md transition-colors"
-								>
-									Cancel
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
+			<FormModal
+				isOpen={showAddForm}
+				title={editingTask ? "Edit Event" : "Add New Event"}
+				fields={[
+					{
+						id: "title",
+						type: "text" as const,
+						placeholder: "Event Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea" as const,
+						placeholder: "Description",
+						rows: 3,
+					},
+					{
+						id: "priority",
+						type: "select" as const,
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
+					{
+						id: "notes",
+						type: "textarea" as const,
+						placeholder: "Notes",
+						rows: 2,
+					},
+				]}
+				initialValues={
+					editingTask
+						? {
+								title: editingTask.title,
+								description: editingTask.description || "",
+								priority: editingTask.priority,
+								dueDate: editingTask.dueDate
+									? editingTask.dueDate.split("T")[0]
+									: "",
+								notes: editingTask.notes || "",
+						  }
+						: { priority: "medium", category: "Events" }
+				}
+				onSubmit={handleSubmit}
+				onClose={() => {
+					setShowAddForm(false);
+					setEditingTask(null);
+				}}
+				loading={loading}
+				submitText={editingTask ? "Update Event" : "Add Event"}
+				cardClassName="card-tasks"
+				submitButtonColor="#a855f7"
+			/>
+
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title="Delete Event"
+				itemName={taskToDelete?.title}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setTaskToDelete(null);
+				}}
+				loading={loading}
+				cardClassName="card-tasks"
+				confirmButtonColor="#a855f7"
+			/>
 		</div>
 	);
 }

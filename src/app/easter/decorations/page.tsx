@@ -13,6 +13,11 @@ import {
 } from "@/store/slices/easterTasksSlice";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 
 export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();
@@ -26,6 +31,9 @@ export default function EasterDecorationsPage() {
 	);
 
 	const [editingTask, setEditingTask] = useState<any>(null);
+	const [showAddForm, setShowAddForm] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
 	// Convert EasterTask to Task format for ToDoCard
 	const convertEasterTaskToTask = (easterTask: any) => ({
@@ -46,6 +54,19 @@ export default function EasterDecorationsPage() {
 		await dispatch(deleteEasterTask(taskId));
 	};
 
+	const handleDelete = (task: any) => {
+		setTaskToDelete(task);
+		setShowDeleteModal(true);
+	};
+
+	const confirmDelete = async () => {
+		if (taskToDelete) {
+			await dispatch(deleteEasterTask(taskToDelete.id));
+			setTaskToDelete(null);
+		}
+		setShowDeleteModal(false);
+	};
+
 	const handleEditTask = (task: any) => {
 		setEditingTask(task);
 	};
@@ -63,128 +84,55 @@ export default function EasterDecorationsPage() {
 
 	return (
 		<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/easter"
-						className="absolute left-0 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							Easter Decorations
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Stay on top of your Easter decorations
-						</p>
-					</div>
-				</div>
-			</header>
+			<HolidayPageHeader
+				title="Easter Decorations"
+				backHref="/easter"
+				error={error}
+			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
-				<button
-					onClick={() => {
-						// TODO: Add new task functionality
-						console.log("Add new decoration item");
-					}}
-					className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors"
-					style={{ backgroundColor: "#a855f7", color: "white" }}
-				>
-					Add New Decoration Item
-				</button>
+				<AddButton
+					title="Decoration Item"
+					onClick={() => setShowAddForm(true)}
+					color="purple"
+				/>
 
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-						{error}
-						<button
-							onClick={() => dispatch(clearEasterTaskError())}
-							className="float-right font-bold"
-						>
-							×
-						</button>
-					</div>
-				)}
+				<TaskSection
+					title="Incomplete"
+					items={decorationTasks.filter((task) => !task.isCompleted)}
+					isCompleted={false}
+					emptyMessage="All decoration items completed! 🎉"
+					completedMessage=""
+					renderItem={(task) => (
+						<ToDoCard
+							key={task.id}
+							task={convertEasterTaskToTask(task)}
+							onToggleComplete={handleToggleCompletion}
+							onDelete={handleDelete}
+							onEdit={handleEditTask}
+						/>
+					)}
+					cardClassName="card-tasks"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete (
-						{decorationTasks.filter((task) => !task.isCompleted).length})
-					</h2>
-					<div className="space-y-3">
-						{decorationTasks.filter((task) => !task.isCompleted).length ===
-						0 ? (
-							<div className="card card-tasks rounded-lg shadow px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All decoration items completed! 🎉
-							</div>
-						) : (
-							decorationTasks
-								.filter((task) => !task.isCompleted)
-								.map((task) => (
-									<ToDoCard
-										key={task.id}
-										task={convertEasterTaskToTask(task)}
-										onToggleComplete={handleToggleCompletion}
-										onDelete={handleDeleteTask}
-										onEdit={handleEditTask}
-									/>
-								))
-						)}
-					</div>
-				</div>
-
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed (
-						{decorationTasks.filter((task) => task.isCompleted).length})
-					</h2>
-					<div className="space-y-3">
-						{decorationTasks.filter((task) => task.isCompleted).length === 0 ? (
-							<div className="card card-tasks rounded-lg shadow px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed decoration items yet.
-							</div>
-						) : (
-							decorationTasks
-								.filter((task) => task.isCompleted)
-								.map((task) => (
-									<ToDoCard
-										key={task.id}
-										task={convertEasterTaskToTask(task)}
-										onToggleComplete={handleToggleCompletion}
-										onDelete={handleDeleteTask}
-										onEdit={handleEditTask}
-										className="opacity-60"
-									/>
-								))
-						)}
-					</div>
-				</div>
-
-				{decorationTasks.length > 0 && (
-					<div className="card rounded-lg p-4">
-						<h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">
-							Decorations Summary
-						</h3>
-						<div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-							<div>Total Items: {decorationTasks.length}</div>
-							<div>
-								Completed: {decorationTasks.filter((t) => t.isCompleted).length}
-							</div>
-							<div>
-								High Priority:{" "}
-								{decorationTasks.filter((t) => t.priority === "high").length}
-							</div>
-							<div>
-								Medium Priority:{" "}
-								{decorationTasks.filter((t) => t.priority === "medium").length}
-							</div>
-							<div>
-								Low Priority:{" "}
-								{decorationTasks.filter((t) => t.priority === "low").length}
-							</div>
-						</div>
-					</div>
-				)}
+				<TaskSection
+					title="Completed"
+					items={decorationTasks.filter((task) => task.isCompleted)}
+					isCompleted={true}
+					emptyMessage="No completed decoration items yet."
+					completedMessage=""
+					renderItem={(task) => (
+						<ToDoCard
+							key={task.id}
+							task={convertEasterTaskToTask(task)}
+							onToggleComplete={handleToggleCompletion}
+							onDelete={handleDelete}
+							onEdit={handleEditTask}
+							className="opacity-60"
+						/>
+					)}
+					cardClassName="card-tasks"
+				/>
 			</main>
 
 			{/* Edit Task Modal */}
@@ -194,6 +142,76 @@ export default function EasterDecorationsPage() {
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
 				loading={loading}
+			/>
+
+			{/* Form Modal for adding new tasks */}
+			<FormModal
+				isOpen={showAddForm}
+				title="Add New Decoration Item"
+				fields={[
+					{
+						id: "title",
+						type: "text" as const,
+						placeholder: "Item Name*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea" as const,
+						placeholder: "Description",
+						rows: 3,
+					},
+					{
+						id: "priority",
+						type: "select" as const,
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
+					{
+						id: "notes",
+						type: "textarea" as const,
+						placeholder: "Notes",
+						rows: 2,
+					},
+				]}
+				initialValues={{ priority: "medium", category: "Decorations" }}
+				onSubmit={async (values) => {
+					await dispatch(
+						addEasterTask({
+							...values,
+							isCompleted: false,
+							category: "Decorations",
+							title: values.title || "",
+							priority: values.priority || "medium",
+						})
+					);
+					setShowAddForm(false);
+				}}
+				onClose={() => setShowAddForm(false)}
+				loading={loading}
+				submitText="Add Item"
+				cardClassName="card-tasks"
+				submitButtonColor="#a855f7"
+			/>
+
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title="Delete Decoration Item"
+				itemName={taskToDelete?.title}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setTaskToDelete(null);
+				}}
+				loading={loading}
+				cardClassName="card-tasks"
+				confirmButtonColor="#a855f7"
 			/>
 		</div>
 	);

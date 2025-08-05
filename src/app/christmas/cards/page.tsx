@@ -159,7 +159,7 @@ export default function CardsPage() {
 				error={error}
 			/>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<AddButton title="Card" onClick={openForm} color="red" />
+				<AddButton title="Card" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -188,9 +188,12 @@ export default function CardsPage() {
 							}}
 							onDelete={handleDeleteCard}
 							loading={loading}
+							theme={{
+								accentColor: "#22c55e", // Green for Christmas
+							}}
+							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
 						/>
 					)}
-					cardClassName="card-cards"
 				/>
 
 				<TaskSection
@@ -210,9 +213,12 @@ export default function CardsPage() {
 							}}
 							onDelete={handleDeleteCard}
 							loading={loading}
+							theme={{
+								accentColor: "#22c55e", // Green for Christmas
+							}}
+							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
 						/>
 					)}
-					cardClassName="card-cards"
 				/>
 			</main>
 
@@ -243,8 +249,8 @@ export default function CardsPage() {
 						: "Add Card"
 				}
 				cancelText="Cancel"
-				cardClassName="card card-cards"
-				submitButtonColor="#ef4444"
+				cardClassName="card"
+				submitButtonColor="#22c55e"
 				showAddressBook={true}
 				contacts={contacts}
 				onAddressBookSelect={(contact) => {

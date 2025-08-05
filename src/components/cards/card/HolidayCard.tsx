@@ -7,6 +7,11 @@ interface HolidayCardProps {
 	onEdit: (card: Card) => void;
 	onDelete: (cardId: string) => void;
 	loading?: boolean;
+	theme?: {
+		accentColor?: string;
+		hoverColor?: string;
+	};
+	borderColor?: string; // Border color for the left border
 }
 
 const HolidayCard: React.FC<HolidayCardProps> = ({
@@ -15,19 +20,32 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
 	onEdit,
 	onDelete,
 	loading = false,
+	theme = {},
+	borderColor,
 }) => {
+	const accentColor = theme.accentColor;
+	const hoverColor =
+		theme.hoverColor || "hover:bg-green-50 dark:hover:bg-green-900/20";
+
+	// Apply border color if provided
+	const borderStyle = borderColor
+		? { borderLeft: `4px solid ${borderColor}` }
+		: {};
+
 	return (
 		<li
-			className={`flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 ${
+			className={`flex items-center px-4 py-3 cursor-pointer ${hoverColor} ${
 				card.isCompleted ? "opacity-60" : ""
 			}`}
+			style={borderStyle}
 			onClick={() => onToggle(card.id)}
 		>
 			<input
 				type="checkbox"
 				checked={card.isCompleted}
 				readOnly
-				className="mr-3 accent-green-500"
+				className="mr-3"
+				style={{ accentColor }}
 			/>
 			<div className="flex-1">
 				<div

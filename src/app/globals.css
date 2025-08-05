@@ -260,9 +260,7 @@ body {
 	border-left: 4px solid rgb(var(--color-green-500));
 }
 
-.card-gifts {
-	border-left: 4px solid rgb(var(--color-orange-500));
-}
+/* Removed .card-gifts - now controlled by component props */
 
 .card-tasks {
 	border-left: 4px solid rgb(var(--color-blue-500));

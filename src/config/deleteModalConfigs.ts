@@ -34,7 +34,7 @@ export const giftsDeleteConfig: DeleteModalConfig = {
 	title: "Confirm Delete",
 	message:
 		"Are you sure you want to delete this gift? This action cannot be undone.",
-	cardClassName: "card card-gifts",
+	cardClassName: "card",
 	confirmText: "Delete",
 	cancelText: "Cancel",
 	confirmButtonColor: "#ef4444", // Red
