@@ -347,8 +347,7 @@ export default function KwanzaaEventsPage() {
 					emptyMessage="All events planned! 🎉"
 					completedMessage=""
 					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
-					borderColor="rgb(var(--color-red-500))"
+					cardClassName="card-events-kwanzaa"
 				/>
 
 				<TaskSection
@@ -358,8 +357,7 @@ export default function KwanzaaEventsPage() {
 					emptyMessage=""
 					completedMessage="No completed tasks yet."
 					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
-					borderColor="rgb(var(--color-red-500))"
+					cardClassName="card-events-kwanzaa"
 				/>
 			</main>
 
@@ -373,7 +371,7 @@ export default function KwanzaaEventsPage() {
 				loading={loading}
 				submitText="Add Event Task"
 				cancelText="Cancel"
-				cardClassName="card card-tasks"
+				cardClassName="card card-events-kwanzaa"
 				submitButtonColor="#dc2626"
 			/>
 
@@ -386,7 +384,7 @@ export default function KwanzaaEventsPage() {
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
 				loading={loading}
-				cardClassName="card card-tasks"
+				cardClassName="card card-events-kwanzaa"
 				confirmText="Delete"
 				cancelText="Cancel"
 				confirmButtonColor="#ef4444"

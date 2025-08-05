@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
 	fetchNewYearTasks,
@@ -11,7 +10,15 @@ import {
 	toggleNewYearTaskCompletion,
 	NewYearTask,
 } from "@/store/slices/newYearTasksSlice";
+import { Task } from "@/store/slices/tasksSlice";
 import SortModal from "@/components/modals/SortModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditTaskModal from "@/components/modals/EditTaskModal";
+import FormModal from "@/components/modals/FormModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
 
 type SortOption = "priority" | "dueDate" | "title" | "none";
 
@@ -21,23 +28,11 @@ export default function NewYearResolutionsPage() {
 		(state: any) => state.newYearTasks
 	);
 
-	const [form, setForm] = useState({
-		title: "",
-		description: "",
-		priority: "medium" as "low" | "medium" | "high",
-		dueDate: "",
-		notes: "",
-	});
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<NewYearTask | null>(null);
+	const [deleteTask, setDeleteTask] = useState<NewYearTask | null>(null);
 
 	useEffect(() => {
 		if (!initialized) {
@@ -50,70 +45,64 @@ export default function NewYearResolutionsPage() {
 		(task: NewYearTask) => task.category === "Resolutions"
 	);
 
-	function handleAddTask(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.title.trim()) return;
-
+	function handleAddTask(values: Record<string, any>) {
 		const newTask: Omit<NewYearTask, "id" | "createdAt" | "updatedAt"> = {
-			title: form.title,
-			description: form.description || undefined,
+			title: values.title,
+			description: values.description || undefined,
 			isCompleted: false,
-			priority: form.priority,
+			priority: values.priority || "medium",
 			category: "Resolutions",
-			dueDate: form.dueDate || undefined,
-			notes: form.notes || undefined,
+			dueDate: values.dueDate || undefined,
+			notes: values.notes || undefined,
 		};
 
 		dispatch(addNewYearTask(newTask));
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
 		setShowForm(false);
 	}
 
-	function openForm() {
-		setShowForm(true);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
+	function handleEditTask(task: NewYearTask) {
+		setEditingTask(task);
 	}
 
-	function closeForm() {
-		setShowForm(false);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
+	function handleSaveEditTask(
+		updatedTask: Omit<Task, "id" | "createdAt" | "updatedAt">
+	) {
+		if (editingTask) {
+			// Convert Task to NewYearTask format
+			const newYearTaskUpdate: NewYearTask = {
+				id: editingTask.id,
+				title: updatedTask.title,
+				description: updatedTask.description,
+				isCompleted: updatedTask.isCompleted,
+				priority: updatedTask.priority,
+				category: updatedTask.category || "Resolutions",
+				dueDate: updatedTask.dueDate,
+				notes: editingTask.notes, // Keep existing notes
+				completedDate: updatedTask.completedDate,
+				createdAt: editingTask.createdAt,
+				updatedAt: new Date().toISOString(),
+			};
+			dispatch(updateNewYearTask(newYearTaskUpdate));
+			setEditingTask(null);
+		}
+	}
+
+	function handleDeleteTask(taskId: string) {
+		const task = resolutions.find((t: NewYearTask) => t.id === taskId);
+		if (task) {
+			setDeleteTask(task);
+		}
+	}
+
+	function confirmDelete() {
+		if (deleteTask) {
+			dispatch(deleteNewYearTask(deleteTask.id));
+			setDeleteTask(null);
+		}
 	}
 
 	function handleToggleTask(taskId: string) {
 		dispatch(toggleNewYearTaskCompletion(taskId));
-	}
-
-	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
-	}
-
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteNewYearTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
-		}
-	}
-
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
 	}
 
 	function sortTasks(tasksToSort: NewYearTask[]): NewYearTask[] {
@@ -158,44 +147,106 @@ export default function NewYearResolutionsPage() {
 		(task: NewYearTask) => task.isCompleted
 	);
 
+	const formFields = [
+		{
+			id: "title",
+			type: "text" as const,
+			label: "Resolution Title",
+			placeholder: "Enter your resolution",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "textarea" as const,
+			label: "Description",
+			placeholder: "Describe your resolution",
+			rows: 3,
+		},
+		{
+			id: "priority",
+			type: "select" as const,
+			label: "Priority",
+			options: [
+				{ value: "low", label: "Low" },
+				{ value: "medium", label: "Medium" },
+				{ value: "high", label: "High" },
+			],
+		},
+		{
+			id: "dueDate",
+			type: "date" as const,
+			label: "Due Date",
+		},
+		{
+			id: "notes",
+			type: "textarea" as const,
+			label: "Notes",
+			placeholder: "Additional notes",
+			rows: 2,
+		},
+	];
+
+	const renderToDoCard = (task: NewYearTask) => {
+		// Convert NewYearTask to Task format for ToDoCard
+		const taskForCard: Task = {
+			id: task.id,
+			title: task.title,
+			description: task.description,
+			priority: task.priority,
+			isCompleted: task.isCompleted,
+			completedDate: task.completedDate,
+			dueDate: task.dueDate,
+			category: task.category,
+			createdAt: task.createdAt,
+			updatedAt: task.updatedAt,
+		};
+
+		return (
+			<ToDoCard
+				key={task.id}
+				task={taskForCard}
+				onToggleComplete={handleToggleTask}
+				onDelete={handleDeleteTask}
+				onEdit={(taskForEdit: Task) => {
+					// Convert back to NewYearTask for editing
+					const newYearTask: NewYearTask = {
+						id: taskForEdit.id,
+						title: taskForEdit.title,
+						description: taskForEdit.description,
+						priority: taskForEdit.priority,
+						isCompleted: taskForEdit.isCompleted,
+						completedDate: taskForEdit.completedDate,
+						dueDate: taskForEdit.dueDate,
+						category: taskForEdit.category || "Resolutions",
+						notes: task.notes, // Keep original notes
+						createdAt: taskForEdit.createdAt,
+						updatedAt: taskForEdit.updatedAt,
+					};
+					handleEditTask(newYearTask);
+				}}
+				theme={{ accentColor: "#f59e0b" }}
+				borderColor="#f59e0b"
+			/>
+		);
+	};
+
 	return (
 		<div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/new-year"
-						className="absolute left-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Resolution Tracker
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
-						title="Sort resolutions"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
+			<HolidayPageHeader
+				title="Resolution Tracker"
+				backHref="/new-year"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort resolutions"
+				error={error}
+			/>
+
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<button
-					onClick={openForm}
-					className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors"
-				>
-					Add New Resolution
-				</button>
+				<AddButton
+					title="Resolution"
+					onClick={() => setShowForm(true)}
+					color="orange"
+				/>
+
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -206,281 +257,56 @@ export default function NewYearResolutionsPage() {
 					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-900 dark:text-white mb-2">
-						Incomplete ({incompleteResolutions.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{incompleteResolutions.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All resolutions completed! 🎉
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteResolutions.map((task: NewYearTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-amber-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-sm text-gray-600 dark:text-gray-300">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-															: task.priority === "medium"
-															? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-															: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
-											title="Delete resolution"
-										>
-											×
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteResolutions}
+					isCompleted={false}
+					emptyMessage="All resolutions completed! 🎉"
+					completedMessage=""
+					renderItem={renderToDoCard}
+				/>
 
-				{completedResolutions.length > 0 && (
-					<div>
-						<h2 className="font-semibold text-gray-900 dark:text-white mb-2">
-							Completed ({completedResolutions.length})
-						</h2>
-						<div className="card card-tasks rounded shadow">
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedResolutions.map((task: NewYearTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-amber-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white line-through">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-sm text-gray-600 dark:text-gray-300 line-through">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-															: task.priority === "medium"
-															? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-															: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
-											title="Delete resolution"
-										>
-											×
-										</button>
-									</li>
-								))}
-							</ul>
-						</div>
-					</div>
-				)}
+				<TaskSection
+					title="Completed"
+					items={completedResolutions}
+					isCompleted={true}
+					emptyMessage=""
+					completedMessage="No completed resolutions yet"
+					renderItem={renderToDoCard}
+				/>
 
 				{/* Form Modal */}
-				{showForm && (
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-						<div className="card card-tasks rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-							<div className="flex justify-between items-center mb-4">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-									Add New Resolution
-								</h3>
-								<button
-									onClick={closeForm}
-									className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-								>
-									×
-								</button>
-							</div>
-							<form onSubmit={handleAddTask} className="space-y-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Resolution Title *
-									</label>
-									<input
-										type="text"
-										value={form.title}
-										onChange={(e) =>
-											setForm({ ...form, title: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-										required
-										style={{ color: "#111827", backgroundColor: "white" }}
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Description
-									</label>
-									<textarea
-										value={form.description}
-										onChange={(e) =>
-											setForm({ ...form, description: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-										rows={3}
-										style={{ color: "#111827", backgroundColor: "white" }}
-									/>
-								</div>
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-											Priority
-										</label>
-										<select
-											value={form.priority}
-											onChange={(e) =>
-												setForm({
-													...form,
-													priority: e.target.value as "low" | "medium" | "high",
-												})
-											}
-											className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-											style={{ color: "#111827", backgroundColor: "white" }}
-										>
-											<option value="low">Low</option>
-											<option value="medium">Medium</option>
-											<option value="high">High</option>
-										</select>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-											Due Date
-										</label>
-										<input
-											type="date"
-											value={form.dueDate}
-											onChange={(e) =>
-												setForm({ ...form, dueDate: e.target.value })
-											}
-											className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-											style={{ color: "#111827", backgroundColor: "white" }}
-										/>
-									</div>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Notes
-									</label>
-									<textarea
-										value={form.notes}
-										onChange={(e) =>
-											setForm({ ...form, notes: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-700 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-										rows={2}
-										style={{ color: "#111827", backgroundColor: "white" }}
-									/>
-								</div>
-								<div className="flex gap-2">
-									<button
-										type="submit"
-										className="flex-1 bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors"
-									>
-										Add Resolution
-									</button>
-									<button
-										type="button"
-										onClick={closeForm}
-										className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-									>
-										Cancel
-									</button>
-								</div>
-							</form>
-						</div>
-					</div>
-				)}
+				<FormModal
+					isOpen={showForm}
+					title="Add New Resolution"
+					fields={formFields}
+					onSubmit={handleAddTask}
+					onClose={() => setShowForm(false)}
+					loading={loading}
+					submitText="Add Resolution"
+					submitButtonColor="#f59e0b"
+				/>
 
-				{/* Delete Confirmation Modal */}
-				{deleteConfirm.show && (
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-						<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-								Delete Resolution
-							</h3>
-							<p className="text-gray-600 dark:text-gray-400 mb-6">
-								Are you sure you want to delete this resolution? This action
-								cannot be undone.
-							</p>
-							<div className="flex gap-2">
-								<button
-									onClick={confirmDelete}
-									className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-								>
-									Delete
-								</button>
-								<button
-									onClick={cancelDelete}
-									className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-								>
-									Cancel
-								</button>
-							</div>
-						</div>
-					</div>
-				)}
+				{/* Edit Task Modal */}
+				<EditTaskModal
+					isOpen={!!editingTask}
+					task={editingTask}
+					onClose={() => setEditingTask(null)}
+					onSave={handleSaveEditTask}
+					loading={loading}
+				/>
+
+				{/* Delete Modal */}
+				<DeleteModal
+					isOpen={!!deleteTask}
+					title="Delete Resolution"
+					message="Are you sure you want to delete this resolution? This action cannot be undone."
+					itemName={deleteTask?.title}
+					onConfirm={confirmDelete}
+					onCancel={() => setDeleteTask(null)}
+					loading={loading}
+					confirmButtonColor="#ef4444"
+				/>
 
 				{/* Sort Modal */}
 				<SortModal

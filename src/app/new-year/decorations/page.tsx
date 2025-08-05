@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
 	fetchNewYearTasks,
@@ -12,32 +11,29 @@ import {
 	NewYearTask,
 } from "@/store/slices/newYearTasksSlice";
 import SortModal from "@/components/modals/SortModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import EditTaskModal from "@/components/modals/EditTaskModal";
+import FormModal from "@/components/modals/FormModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
 
 type SortOption = "priority" | "dueDate" | "title" | "none";
 
-export default function NewYearEventsPage() {
+export default function NewYearDecorationsPage() {
 	const dispatch = useAppDispatch();
 	const { tasks, loading, error, initialized } = useAppSelector(
 		(state: any) => state.newYearTasks
 	);
 
-	const [form, setForm] = useState({
-		title: "",
-		description: "",
-		priority: "medium" as "low" | "medium" | "high",
-		dueDate: "",
-		notes: "",
-	});
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
-	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [selectedTask, setSelectedTask] = useState<NewYearTask | null>(null);
+	const [taskToDelete, setTaskToDelete] = useState<NewYearTask | null>(null);
 
 	useEffect(() => {
 		if (!initialized) {
@@ -50,70 +46,61 @@ export default function NewYearEventsPage() {
 		(task: NewYearTask) => task.category === "Decorations"
 	);
 
-	function handleAddTask(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.title.trim()) return;
-
+	function handleAddTask(values: Record<string, any>) {
 		const newTask: Omit<NewYearTask, "id" | "createdAt" | "updatedAt"> = {
-			title: form.title,
-			description: form.description || undefined,
+			title: values.title,
+			description: values.description || undefined,
 			isCompleted: false,
-			priority: form.priority,
+			priority: values.priority || "medium",
 			category: "Decorations",
-			dueDate: form.dueDate || undefined,
-			notes: form.notes || undefined,
+			dueDate: values.dueDate || undefined,
+			notes: values.notes || undefined,
 		};
 
 		dispatch(addNewYearTask(newTask));
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
-		setShowForm(false);
+		setShowFormModal(false);
 	}
 
-	function openForm() {
-		setShowForm(true);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
-	}
+	function handleEditTask(values: Record<string, any>) {
+		if (!selectedTask) return;
 
-	function closeForm() {
-		setShowForm(false);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			dueDate: "",
-			notes: "",
-		});
+		const updatedTask: NewYearTask = {
+			...selectedTask,
+			title: values.title,
+			description: values.description || undefined,
+			isCompleted: values.isCompleted || false,
+			priority: values.priority || "medium",
+			category: "Decorations",
+			dueDate: values.dueDate || undefined,
+			notes: values.notes || undefined,
+			updatedAt: new Date().toISOString(),
+		};
+
+		dispatch(updateNewYearTask(updatedTask));
+		setShowEditModal(false);
+		setSelectedTask(null);
 	}
 
 	function handleToggleTask(taskId: string) {
 		dispatch(toggleNewYearTaskCompletion(taskId));
 	}
 
-	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+	function handleDeleteTask(task: NewYearTask) {
+		setTaskToDelete(task);
+		setShowDeleteModal(true);
 	}
 
 	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteNewYearTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+		if (taskToDelete) {
+			dispatch(deleteNewYearTask(taskToDelete.id));
+			setShowDeleteModal(false);
+			setTaskToDelete(null);
 		}
 	}
 
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
+	function handleEditTaskClick(task: NewYearTask) {
+		setSelectedTask(task);
+		setShowEditModal(true);
 	}
 
 	function sortTasks(tasksToSort: NewYearTask[]): NewYearTask[] {
@@ -137,12 +124,97 @@ export default function NewYearEventsPage() {
 		}
 	}
 
+	const formFields = [
+		{
+			id: "title",
+			type: "text" as const,
+			label: "Decoration Title",
+			placeholder: "Enter decoration title",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "textarea" as const,
+			label: "Description",
+			placeholder: "Enter description",
+			rows: 3,
+		},
+		{
+			id: "priority",
+			type: "select" as const,
+			label: "Priority",
+			options: [
+				{ value: "low", label: "Low" },
+				{ value: "medium", label: "Medium" },
+				{ value: "high", label: "High" },
+			],
+		},
+		{
+			id: "dueDate",
+			type: "date" as const,
+			label: "Due Date",
+		},
+		{
+			id: "notes",
+			type: "textarea" as const,
+			label: "Notes",
+			placeholder: "Enter additional notes",
+			rows: 2,
+		},
+	];
+
+	const editFormFields = [
+		{
+			id: "title",
+			type: "text" as const,
+			label: "Decoration Title",
+			placeholder: "Enter decoration title",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "textarea" as const,
+			label: "Description",
+			placeholder: "Enter description",
+			rows: 3,
+		},
+		{
+			id: "priority",
+			type: "select" as const,
+			label: "Priority",
+			options: [
+				{ value: "low", label: "Low" },
+				{ value: "medium", label: "Medium" },
+				{ value: "high", label: "High" },
+			],
+		},
+		{
+			id: "dueDate",
+			type: "date" as const,
+			label: "Due Date",
+		},
+		{
+			id: "notes",
+			type: "textarea" as const,
+			label: "Notes",
+			placeholder: "Enter additional notes",
+			rows: 2,
+		},
+		{
+			id: "isCompleted",
+			type: "checkbox" as const,
+			label: "Mark as completed",
+		},
+	];
+
 	if (loading && !initialized) {
 		return (
 			<div className="min-h-screen new-year-gradient flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading events...</p>
+					<p className="text-gray-600 dark:text-gray-300">
+						Loading decorations...
+					</p>
 				</div>
 			</div>
 		);
@@ -156,329 +228,63 @@ export default function NewYearEventsPage() {
 		(task: NewYearTask) => task.isCompleted
 	);
 
+	const renderTaskItem = (task: NewYearTask) => {
+		// Convert NewYearTask to Task type for ToDoCard
+		const taskForCard = {
+			...task,
+			category: task.category || "Decorations",
+		};
+
+		return (
+			<ToDoCard
+				key={task.id}
+				task={taskForCard as any}
+				onToggleComplete={handleToggleTask}
+				onDelete={(taskId: string) => handleDeleteTask(task)}
+				onEdit={(taskForEdit: any) => handleEditTaskClick(task)}
+				theme={{
+					accentColor: "#f59e0b",
+					hoverColor: "hover:bg-amber-50 dark:hover:bg-amber-900/20",
+				}}
+				borderColor="#f59e0b"
+			/>
+		);
+	};
+
 	return (
 		<div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/new-year"
-						className="absolute left-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Decorations Checklist
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
-						title="Sort decorations"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
+			<HolidayPageHeader
+				title="Decorations Checklist"
+				backHref="/new-year"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort decorations"
+				error={error}
+			/>
+
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<button
-					onClick={openForm}
-					className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors"
-				>
-					Add New Decoration
-				</button>
-				<div className="flex items-center justify-center">
-					{sortBy !== "none" && (
-						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "priority" && "Sorted by Priority"}
-							{sortBy === "dueDate" && "Sorted by Due Date"}
-							{sortBy === "title" && "Sorted by Title"}
-						</div>
-					)}
-				</div>
+				<AddButton
+					title="Decoration"
+					onClick={() => setShowFormModal(true)}
+					color="orange"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-900 dark:text-white mb-2">
-						Incomplete ({incompleteDecorations.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{incompleteDecorations.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All decorations completed! 🎉
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteDecorations.map((task: NewYearTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-amber-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-sm text-gray-600 dark:text-gray-300">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-															: task.priority === "medium"
-															? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-															: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
-											title="Delete event"
-										>
-											×
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteDecorations}
+					isCompleted={false}
+					emptyMessage="All decorations completed! 🎉"
+					completedMessage=""
+					renderItem={renderTaskItem}
+				/>
 
-				{completedDecorations.length > 0 && (
-					<div>
-						<h2 className="font-semibold text-gray-900 dark:text-white mb-2">
-							Completed ({completedDecorations.length})
-						</h2>
-						<div className="card card-tasks rounded shadow">
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedDecorations.map((task: NewYearTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-amber-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white line-through">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-sm text-gray-600 dark:text-gray-300 line-through">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-															: task.priority === "medium"
-															? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-															: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
-											title="Delete event"
-										>
-											×
-										</button>
-									</li>
-								))}
-							</ul>
-						</div>
-					</div>
-				)}
-
-				{/* Form Modal */}
-				{showForm && (
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-						<div className="card card-tasks rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-							<div className="flex justify-between items-center mb-4">
-								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-									Add New Decoration
-								</h3>
-								<button
-									onClick={closeForm}
-									className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-								>
-									×
-								</button>
-							</div>
-							<form onSubmit={handleAddTask} className="space-y-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Decoration Title *
-									</label>
-									<input
-										type="text"
-										value={form.title}
-										onChange={(e) =>
-											setForm({ ...form, title: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-										required
-										style={{ color: "#111827", backgroundColor: "white" }}
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Description
-									</label>
-									<textarea
-										value={form.description}
-										onChange={(e) =>
-											setForm({ ...form, description: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-										rows={3}
-										style={{ color: "#111827", backgroundColor: "white" }}
-									/>
-								</div>
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-											Priority
-										</label>
-										<select
-											value={form.priority}
-											onChange={(e) =>
-												setForm({
-													...form,
-													priority: e.target.value as "low" | "medium" | "high",
-												})
-											}
-											className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-											style={{ color: "#111827", backgroundColor: "white" }}
-										>
-											<option value="low">Low</option>
-											<option value="medium">Medium</option>
-											<option value="high">High</option>
-										</select>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-											Due Date
-										</label>
-										<input
-											type="date"
-											value={form.dueDate}
-											onChange={(e) =>
-												setForm({ ...form, dueDate: e.target.value })
-											}
-											className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-											style={{ color: "#111827", backgroundColor: "white" }}
-										/>
-									</div>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Notes
-									</label>
-									<textarea
-										value={form.notes}
-										onChange={(e) =>
-											setForm({ ...form, notes: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
-										rows={2}
-										style={{ color: "#111827", backgroundColor: "white" }}
-									/>
-								</div>
-								<div className="flex gap-2">
-									<button
-										type="submit"
-										className="flex-1 bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors"
-									>
-										Add Decoration
-									</button>
-									<button
-										type="button"
-										onClick={closeForm}
-										className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-									>
-										Cancel
-									</button>
-								</div>
-							</form>
-						</div>
-					</div>
-				)}
-
-				{/* Delete Confirmation Modal */}
-				{deleteConfirm.show && (
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-						<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4">
-							<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-								Delete Decoration
-							</h3>
-							<p className="text-gray-600 dark:text-gray-400 mb-6">
-								Are you sure you want to delete this decoration? This action
-								cannot be undone.
-							</p>
-							<div className="flex gap-2">
-								<button
-									onClick={confirmDelete}
-									className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-								>
-									Delete
-								</button>
-								<button
-									onClick={cancelDelete}
-									className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-								>
-									Cancel
-								</button>
-							</div>
-						</div>
-					</div>
-				)}
+				<TaskSection
+					title="Completed"
+					items={completedDecorations}
+					isCompleted={true}
+					emptyMessage="No completed decorations yet."
+					completedMessage="No completed decorations yet."
+					renderItem={renderTaskItem}
+				/>
 
 				{/* Sort Modal */}
 				<SortModal
@@ -495,6 +301,58 @@ export default function NewYearEventsPage() {
 						{ value: "title", label: "Sort by Title" },
 					]}
 					title="Sort Decorations"
+				/>
+
+				{/* Form Modal for Adding */}
+				<FormModal
+					isOpen={showFormModal}
+					title="Add New Decoration"
+					fields={formFields}
+					onSubmit={handleAddTask}
+					onClose={() => setShowFormModal(false)}
+					submitText="Add Decoration"
+					submitButtonColor="#f59e0b"
+				/>
+
+				{/* Form Modal for Editing */}
+				<FormModal
+					isOpen={showEditModal}
+					title="Edit Decoration"
+					fields={editFormFields}
+					initialValues={
+						selectedTask
+							? {
+									title: selectedTask.title,
+									description: selectedTask.description || "",
+									priority: selectedTask.priority,
+									dueDate: selectedTask.dueDate || "",
+									notes: selectedTask.notes || "",
+									isCompleted: selectedTask.isCompleted,
+							  }
+							: {}
+					}
+					onSubmit={handleEditTask}
+					onClose={() => {
+						setShowEditModal(false);
+						setSelectedTask(null);
+					}}
+					submitText="Save Changes"
+					submitButtonColor="#f59e0b"
+				/>
+
+				{/* Delete Modal */}
+				<DeleteModal
+					isOpen={showDeleteModal}
+					title="Delete Decoration"
+					message="Are you sure you want to delete this decoration? This action cannot be undone."
+					itemName={taskToDelete?.title}
+					onConfirm={confirmDelete}
+					onCancel={() => {
+						setShowDeleteModal(false);
+						setTaskToDelete(null);
+					}}
+					confirmText="Delete"
+					confirmButtonColor="#ef4444"
 				/>
 			</main>
 

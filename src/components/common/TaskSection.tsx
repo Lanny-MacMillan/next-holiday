@@ -19,7 +19,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 	completedMessage,
 	renderItem,
 	cardClassName = "",
-	borderColor = "rgb(var(--color-blue-500))",
+	borderColor,
 }) => {
 	const getTitleColor = () => {
 		return isCompleted
@@ -40,7 +40,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 			</h2>
 			<div
 				className={`card ${cardClassName} rounded shadow`}
-				style={{ borderLeft: `4px solid ${borderColor}` }}
+				style={borderColor ? { borderLeft: `4px solid ${borderColor}` } : {}}
 			>
 				{items.length === 0 ? (
 					<div className={`px-4 py-3 ${getEmptyMessageColor()} text-center`}>

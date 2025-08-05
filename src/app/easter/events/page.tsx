@@ -106,7 +106,7 @@ export default function EasterEventsPage() {
 							onEdit={handleEdit}
 						/>
 					)}
-					cardClassName="card-tasks"
+					cardClassName="card-events-easter"
 				/>
 
 				<TaskSection
@@ -125,7 +125,7 @@ export default function EasterEventsPage() {
 							className="opacity-60"
 						/>
 					)}
-					cardClassName="card-tasks"
+					cardClassName="card-events-easter"
 				/>
 			</main>
 
@@ -184,7 +184,7 @@ export default function EasterEventsPage() {
 				}}
 				loading={loading}
 				submitText={editingTask ? "Update Event" : "Add Event"}
-				cardClassName="card-tasks"
+				cardClassName="card-events-easter"
 				submitButtonColor="#a855f7"
 			/>
 
@@ -199,7 +199,7 @@ export default function EasterEventsPage() {
 					setTaskToDelete(null);
 				}}
 				loading={loading}
-				cardClassName="card-tasks"
+				cardClassName="card-events-easter"
 				confirmButtonColor="#a855f7"
 			/>
 		</div>

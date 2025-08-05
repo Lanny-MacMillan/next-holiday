@@ -383,7 +383,7 @@ export default function HanukkahEventsPage() {
 					emptyMessage="All events planned! 🎉"
 					completedMessage=""
 					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
+					cardClassName="card-events-hanukkah"
 				/>
 
 				<TaskSection
@@ -393,14 +393,14 @@ export default function HanukkahEventsPage() {
 					emptyMessage=""
 					completedMessage="No completed events yet. Complete some tasks to see them here! 🎉"
 					renderItem={renderCompletedTaskItem}
-					cardClassName="card-tasks"
+					cardClassName="card-events-hanukkah"
 				/>
 			</main>
 
 			{/* Form Modal */}
 			{showForm && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-tasks rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+					<div className="card card-events-hanukkah rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
 						<div className="flex justify-between items-center mb-4">
 							<h3
 								className="text-lg font-semibold text-gray-900 dark:text-white"
