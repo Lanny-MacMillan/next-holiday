@@ -371,7 +371,7 @@ export default function HanukkahDecorationsPage() {
 					items={completedTasks}
 					isCompleted={true}
 					emptyMessage="No completed tasks yet."
-					completedMessage=""
+					completedMessage="No completed tasks yet."
 					renderItem={renderCompletedTaskItem}
 					cardClassName="card-tasks"
 				/>
