@@ -3,7 +3,7 @@ import React from "react";
 interface AddButtonProps {
 	title: string;
 	onClick: () => void;
-	color?: "red" | "green" | "blue" | "purple" | "orange";
+	color?: "red" | "green" | "blue" | "purple" | "orange" | "yellow";
 	disabled?: boolean;
 }
 
@@ -25,6 +25,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return "bg-purple-500 hover:bg-purple-600";
 			case "orange":
 				return "bg-orange-500 hover:bg-orange-600";
+			case "yellow":
+				return "bg-yellow-500 hover:bg-yellow-600";
 			default:
 				return "bg-red-500 hover:bg-red-600";
 		}
@@ -42,6 +44,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return { backgroundColor: "#8b5cf6", color: "white" };
 			case "orange":
 				return { backgroundColor: "#f97316", color: "white" };
+			case "yellow":
+				return { backgroundColor: "#eab308", color: "white" };
 			default:
 				return { backgroundColor: "#ef4444", color: "white" };
 		}

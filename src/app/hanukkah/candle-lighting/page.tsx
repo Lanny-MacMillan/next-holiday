@@ -12,6 +12,9 @@ import {
 	HanukkahTask,
 } from "@/store/slices/hanukkahTasksSlice";
 import SortModal from "@/components/modals/SortModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -108,37 +111,106 @@ export default function CandleLightingPage() {
 		(task: HanukkahTask) => task.isCompleted
 	);
 
-	return (
-		<div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/hanukkah"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Candle Lighting Tracker
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-						title="Sort tasks"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
+	const renderTaskItem = (task: HanukkahTask) => (
+		<li
+			key={task.id}
+			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
+			onClick={() => handleToggleTask(task.id)}
+		>
+			<input
+				type="checkbox"
+				checked={task.isCompleted}
+				readOnly
+				className="mr-3 accent-blue-500"
+			/>
+			<div className="flex-1">
+				<div className="text-gray-900 dark:text-white">{task.title}</div>
+				{task.description && (
+					<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						{task.description}
 					</div>
 				)}
-			</header>
+				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+					<span
+						className={`px-2 py-1 rounded ${
+							task.priority === "high"
+								? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+								: task.priority === "medium"
+								? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+								: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+						}`}
+					>
+						{task.priority}
+					</span>
+					{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}
+					{task.category && <span>{task.category}</span>}
+					{task.dueDate && (
+						<span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+					)}
+				</div>
+			</div>
+			<button
+				onClick={(e) => {
+					e.stopPropagation();
+					handleDeleteTask(task.id);
+				}}
+				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+				disabled={loading}
+			>
+				Delete
+			</button>
+		</li>
+	);
+
+	const renderCompletedTaskItem = (task: HanukkahTask) => (
+		<li
+			key={task.id}
+			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
+			onClick={() => handleToggleTask(task.id)}
+		>
+			<input
+				type="checkbox"
+				checked={task.isCompleted}
+				readOnly
+				className="mr-3 accent-blue-500"
+			/>
+			<div className="flex-1">
+				<div className="line-through text-gray-400 dark:text-gray-500">
+					{task.title}
+				</div>
+				{task.description && (
+					<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
+						{task.description}
+					</div>
+				)}
+				{task.completedDate && (
+					<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+						Completed: {new Date(task.completedDate).toLocaleDateString()}
+					</div>
+				)}
+			</div>
+			<button
+				onClick={(e) => {
+					e.stopPropagation();
+					handleDeleteTask(task.id);
+				}}
+				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+				disabled={loading}
+			>
+				Delete
+			</button>
+		</li>
+	);
+
+	return (
+		<div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+			<HolidayPageHeader
+				title="Candle Lighting Tracker"
+				backHref="/hanukkah"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort tasks"
+				error={error}
+			/>
 			<main className="w-full max-w-md flex flex-col gap-6">
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -151,133 +223,25 @@ export default function CandleLightingPage() {
 					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete ({incompleteTasks.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{incompleteTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All candles lit! 🕯️✨
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteTasks.map((task: HanukkahTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-															: task.priority === "medium"
-															? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-															: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.assignedTo && (
-													<span>Assigned: {task.assignedTo}</span>
-												)}
-												{task.category && <span>{task.category}</span>}
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteTasks}
+					isCompleted={false}
+					emptyMessage="All candles lit! 🕯️✨"
+					completedMessage=""
+					renderItem={renderTaskItem}
+					cardClassName="card-tasks"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed ({completedTasks.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{completedTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed tasks yet.
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedTasks.map((task: HanukkahTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{task.description}
-												</div>
-											)}
-											{task.completedDate && (
-												<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-													Completed:{" "}
-													{new Date(task.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Completed"
+					items={completedTasks}
+					isCompleted={true}
+					emptyMessage="No completed tasks yet."
+					completedMessage=""
+					renderItem={renderCompletedTaskItem}
+					cardClassName="card-tasks"
+				/>
 			</main>
 
 			{/* Delete Confirmation Modal */}

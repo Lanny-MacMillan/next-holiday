@@ -201,39 +201,41 @@ export default function FormModal({
 							{/* Regular field rendering */}
 							{!(field.id === "recipient" && showAddressBook) &&
 								renderField(field)}
+
+							{/* Address Book Dropdown - positioned right after recipient field */}
+							{field.id === "recipient" &&
+								showAddressBookInternal &&
+								showAddressBook && (
+									<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto mt-2">
+										<h4
+											className="text-sm font-medium mb-1 text-gray-900 dark:text-white"
+											style={{ color: "#111827" }}
+										>
+											From Address Book:
+										</h4>
+										{contacts.map((contact: any) => (
+											<button
+												key={contact.id}
+												type="button"
+												onClick={() => {
+													handleAddressBookSelect(contact);
+												}}
+												className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
+												style={{ color: "#111827" }}
+											>
+												<div className="font-medium">{contact.name}</div>
+												{contact.streetAddress && (
+													<div className="text-xs text-gray-500">
+														{contact.streetAddress}, {contact.city},{" "}
+														{contact.state} {contact.zipCode}
+													</div>
+												)}
+											</button>
+										))}
+									</div>
+								)}
 						</div>
 					))}
-
-					{/* Address Book Dropdown */}
-					{showAddressBookInternal && showAddressBook && (
-						<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
-							<h4
-								className="text-sm font-medium mb-1 text-gray-900 dark:text-white"
-								style={{ color: "#111827" }}
-							>
-								From Address Book:
-							</h4>
-							{contacts.map((contact: any) => (
-								<button
-									key={contact.id}
-									type="button"
-									onClick={() => {
-										handleAddressBookSelect(contact);
-									}}
-									className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
-									style={{ color: "#111827" }}
-								>
-									<div className="font-medium">{contact.name}</div>
-									{contact.streetAddress && (
-										<div className="text-xs text-gray-500">
-											{contact.streetAddress}, {contact.city}, {contact.state}{" "}
-											{contact.zipCode}
-										</div>
-									)}
-								</button>
-							))}
-						</div>
-					)}
 
 					<div className="flex gap-3 pt-2">
 						<button

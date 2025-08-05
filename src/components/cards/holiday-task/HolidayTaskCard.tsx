@@ -41,7 +41,10 @@ export default function HolidayTaskCard({
 		<Link
 			href={href}
 			className={`block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100 ${className}`}
-			style={{ backgroundColor }}
+			style={{
+				backgroundColor,
+				borderLeft: `4px solid ${primaryColor}`, // Colored line on left edge
+			}}
 		>
 			<div className="flex items-center justify-between mb-1">
 				<h3 className="text-lg font-bold text-gray-800 dark:text-white">

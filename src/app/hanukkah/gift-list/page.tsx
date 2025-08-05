@@ -14,6 +14,9 @@ import {
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
@@ -173,48 +176,134 @@ export default function HanukkahGiftListPage() {
 		(gift: HanukkahGift) => gift.isCompleted
 	);
 
-	return (
-		<div className="min-h-screen hanukkah-gifts-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/hanukkah"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Hanukkah Gift List
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-						title="Sort gifts"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
+	const renderGiftItem = (gift: HanukkahGift) => (
+		<li
+			key={gift.id}
+			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
+			onClick={() => handleToggleGift(gift.id)}
+		>
+			<input
+				type="checkbox"
+				checked={gift.isCompleted}
+				readOnly
+				className="mr-3 accent-blue-500"
+			/>
+			<div className="flex-1">
+				<div className="text-gray-900 dark:text-white">{gift.name}</div>
+				<div className="text-sm text-gray-600 dark:text-gray-300">
+					For: {gift.recipient}
 				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
+				{gift.description && (
+					<div className="text-xs text-gray-500 dark:text-gray-400">
+						{gift.description}
 					</div>
 				)}
-			</header>
+				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+					{gift.price > 0 && <span>${gift.price.toFixed(2)}</span>}
+					{gift.store && <span>Store: {gift.store}</span>}
+				</div>
+				{gift.notes && (
+					<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						{gift.notes}
+					</div>
+				)}
+			</div>
+			<div className="flex flex-col gap-1">
+				{gift.productLink && (
+					<a
+						href={gift.productLink}
+						target="_blank"
+						rel="noopener noreferrer"
+						onClick={(e) => e.stopPropagation()}
+						className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
+					>
+						🔗 Link
+					</a>
+				)}
+				<button
+					onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteGift(gift.id);
+					}}
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+					disabled={loading}
+				>
+					Delete
+				</button>
+			</div>
+		</li>
+	);
+
+	const renderCompletedGiftItem = (gift: HanukkahGift) => (
+		<li
+			key={gift.id}
+			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
+			onClick={() => handleToggleGift(gift.id)}
+		>
+			<input
+				type="checkbox"
+				checked={gift.isCompleted}
+				readOnly
+				className="mr-3 accent-blue-500"
+			/>
+			<div className="flex-1">
+				<div className="line-through text-gray-400 dark:text-gray-500">
+					{gift.name}
+				</div>
+				<div className="text-sm text-gray-400 dark:text-gray-500 line-through">
+					For: {gift.recipient}
+				</div>
+				{gift.description && (
+					<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
+						{gift.description}
+					</div>
+				)}
+				{gift.completedDate && (
+					<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+						Completed: {new Date(gift.completedDate).toLocaleDateString()}
+					</div>
+				)}
+			</div>
+			<div className="flex flex-col gap-1">
+				{gift.productLink && (
+					<a
+						href={gift.productLink}
+						target="_blank"
+						rel="noopener noreferrer"
+						onClick={(e) => e.stopPropagation()}
+						className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
+					>
+						🔗 Link
+					</a>
+				)}
+				<button
+					onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteGift(gift.id);
+					}}
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+					disabled={loading}
+				>
+					Delete
+				</button>
+			</div>
+		</li>
+	);
+
+	return (
+		<div className="min-h-screen hanukkah-gifts-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+			<HolidayPageHeader
+				title="Hanukkah Gift List"
+				backHref="/hanukkah"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort gifts"
+				error={error}
+			/>
 			<main className="w-full max-w-md flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay holiday="Hanukkah" />
 
-				<button
-					onClick={openForm}
-					className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-					style={{ backgroundColor: "#3b82f6", color: "white" }}
-				>
-					Add New Gift
-				</button>
+				<AddButton title="Gift" onClick={openForm} color="blue" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -226,154 +315,25 @@ export default function HanukkahGiftListPage() {
 					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-900 dark:text-white mb-2">
-						Incomplete ({incompleteGifts.length})
-					</h2>
-					<div className="card card-gifts rounded shadow">
-						{incompleteGifts.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All gifts completed! 🕯️
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteGifts.map((gift: HanukkahGift) => (
-									<li
-										key={gift.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
-										onClick={() => handleToggleGift(gift.id)}
-									>
-										<input
-											type="checkbox"
-											checked={gift.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{gift.name}
-											</div>
-											<div className="text-sm text-gray-600 dark:text-gray-300">
-												For: {gift.recipient}
-											</div>
-											{gift.description && (
-												<div className="text-xs text-gray-500 dark:text-gray-400">
-													{gift.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												{gift.price > 0 && (
-													<span>${gift.price.toFixed(2)}</span>
-												)}
-												{gift.store && <span>Store: {gift.store}</span>}
-											</div>
-											{gift.notes && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													{gift.notes}
-												</div>
-											)}
-										</div>
-										<div className="flex flex-col gap-1">
-											{gift.productLink && (
-												<a
-													href={gift.productLink}
-													target="_blank"
-													rel="noopener noreferrer"
-													onClick={(e) => e.stopPropagation()}
-													className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
-												>
-													🔗 Link
-												</a>
-											)}
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteGift(gift.id);
-												}}
-												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-												disabled={loading}
-											>
-												Delete
-											</button>
-										</div>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteGifts}
+					isCompleted={false}
+					emptyMessage="All gifts completed! 🕯️"
+					completedMessage=""
+					renderItem={renderGiftItem}
+					cardClassName="card-gifts"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed ({completedGifts.length})
-					</h2>
-					<div className="card card-gifts rounded shadow">
-						{completedGifts.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed gifts yet.
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedGifts.map((gift: HanukkahGift) => (
-									<li
-										key={gift.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
-										onClick={() => handleToggleGift(gift.id)}
-									>
-										<input
-											type="checkbox"
-											checked={gift.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												{gift.name}
-											</div>
-											<div className="text-sm text-gray-400 dark:text-gray-500 line-through">
-												For: {gift.recipient}
-											</div>
-											{gift.description && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{gift.description}
-												</div>
-											)}
-											{gift.completedDate && (
-												<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-													Completed:{" "}
-													{new Date(gift.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<div className="flex flex-col gap-1">
-											{gift.productLink && (
-												<a
-													href={gift.productLink}
-													target="_blank"
-													rel="noopener noreferrer"
-													onClick={(e) => e.stopPropagation()}
-													className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
-												>
-													🔗 Link
-												</a>
-											)}
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteGift(gift.id);
-												}}
-												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-												disabled={loading}
-											>
-												Delete
-											</button>
-										</div>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Completed"
+					items={completedGifts}
+					isCompleted={true}
+					emptyMessage="No completed gifts yet."
+					completedMessage=""
+					renderItem={renderCompletedGiftItem}
+					cardClassName="card-gifts"
+				/>
 			</main>
 
 			{/* Form Modal */}

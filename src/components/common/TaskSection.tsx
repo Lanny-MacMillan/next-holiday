@@ -39,7 +39,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 			<div className={`card ${cardClassName} rounded shadow`}>
 				{items.length === 0 ? (
 					<div className={`px-4 py-3 ${getEmptyMessageColor()} text-center`}>
-						{isCompleted ? emptyMessage : completedMessage}
+						{isCompleted ? completedMessage : emptyMessage}
 					</div>
 				) : (
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">

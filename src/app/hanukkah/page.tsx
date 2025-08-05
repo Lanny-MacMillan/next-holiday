@@ -8,6 +8,7 @@ import { fetchHanukkahGifts } from "@/store/slices/hanukkahGiftListSlice";
 import { fetchHanukkahTasks } from "@/store/slices/hanukkahTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
 const subsections = [
 	{
@@ -139,6 +140,27 @@ export default function HanukkahPage() {
 										theme={{
 											primaryColor: "#3b82f6", // Blue for Hanukkah
 											accentColor: "#eab308",
+										}}
+									/>
+								</li>
+							);
+						}
+
+						// Use HolidayTaskCard for task sections
+						if (section.sliceKey === "tasks") {
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Hanukkah"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#3b82f6", // Blue for Hanukkah
+											accentColor: "#eab308",
+											progressColor: "#3b82f6", // Blue for Hanukkah
 										}}
 									/>
 								</li>
