@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchValentinesGifts } from "@/store/slices/valentinesGiftListSlice";
 import { fetchValentinesTasks } from "@/store/slices/valentinesTasksSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
 const subsections = [
 	{
@@ -19,18 +20,21 @@ const subsections = [
 		description: "Plan romantic activities and dates",
 		href: "/valentines/date-ideas",
 		sliceKey: "valentinesTasks",
+		category: "Date Ideas",
 	},
 	{
 		name: "Card List",
 		description: "Track your Valentine's cards",
 		href: "/valentines/cards",
-		sliceKey: "cards",
+		sliceKey: "valentinesTasks",
+		category: "Cards",
 	},
 	{
 		name: "Reservations Tracker",
 		description: "Track restaurant and activity reservations",
 		href: "/valentines/reservations",
 		sliceKey: "valentinesTasks",
+		category: "Reservations",
 	},
 ];
 
@@ -43,7 +47,6 @@ export default function ValentinesPage() {
 	const valentinesTasks = useAppSelector(
 		(state: any) => state.valentinesTasks.tasks
 	);
-	const cards = useAppSelector((state: any) => state.cards.cards);
 
 	useEffect(() => {
 		// Fetch all data when component mounts if not already initialized
@@ -51,7 +54,10 @@ export default function ValentinesPage() {
 		dispatch(fetchValentinesTasks());
 	}, [dispatch]);
 
-	function getProgressData(sliceKey: string): {
+	function getProgressData(
+		sliceKey: string,
+		category?: string
+	): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -60,10 +66,6 @@ export default function ValentinesPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
-			case "cards":
-				total = cards.length;
-				completed = cards.filter((card: any) => card.isCompleted).length;
-				break;
 			case "valentinesGiftList":
 				total = valentinesGifts.length;
 				completed = valentinesGifts.filter(
@@ -71,33 +73,14 @@ export default function ValentinesPage() {
 				).length;
 				break;
 			case "valentinesTasks":
-				// For Date Ideas and Reservations, filter by category
-				const isDateIdeas = window.location.pathname.includes("date-ideas");
-				const isReservations =
-					window.location.pathname.includes("reservations");
-
-				if (isDateIdeas) {
-					const dateIdeasTasks = valentinesTasks.filter(
-						(task: any) => task.category === "Date Ideas"
-					);
-					total = dateIdeasTasks.length;
-					completed = dateIdeasTasks.filter(
-						(task: any) => task.isCompleted
-					).length;
-				} else if (isReservations) {
-					const reservationTasks = valentinesTasks.filter(
-						(task: any) => task.category === "Reservations"
-					);
-					total = reservationTasks.length;
-					completed = reservationTasks.filter(
-						(task: any) => task.isCompleted
-					).length;
-				} else {
-					total = valentinesTasks.length;
-					completed = valentinesTasks.filter(
-						(task: any) => task.isCompleted
-					).length;
-				}
+				// Filter tasks by category if provided
+				const filteredTasks = category
+					? valentinesTasks.filter((task: any) => task.category === category)
+					: valentinesTasks;
+				total = filteredTasks.length;
+				completed = filteredTasks.filter(
+					(task: any) => task.isCompleted
+				).length;
 				break;
 			default:
 				total = 0;
@@ -132,8 +115,9 @@ export default function ValentinesPage() {
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
-						const { total, completed, progress } = getProgressData(
-							section.sliceKey
+						const { total, completed } = getProgressData(
+							section.sliceKey,
+							section.category
 						);
 
 						// Use GiftListCard for gift list sections
@@ -152,40 +136,22 @@ export default function ValentinesPage() {
 							);
 						}
 
+						// Use HolidayTaskCard for task sections
 						return (
 							<li key={section.name}>
-								<Link
+								<HolidayTaskCard
+									holidayName="Valentine's Day"
+									sectionName={section.name}
+									description={section.description}
 									href={section.href}
-									className="block card card-valentines rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
-								>
-									<div className="flex items-center justify-between mb-1">
-										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
-											{section.name}
-										</h3>
-										<span className="bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
-											{total}
-										</span>
-									</div>
-									<p className="text-gray-600 dark:text-gray-400 text-sm">
-										{section.description}
-									</p>
-									{/* Progress bar */}
-									<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-										<div
-											className="bg-pink-400 dark:bg-pink-500 h-2 rounded-full transition-all"
-											style={{ width: `${progress * 100}%` }}
-										/>
-									</div>
-									{/* Progress text */}
-									<div className="flex justify-between items-center mt-1">
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{Math.round(progress * 100)}% complete
-										</span>
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{completed}/{total} items
-										</span>
-									</div>
-								</Link>
+									totalItems={total}
+									completedItems={completed}
+									theme={{
+										primaryColor: "#ec4899", // Pink for Valentine's Day
+										accentColor: "#eab308",
+										progressColor: "#ec4899",
+									}}
+								/>
 							</li>
 						);
 					})}

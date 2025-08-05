@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchThanksgivingGifts } from "@/store/slices/thanksgivingGiftListSlice";
 import { fetchThanksgivingTasks } from "@/store/slices/thanksgivingTasksSlice";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
 const subsections = [
 	{
@@ -50,18 +50,14 @@ const subsections = [
 export default function ThanksgivingPage() {
 	const dispatch = useAppDispatch();
 
-	const cards = useAppSelector((state: any) => state.cards.cards);
 	const gifts = useAppSelector(
 		(state: any) => state.thanksgivingGiftList.gifts
 	);
 	const tasks = useAppSelector((state: any) => state.thanksgivingTasks.tasks);
-	const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
 	useEffect(() => {
-		dispatch(fetchCards());
 		dispatch(fetchThanksgivingGifts());
 		dispatch(fetchThanksgivingTasks());
-		dispatch(fetchContacts());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string, category?: string) {
@@ -127,44 +123,42 @@ export default function ThanksgivingPage() {
 
 				<div className="grid gap-4">
 					{subsections.map((section) => {
-						const progressData = getProgressData(
+						const { total, completed } = getProgressData(
 							section.sliceKey,
 							section.category
 						);
+
+						// Use GiftListCard for gift list sections
+						if (section.sliceKey === "giftList") {
+							return (
+								<GiftListCard
+									key={section.name}
+									holiday="Thanksgiving"
+									href={section.href}
+									theme={{
+										primaryColor: "#d97706", // Amber for Thanksgiving
+										accentColor: "#eab308",
+									}}
+								/>
+							);
+						}
+
+						// Use HolidayTaskCard for task sections
 						return (
-							<Link
+							<HolidayTaskCard
 								key={section.name}
+								holidayName="Thanksgiving"
+								sectionName={section.name}
+								description={section.description}
 								href={section.href}
-								className="card rounded-lg p-6 transition hover:scale-[1.02] active:scale-100"
-							>
-								<div className="flex justify-between items-start mb-2">
-									<div>
-										<h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-											{section.name}
-										</h3>
-										<p className="text-gray-600 dark:text-gray-400 text-sm">
-											{section.description}
-										</p>
-									</div>
-									<span className="text-2xl text-gray-300 dark:text-gray-600">
-										→
-									</span>
-								</div>
-								<div className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-									<div
-										className="bg-amber-600 dark:bg-amber-500 h-2 rounded-full transition-all"
-										style={{ width: `${progressData.progress * 100}%` }}
-									/>
-								</div>
-								<div className="flex justify-between items-center mt-1">
-									<span className="text-xs text-gray-500 dark:text-gray-500">
-										{Math.round(progressData.progress * 100)}% complete
-									</span>
-									<span className="text-xs text-gray-500 dark:text-gray-500">
-										{progressData.completed}/{progressData.total} items
-									</span>
-								</div>
-							</Link>
+								totalItems={total}
+								completedItems={completed}
+								theme={{
+									primaryColor: "#d97706", // Amber for Thanksgiving
+									accentColor: "#eab308",
+									progressColor: "#d97706",
+								}}
+							/>
 						);
 					})}
 				</div>
