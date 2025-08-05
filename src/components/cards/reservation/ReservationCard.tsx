@@ -1,0 +1,112 @@
+import React from "react";
+
+interface ReservationCardProps {
+	id: string;
+	title: string;
+	description?: string;
+	dueDate?: string;
+	priority: "low" | "medium" | "high";
+	isCompleted: boolean;
+	notes?: string;
+	onToggleCompletion: (id: string) => void;
+	onDelete: (id: string) => void;
+}
+
+const ReservationCard: React.FC<ReservationCardProps> = ({
+	id,
+	title,
+	description,
+	dueDate,
+	priority,
+	isCompleted,
+	notes,
+	onToggleCompletion,
+	onDelete,
+}) => {
+	const getPriorityColor = (priority: string) => {
+		switch (priority) {
+			case "high":
+				return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+			case "medium":
+				return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+			case "low":
+				return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+			default:
+				return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+		}
+	};
+
+	return (
+		<div
+			className={`card card-valentines rounded-2xl p-4 transition-all ${
+				isCompleted ? "opacity-75" : ""
+			}`}
+		>
+			{/* Header with title and badges */}
+			<div className="mb-3">
+				<div className="flex items-center gap-2 mb-2">
+					<h3
+						className={`font-bold text-gray-800 dark:text-white text-lg ${
+							isCompleted ? "line-through" : ""
+						}`}
+					>
+						{title}
+					</h3>
+					<span
+						className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(
+							priority
+						)}`}
+					>
+						{priority.charAt(0).toUpperCase() + priority.slice(1)}
+					</span>
+					{isCompleted && (
+						<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full">
+							Confirmed
+						</span>
+					)}
+				</div>
+			</div>
+
+			{/* Details section */}
+			<div className="mb-4 space-y-2">
+				{description && (
+					<p className="text-gray-600 dark:text-gray-400 text-sm">
+						{description}
+					</p>
+				)}
+				{notes && (
+					<p className="text-gray-500 dark:text-gray-500 text-sm italic">
+						{notes}
+					</p>
+				)}
+				{dueDate && (
+					<p className="text-sm text-gray-500 dark:text-gray-500">
+						Due: {new Date(dueDate).toLocaleDateString()}
+					</p>
+				)}
+			</div>
+
+			{/* Action buttons at bottom */}
+			<div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+				<button
+					onClick={() => onToggleCompletion(id)}
+					className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+						isCompleted
+							? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+							: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
+					}`}
+				>
+					{isCompleted ? "Confirmed" : "Mark Confirmed"}
+				</button>
+				<button
+					onClick={() => onDelete(id)}
+					className="flex-1 px-3 py-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-sm font-medium transition-colors"
+				>
+					Delete
+				</button>
+			</div>
+		</div>
+	);
+};
+
+export default ReservationCard;

@@ -1,18 +1,21 @@
 import React from "react";
+import { usePathname } from "next/navigation";
+import { getHolidayAccentColor } from "@/utils/holidayUtils";
 
 interface AddButtonProps {
 	title: string;
 	onClick: () => void;
-	color?: "red" | "green" | "blue" | "purple" | "orange" | "yellow";
+	color?: "red" | "green" | "blue" | "purple" | "orange" | "yellow" | "holiday";
 	disabled?: boolean;
 }
 
 const AddButton: React.FC<AddButtonProps> = ({
 	title,
 	onClick,
-	color = "red",
+	color = "holiday",
 	disabled = false,
 }) => {
+	const pathname = usePathname();
 	const getColorClasses = () => {
 		switch (color) {
 			case "red":
@@ -27,6 +30,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return "bg-orange-500 hover:bg-orange-600";
 			case "yellow":
 				return "bg-yellow-500 hover:bg-yellow-600";
+			case "holiday":
+				return "hover:opacity-90";
 			default:
 				return "bg-red-500 hover:bg-red-600";
 		}
@@ -46,6 +51,11 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return { backgroundColor: "#f97316", color: "white" };
 			case "yellow":
 				return { backgroundColor: "#eab308", color: "white" };
+			case "holiday":
+				return {
+					backgroundColor: getHolidayAccentColor(pathname),
+					color: "white",
+				};
 			default:
 				return { backgroundColor: "#ef4444", color: "white" };
 		}

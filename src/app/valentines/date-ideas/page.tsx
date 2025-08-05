@@ -12,6 +12,7 @@ import {
 	setSelectedValentinesTask,
 } from "@/store/slices/valentinesTasksSlice";
 import SortModal from "@/components/modals/SortModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 
 export default function ValentinesDateIdeasPage() {
 	const dispatch = useAppDispatch();
@@ -122,24 +123,12 @@ export default function ValentinesDateIdeasPage() {
 
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/valentines"
-						className="absolute left-0 text-pink-600 hover:text-pink-800 dark:text-pink-400 dark:hover:text-pink-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							Date Ideas
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Plan romantic activities and experiences
-						</p>
-					</div>
-				</div>
-			</header>
+			<HolidayPageHeader
+				title="Date Ideas"
+				backHref="/valentines"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Date Ideas"
+			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
 				{/* Summary Stats */}
