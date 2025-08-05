@@ -12,6 +12,7 @@ import {
 	HanukkahTask,
 } from "@/store/slices/hanukkahTasksSlice";
 import SortModal from "@/components/modals/SortModal";
+import DeleteModal from "@/components/modals/DeleteModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
@@ -75,9 +76,11 @@ export default function HanukkahEventsPage() {
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
+		taskTitle?: string;
 	}>({
 		show: false,
 		taskId: null,
+		taskTitle: "",
 	});
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -170,19 +173,19 @@ export default function HanukkahEventsPage() {
 		dispatch(toggleHanukkahTaskCompletion(taskId));
 	}
 
-	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+	function handleDeleteTask(taskId: string, taskTitle?: string) {
+		setDeleteConfirm({ show: true, taskId, taskTitle });
 	}
 
 	function confirmDelete() {
 		if (deleteConfirm.taskId) {
 			dispatch(deleteHanukkahTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+			setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
+		setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
 	}
 
 	function sortTasks(tasksToSort: HanukkahTask[]): HanukkahTask[] {
@@ -275,7 +278,7 @@ export default function HanukkahEventsPage() {
 			<button
 				onClick={(e) => {
 					e.stopPropagation();
-					handleDeleteTask(task.id);
+					handleDeleteTask(task.id, task.title);
 				}}
 				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
 				disabled={loading}
@@ -315,7 +318,7 @@ export default function HanukkahEventsPage() {
 			<button
 				onClick={(e) => {
 					e.stopPropagation();
-					handleDeleteTask(task.id);
+					handleDeleteTask(task.id, task.title);
 				}}
 				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
 				disabled={loading}
@@ -387,8 +390,8 @@ export default function HanukkahEventsPage() {
 					title="Completed"
 					items={completedTasks}
 					isCompleted={true}
-					emptyMessage="No completed tasks yet."
-					completedMessage=""
+					emptyMessage=""
+					completedMessage="No completed events yet. Complete some tasks to see them here! 🎉"
 					renderItem={renderCompletedTaskItem}
 					cardClassName="card-tasks"
 				/>
@@ -501,34 +504,20 @@ export default function HanukkahEventsPage() {
 				</div>
 			)}
 
-			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-tasks rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							Confirm Delete
-						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-6">
-							Are you sure you want to delete this task? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				title="Confirm Delete"
+				message="Are you sure you want to delete this task? This action cannot be undone."
+				itemName={deleteConfirm.taskTitle}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={loading}
+				cardClassName="card-tasks"
+				confirmText="Delete"
+				cancelText="Cancel"
+				confirmButtonColor="#ef4444"
+			/>
 
 			{/* Sort Modal */}
 			<SortModal

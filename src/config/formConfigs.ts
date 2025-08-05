@@ -88,6 +88,54 @@ export const tasksFormConfig: FormConfig = {
 	submitButtonColor: "#22c55e", // Green
 };
 
+// Events form configuration
+export const eventsFormConfig: FormConfig = {
+	title: "Add New Event Task",
+	fields: [
+		{
+			id: "title",
+			type: "text",
+			placeholder: "Event Task Title*",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "textarea",
+			placeholder: "Description",
+			rows: 2,
+		},
+		{
+			id: "priority",
+			type: "select",
+			placeholder: "Priority",
+			options: [
+				{ value: "low", label: "Low Priority" },
+				{ value: "medium", label: "Medium Priority" },
+				{ value: "high", label: "High Priority" },
+			],
+		},
+		{
+			id: "assignedTo",
+			type: "text",
+			placeholder: "Assigned To",
+		},
+		{
+			id: "category",
+			type: "text",
+			placeholder: "Category",
+		},
+		{
+			id: "dueDate",
+			type: "date",
+			placeholder: "Due Date",
+		},
+	],
+	submitText: "Add Event Task",
+	cancelText: "Cancel",
+	cardClassName: "card card-tasks",
+	submitButtonColor: "#3b82f6", // Blue for events
+};
+
 // Gifts form configuration
 export const giftsFormConfig: FormConfig = {
 	title: "Add New Gift",
@@ -152,6 +200,12 @@ export const editTasksFormConfig: FormConfig = {
 	submitText: "Update Task",
 };
 
+export const editEventsFormConfig: FormConfig = {
+	...eventsFormConfig,
+	title: "Edit Event Task",
+	submitText: "Update Event Task",
+};
+
 export const editGiftsFormConfig: FormConfig = {
 	...giftsFormConfig,
 	title: "Edit Gift",
@@ -160,12 +214,13 @@ export const editGiftsFormConfig: FormConfig = {
 
 // Helper function to get form config based on type and mode
 export function getFormConfig(
-	type: "cards" | "tasks" | "gifts",
+	type: "cards" | "tasks" | "events" | "gifts",
 	mode: "add" | "edit" = "add"
 ): FormConfig {
 	const configs = {
 		cards: mode === "add" ? cardsFormConfig : editCardsFormConfig,
 		tasks: mode === "add" ? tasksFormConfig : editTasksFormConfig,
+		events: mode === "add" ? eventsFormConfig : editEventsFormConfig,
 		gifts: mode === "add" ? giftsFormConfig : editGiftsFormConfig,
 	};
 

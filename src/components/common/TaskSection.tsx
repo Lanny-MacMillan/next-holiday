@@ -8,6 +8,7 @@ interface TaskSectionProps {
 	completedMessage: string;
 	renderItem: (item: any) => React.ReactNode;
 	cardClassName?: string;
+	borderColor?: string;
 }
 
 const TaskSection: React.FC<TaskSectionProps> = ({
@@ -18,6 +19,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 	completedMessage,
 	renderItem,
 	cardClassName = "",
+	borderColor = "rgb(var(--color-blue-500))",
 }) => {
 	const getTitleColor = () => {
 		return isCompleted
@@ -36,7 +38,10 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 			<h2 className={`font-semibold mb-2 ${getTitleColor()}`}>
 				{title} ({items.length})
 			</h2>
-			<div className={`card ${cardClassName} rounded shadow`}>
+			<div
+				className={`card ${cardClassName} rounded shadow`}
+				style={{ borderLeft: `4px solid ${borderColor}` }}
+			>
 				{items.length === 0 ? (
 					<div className={`px-4 py-3 ${getEmptyMessageColor()} text-center`}>
 						{isCompleted ? completedMessage : emptyMessage}

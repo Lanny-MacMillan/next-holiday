@@ -72,7 +72,7 @@ export default function FormModal({
 		if (isOpen) {
 			setFormValues(initialValues);
 		}
-	}, [isOpen, initialValues]);
+	}, [isOpen]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
