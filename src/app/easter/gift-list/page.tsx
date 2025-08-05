@@ -19,6 +19,7 @@ import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import SortModal from "@/components/modals/SortModal";
 
 export default function EasterGiftListPage() {
 	const dispatch = useAppDispatch();
@@ -33,6 +34,44 @@ export default function EasterGiftListPage() {
 	const [editingGift, setEditingGift] = useState<any>(null);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [sortBy, setSortBy] = useState<string>("dateCreated");
+
+	// Sort options for gifts
+	const sortOptions = [
+		{ value: "dateCreated", label: "Date Created" },
+		{ value: "name", label: "Name A-Z" },
+		{ value: "recipient", label: "Recipient A-Z" },
+		{ value: "price", label: "Price" },
+		{ value: "store", label: "Store A-Z" },
+	];
+
+	// Sort function
+	const sortGifts = (gifts: any[], sortOption: string) => {
+		const sortedGifts = [...gifts];
+		switch (sortOption) {
+			case "name":
+				return sortedGifts.sort((a, b) => a.name.localeCompare(b.name));
+			case "recipient":
+				return sortedGifts.sort((a, b) =>
+					a.recipient.localeCompare(b.recipient)
+				);
+			case "price":
+				return sortedGifts.sort((a, b) => (a.price || 0) - (b.price || 0));
+			case "store":
+				return sortedGifts.sort((a, b) =>
+					(a.store || "").localeCompare(b.store || "")
+				);
+			case "dateCreated":
+			default:
+				return sortedGifts.sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+				);
+		}
+	};
+
+	const sortedGifts = sortGifts(gifts, sortBy);
 
 	useEffect(() => {
 		dispatch(fetchEasterGifts());
@@ -83,14 +122,18 @@ export default function EasterGiftListPage() {
 		await dispatch(toggleEasterGiftCompletion(giftId));
 	};
 
-	const totalSpent = gifts
+	const handleSortChange = (sortOption: string) => {
+		setSortBy(sortOption);
+	};
+
+	const totalSpent = sortedGifts
 		.filter((gift) => gift.isCompleted)
 		.reduce((sum, gift) => sum + gift.price, 0);
 
-	const totalBudget = gifts.reduce((sum, gift) => sum + gift.price, 0);
+	const totalBudget = sortedGifts.reduce((sum, gift) => sum + gift.price, 0);
 
-	const incompleteGifts = gifts.filter((g) => !g.isCompleted);
-	const completedGifts = gifts.filter((g) => g.isCompleted);
+	const incompleteGifts = sortedGifts.filter((g) => !g.isCompleted);
+	const completedGifts = sortedGifts.filter((g) => g.isCompleted);
 
 	const formFields = [
 		{
@@ -140,6 +183,8 @@ export default function EasterGiftListPage() {
 				title="Easter Gift List"
 				backHref="/easter"
 				error={error}
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Gifts"
 			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
@@ -169,10 +214,20 @@ export default function EasterGiftListPage() {
 					items={completedGifts}
 					isCompleted={true}
 					emptyMessage="No completed gifts yet."
-					completedMessage=""
+					completedMessage="No completed gifts yet."
 					renderItem={renderGiftItem}
 				/>
 			</main>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={handleSortChange}
+				sortOptions={sortOptions}
+				title="Sort Gifts"
+			/>
 
 			{/* Form Modal */}
 			<FormModal

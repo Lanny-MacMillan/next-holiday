@@ -17,6 +17,7 @@ import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import SortModal from "@/components/modals/SortModal";
 
 export default function EasterEventsPage() {
 	const dispatch = useAppDispatch();
@@ -31,6 +32,47 @@ export default function EasterEventsPage() {
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [sortBy, setSortBy] = useState<string>("dateCreated");
+
+	// Sort options for events
+	const sortOptions = [
+		{ value: "dateCreated", label: "Date Created" },
+		{ value: "title", label: "Title A-Z" },
+		{ value: "priority", label: "Priority" },
+		{ value: "dueDate", label: "Due Date" },
+	];
+
+	// Sort function
+	const sortTasks = (tasks: any[], sortOption: string) => {
+		const sortedTasks = [...tasks];
+		switch (sortOption) {
+			case "title":
+				return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
+			case "priority":
+				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				return sortedTasks.sort(
+					(a, b) =>
+						(priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
+						(priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
+				);
+			case "dueDate":
+				return sortedTasks.sort((a, b) => {
+					if (!a.dueDate && !b.dueDate) return 0;
+					if (!a.dueDate) return 1;
+					if (!b.dueDate) return -1;
+					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+				});
+			case "dateCreated":
+			default:
+				return sortedTasks.sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+				);
+		}
+	};
+
+	const sortedEventTasks = sortTasks(eventTasks, sortBy);
 
 	useEffect(() => {
 		dispatch(fetchEasterTasks());
@@ -76,12 +118,18 @@ export default function EasterEventsPage() {
 		await dispatch(toggleEasterTaskCompletion(taskId));
 	};
 
+	const handleSortChange = (sortOption: string) => {
+		setSortBy(sortOption);
+	};
+
 	return (
 		<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="Easter Events"
 				backHref="/easter"
 				error={error}
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Events"
 			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
@@ -93,7 +141,7 @@ export default function EasterEventsPage() {
 
 				<TaskSection
 					title="Incomplete"
-					items={eventTasks.filter((task) => !task.isCompleted)}
+					items={sortedEventTasks.filter((task) => !task.isCompleted)}
 					isCompleted={false}
 					emptyMessage="All events completed! 🎉"
 					completedMessage=""
@@ -106,15 +154,14 @@ export default function EasterEventsPage() {
 							onEdit={handleEdit}
 						/>
 					)}
-					cardClassName="card-events-easter"
 				/>
 
 				<TaskSection
 					title="Completed"
-					items={eventTasks.filter((task) => task.isCompleted)}
+					items={sortedEventTasks.filter((task) => task.isCompleted)}
 					isCompleted={true}
 					emptyMessage="No completed events yet."
-					completedMessage=""
+					completedMessage="No completed events yet."
 					renderItem={(task) => (
 						<ToDoCard
 							key={task.id}
@@ -125,9 +172,18 @@ export default function EasterEventsPage() {
 							className="opacity-60"
 						/>
 					)}
-					cardClassName="card-events-easter"
 				/>
 			</main>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={handleSortChange}
+				sortOptions={sortOptions}
+				title="Sort Events"
+			/>
 
 			{/* Form Modal */}
 			<FormModal

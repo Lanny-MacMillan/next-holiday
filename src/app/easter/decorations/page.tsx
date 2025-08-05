@@ -18,6 +18,7 @@ import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import SortModal from "@/components/modals/SortModal";
 
 export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();
@@ -34,6 +35,47 @@ export default function EasterDecorationsPage() {
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [sortBy, setSortBy] = useState<string>("dateCreated");
+
+	// Sort options for decorations
+	const sortOptions = [
+		{ value: "dateCreated", label: "Date Created" },
+		{ value: "title", label: "Title A-Z" },
+		{ value: "priority", label: "Priority" },
+		{ value: "dueDate", label: "Due Date" },
+	];
+
+	// Sort function
+	const sortDecorationTasks = (tasks: any[], sortOption: string) => {
+		const sortedTasks = [...tasks];
+		switch (sortOption) {
+			case "title":
+				return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
+			case "priority":
+				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				return sortedTasks.sort(
+					(a, b) =>
+						(priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
+						(priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
+				);
+			case "dueDate":
+				return sortedTasks.sort((a, b) => {
+					if (!a.dueDate && !b.dueDate) return 0;
+					if (!a.dueDate) return 1;
+					if (!b.dueDate) return -1;
+					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+				});
+			case "dateCreated":
+			default:
+				return sortedTasks.sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+				);
+		}
+	};
+
+	const sortedDecorationTasks = sortDecorationTasks(decorationTasks, sortBy);
 
 	// Convert EasterTask to Task format for ToDoCard
 	const convertEasterTaskToTask = (easterTask: any) => ({
@@ -82,12 +124,18 @@ export default function EasterDecorationsPage() {
 		setEditingTask(null);
 	};
 
+	const handleSortChange = (sortOption: string) => {
+		setSortBy(sortOption);
+	};
+
 	return (
 		<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="Easter Decorations"
 				backHref="/easter"
 				error={error}
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Decorations"
 			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
@@ -99,7 +147,7 @@ export default function EasterDecorationsPage() {
 
 				<TaskSection
 					title="Incomplete"
-					items={decorationTasks.filter((task) => !task.isCompleted)}
+					items={sortedDecorationTasks.filter((task) => !task.isCompleted)}
 					isCompleted={false}
 					emptyMessage="All decoration items completed! 🎉"
 					completedMessage=""
@@ -112,15 +160,14 @@ export default function EasterDecorationsPage() {
 							onEdit={handleEditTask}
 						/>
 					)}
-					cardClassName="card-tasks"
 				/>
 
 				<TaskSection
 					title="Completed"
-					items={decorationTasks.filter((task) => task.isCompleted)}
+					items={sortedDecorationTasks.filter((task) => task.isCompleted)}
 					isCompleted={true}
 					emptyMessage="No completed decoration items yet."
-					completedMessage=""
+					completedMessage="No completed decoration items yet."
 					renderItem={(task) => (
 						<ToDoCard
 							key={task.id}
@@ -131,9 +178,18 @@ export default function EasterDecorationsPage() {
 							className="opacity-60"
 						/>
 					)}
-					cardClassName="card-tasks"
 				/>
 			</main>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={handleSortChange}
+				sortOptions={sortOptions}
+				title="Sort Decorations"
+			/>
 
 			{/* Edit Task Modal */}
 			<EditTaskModal

@@ -19,6 +19,7 @@ import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import SortModal from "@/components/modals/SortModal";
 
 export default function EasterBasketListPage() {
 	const dispatch = useAppDispatch();
@@ -33,6 +34,44 @@ export default function EasterBasketListPage() {
 	const [editingGift, setEditingGift] = useState<any>(null);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [sortBy, setSortBy] = useState<string>("dateCreated");
+
+	// Sort options for basket items
+	const sortOptions = [
+		{ value: "dateCreated", label: "Date Created" },
+		{ value: "name", label: "Name A-Z" },
+		{ value: "recipient", label: "Recipient A-Z" },
+		{ value: "price", label: "Price" },
+		{ value: "store", label: "Store A-Z" },
+	];
+
+	// Sort function
+	const sortBasketItems = (items: any[], sortOption: string) => {
+		const sortedItems = [...items];
+		switch (sortOption) {
+			case "name":
+				return sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+			case "recipient":
+				return sortedItems.sort((a, b) =>
+					a.recipient.localeCompare(b.recipient)
+				);
+			case "price":
+				return sortedItems.sort((a, b) => (a.price || 0) - (b.price || 0));
+			case "store":
+				return sortedItems.sort((a, b) =>
+					(a.store || "").localeCompare(b.store || "")
+				);
+			case "dateCreated":
+			default:
+				return sortedItems.sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+				);
+		}
+	};
+
+	const sortedBasketItems = sortBasketItems(gifts, sortBy);
 
 	useEffect(() => {
 		dispatch(fetchEasterGifts());
@@ -83,14 +122,21 @@ export default function EasterBasketListPage() {
 		await dispatch(toggleEasterGiftCompletion(giftId));
 	};
 
-	const totalSpent = gifts
+	const handleSortChange = (sortOption: string) => {
+		setSortBy(sortOption);
+	};
+
+	const totalSpent = sortedBasketItems
 		.filter((gift) => gift.isCompleted)
 		.reduce((sum, gift) => sum + gift.price, 0);
 
-	const totalBudget = gifts.reduce((sum, gift) => sum + gift.price, 0);
+	const totalBudget = sortedBasketItems.reduce(
+		(sum, gift) => sum + gift.price,
+		0
+	);
 
-	const incompleteGifts = gifts.filter((g) => !g.isCompleted);
-	const completedGifts = gifts.filter((g) => g.isCompleted);
+	const incompleteBasketItems = sortedBasketItems.filter((g) => !g.isCompleted);
+	const completedBasketItems = sortedBasketItems.filter((g) => g.isCompleted);
 
 	const formFields = [
 		{
@@ -140,6 +186,8 @@ export default function EasterBasketListPage() {
 				title="Easter Basket List"
 				backHref="/easter"
 				error={error}
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Basket Items"
 			/>
 
 			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
@@ -156,7 +204,7 @@ export default function EasterBasketListPage() {
 				{/* Incomplete Basket Items */}
 				<TaskSection
 					title="Incomplete"
-					items={incompleteGifts}
+					items={incompleteBasketItems}
 					isCompleted={false}
 					emptyMessage="All basket items completed! 🎉"
 					completedMessage=""
@@ -166,13 +214,23 @@ export default function EasterBasketListPage() {
 				{/* Completed Basket Items */}
 				<TaskSection
 					title="Completed"
-					items={completedGifts}
+					items={completedBasketItems}
 					isCompleted={true}
 					emptyMessage="No completed basket items yet."
-					completedMessage=""
+					completedMessage="No completed basket items yet."
 					renderItem={renderGiftItem}
 				/>
 			</main>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={handleSortChange}
+				sortOptions={sortOptions}
+				title="Sort Basket Items"
+			/>
 
 			{/* Form Modal */}
 			<FormModal
