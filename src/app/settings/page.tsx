@@ -135,7 +135,7 @@ export default function SettingsPage() {
 				{/* Theme Settings */}
 				<div className="card card-settings rounded-lg p-6">
 					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-						🎨 Appearance
+						🎨 Theme
 					</h2>
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
@@ -161,6 +161,39 @@ export default function SettingsPage() {
 								<span
 									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
 										localSettings.theme === "dark"
+											? "translate-x-6"
+											: "translate-x-1"
+									}`}
+								/>
+							</button>
+						</div>
+						<div className="flex items-center justify-between">
+							<div>
+								<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+									Display Mode
+								</label>
+								<p className="text-xs text-gray-800 dark:text-gray-400">
+									Switch between professional and gamified UI
+								</p>
+							</div>
+							<button
+								onClick={() =>
+									handleSettingChange(
+										"displayMode",
+										localSettings.displayMode === "professional"
+											? "gamified"
+											: "professional"
+									)
+								}
+								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+									localSettings.displayMode === "gamified"
+										? "bg-blue-600"
+										: "bg-gray-400"
+								}`}
+							>
+								<span
+									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+										localSettings.displayMode === "gamified"
 											? "translate-x-6"
 											: "translate-x-1"
 									}`}

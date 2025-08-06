@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface UserSettings {
 	theme: "light" | "dark";
+	displayMode: "professional" | "gamified";
 	holidayChoices: Array<{ holiday: string; budget: number }>;
 	giftBudgetLimit: number;
 	notifications: {
@@ -19,6 +20,7 @@ interface ThemeState {
 const initialState: ThemeState = {
 	settings: {
 		theme: "light",
+		displayMode: "professional",
 		holidayChoices: [{ holiday: "Christmas", budget: 500 }],
 		giftBudgetLimit: 500,
 		notifications: {
