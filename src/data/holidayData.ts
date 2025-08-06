@@ -318,4 +318,109 @@ export const holidayData: HolidayData[] = [
 			return gifts.length + tasks.length;
 		},
 	},
+	{
+		id: "mothers-day",
+		name: "Mother's Day",
+		description: "Show your love and appreciation!",
+		route: "/mothers-day",
+		color: {
+			light: "#ec4899",
+			dark: "#f472b6",
+			progress: "bg-pink-400 dark:bg-pink-500",
+		},
+		getProgress: (state) => {
+			const gifts = state.mothersDayGiftList.gifts;
+			const tasks = state.mothersDayTasks.tasks;
+
+			const totalItems = gifts.length + tasks.length;
+			const completedItems =
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const gifts = state.mothersDayGiftList.gifts;
+			const tasks = state.mothersDayTasks.tasks;
+
+			return (
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length
+			);
+		},
+		getTotalItems: (state) => {
+			const gifts = state.mothersDayGiftList.gifts;
+			const tasks = state.mothersDayTasks.tasks;
+
+			return gifts.length + tasks.length;
+		},
+	},
+	{
+		id: "fathers-day",
+		name: "Father's Day",
+		description: "Honor and celebrate Dad!",
+		route: "/fathers-day",
+		color: {
+			light: "#3b82f6",
+			dark: "#60a5fa",
+			progress: "bg-blue-400 dark:bg-blue-500",
+		},
+		getProgress: (state) => {
+			const gifts = state.fathersDayGiftList.gifts;
+			const tasks = state.fathersDayTasks.tasks;
+
+			const totalItems = gifts.length + tasks.length;
+			const completedItems =
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const gifts = state.fathersDayGiftList.gifts;
+			const tasks = state.fathersDayTasks.tasks;
+
+			return (
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length
+			);
+		},
+		getTotalItems: (state) => {
+			const gifts = state.fathersDayGiftList.gifts;
+			const tasks = state.fathersDayTasks.tasks;
+
+			return gifts.length + tasks.length;
+		},
+	},
+	{
+		id: "fourth-of-july",
+		name: "Fourth of July",
+		description: "Celebrate independence and freedom!",
+		route: "/fourth-of-july",
+		color: {
+			light: "#dc2626",
+			dark: "#f87171",
+			progress: "bg-red-400 dark:bg-red-500",
+		},
+		getProgress: (state) => {
+			const tasks = state.fourthOfJulyTasks.tasks;
+
+			const totalItems = tasks.length;
+			const completedItems = tasks.filter(
+				(task: any) => task.isCompleted
+			).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const tasks = state.fourthOfJulyTasks.tasks;
+
+			return tasks.filter((task: any) => task.isCompleted).length;
+		},
+		getTotalItems: (state) => {
+			const tasks = state.fourthOfJulyTasks.tasks;
+
+			return tasks.length;
+		},
+	},
 ];

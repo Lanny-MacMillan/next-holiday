@@ -599,3 +599,60 @@ body {
 		rgb(25, 15, 10) 100%
 	);
 }
+
+/* Mother's Day-themed gradient backgrounds */
+.mothers-day-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(253, 242, 248) 0%,
+		rgb(252, 231, 243) 50%,
+		rgb(253, 242, 248) 100%
+	);
+}
+
+.dark .mothers-day-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 10, 15) 0%,
+		rgb(15, 8, 12) 50%,
+		rgb(20, 10, 15) 100%
+	);
+}
+
+/* Father's Day-themed gradient backgrounds */
+.fathers-day-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(239, 246, 255) 0%,
+		rgb(219, 234, 254) 50%,
+		rgb(239, 246, 255) 100%
+	);
+}
+
+.dark .fathers-day-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(15, 20, 30) 0%,
+		rgb(10, 15, 25) 50%,
+		rgb(15, 20, 30) 100%
+	);
+}
+
+/* Fourth of July-themed gradient backgrounds */
+.fourth-of-july-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(254, 242, 242) 0%,
+		rgb(254, 226, 226) 50%,
+		rgb(254, 242, 242) 100%
+	);
+}
+
+.dark .fourth-of-july-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(30, 10, 10) 0%,
+		rgb(25, 8, 8) 50%,
+		rgb(30, 10, 10) 100%
+	);
+}

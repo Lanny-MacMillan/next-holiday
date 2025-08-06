@@ -29,6 +29,11 @@ import thanksgivingTasksReducer from "./slices/thanksgivingTasksSlice";
 import thanksgivingCountdownReducer from "./slices/thanksgivingCountdownSlice";
 import thanksgivingGuestListReducer from "./slices/thanksgivingGuestListSlice";
 import thanksgivingMealPlanningReducer from "./slices/thanksgivingMealPlanningSlice";
+import mothersDayGiftListReducer from "./slices/mothersDayGiftListSlice";
+import mothersDayTasksReducer from "./slices/mothersDayTasksSlice";
+import fathersDayGiftListReducer from "./slices/fathersDayGiftListSlice";
+import fathersDayTasksReducer from "./slices/fathersDayTasksSlice";
+import fourthOfJulyTasksReducer from "./slices/fourthOfJulyTasksSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -62,6 +67,11 @@ export const store = configureStore({
 		thanksgivingCountdown: thanksgivingCountdownReducer,
 		thanksgivingGuestList: thanksgivingGuestListReducer,
 		thanksgivingMealPlanning: thanksgivingMealPlanningReducer,
+		mothersDayGiftList: mothersDayGiftListReducer,
+		mothersDayTasks: mothersDayTasksReducer,
+		fathersDayGiftList: fathersDayGiftListReducer,
+		fathersDayTasks: fathersDayTasksReducer,
+		fourthOfJulyTasks: fourthOfJulyTasksReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

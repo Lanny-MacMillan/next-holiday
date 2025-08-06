@@ -51,6 +51,21 @@ export default function Home() {
 	const thanksgivingTasks = useAppSelector(
 		(state) => state.thanksgivingTasks.tasks
 	);
+	const mothersDayGifts = useAppSelector(
+		(state) => state.mothersDayGiftList.gifts
+	);
+	const mothersDayTasks = useAppSelector(
+		(state) => state.mothersDayTasks.tasks
+	);
+	const fathersDayGifts = useAppSelector(
+		(state) => state.fathersDayGiftList.gifts
+	);
+	const fathersDayTasks = useAppSelector(
+		(state) => state.fathersDayTasks.tasks
+	);
+	const fourthOfJulyTasks = useAppSelector(
+		(state) => state.fourthOfJulyTasks.tasks
+	);
 
 	// Show loading state while data is being fetched
 	if (isLoading) {
@@ -101,6 +116,11 @@ export default function Home() {
 							halloweenTasks: { tasks: halloweenTasks },
 							thanksgivingGiftList: { gifts: thanksgivingGifts },
 							thanksgivingTasks: { tasks: thanksgivingTasks },
+							mothersDayGiftList: { gifts: mothersDayGifts },
+							mothersDayTasks: { tasks: mothersDayTasks },
+							fathersDayGiftList: { gifts: fathersDayGifts },
+							fathersDayTasks: { tasks: fathersDayTasks },
+							fourthOfJulyTasks: { tasks: fourthOfJulyTasks },
 						};
 
 						const progress = holiday.getProgress(state);
