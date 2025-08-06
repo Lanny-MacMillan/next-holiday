@@ -212,9 +212,81 @@ export const editGiftsFormConfig: FormConfig = {
 	submitText: "Update Gift",
 };
 
+// Guest list form configuration
+export const guestsFormConfig: FormConfig = {
+	title: "Add New Guest",
+	fields: [
+		{
+			id: "name",
+			type: "text",
+			placeholder: "Guest Name*",
+			required: true,
+		},
+		{
+			id: "email",
+			type: "email",
+			placeholder: "Email",
+		},
+		{
+			id: "phone",
+			type: "tel",
+			placeholder: "Phone",
+		},
+		{
+			id: "address",
+			type: "text",
+			placeholder: "Address",
+		},
+		{
+			id: "rsvpStatus",
+			type: "select",
+			placeholder: "RSVP Status",
+			options: [
+				{ value: "pending", label: "Pending" },
+				{ value: "confirmed", label: "Confirmed" },
+				{ value: "declined", label: "Declined" },
+			],
+		},
+		{
+			id: "numberOfGuests",
+			type: "number",
+			placeholder: "Number of Guests*",
+			required: true,
+			min: "1",
+		},
+		{
+			id: "dietaryRestrictions",
+			type: "text",
+			placeholder: "Dietary Restrictions",
+		},
+		{
+			id: "bringingDish",
+			type: "text",
+			placeholder: "Dish They're Bringing",
+		},
+		{
+			id: "notes",
+			type: "textarea",
+			placeholder: "Notes",
+			rows: 2,
+		},
+	],
+	submitText: "Add Guest",
+	cancelText: "Cancel",
+	cardClassName: "card",
+	submitButtonColor: "#f97316", // Orange for thanksgiving
+	showAddressBook: true,
+};
+
+export const editGuestsFormConfig: FormConfig = {
+	...guestsFormConfig,
+	title: "Edit Guest",
+	submitText: "Update Guest",
+};
+
 // Helper function to get form config based on type and mode
 export function getFormConfig(
-	type: "cards" | "tasks" | "events" | "gifts",
+	type: "cards" | "tasks" | "events" | "gifts" | "guests",
 	mode: "add" | "edit" = "add"
 ): FormConfig {
 	const configs = {
@@ -222,6 +294,7 @@ export function getFormConfig(
 		tasks: mode === "add" ? tasksFormConfig : editTasksFormConfig,
 		events: mode === "add" ? eventsFormConfig : editEventsFormConfig,
 		gifts: mode === "add" ? giftsFormConfig : editGiftsFormConfig,
+		guests: mode === "add" ? guestsFormConfig : editGuestsFormConfig,
 	};
 
 	return configs[type];

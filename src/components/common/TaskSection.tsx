@@ -9,6 +9,7 @@ interface TaskSectionProps {
 	renderItem: (item: any) => React.ReactNode;
 	cardClassName?: string;
 	borderColor?: string;
+	customTitle?: string; // Optional custom title override
 }
 
 const TaskSection: React.FC<TaskSectionProps> = ({
@@ -20,6 +21,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 	renderItem,
 	cardClassName = "",
 	borderColor,
+	customTitle,
 }) => {
 	const getTitleColor = () => {
 		return isCompleted
@@ -36,7 +38,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 	return (
 		<div>
 			<h2 className={`font-semibold mb-2 ${getTitleColor()}`}>
-				{title} ({items.length})
+				{customTitle || title} ({items.length})
 			</h2>
 			<div
 				className={`card ${cardClassName} rounded shadow`}

@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchThanksgivingGifts } from "@/store/slices/thanksgivingGiftListSlice";
 import { fetchThanksgivingTasks } from "@/store/slices/thanksgivingTasksSlice";
+import { fetchThanksgivingGuests } from "@/store/slices/thanksgivingGuestListSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -28,7 +29,7 @@ const subsections = [
 		name: "Guest List",
 		description: "Manage your Thanksgiving guest list",
 		href: "/thanksgiving/guest-list",
-		sliceKey: "tasks",
+		sliceKey: "guestList",
 		category: "Guest List",
 	},
 	{
@@ -47,10 +48,14 @@ export default function ThanksgivingPage() {
 		(state: any) => state.thanksgivingGiftList.gifts
 	);
 	const tasks = useAppSelector((state: any) => state.thanksgivingTasks.tasks);
+	const guests = useAppSelector(
+		(state: any) => state.thanksgivingGuestList.guests
+	);
 
 	useEffect(() => {
 		dispatch(fetchThanksgivingGifts());
 		dispatch(fetchThanksgivingTasks());
+		dispatch(fetchThanksgivingGuests());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string, category?: string) {
@@ -61,6 +66,10 @@ export default function ThanksgivingPage() {
 			case "giftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
+			case "guestList":
+				total = guests.length;
+				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
 			case "tasks":
 				const filteredTasks = category
@@ -119,6 +128,21 @@ export default function ThanksgivingPage() {
 
 						// Use GiftListCard for shopping list (budget tracking) and gift list sections
 						if (section.sliceKey === "giftList") {
+							return (
+								<GiftListCard
+									key={section.name}
+									holiday="Thanksgiving"
+									href={section.href}
+									theme={{
+										primaryColor: "#d97706", // Amber for Thanksgiving
+										accentColor: "#eab308",
+									}}
+								/>
+							);
+						}
+
+						// Use GiftListCard for guest list section (similar to gift list)
+						if (section.sliceKey === "guestList") {
 							return (
 								<GiftListCard
 									key={section.name}
