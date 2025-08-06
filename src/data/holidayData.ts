@@ -423,4 +423,170 @@ export const holidayData: HolidayData[] = [
 			return tasks.length;
 		},
 	},
+	{
+		id: "birthday",
+		name: "Birthday",
+		description: "Celebrate special birthdays with style!",
+		route: "/birthday",
+		color: {
+			light: "#f59e0b",
+			dark: "#fbbf24",
+			progress: "bg-amber-400 dark:bg-amber-500",
+		},
+		getProgress: (state) => {
+			const gifts = state.birthdayGiftList.gifts;
+			const tasks = state.birthdayTasks.tasks;
+			const cards = state.birthdayCards.cards;
+			const contacts = state.birthdayAddressBook.contacts;
+
+			const totalItems =
+				gifts.length + tasks.length + cards.length + contacts.length;
+			const completedItems =
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length +
+				cards.filter((card: any) => card.isCompleted).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const gifts = state.birthdayGiftList.gifts;
+			const tasks = state.birthdayTasks.tasks;
+			const cards = state.birthdayCards.cards;
+
+			return (
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length +
+				cards.filter((card: any) => card.isCompleted).length
+			);
+		},
+		getTotalItems: (state) => {
+			const gifts = state.birthdayGiftList.gifts;
+			const tasks = state.birthdayTasks.tasks;
+			const cards = state.birthdayCards.cards;
+			const contacts = state.birthdayAddressBook.contacts;
+
+			return gifts.length + tasks.length + cards.length + contacts.length;
+		},
+	},
+	{
+		id: "anniversary",
+		name: "Anniversary",
+		description: "Plan romantic anniversaries and celebrations!",
+		route: "/anniversary",
+		color: {
+			light: "#ec4899",
+			dark: "#f472b6",
+			progress: "bg-pink-400 dark:bg-pink-500",
+		},
+		getProgress: (state) => {
+			const gifts = state.anniversaryGiftList.gifts;
+			const tasks = state.anniversaryTasks.tasks;
+
+			const totalItems = gifts.length + tasks.length;
+			const completedItems =
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const gifts = state.anniversaryGiftList.gifts;
+			const tasks = state.anniversaryTasks.tasks;
+
+			return (
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length
+			);
+		},
+		getTotalItems: (state) => {
+			const gifts = state.anniversaryGiftList.gifts;
+			const tasks = state.anniversaryTasks.tasks;
+
+			return gifts.length + tasks.length;
+		},
+	},
+	{
+		id: "graduation",
+		name: "Graduation",
+		description: "Celebrate academic achievements!",
+		route: "/graduation",
+		color: {
+			light: "#8b5cf6",
+			dark: "#a78bfa",
+			progress: "bg-purple-400 dark:bg-purple-500",
+		},
+		getProgress: (state) => {
+			const gifts = state.graduationGiftList.gifts;
+			const tasks = state.graduationTasks.tasks;
+			const cards = state.graduationCards.cards;
+			const contacts = state.graduationAddressBook.contacts;
+
+			const totalItems =
+				gifts.length + tasks.length + cards.length + contacts.length;
+			const completedItems =
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length +
+				cards.filter((card: any) => card.isCompleted).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const gifts = state.graduationGiftList.gifts;
+			const tasks = state.graduationTasks.tasks;
+			const cards = state.graduationCards.cards;
+
+			return (
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length +
+				cards.filter((card: any) => card.isCompleted).length
+			);
+		},
+		getTotalItems: (state) => {
+			const gifts = state.graduationGiftList.gifts;
+			const tasks = state.graduationTasks.tasks;
+			const cards = state.graduationCards.cards;
+			const contacts = state.graduationAddressBook.contacts;
+
+			return gifts.length + tasks.length + cards.length + contacts.length;
+		},
+	},
+	{
+		id: "baby-shower",
+		name: "Baby Shower",
+		description: "Plan the perfect baby shower celebration!",
+		route: "/baby-shower",
+		color: {
+			light: "#06b6d4",
+			dark: "#22d3ee",
+			progress: "bg-cyan-400 dark:bg-cyan-500",
+		},
+		getProgress: (state) => {
+			const gifts = state.babyShowerGiftList.gifts;
+			const tasks = state.babyShowerTasks.tasks;
+			const contacts = state.babyShowerAddressBook.contacts;
+
+			const totalItems = gifts.length + tasks.length + contacts.length;
+			const completedItems =
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length;
+
+			return totalItems > 0 ? completedItems / totalItems : 0;
+		},
+		getCompletedItems: (state) => {
+			const gifts = state.babyShowerGiftList.gifts;
+			const tasks = state.babyShowerTasks.tasks;
+
+			return (
+				gifts.filter((gift: any) => gift.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length
+			);
+		},
+		getTotalItems: (state) => {
+			const gifts = state.babyShowerGiftList.gifts;
+			const tasks = state.babyShowerTasks.tasks;
+			const contacts = state.babyShowerAddressBook.contacts;
+
+			return gifts.length + tasks.length + contacts.length;
+		},
+	},
 ];

@@ -11,60 +11,119 @@ import { holidayData } from "@/data/holidayData";
 
 export default function Home() {
 	// Get state from all Redux slices
-	const cards = useAppSelector((state) => state.cards.cards);
-	const gifts = useAppSelector((state) => state.giftList.gifts);
-	const tasks = useAppSelector((state) => state.tasks.tasks);
-	const contacts = useAppSelector((state) => state.addressBook.contacts);
+	const cards = useAppSelector((state) => state.cards?.cards || []);
+	const gifts = useAppSelector((state) => state.giftList?.gifts || []);
+	const tasks = useAppSelector((state) => state.tasks?.tasks || []);
+	const contacts = useAppSelector((state) => state.addressBook?.contacts || []);
 
 	// Get loading states
-	const cardsLoading = useAppSelector((state) => state.cards.loading);
-	const giftsLoading = useAppSelector((state) => state.giftList.loading);
-	const tasksLoading = useAppSelector((state) => state.tasks.loading);
-	const contactsLoading = useAppSelector((state) => state.addressBook.loading);
+	const cardsLoading = useAppSelector((state) => state.cards?.loading || false);
+	const giftsLoading = useAppSelector(
+		(state) => state.giftList?.loading || false
+	);
+	const tasksLoading = useAppSelector((state) => state.tasks?.loading || false);
+	const contactsLoading = useAppSelector(
+		(state) => state.addressBook?.loading || false
+	);
 
 	// Check if any data is still loading
 	const isLoading =
 		cardsLoading || giftsLoading || tasksLoading || contactsLoading;
 
 	// Get all holiday data from Redux state
-	const hanukkahGifts = useAppSelector((state) => state.hanukkahGiftList.gifts);
-	const hanukkahTasks = useAppSelector((state) => state.hanukkahTasks.tasks);
-	const kwanzaaGifts = useAppSelector((state) => state.kwanzaaGiftList.gifts);
-	const kwanzaaTasks = useAppSelector((state) => state.kwanzaaTasks.tasks);
-	const newYearGifts = useAppSelector((state) => state.newYearGiftList.gifts);
-	const newYearTasks = useAppSelector((state) => state.newYearTasks.tasks);
+	const hanukkahGifts = useAppSelector(
+		(state) => state.hanukkahGiftList?.gifts || []
+	);
+	const hanukkahTasks = useAppSelector(
+		(state) => state.hanukkahTasks?.tasks || []
+	);
+	const kwanzaaGifts = useAppSelector(
+		(state) => state.kwanzaaGiftList?.gifts || []
+	);
+	const kwanzaaTasks = useAppSelector(
+		(state) => state.kwanzaaTasks?.tasks || []
+	);
+	const newYearGifts = useAppSelector(
+		(state) => state.newYearGiftList?.gifts || []
+	);
+	const newYearTasks = useAppSelector(
+		(state) => state.newYearTasks?.tasks || []
+	);
 	const valentinesGifts = useAppSelector(
-		(state) => state.valentinesGiftList.gifts
+		(state) => state.valentinesGiftList?.gifts || []
 	);
 	const valentinesTasks = useAppSelector(
-		(state) => state.valentinesTasks.tasks
+		(state) => state.valentinesTasks?.tasks || []
 	);
-	const easterGifts = useAppSelector((state) => state.easterGiftList.gifts);
-	const easterTasks = useAppSelector((state) => state.easterTasks.tasks);
+	const easterGifts = useAppSelector(
+		(state) => state.easterGiftList?.gifts || []
+	);
+	const easterTasks = useAppSelector((state) => state.easterTasks?.tasks || []);
 	const halloweenGifts = useAppSelector(
-		(state) => state.halloweenGiftList.gifts
+		(state) => state.halloweenGiftList?.gifts || []
 	);
-	const halloweenTasks = useAppSelector((state) => state.halloweenTasks.tasks);
+	const halloweenTasks = useAppSelector(
+		(state) => state.halloweenTasks?.tasks || []
+	);
 	const thanksgivingGifts = useAppSelector(
-		(state) => state.thanksgivingGiftList.gifts
+		(state) => state.thanksgivingGiftList?.gifts || []
 	);
 	const thanksgivingTasks = useAppSelector(
-		(state) => state.thanksgivingTasks.tasks
+		(state) => state.thanksgivingTasks?.tasks || []
 	);
 	const mothersDayGifts = useAppSelector(
-		(state) => state.mothersDayGiftList.gifts
+		(state) => state.mothersDayGiftList?.gifts || []
 	);
 	const mothersDayTasks = useAppSelector(
-		(state) => state.mothersDayTasks.tasks
+		(state) => state.mothersDayTasks?.tasks || []
 	);
 	const fathersDayGifts = useAppSelector(
-		(state) => state.fathersDayGiftList.gifts
+		(state) => state.fathersDayGiftList?.gifts || []
 	);
 	const fathersDayTasks = useAppSelector(
-		(state) => state.fathersDayTasks.tasks
+		(state) => state.fathersDayTasks?.tasks || []
 	);
 	const fourthOfJulyTasks = useAppSelector(
-		(state) => state.fourthOfJulyTasks.tasks
+		(state) => state.fourthOfJulyTasks?.tasks || []
+	);
+	const birthdayGifts = useAppSelector(
+		(state) => state.birthdayGiftList?.gifts || []
+	);
+	const birthdayTasks = useAppSelector(
+		(state) => state.birthdayTasks?.tasks || []
+	);
+	const birthdayCards = useAppSelector(
+		(state) => state.birthdayCards?.cards || []
+	);
+	const birthdayContacts = useAppSelector(
+		(state) => state.birthdayAddressBook?.contacts || []
+	);
+	const anniversaryGifts = useAppSelector(
+		(state) => state.anniversaryGiftList?.gifts || []
+	);
+	const anniversaryTasks = useAppSelector(
+		(state) => state.anniversaryTasks?.tasks || []
+	);
+	const graduationGifts = useAppSelector(
+		(state) => state.graduationGiftList?.gifts || []
+	);
+	const graduationTasks = useAppSelector(
+		(state) => state.graduationTasks?.tasks || []
+	);
+	const graduationCards = useAppSelector(
+		(state) => state.graduationCards?.cards || []
+	);
+	const graduationContacts = useAppSelector(
+		(state) => state.graduationAddressBook?.contacts || []
+	);
+	const babyShowerGifts = useAppSelector(
+		(state) => state.babyShowerGiftList?.gifts || []
+	);
+	const babyShowerTasks = useAppSelector(
+		(state) => state.babyShowerTasks?.tasks || []
+	);
+	const babyShowerContacts = useAppSelector(
+		(state) => state.babyShowerAddressBook?.contacts || []
 	);
 
 	// Show loading state while data is being fetched
@@ -121,6 +180,19 @@ export default function Home() {
 							fathersDayGiftList: { gifts: fathersDayGifts },
 							fathersDayTasks: { tasks: fathersDayTasks },
 							fourthOfJulyTasks: { tasks: fourthOfJulyTasks },
+							birthdayGiftList: { gifts: birthdayGifts },
+							birthdayTasks: { tasks: birthdayTasks },
+							birthdayCards: { cards: birthdayCards },
+							birthdayAddressBook: { contacts: birthdayContacts },
+							anniversaryGiftList: { gifts: anniversaryGifts },
+							anniversaryTasks: { tasks: anniversaryTasks },
+							graduationGiftList: { gifts: graduationGifts },
+							graduationTasks: { tasks: graduationTasks },
+							graduationCards: { cards: graduationCards },
+							graduationAddressBook: { contacts: graduationContacts },
+							babyShowerGiftList: { gifts: babyShowerGifts },
+							babyShowerTasks: { tasks: babyShowerTasks },
+							babyShowerAddressBook: { contacts: babyShowerContacts },
 						};
 
 						const progress = holiday.getProgress(state);

@@ -28,12 +28,6 @@ const fourthOfJulySubsections = [
 		sliceKey: "tasks",
 		category: "Decorations",
 	},
-	{
-		name: "Budget Tracker",
-		description: "Track Fourth of July expenses",
-		href: "/fourth-of-july/budget",
-		sliceKey: "budget",
-	},
 ];
 
 export default function FourthOfJulyPage() {

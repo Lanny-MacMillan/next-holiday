@@ -656,3 +656,79 @@ body {
 		rgb(30, 10, 10) 100%
 	);
 }
+
+/* Birthday-themed gradient backgrounds */
+.birthday-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(255, 251, 235) 0%,
+		rgb(254, 243, 199) 50%,
+		rgb(255, 251, 235) 100%
+	);
+}
+
+.dark .birthday-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(25, 15, 5) 0%,
+		rgb(20, 10, 3) 50%,
+		rgb(25, 15, 5) 100%
+	);
+}
+
+/* Anniversary-themed gradient backgrounds */
+.anniversary-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(253, 242, 248) 0%,
+		rgb(252, 231, 243) 50%,
+		rgb(253, 242, 248) 100%
+	);
+}
+
+.dark .anniversary-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 10, 15) 0%,
+		rgb(15, 8, 12) 50%,
+		rgb(20, 10, 15) 100%
+	);
+}
+
+/* Graduation-themed gradient backgrounds */
+.graduation-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(250, 245, 255) 0%,
+		rgb(243, 232, 255) 50%,
+		rgb(250, 245, 255) 100%
+	);
+}
+
+.dark .graduation-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(20, 10, 25) 0%,
+		rgb(15, 8, 20) 50%,
+		rgb(20, 10, 25) 100%
+	);
+}
+
+/* Baby Shower-themed gradient backgrounds */
+.baby-shower-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(236, 254, 255) 0%,
+		rgb(207, 250, 254) 50%,
+		rgb(236, 254, 255) 100%
+	);
+}
+
+.dark .baby-shower-gradient {
+	background: linear-gradient(
+		135deg,
+		rgb(10, 20, 25) 0%,
+		rgb(8, 15, 20) 50%,
+		rgb(10, 20, 25) 100%
+	);
+}

@@ -34,6 +34,19 @@ import mothersDayTasksReducer from "./slices/mothersDayTasksSlice";
 import fathersDayGiftListReducer from "./slices/fathersDayGiftListSlice";
 import fathersDayTasksReducer from "./slices/fathersDayTasksSlice";
 import fourthOfJulyTasksReducer from "./slices/fourthOfJulyTasksSlice";
+import birthdayGiftListReducer from "./slices/birthdayGiftListSlice";
+import birthdayTasksReducer from "./slices/birthdayTasksSlice";
+import birthdayCardsReducer from "./slices/birthdayCardsSlice";
+import birthdayAddressBookReducer from "./slices/birthdayAddressBookSlice";
+import anniversaryGiftListReducer from "./slices/anniversaryGiftListSlice";
+import anniversaryTasksReducer from "./slices/anniversaryTasksSlice";
+import graduationGiftListReducer from "./slices/graduationGiftListSlice";
+import graduationTasksReducer from "./slices/graduationTasksSlice";
+import graduationCardsReducer from "./slices/graduationCardsSlice";
+import graduationAddressBookReducer from "./slices/graduationAddressBookSlice";
+import babyShowerGiftListReducer from "./slices/babyShowerGiftListSlice";
+import babyShowerTasksReducer from "./slices/babyShowerTasksSlice";
+import babyShowerAddressBookReducer from "./slices/babyShowerAddressBookSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -72,6 +85,19 @@ export const store = configureStore({
 		fathersDayGiftList: fathersDayGiftListReducer,
 		fathersDayTasks: fathersDayTasksReducer,
 		fourthOfJulyTasks: fourthOfJulyTasksReducer,
+		birthdayGiftList: birthdayGiftListReducer,
+		birthdayTasks: birthdayTasksReducer,
+		birthdayCards: birthdayCardsReducer,
+		birthdayAddressBook: birthdayAddressBookReducer,
+		anniversaryGiftList: anniversaryGiftListReducer,
+		anniversaryTasks: anniversaryTasksReducer,
+		graduationGiftList: graduationGiftListReducer,
+		graduationTasks: graduationTasksReducer,
+		graduationCards: graduationCardsReducer,
+		graduationAddressBook: graduationAddressBookReducer,
+		babyShowerGiftList: babyShowerGiftListReducer,
+		babyShowerTasks: babyShowerTasksReducer,
+		babyShowerAddressBook: babyShowerAddressBookReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

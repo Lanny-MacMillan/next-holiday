@@ -1,0 +1,153 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchBabyShowerGifts } from "@/store/slices/babyShowerGiftListSlice";
+import { fetchBabyShowerTasks } from "@/store/slices/babyShowerTasksSlice";
+import { fetchBabyShowerContacts } from "@/store/slices/babyShowerAddressBookSlice";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+
+const subsections = [
+	{
+		name: "Gift Registry Tracker",
+		description: "Track baby shower gifts and registry items",
+		href: "/baby-shower/gift-list",
+		sliceKey: "giftList",
+		type: "gift-list",
+	},
+	{
+		name: "Guest List",
+		description: "Manage your baby shower guest list",
+		href: "/baby-shower/guest-list",
+		sliceKey: "addressBook",
+		type: "task",
+	},
+	{
+		name: "Games & Activities",
+		description: "Plan fun baby shower games and activities",
+		href: "/baby-shower/games",
+		sliceKey: "tasks",
+		type: "task",
+		category: "Events",
+	},
+];
+
+export default function BabyShowerPage() {
+	const dispatch = useAppDispatch();
+
+	const gifts = useAppSelector((state: any) => state.babyShowerGiftList.gifts);
+	const tasks = useAppSelector((state: any) => state.babyShowerTasks.tasks);
+	const contacts = useAppSelector(
+		(state: any) => state.babyShowerAddressBook.contacts
+	);
+
+	useEffect(() => {
+		// Fetch all data when component mounts if not already initialized
+		dispatch(fetchBabyShowerGifts());
+		dispatch(fetchBabyShowerTasks());
+		dispatch(fetchBabyShowerContacts());
+	}, [dispatch]);
+
+	function getProgressData(sliceKey: string): {
+		total: number;
+		completed: number;
+		progress: number;
+	} {
+		let total = 0;
+		let completed = 0;
+
+		switch (sliceKey) {
+			case "giftList":
+				total = gifts.length;
+				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
+			case "tasks":
+				total = tasks.length;
+				completed = tasks.filter((task: any) => task.isCompleted).length;
+				break;
+			case "addressBook":
+				total = contacts.length;
+				completed = 0; // Address book doesn't have completion status
+				break;
+			default:
+				total = 0;
+				completed = 0;
+		}
+
+		const progress = total > 0 ? completed / total : 0;
+
+		return { total, completed, progress };
+	}
+
+	return (
+		<div className="min-h-screen baby-shower-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+			<header className="w-full max-w-md py-6">
+				<div className="flex items-center justify-center relative">
+					<Link
+						href="/"
+						className="absolute left-0 text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 text-xl"
+					>
+						←
+					</Link>
+					<div className="text-center">
+						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
+							Baby Shower
+						</h1>
+						<p className="text-center text-gray-600 dark:text-gray-400">
+							Plan the perfect baby shower celebration!
+						</p>
+					</div>
+				</div>
+			</header>
+			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+				<ul className="flex flex-col gap-4">
+					{subsections.map((section) => {
+						const { total, completed, progress } = getProgressData(
+							section.sliceKey
+						);
+
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Baby Shower"
+										href={section.href}
+										theme={{
+											primaryColor: "#06b6d4", // Cyan for Baby Shower
+											accentColor: "#06b6d4", // Cyan accent
+										}}
+									/>
+								</li>
+							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Baby Shower"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#06b6d4", // Cyan for Baby Shower
+											accentColor: "#06b6d4", // Cyan accent
+											progressColor: "#06b6d4", // Cyan for progress bar
+										}}
+									/>
+								</li>
+							);
+						}
+					})}
+				</ul>
+			</main>
+			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
+				&copy; {new Date().getFullYear()} Next Holiday
+			</footer>
+		</div>
+	);
+}

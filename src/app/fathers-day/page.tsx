@@ -22,12 +22,6 @@ const fathersDaySubsections = [
 		sliceKey: "cards",
 	},
 	{
-		name: "Budget Tracker",
-		description: "Track your spending for Father's Day",
-		href: "/fathers-day/budget",
-		sliceKey: "budget",
-	},
-	{
 		name: "Event Planning",
 		description: "Plan Father's Day celebrations",
 		href: "/fathers-day/events",

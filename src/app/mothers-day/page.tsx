@@ -21,12 +21,7 @@ const mothersDaySubsections = [
 		href: "/mothers-day/cards",
 		sliceKey: "cards",
 	},
-	{
-		name: "Budget Tracker",
-		description: "Track your spending for Mother's Day",
-		href: "/mothers-day/budget",
-		sliceKey: "budget",
-	},
+
 	{
 		name: "Event Planning",
 		description: "Plan Mother's Day celebrations",
