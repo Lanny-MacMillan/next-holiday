@@ -107,6 +107,15 @@ export const deleteMothersDayGift = createAsyncThunk(
 	}
 );
 
+export const toggleMothersDayGiftCompletion = createAsyncThunk(
+	"mothersDayGiftList/toggleMothersDayGiftCompletion",
+	async (giftId: string) => {
+		// Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		return giftId;
+	}
+);
+
 const mothersDayGiftListSlice = createSlice({
 	name: "mothersDayGiftList",
 	initialState,
@@ -173,6 +182,26 @@ const mothersDayGiftListSlice = createSlice({
 			.addCase(deleteMothersDayGift.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete gift";
+			})
+			.addCase(toggleMothersDayGiftCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleMothersDayGiftCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const gift = state.gifts.find((gift) => gift.id === action.payload);
+				if (gift) {
+					gift.isCompleted = !gift.isCompleted;
+					gift.completedDate = gift.isCompleted
+						? new Date().toISOString()
+						: undefined;
+					gift.updatedAt = new Date().toISOString();
+				}
+			})
+			.addCase(toggleMothersDayGiftCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to toggle gift completion";
 			});
 	},
 });

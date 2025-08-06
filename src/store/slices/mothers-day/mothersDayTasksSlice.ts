@@ -106,6 +106,15 @@ export const deleteMothersDayTask = createAsyncThunk(
 	}
 );
 
+export const toggleMothersDayTaskCompletion = createAsyncThunk(
+	"mothersDayTasks/toggleMothersDayTaskCompletion",
+	async (taskId: string) => {
+		// Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		return taskId;
+	}
+);
+
 const mothersDayTasksSlice = createSlice({
 	name: "mothersDayTasks",
 	initialState,
@@ -172,6 +181,26 @@ const mothersDayTasksSlice = createSlice({
 			.addCase(deleteMothersDayTask.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete task";
+			})
+			.addCase(toggleMothersDayTaskCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleMothersDayTaskCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const task = state.tasks.find((task) => task.id === action.payload);
+				if (task) {
+					task.isCompleted = !task.isCompleted;
+					task.completedDate = task.isCompleted
+						? new Date().toISOString()
+						: undefined;
+					task.updatedAt = new Date().toISOString();
+				}
+			})
+			.addCase(toggleMothersDayTaskCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to toggle task completion";
 			});
 	},
 });
