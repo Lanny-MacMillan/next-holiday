@@ -105,6 +105,15 @@ export const deleteBirthdayTask = createAsyncThunk(
 	}
 );
 
+export const toggleBirthdayTaskCompletion = createAsyncThunk(
+	"birthdayTasks/toggleBirthdayTaskCompletion",
+	async (taskId: string, { getState }) => {
+		// Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		return taskId;
+	}
+);
+
 const birthdayTasksSlice = createSlice({
 	name: "birthdayTasks",
 	initialState,
@@ -171,9 +180,26 @@ const birthdayTasksSlice = createSlice({
 			.addCase(deleteBirthdayTask.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete birthday task";
+			})
+			.addCase(toggleBirthdayTaskCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleBirthdayTaskCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const task = state.tasks.find((t) => t.id === action.payload);
+				if (task) {
+					task.isCompleted = !task.isCompleted;
+					task.completedDate = task.isCompleted ? new Date().toISOString() : undefined;
+				}
+			})
+			.addCase(toggleBirthdayTaskCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to toggle birthday task completion";
 			});
 	},
 });
 
 export const { setSelectedTask, clearError } = birthdayTasksSlice.actions;
+export const clearBirthdayTaskError = clearError;
 export default birthdayTasksSlice.reducer;

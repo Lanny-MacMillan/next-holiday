@@ -40,6 +40,7 @@ import birthdayGiftListReducer from "./slices/birthday/birthdayGiftListSlice";
 import birthdayTasksReducer from "./slices/birthday/birthdayTasksSlice";
 import birthdayCardsReducer from "./slices/birthday/birthdayCardsSlice";
 import birthdayAddressBookReducer from "./slices/birthday/birthdayAddressBookSlice";
+import birthdayGuestListReducer from "./slices/birthday/birthdayGuestListSlice";
 import anniversaryGiftListReducer from "./slices/anniversary/anniversaryGiftListSlice";
 import anniversaryTasksReducer from "./slices/anniversary/anniversaryTasksSlice";
 import graduationGiftListReducer from "./slices/graduation/graduationGiftListSlice";
@@ -93,6 +94,7 @@ export const store = configureStore({
 		birthdayTasks: birthdayTasksReducer,
 		birthdayCards: birthdayCardsReducer,
 		birthdayAddressBook: birthdayAddressBookReducer,
+		birthdayGuestList: birthdayGuestListReducer,
 		anniversaryGiftList: anniversaryGiftListReducer,
 		anniversaryTasks: anniversaryTasksReducer,
 		graduationGiftList: graduationGiftListReducer,

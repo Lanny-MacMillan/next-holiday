@@ -141,12 +141,6 @@ export const giftsFormConfig: FormConfig = {
 	title: "Add New Gift",
 	fields: [
 		{
-			id: "name",
-			type: "text",
-			placeholder: "Gift Name*",
-			required: true,
-		},
-		{
 			id: "recipient",
 			type: "text",
 			placeholder: "Recipient*",
@@ -155,7 +149,7 @@ export const giftsFormConfig: FormConfig = {
 		{
 			id: "description",
 			type: "text",
-			placeholder: "Description",
+			placeholder: "Gift",
 		},
 		{
 			id: "price",

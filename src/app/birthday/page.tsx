@@ -9,6 +9,7 @@ import { fetchBirthdayTasks } from "@/store/slices/birthday/birthdayTasksSlice";
 import { fetchBirthdayContacts } from "@/store/slices/birthday/birthdayAddressBookSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import PartyPlanningCard from "@/components/cards/holiday-task/PartyPlanningCard";
 
 const subsections = [
 	{
@@ -136,26 +137,45 @@ export default function BirthdayPage() {
 									/>
 								</li>
 							);
-						} else {
-							// Use HolidayTaskCard for tasks and other sections
-							return (
-								<li key={section.name}>
-									<HolidayTaskCard
-										holidayName="Birthday"
-										sectionName={section.name}
-										description={section.description}
-										href={section.href}
-										totalItems={total}
-										completedItems={completed}
-										theme={{
-											primaryColor: "#f59e0b", // Amber for Birthday
-											accentColor: "#f59e0b", // Amber accent
-											progressColor: "#f59e0b", // Amber for progress bar
-										}}
-									/>
-								</li>
-							);
-						}
+								} else if (section.name === "Party Planning") {
+			// Use PartyPlanningCard for party planning section
+			return (
+				<li key={section.name}>
+					<PartyPlanningCard
+						holidayName="Birthday"
+						sectionName={section.name}
+						description={section.description}
+						href={section.href}
+						totalItems={total}
+						completedItems={completed}
+						theme={{
+							primaryColor: "#f59e0b", // Amber for Birthday
+							accentColor: "#f59e0b", // Amber accent
+							progressColor: "#f59e0b", // Amber for progress bar
+						}}
+					/>
+				</li>
+			);
+		} else {
+			// Use HolidayTaskCard for tasks and other sections
+			return (
+				<li key={section.name}>
+					<HolidayTaskCard
+						holidayName="Birthday"
+						sectionName={section.name}
+						description={section.description}
+						href={section.href}
+						totalItems={total}
+						completedItems={completed}
+						theme={{
+							primaryColor: "#f59e0b", // Amber for Birthday
+							accentColor: "#f59e0b", // Amber accent
+							progressColor: "#f59e0b", // Amber for progress bar
+						}}
+					/>
+				</li>
+			);
+		}
 					})}
 				</ul>
 			</main>

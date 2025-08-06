@@ -83,6 +83,7 @@ export default function EasterGiftListPage() {
 				updateEasterGift({
 					...editingGift,
 					...values,
+					name: values.description,
 				})
 			);
 			setEditingGift(null);
@@ -91,7 +92,7 @@ export default function EasterGiftListPage() {
 				addEasterGift({
 					...values,
 					isCompleted: false,
-					name: values.name || "",
+					name: values.description || "",
 					recipient: values.recipient || "",
 					price: values.price || 0,
 				})
@@ -137,18 +138,12 @@ export default function EasterGiftListPage() {
 
 	const formFields = [
 		{
-			id: "name",
-			type: "text" as const,
-			placeholder: "Gift Name*",
-			required: true,
-		},
-		{
 			id: "recipient",
 			type: "text" as const,
 			placeholder: "Recipient*",
 			required: true,
 		},
-		{ id: "description", type: "text" as const, placeholder: "Description" },
+		{ id: "description", type: "text" as const, placeholder: "Gift" },
 		{
 			id: "price",
 			type: "number" as const,
@@ -237,8 +232,7 @@ export default function EasterGiftListPage() {
 				initialValues={
 					editingGift
 						? {
-								name: editingGift.name,
-								description: editingGift.description || "",
+								description: editingGift.name,
 								price: editingGift.price,
 								recipient: editingGift.recipient,
 								store: editingGift.store || "",

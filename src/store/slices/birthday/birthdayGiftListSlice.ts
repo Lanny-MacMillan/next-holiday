@@ -107,6 +107,36 @@ export const deleteBirthdayGift = createAsyncThunk(
 	}
 );
 
+export const toggleBirthdayGiftCompletion = createAsyncThunk(
+	"birthdayGiftList/toggleBirthdayGiftCompletion",
+	async (giftId: string, { getState }) => {
+		const state = getState() as any;
+		const gift = state.birthdayGiftList.gifts.find(
+			(g: BirthdayGift) => g.id === giftId
+		);
+
+		if (!gift) {
+			throw new Error("Gift not found");
+		}
+
+		// Simulate API call
+		const response = await new Promise<BirthdayGift>((resolve) => {
+			setTimeout(() => {
+				const updatedGift: BirthdayGift = {
+					...gift,
+					isCompleted: !gift.isCompleted,
+					completedDate: !gift.isCompleted
+						? new Date().toISOString()
+						: undefined,
+					updatedAt: new Date().toISOString(),
+				};
+				resolve(updatedGift);
+			}, 500);
+		});
+		return response;
+	}
+);
+
 const birthdayGiftListSlice = createSlice({
 	name: "birthdayGiftList",
 	initialState,
@@ -173,6 +203,21 @@ const birthdayGiftListSlice = createSlice({
 			.addCase(deleteBirthdayGift.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete birthday gift";
+			})
+			.addCase(toggleBirthdayGiftCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleBirthdayGiftCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.gifts.findIndex((g) => g.id === action.payload.id);
+				if (index !== -1) {
+					state.gifts[index] = action.payload;
+				}
+			})
+			.addCase(toggleBirthdayGiftCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to toggle birthday gift completion";
 			});
 	},
 });

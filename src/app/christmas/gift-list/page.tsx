@@ -54,13 +54,13 @@ export default function GiftListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGift(values: Record<string, any>) {
-		if (!values.name?.trim() || !values.recipient?.trim()) return;
+		if (!values.description?.trim() || !values.recipient?.trim()) return;
 
 		if (editingGift) {
 			// Update existing gift
 			const updatedGift: Gift = {
 				...editingGift,
-				name: values.name,
+				name: values.description,
 				description: values.description || undefined,
 				price: parseFloat(values.price) || 0,
 				recipient: values.recipient,
@@ -74,7 +74,7 @@ export default function GiftListPage() {
 		} else {
 			// Add new gift
 			const newGift: Omit<Gift, "id" | "createdAt" | "updatedAt"> = {
-				name: values.name,
+				name: values.description,
 				description: values.description || undefined,
 				price: parseFloat(values.price) || 0,
 				recipient: values.recipient,
@@ -193,12 +193,6 @@ export default function GiftListPage() {
 	// Form fields configuration
 	const formFields = [
 		{
-			id: "name",
-			type: "text" as const,
-			placeholder: "Gift Name*",
-			required: true,
-		},
-		{
 			id: "recipient",
 			type: "text" as const,
 			placeholder: "Recipient*",
@@ -206,9 +200,8 @@ export default function GiftListPage() {
 		},
 		{
 			id: "description",
-			type: "textarea" as const,
-			placeholder: "Description",
-			rows: 2,
+			type: "text" as const,
+			placeholder: "Gift",
 		},
 		{
 			id: "price",
@@ -239,8 +232,7 @@ export default function GiftListPage() {
 		if (!editingGift) return {};
 
 		return {
-			name: editingGift.name,
-			description: editingGift.description || "",
+			description: editingGift.name,
 			price: editingGift.price.toString(),
 			recipient: editingGift.recipient,
 			store: editingGift.store || "",

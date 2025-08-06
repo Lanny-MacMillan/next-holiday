@@ -5,7 +5,7 @@ import { getHolidayAccentColor } from "@/utils/holidayUtils";
 interface AddButtonProps {
 	title: string;
 	onClick: () => void;
-	color?: "red" | "green" | "blue" | "purple" | "orange" | "yellow" | "holiday";
+	color?: "red" | "green" | "blue" | "purple" | "orange" | "yellow" | "amber" | "holiday";
 	disabled?: boolean;
 }
 
@@ -30,6 +30,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return "bg-orange-500 hover:bg-orange-600";
 			case "yellow":
 				return "bg-yellow-500 hover:bg-yellow-600";
+			case "amber":
+				return "bg-amber-500 hover:bg-amber-600";
 			case "holiday":
 				return "hover:opacity-90";
 			default:
@@ -51,6 +53,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return { backgroundColor: "#f97316", color: "white" };
 			case "yellow":
 				return { backgroundColor: "#eab308", color: "white" };
+			case "amber":
+				return { backgroundColor: "#f59e0b", color: "white" };
 			case "holiday":
 				return {
 					backgroundColor: getHolidayAccentColor(pathname),

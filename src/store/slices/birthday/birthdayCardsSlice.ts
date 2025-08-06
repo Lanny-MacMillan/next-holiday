@@ -104,6 +104,36 @@ export const deleteBirthdayCard = createAsyncThunk(
 	}
 );
 
+export const toggleBirthdayCardCompletion = createAsyncThunk(
+	"birthdayCards/toggleBirthdayCardCompletion",
+	async (cardId: string, { getState }) => {
+		const state = getState() as any;
+		const card = state.birthdayCards.cards.find(
+			(c: BirthdayCard) => c.id === cardId
+		);
+
+		if (!card) {
+			throw new Error("Card not found");
+		}
+
+		// Simulate API call
+		const response = await new Promise<BirthdayCard>((resolve) => {
+			setTimeout(() => {
+				const updatedCard: BirthdayCard = {
+					...card,
+					isCompleted: !card.isCompleted,
+					completedDate: !card.isCompleted
+						? new Date().toISOString()
+						: undefined,
+					updatedAt: new Date().toISOString(),
+				};
+				resolve(updatedCard);
+			}, 500);
+		});
+		return response;
+	}
+);
+
 const birthdayCardsSlice = createSlice({
 	name: "birthdayCards",
 	initialState,
@@ -170,6 +200,21 @@ const birthdayCardsSlice = createSlice({
 			.addCase(deleteBirthdayCard.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete birthday card";
+			})
+			.addCase(toggleBirthdayCardCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleBirthdayCardCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.cards.findIndex((c) => c.id === action.payload.id);
+				if (index !== -1) {
+					state.cards[index] = action.payload;
+				}
+			})
+			.addCase(toggleBirthdayCardCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to toggle birthday card completion";
 			});
 	},
 });
