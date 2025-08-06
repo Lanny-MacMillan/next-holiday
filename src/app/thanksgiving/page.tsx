@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchThanksgivingGifts } from "@/store/slices/thanksgivingGiftListSlice";
 import { fetchThanksgivingTasks } from "@/store/slices/thanksgivingTasksSlice";
 import { fetchThanksgivingGuests } from "@/store/slices/thanksgivingGuestListSlice";
+import { fetchThanksgivingRecipes } from "@/store/slices/thanksgivingMealPlanningSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -23,7 +24,7 @@ const subsections = [
 		name: "Meal Planning",
 		description: "Plan your Thanksgiving menu and dishes",
 		href: "/thanksgiving/meal-planning",
-		sliceKey: "tasks",
+		sliceKey: "mealPlanning",
 		category: "Meal Planning",
 	},
 	{
@@ -52,11 +53,15 @@ export default function ThanksgivingPage() {
 	const guests = useAppSelector(
 		(state: any) => state.thanksgivingGuestList.guests
 	);
+	const recipes = useAppSelector(
+		(state: any) => state.thanksgivingMealPlanning.recipes
+	);
 
 	useEffect(() => {
 		dispatch(fetchThanksgivingGifts());
 		dispatch(fetchThanksgivingTasks());
 		dispatch(fetchThanksgivingGuests());
+		dispatch(fetchThanksgivingRecipes());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string, category?: string) {
@@ -71,6 +76,10 @@ export default function ThanksgivingPage() {
 			case "guestList":
 				total = guests.length;
 				completed = guests.filter((guest: any) => guest.isCompleted).length;
+				break;
+			case "mealPlanning":
+				total = recipes.length;
+				completed = recipes.filter((recipe: any) => recipe.isCompleted).length;
 				break;
 			case "tasks":
 				const filteredTasks = category
@@ -92,35 +101,26 @@ export default function ThanksgivingPage() {
 
 	return (
 		<div className="min-h-screen thanksgiving-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-2xl py-6 flex flex-col items-center relative">
-				<Link
-					href="/"
-					className="absolute left-0 top-10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-				>
-					<svg
-						className="w-6 h-6"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+			<header className="w-full max-w-md py-6">
+				<div className="flex items-center justify-center relative">
+					<Link
+						href="/"
+						className="absolute left-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M15 19l-7-7 7-7"
-						/>
-					</svg>
-				</Link>
-				<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-					🦃 Thanksgiving
-				</h1>
-				<p className="text-center text-gray-600 dark:text-gray-400">
-					Plan your feast, guests, and gratitude!
-				</p>
+						←
+					</Link>
+					<div className="text-center">
+						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
+							🦃 Thanksgiving
+						</h1>
+						<p className="text-center text-gray-600 dark:text-gray-400">
+							Plan your feast, guests, and gratitude!
+						</p>
+					</div>
+				</div>
 			</header>
-
-			<main className="w-full max-w-2xl flex flex-col gap-6">
-				<div className="grid gap-4">
+			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed } = getProgressData(
 							section.sliceKey,
@@ -130,52 +130,55 @@ export default function ThanksgivingPage() {
 						// Use GiftListCard for shopping list (budget tracking) and gift list sections
 						if (section.sliceKey === "giftList") {
 							return (
-								<GiftListCard
-									key={section.name}
-									holiday="Thanksgiving"
-									href={section.href}
-									theme={{
-										primaryColor: "#d97706", // Amber for Thanksgiving
-										accentColor: "#eab308",
-									}}
-								/>
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Thanksgiving"
+										href={section.href}
+										theme={{
+											primaryColor: "#d97706", // Amber for Thanksgiving
+											accentColor: "#eab308",
+										}}
+									/>
+								</li>
 							);
 						}
 
 						// Use GuestListCard for guest list section
 						if (section.sliceKey === "guestList") {
 							return (
-								<GuestListCard
-									key={section.name}
-									holiday="Thanksgiving"
-									href={section.href}
-									theme={{
-										primaryColor: "#d97706", // Amber for Thanksgiving
-										accentColor: "#eab308",
-									}}
-								/>
+								<li key={section.name}>
+									<GuestListCard
+										holiday="Thanksgiving"
+										href={section.href}
+										theme={{
+											primaryColor: "#d97706", // Amber for Thanksgiving
+											accentColor: "#eab308",
+										}}
+									/>
+								</li>
 							);
 						}
 
 						// Use HolidayTaskCard for task sections
 						return (
-							<HolidayTaskCard
-								key={section.name}
-								holidayName="Thanksgiving"
-								sectionName={section.name}
-								description={section.description}
-								href={section.href}
-								totalItems={total}
-								completedItems={completed}
-								theme={{
-									primaryColor: "#d97706", // Amber for Thanksgiving
-									accentColor: "#eab308",
-									progressColor: "#d97706",
-								}}
-							/>
+							<li key={section.name}>
+								<HolidayTaskCard
+									holidayName="Thanksgiving"
+									sectionName={section.name}
+									description={section.description}
+									href={section.href}
+									totalItems={total}
+									completedItems={completed}
+									theme={{
+										primaryColor: "#d97706", // Amber for Thanksgiving
+										accentColor: "#eab308",
+										progressColor: "#d97706",
+									}}
+								/>
+							</li>
 						);
 					})}
-				</div>
+				</ul>
 			</main>
 		</div>
 	);

@@ -51,15 +51,27 @@ export const guestsDeleteConfig: DeleteModalConfig = {
 	confirmButtonColor: "#ef4444", // Red
 };
 
+// Recipes delete configuration
+export const recipesDeleteConfig: DeleteModalConfig = {
+	title: "Confirm Delete",
+	message:
+		"Are you sure you want to delete this recipe? This action cannot be undone.",
+	cardClassName: "card",
+	confirmText: "Delete",
+	cancelText: "Cancel",
+	confirmButtonColor: "#ef4444", // Red
+};
+
 // Helper function to get delete config based on type
 export function getDeleteConfig(
-	type: "cards" | "tasks" | "gifts" | "guests"
+	type: "cards" | "tasks" | "gifts" | "guests" | "recipes"
 ): DeleteModalConfig {
 	const configs = {
 		cards: cardsDeleteConfig,
 		tasks: tasksDeleteConfig,
 		gifts: giftsDeleteConfig,
 		guests: guestsDeleteConfig,
+		recipes: recipesDeleteConfig,
 	};
 
 	return configs[type];
