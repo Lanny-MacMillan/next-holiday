@@ -106,6 +106,36 @@ export const deleteFourthOfJulyTask = createAsyncThunk(
 	}
 );
 
+export const toggleFourthOfJulyTaskCompletion = createAsyncThunk(
+	"fourthOfJulyTasks/toggleFourthOfJulyTaskCompletion",
+	async (taskId: string, { getState }) => {
+		const state = getState() as any;
+		const task = state.fourthOfJulyTasks.tasks.find(
+			(t: FourthOfJulyTask) => t.id === taskId
+		);
+
+		if (!task) {
+			throw new Error("Task not found");
+		}
+
+		// Simulate API call
+		const response = await new Promise<FourthOfJulyTask>((resolve) => {
+			setTimeout(() => {
+				const updatedTask: FourthOfJulyTask = {
+					...task,
+					isCompleted: !task.isCompleted,
+					completedDate: !task.isCompleted
+						? new Date().toISOString()
+						: undefined,
+					updatedAt: new Date().toISOString(),
+				};
+				resolve(updatedTask);
+			}, 500);
+		});
+		return response;
+	}
+);
+
 const fourthOfJulyTasksSlice = createSlice({
 	name: "fourthOfJulyTasks",
 	initialState,
@@ -175,6 +205,25 @@ const fourthOfJulyTasksSlice = createSlice({
 			.addCase(deleteFourthOfJulyTask.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete task";
+			})
+			// Toggle task completion
+			.addCase(toggleFourthOfJulyTaskCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleFourthOfJulyTaskCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.tasks.findIndex(
+					(task) => task.id === action.payload.id
+				);
+				if (index !== -1) {
+					state.tasks[index] = action.payload;
+				}
+			})
+			.addCase(toggleFourthOfJulyTaskCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to toggle task completion";
 			});
 	},
 });

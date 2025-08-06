@@ -35,6 +35,7 @@ import fathersDayGiftListReducer from "./slices/fathers-day/fathersDayGiftListSl
 import fathersDayTasksReducer from "./slices/fathers-day/fathersDayTasksSlice";
 import fathersDayCardsReducer from "./slices/fathers-day/fathersDayCardsSlice";
 import fourthOfJulyTasksReducer from "./slices/fourth-of-july/fourthOfJulyTasksSlice";
+import fourthOfJulyGuestListReducer from "./slices/fourth-of-july/fourthOfJulyGuestListSlice";
 import birthdayGiftListReducer from "./slices/birthday/birthdayGiftListSlice";
 import birthdayTasksReducer from "./slices/birthday/birthdayTasksSlice";
 import birthdayCardsReducer from "./slices/birthday/birthdayCardsSlice";
@@ -87,6 +88,7 @@ export const store = configureStore({
 		fathersDayTasks: fathersDayTasksReducer,
 		fathersDayCards: fathersDayCardsReducer,
 		fourthOfJulyTasks: fourthOfJulyTasksReducer,
+		fourthOfJulyGuestList: fourthOfJulyGuestListReducer,
 		birthdayGiftList: birthdayGiftListReducer,
 		birthdayTasks: birthdayTasksReducer,
 		birthdayCards: birthdayCardsReducer,
