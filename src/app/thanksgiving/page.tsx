@@ -9,6 +9,7 @@ import { fetchThanksgivingGuests } from "@/store/slices/thanksgivingGuestListSli
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import GuestListCard from "@/components/cards/guest/GuestListCard";
 
 const subsections = [
 	{
@@ -141,10 +142,10 @@ export default function ThanksgivingPage() {
 							);
 						}
 
-						// Use GiftListCard for guest list section (similar to gift list)
+						// Use GuestListCard for guest list section
 						if (section.sliceKey === "guestList") {
 							return (
-								<GiftListCard
+								<GuestListCard
 									key={section.name}
 									holiday="Thanksgiving"
 									href={section.href}

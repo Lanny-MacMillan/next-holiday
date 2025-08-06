@@ -72,8 +72,12 @@ export default function FormModal({
 
 		setFormValues((prev) => ({
 			...prev,
+			// Support both "recipient" (for cards) and "name" (for guests)
 			recipient: contact.name,
+			name: contact.name,
 			address: fullAddress,
+			email: contact.email || "",
+			phone: contact.phone || "",
 		}));
 		setShowAddressBookInternal(false);
 	};
@@ -193,27 +197,30 @@ export default function FormModal({
 					{fields.map((field) => (
 						<div key={field.id}>
 							{/* Special handling for address book integration */}
-							{field.id === "recipient" && showAddressBook && (
-								<div className="flex gap-2">
-									<div className="flex-1">{renderField(field)}</div>
-									<button
-										type="button"
-										onClick={() =>
-											setShowAddressBookInternal(!showAddressBookInternal)
-										}
-										className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
-										style={{ backgroundColor: "#3b82f6", color: "white" }}
-									>
-										📖
-									</button>
-								</div>
-							)}
+							{(field.id === "recipient" || field.id === "name") &&
+								showAddressBook && (
+									<div className="flex gap-2">
+										<div className="flex-1">{renderField(field)}</div>
+										<button
+											type="button"
+											onClick={() =>
+												setShowAddressBookInternal(!showAddressBookInternal)
+											}
+											className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
+											style={{ backgroundColor: "#3b82f6", color: "white" }}
+										>
+											📖
+										</button>
+									</div>
+								)}
 							{/* Regular field rendering */}
-							{!(field.id === "recipient" && showAddressBook) &&
-								renderField(field)}
+							{!(
+								(field.id === "recipient" || field.id === "name") &&
+								showAddressBook
+							) && renderField(field)}
 
-							{/* Address Book Dropdown - positioned right after recipient field */}
-							{field.id === "recipient" &&
+							{/* Address Book Dropdown - positioned right after recipient/name field */}
+							{(field.id === "recipient" || field.id === "name") &&
 								showAddressBookInternal &&
 								showAddressBook && (
 									<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto mt-2">
