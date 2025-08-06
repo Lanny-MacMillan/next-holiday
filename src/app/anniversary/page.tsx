@@ -24,14 +24,6 @@ const subsections = [
 		type: "task",
 		category: "Planning",
 	},
-	{
-		name: "Event Planning",
-		description: "Organize anniversary celebrations",
-		href: "/anniversary/events",
-		sliceKey: "tasks",
-		type: "task",
-		category: "Events",
-	},
 ];
 
 export default function AnniversaryPage() {

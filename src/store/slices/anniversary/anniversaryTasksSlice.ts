@@ -105,6 +105,33 @@ export const deleteAnniversaryTask = createAsyncThunk(
 	}
 );
 
+export const toggleAnniversaryTaskCompletion = createAsyncThunk(
+	"anniversaryTasks/toggleAnniversaryTaskCompletion",
+	async (taskId: string, { getState }) => {
+		// Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		// Get current state to find the task
+		const state = getState() as any;
+		const task = state.anniversaryTasks.tasks.find(
+			(t: AnniversaryTask) => t.id === taskId
+		);
+
+		if (!task) {
+			throw new Error("Task not found");
+		}
+
+		const updatedTask: AnniversaryTask = {
+			...task,
+			isCompleted: !task.isCompleted,
+			completedDate: !task.isCompleted ? new Date().toISOString() : undefined,
+			updatedAt: new Date().toISOString(),
+		};
+
+		return updatedTask;
+	}
+);
+
 const anniversaryTasksSlice = createSlice({
 	name: "anniversaryTasks",
 	initialState,
@@ -174,9 +201,29 @@ const anniversaryTasksSlice = createSlice({
 				state.loading = false;
 				state.error =
 					action.error.message || "Failed to delete anniversary task";
+			})
+			.addCase(toggleAnniversaryTaskCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleAnniversaryTaskCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.tasks.findIndex(
+					(task) => task.id === action.payload.id
+				);
+				if (index !== -1) {
+					state.tasks[index] = action.payload;
+				}
+			})
+			.addCase(toggleAnniversaryTaskCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message ||
+					"Failed to toggle anniversary task completion";
 			});
 	},
 });
 
 export const { setSelectedTask, clearError } = anniversaryTasksSlice.actions;
+export const clearAnniversaryTaskError = clearError;
 export default anniversaryTasksSlice.reducer;
