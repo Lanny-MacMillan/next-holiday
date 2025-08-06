@@ -106,6 +106,30 @@ export const deleteFathersDayTask = createAsyncThunk(
 	}
 );
 
+export const toggleFathersDayTaskCompletion = createAsyncThunk(
+	"fathersDayTasks/toggleFathersDayTaskCompletion",
+	async (taskId: string, { getState }) => {
+		// Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		// Get current state to find the task
+		const state = getState() as any;
+		const task = state.fathersDayTasks.tasks.find(
+			(t: FathersDayTask) => t.id === taskId
+		);
+
+		if (!task) {
+			throw new Error("Task not found");
+		}
+
+		return {
+			id: taskId,
+			isCompleted: !task.isCompleted,
+			completedDate: !task.isCompleted ? new Date().toISOString() : undefined,
+		};
+	}
+);
+
 const fathersDayTasksSlice = createSlice({
 	name: "fathersDayTasks",
 	initialState,
@@ -172,6 +196,23 @@ const fathersDayTasksSlice = createSlice({
 			.addCase(deleteFathersDayTask.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete task";
+			})
+			.addCase(toggleFathersDayTaskCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleFathersDayTaskCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const task = state.tasks.find((t) => t.id === action.payload.id);
+				if (task) {
+					task.isCompleted = action.payload.isCompleted;
+					task.completedDate = action.payload.completedDate;
+				}
+			})
+			.addCase(toggleFathersDayTaskCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to toggle task completion";
 			});
 	},
 });

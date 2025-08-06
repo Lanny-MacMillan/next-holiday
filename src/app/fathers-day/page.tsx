@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchFathersDayGifts } from "@/store/slices/fathers-day/fathersDayGiftListSlice";
 import { fetchFathersDayTasks } from "@/store/slices/fathers-day/fathersDayTasksSlice";
+import { fetchFathersDayCards } from "@/store/slices/fathers-day/fathersDayCardsSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
@@ -35,10 +36,12 @@ export default function FathersDayPage() {
 
 	const gifts = useAppSelector((state: any) => state.fathersDayGiftList.gifts);
 	const tasks = useAppSelector((state: any) => state.fathersDayTasks.tasks);
+	const cards = useAppSelector((state: any) => state.fathersDayCards.cards);
 
 	useEffect(() => {
 		dispatch(fetchFathersDayGifts());
 		dispatch(fetchFathersDayTasks());
+		dispatch(fetchFathersDayCards());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string, category?: string) {
@@ -49,6 +52,10 @@ export default function FathersDayPage() {
 			case "giftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
+			case "cards":
+				total = cards.length;
+				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "tasks":
 				const filteredTasks = category

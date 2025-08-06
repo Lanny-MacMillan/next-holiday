@@ -107,6 +107,30 @@ export const deleteFathersDayGift = createAsyncThunk(
 	}
 );
 
+export const toggleFathersDayGiftCompletion = createAsyncThunk(
+	"fathersDayGiftList/toggleFathersDayGiftCompletion",
+	async (giftId: string, { getState }) => {
+		// Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		// Get current state to find the gift
+		const state = getState() as any;
+		const gift = state.fathersDayGiftList.gifts.find(
+			(g: FathersDayGift) => g.id === giftId
+		);
+
+		if (!gift) {
+			throw new Error("Gift not found");
+		}
+
+		return {
+			id: giftId,
+			isCompleted: !gift.isCompleted,
+			completedDate: !gift.isCompleted ? new Date().toISOString() : undefined,
+		};
+	}
+);
+
 const fathersDayGiftListSlice = createSlice({
 	name: "fathersDayGiftList",
 	initialState,
@@ -173,6 +197,23 @@ const fathersDayGiftListSlice = createSlice({
 			.addCase(deleteFathersDayGift.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete gift";
+			})
+			.addCase(toggleFathersDayGiftCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleFathersDayGiftCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const gift = state.gifts.find((g) => g.id === action.payload.id);
+				if (gift) {
+					gift.isCompleted = action.payload.isCompleted;
+					gift.completedDate = action.payload.completedDate;
+				}
+			})
+			.addCase(toggleFathersDayGiftCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to toggle gift completion";
 			});
 	},
 });
