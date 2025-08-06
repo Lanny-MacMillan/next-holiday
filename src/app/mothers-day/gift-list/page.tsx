@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchMothersDayGifts } from "@/store/slices/mothersDayGiftListSlice";
+import { fetchMothersDayGifts } from "@/store/slices/mothers-day/mothersDayGiftListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 
 export default function MothersDayGiftListPage() {

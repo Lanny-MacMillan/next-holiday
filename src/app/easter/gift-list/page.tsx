@@ -11,7 +11,7 @@ import {
 	toggleEasterGiftCompletion,
 	setSelectedEasterGift,
 	clearEasterError,
-} from "@/store/slices/easterGiftListSlice";
+} from "@/store/slices/easter/easterGiftListSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";

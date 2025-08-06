@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchHalloweenTasks } from "@/store/slices/halloweenTasksSlice";
+import { fetchHalloweenTasks } from "@/store/slices/halloween/halloweenTasksSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 

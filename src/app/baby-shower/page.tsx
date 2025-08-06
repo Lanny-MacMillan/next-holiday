@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchBabyShowerGifts } from "@/store/slices/babyShowerGiftListSlice";
-import { fetchBabyShowerTasks } from "@/store/slices/babyShowerTasksSlice";
-import { fetchBabyShowerContacts } from "@/store/slices/babyShowerAddressBookSlice";
+import { fetchBabyShowerGifts } from "@/store/slices/baby-shower/babyShowerGiftListSlice";
+import { fetchBabyShowerTasks } from "@/store/slices/baby-shower/babyShowerTasksSlice";
+import { fetchBabyShowerContacts } from "@/store/slices/baby-shower/babyShowerAddressBookSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 

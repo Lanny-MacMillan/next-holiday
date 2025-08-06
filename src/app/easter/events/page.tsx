@@ -10,7 +10,7 @@ import {
 	deleteEasterTask,
 	toggleEasterTaskCompletion,
 	clearEasterTaskError,
-} from "@/store/slices/easterTasksSlice";
+} from "@/store/slices/easter/easterTasksSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";

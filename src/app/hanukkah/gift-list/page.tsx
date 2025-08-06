@@ -9,7 +9,7 @@ import {
 	deleteHanukkahGift,
 	toggleHanukkahGiftCompletion,
 	HanukkahGift,
-} from "@/store/slices/hanukkahGiftListSlice";
+} from "@/store/slices/hanukkah/hanukkahGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";

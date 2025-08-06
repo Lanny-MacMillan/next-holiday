@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchEasterGifts } from "@/store/slices/easterGiftListSlice";
-import { fetchEasterTasks } from "@/store/slices/easterTasksSlice";
+import { fetchEasterGifts } from "@/store/slices/easter/easterGiftListSlice";
+import { fetchEasterTasks } from "@/store/slices/easter/easterTasksSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 

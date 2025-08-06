@@ -9,7 +9,7 @@ import {
 	deleteHalloweenTask,
 	toggleHalloweenTaskCompletion,
 	HalloweenTask,
-} from "@/store/slices/halloweenTasksSlice";
+} from "@/store/slices/halloween/halloweenTasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";

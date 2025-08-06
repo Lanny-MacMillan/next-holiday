@@ -10,7 +10,7 @@ import {
 	deleteKwanzaaTask,
 	toggleKwanzaaTaskCompletion,
 	KwanzaaTask,
-} from "@/store/slices/kwanzaaTasksSlice";
+} from "@/store/slices/kwanzaa/kwanzaaTasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import TaskSection from "@/components/common/TaskSection";

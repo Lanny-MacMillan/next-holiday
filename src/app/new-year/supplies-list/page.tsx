@@ -10,7 +10,7 @@ import {
 	deleteNewYearGift,
 	toggleNewYearGiftCompletion,
 	NewYearGift,
-} from "@/store/slices/newYearGiftListSlice";
+} from "@/store/slices/new-year/newYearGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";

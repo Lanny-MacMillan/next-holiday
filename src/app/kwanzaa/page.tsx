@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchKwanzaaGifts } from "@/store/slices/kwanzaaGiftListSlice";
-import { fetchKwanzaaTasks } from "@/store/slices/kwanzaaTasksSlice";
+import { fetchKwanzaaGifts } from "@/store/slices/kwanzaa/kwanzaaGiftListSlice";
+import { fetchKwanzaaTasks } from "@/store/slices/kwanzaa/kwanzaaTasksSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 

@@ -8,7 +8,7 @@ import {
 	updateThanksgivingTask,
 	deleteThanksgivingTask,
 	toggleThanksgivingTaskCompletion,
-} from "@/store/slices/thanksgivingTasksSlice";
+} from "@/store/slices/thanksgiving/thanksgivingTasksSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";

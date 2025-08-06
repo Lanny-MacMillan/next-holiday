@@ -9,7 +9,7 @@ import {
 	deleteKwanzaaGift,
 	toggleKwanzaaGiftCompletion,
 	KwanzaaGift,
-} from "@/store/slices/kwanzaaGiftListSlice";
+} from "@/store/slices/kwanzaa/kwanzaaGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";

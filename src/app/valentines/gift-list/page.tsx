@@ -9,7 +9,7 @@ import {
 	deleteValentinesGift,
 	toggleValentinesGiftCompletion,
 	ValentinesGift,
-} from "@/store/slices/valentinesGiftListSlice";
+} from "@/store/slices/valentines/valentinesGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
@@ -78,7 +78,14 @@ export default function ValentinesGiftListPage() {
 				notes: formData.notes || undefined,
 			};
 
-		dispatch(updateValentinesGift({ id: selectedGift.id, ...updatedGift }));
+		dispatch(
+			updateValentinesGift({
+				id: selectedGift.id,
+				...updatedGift,
+				createdAt: selectedGift.createdAt,
+				updatedAt: new Date().toISOString(),
+			})
+		);
 		setShowEditModal(false);
 		setSelectedGift(null);
 	};

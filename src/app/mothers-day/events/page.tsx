@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchMothersDayTasks } from "@/store/slices/mothersDayTasksSlice";
+import { fetchMothersDayTasks } from "@/store/slices/mothers-day/mothersDayTasksSlice";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
 export default function MothersDayEventsPage() {

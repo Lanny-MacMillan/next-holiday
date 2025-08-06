@@ -10,7 +10,7 @@ import {
 	deleteValentinesTask,
 	toggleValentinesTaskCompletion,
 	setSelectedValentinesTask,
-} from "@/store/slices/valentinesTasksSlice";
+} from "@/store/slices/valentines/valentinesTasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 

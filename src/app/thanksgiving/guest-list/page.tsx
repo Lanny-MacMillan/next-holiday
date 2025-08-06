@@ -10,7 +10,7 @@ import {
 	deleteThanksgivingGuest,
 	toggleThanksgivingGuestCompletion,
 	Guest,
-} from "@/store/slices/thanksgivingGuestListSlice";
+} from "@/store/slices/thanksgiving/thanksgivingGuestListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import GuestCardItem from "@/components/cards/guest/GuestCardItem";

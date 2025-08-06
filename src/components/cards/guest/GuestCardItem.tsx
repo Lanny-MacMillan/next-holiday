@@ -1,5 +1,5 @@
 import React from "react";
-import { Guest } from "@/store/slices/thanksgivingGuestListSlice";
+import { Guest } from "@/store/slices/thanksgiving/thanksgivingGuestListSlice";
 
 export interface GuestCardItemProps {
 	guest: Guest;

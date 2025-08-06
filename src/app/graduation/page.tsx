@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchGraduationCards } from "@/store/slices/graduationCardsSlice";
-import { fetchGraduationGifts } from "@/store/slices/graduationGiftListSlice";
-import { fetchGraduationTasks } from "@/store/slices/graduationTasksSlice";
-import { fetchGraduationContacts } from "@/store/slices/graduationAddressBookSlice";
+import { fetchGraduationCards } from "@/store/slices/graduation/graduationCardsSlice";
+import { fetchGraduationGifts } from "@/store/slices/graduation/graduationGiftListSlice";
+import { fetchGraduationTasks } from "@/store/slices/graduation/graduationTasksSlice";
+import { fetchGraduationContacts } from "@/store/slices/graduation/graduationAddressBookSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 

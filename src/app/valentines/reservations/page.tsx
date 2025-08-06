@@ -9,7 +9,7 @@ import {
 	updateValentinesTask,
 	deleteValentinesTask,
 	toggleValentinesTaskCompletion,
-} from "@/store/slices/valentinesTasksSlice";
+} from "@/store/slices/valentines/valentinesTasksSlice";
 import {
 	ReservationCard,
 	ReservationsTracker,

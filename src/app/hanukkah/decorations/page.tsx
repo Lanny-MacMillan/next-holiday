@@ -10,7 +10,7 @@ import {
 	deleteHanukkahTask,
 	toggleHanukkahTaskCompletion,
 	HanukkahTask,
-} from "@/store/slices/hanukkahTasksSlice";
+} from "@/store/slices/hanukkah/hanukkahTasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";

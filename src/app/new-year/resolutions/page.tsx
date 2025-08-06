@@ -9,7 +9,7 @@ import {
 	deleteNewYearTask,
 	toggleNewYearTaskCompletion,
 	NewYearTask,
-} from "@/store/slices/newYearTasksSlice";
+} from "@/store/slices/new-year/newYearTasksSlice";
 import { Task } from "@/store/slices/tasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";

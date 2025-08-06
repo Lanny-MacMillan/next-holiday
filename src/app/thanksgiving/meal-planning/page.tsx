@@ -8,7 +8,7 @@ import {
 	updateThanksgivingRecipe,
 	deleteThanksgivingRecipe,
 	toggleThanksgivingRecipeCompletion,
-} from "@/store/slices/thanksgivingMealPlanningSlice";
+} from "@/store/slices/thanksgiving/thanksgivingMealPlanningSlice";
 
 import SortModal from "@/components/modals/SortModal";
 import RecipeCard, { Recipe } from "@/components/cards/recipe/RecipeCard";

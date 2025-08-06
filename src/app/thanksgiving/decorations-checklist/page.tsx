@@ -9,7 +9,7 @@ import {
 	deleteThanksgivingTask,
 	toggleThanksgivingTaskCompletion,
 	ThanksgivingTask,
-} from "@/store/slices/thanksgivingTasksSlice";
+} from "@/store/slices/thanksgiving/thanksgivingTasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";

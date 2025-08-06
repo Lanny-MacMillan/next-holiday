@@ -11,37 +11,37 @@ import {
 	setHanukkahCountdown,
 	clearHanukkahCountdown,
 	updateHanukkahCountdown,
-} from "@/store/slices/hanukkahCountdownSlice";
+} from "@/store/slices/hanukkah/hanukkahCountdownSlice";
 import {
 	setKwanzaaCountdown,
 	clearKwanzaaCountdown,
 	updateKwanzaaCountdown,
-} from "@/store/slices/kwanzaaCountdownSlice";
+} from "@/store/slices/kwanzaa/kwanzaaCountdownSlice";
 import {
 	setNewYearCountdown,
 	clearNewYearCountdown,
 	updateNewYearCountdown,
-} from "@/store/slices/newYearCountdownSlice";
+} from "@/store/slices/new-year/newYearCountdownSlice";
 import {
 	setValentinesCountdown,
 	clearValentinesCountdown,
 	updateValentinesCountdown,
-} from "@/store/slices/valentinesCountdownSlice";
+} from "@/store/slices/valentines/valentinesCountdownSlice";
 import {
 	setEasterCountdown,
 	clearEasterCountdown,
 	updateEasterCountdown,
-} from "@/store/slices/easterCountdownSlice";
+} from "@/store/slices/easter/easterCountdownSlice";
 import {
 	setHalloweenCountdown,
 	clearHalloweenCountdown,
 	updateHalloweenCountdown,
-} from "@/store/slices/halloweenCountdownSlice";
+} from "@/store/slices/halloween/halloweenCountdownSlice";
 import {
 	setThanksgivingCountdown,
 	clearThanksgivingCountdown,
 	updateThanksgivingCountdown,
-} from "@/store/slices/thanksgivingCountdownSlice";
+} from "@/store/slices/thanksgiving/thanksgivingCountdownSlice";
 import DatePickerModal from "../modals/DatePickerModal";
 
 interface CountdownTimerProps {
