@@ -57,16 +57,6 @@ export const fetchThanksgivingTasks = createAsyncThunk(
 					},
 					{
 						id: "2",
-						title: "Create Shopping List",
-						description: "List all ingredients needed",
-						priority: "high",
-						category: "Shopping List",
-						isCompleted: false,
-						createdAt: new Date().toISOString(),
-						updatedAt: new Date().toISOString(),
-					},
-					{
-						id: "3",
 						title: "Confirm Guest List",
 						description: "Finalize who's coming to dinner",
 						priority: "high",
@@ -76,7 +66,7 @@ export const fetchThanksgivingTasks = createAsyncThunk(
 						updatedAt: new Date().toISOString(),
 					},
 					{
-						id: "4",
+						id: "3",
 						title: "Set Table Decorations",
 						description: "Decorate the dining table",
 						priority: "medium",
@@ -86,9 +76,9 @@ export const fetchThanksgivingTasks = createAsyncThunk(
 						updatedAt: new Date().toISOString(),
 					},
 					{
-						id: "5",
+						id: "4",
 						title: "Buy Turkey",
-						description: "Purchase the main turkey",
+						description: "Purchase the main turkey\nCost: $20.00",
 						priority: "high",
 						category: "Shopping List",
 						isCompleted: false,
@@ -96,7 +86,7 @@ export const fetchThanksgivingTasks = createAsyncThunk(
 						updatedAt: new Date().toISOString(),
 					},
 					{
-						id: "6",
+						id: "5",
 						title: "Prepare Side Dishes",
 						description: "Make mashed potatoes, stuffing, etc.",
 						priority: "medium",

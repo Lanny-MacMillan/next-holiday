@@ -81,6 +81,17 @@ export default function ToDoCard({
 			style={borderStyle}
 			onClick={handleToggle}
 		>
+			{/* Close Button (Red X) */}
+			<button
+				onClick={(e) => {
+					e.stopPropagation();
+					handleDelete(e);
+				}}
+				className="absolute top-2 right-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-lg font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+				title="Delete task"
+			>
+				×
+			</button>
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={showDeleteConfirm}
@@ -116,15 +127,45 @@ export default function ToDoCard({
 
 					{/* Task Description */}
 					{task.description && (
-						<div
-							className={`text-sm mt-1 ${
-								task.isCompleted
-									? "line-through text-gray-400 dark:text-gray-500"
-									: "text-gray-500 dark:text-gray-400"
-							}`}
-						>
-							{task.description}
-						</div>
+						<>
+							{/* Extract and display description without cost */}
+							{(() => {
+								const costMatch = task.description.match(/Cost: \$(\d+\.?\d*)/);
+								const descriptionWithoutCost = task.description.replace(
+									/\nCost: \$(\d+\.?\d*)/,
+									""
+								);
+
+								return (
+									<>
+										{descriptionWithoutCost && (
+											<div
+												className={`text-sm mt-1 ${
+													task.isCompleted
+														? "line-through text-gray-400 dark:text-gray-500"
+														: "text-gray-500 dark:text-gray-400"
+												}`}
+											>
+												{descriptionWithoutCost}
+											</div>
+										)}
+
+										{/* Display cost separately below description */}
+										{costMatch && (
+											<div
+												className={`text-sm mt-1 font-medium ${
+													task.isCompleted
+														? "line-through text-gray-400 dark:text-gray-500"
+														: "text-green-600 dark:text-green-400"
+												}`}
+											>
+												Cost: ${costMatch[1]}
+											</div>
+										)}
+									</>
+								);
+							})()}
+						</>
 					)}
 
 					{/* Task Metadata */}
@@ -160,25 +201,16 @@ export default function ToDoCard({
 						)}
 					</div>
 				</div>
-
-				{/* Action Buttons */}
-				<div className="flex flex-col gap-1">
-					<button
-						onClick={handleEdit}
-						className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-						title="Edit task"
-					>
-						Edit
-					</button>
-					<button
-						onClick={handleDelete}
-						className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-						title="Delete task"
-					>
-						Delete
-					</button>
-				</div>
 			</div>
+
+			{/* Edit Button - Centered on Right Side */}
+			<button
+				onClick={handleEdit}
+				className="absolute top-1/2 right-4 transform -translate-y-1/2 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+				title="Edit task"
+			>
+				Edit
+			</button>
 		</div>
 	);
 }

@@ -44,9 +44,22 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 	}
 
 	// Calculate total spent from all gifts (both completed and incomplete)
-	const totalSpent = gifts.reduce((sum: number, gift: any) => {
+	let totalSpent = gifts.reduce((sum: number, gift: any) => {
 		return sum + (gift.price || 0);
 	}, 0);
+
+	// For Thanksgiving, also include shopping list costs
+	if (holiday === "Thanksgiving") {
+		const shoppingTasks = useAppSelector(
+			(state: any) => state.thanksgivingTasks.tasks
+		);
+		const shoppingCosts = shoppingTasks.reduce((sum: number, task: any) => {
+			if (!task.description) return sum;
+			const costMatch = task.description.match(/Cost: \$(\d+\.?\d*)/);
+			return sum + (costMatch ? parseFloat(costMatch[1]) : 0);
+		}, 0);
+		totalSpent += shoppingCosts;
+	}
 
 	const remaining = budgetLimit - totalSpent;
 	const percentageUsed = budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;

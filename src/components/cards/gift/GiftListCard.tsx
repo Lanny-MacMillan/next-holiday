@@ -148,7 +148,9 @@ export default function GiftListCard({
 				<div className="mb-4">
 					<div className="flex justify-between items-start mb-4">
 						<h3 className="font-bold text-gray-900 text-lg">
-							{displayHolidayName} Budget
+							{holiday === "Thanksgiving"
+								? `${displayHolidayName} Shopping Budget`
+								: `${displayHolidayName} Budget`}
 						</h3>
 						<div className="text-sm text-gray-600">{finalBudgetStatus}</div>
 					</div>
@@ -191,7 +193,9 @@ export default function GiftListCard({
 				{/* Gift List Section */}
 				<div className="mt-6">
 					<div className="flex items-center justify-between mb-2">
-						<h4 className="font-bold text-gray-900 text-lg">Gift List</h4>
+						<h4 className="font-bold text-gray-900 text-lg">
+							{holiday === "Thanksgiving" ? "Shopping List" : "Gift List"}
+						</h4>
 						<span
 							className="text-xs font-medium px-2.5 py-0.5 rounded-full"
 							style={{
@@ -203,7 +207,9 @@ export default function GiftListCard({
 						</span>
 					</div>
 					<p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
-						Track your {displayHolidayName} gift ideas
+						{holiday === "Thanksgiving"
+							? "Track your Thanksgiving shopping budget"
+							: `Track your ${displayHolidayName} gift ideas`}
 					</p>
 
 					{/* Gift List Progress bar */}

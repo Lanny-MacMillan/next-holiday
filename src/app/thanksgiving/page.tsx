@@ -14,7 +14,7 @@ const subsections = [
 		name: "Shopping List",
 		description: "List of ingredients and supplies needed",
 		href: "/thanksgiving/shopping-list",
-		sliceKey: "tasks",
+		sliceKey: "giftList", // Changed from "tasks" to "giftList" to use GiftListCard
 		category: "Shopping List",
 	},
 	{
@@ -37,13 +37,6 @@ const subsections = [
 		href: "/thanksgiving/decorations-checklist",
 		sliceKey: "tasks",
 		category: "Decorations Checklist",
-	},
-	{
-		name: "Gift List",
-		description: "Track your Thanksgiving gift ideas",
-		href: "/thanksgiving/gift-list",
-		sliceKey: "giftList",
-		category: undefined,
 	},
 ];
 
@@ -117,10 +110,6 @@ export default function ThanksgivingPage() {
 			</header>
 
 			<main className="w-full max-w-2xl flex flex-col gap-6">
-				<div className="mb-4">
-					<BudgetDisplay holiday="Thanksgiving" />
-				</div>
-
 				<div className="grid gap-4">
 					{subsections.map((section) => {
 						const { total, completed } = getProgressData(
@@ -128,7 +117,7 @@ export default function ThanksgivingPage() {
 							section.category
 						);
 
-						// Use GiftListCard for gift list sections
+						// Use GiftListCard for shopping list (budget tracking) and gift list sections
 						if (section.sliceKey === "giftList") {
 							return (
 								<GiftListCard
