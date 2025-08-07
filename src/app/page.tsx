@@ -6,6 +6,7 @@ import { useAppSelector } from "@/store/hooks";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import HolidayCard from "@/components/cards/HolidayCard";
 import { holidayData } from "@/data/holidayData";
+import GamifiedHolidayCardExample from "@/components/examples/GamifiedHolidayCardExample";
 // import ReduxExample from "@/components/ReduxExample";
 // import ReduxTest from "@/components/ReduxTest";
 
@@ -221,6 +222,12 @@ export default function Home() {
 					<ReduxTest />
 				</div>
 			</div> */}
+
+			{/* Gamified HolidayCard Examples */}
+			<div className="w-full max-w-4xl mt-8">
+				<GamifiedHolidayCardExample />
+			</div>
+
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday
 			</footer>
