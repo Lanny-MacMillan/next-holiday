@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Toast from "@/components/common/Toast";
 
 export default function SettingsPage() {
 	const { user } = useAuth0();
@@ -12,6 +13,7 @@ export default function SettingsPage() {
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const [localSettings, setLocalSettings] = useState(settings);
 	const [imageError, setImageError] = useState(false);
+	const [showToast, setShowToast] = useState(false);
 
 	// Reset image error when user changes
 	useEffect(() => {
@@ -46,6 +48,7 @@ export default function SettingsPage() {
 
 	const handleSave = () => {
 		dispatch(updateSettings(localSettings));
+		setShowToast(true);
 	};
 
 	return (
@@ -233,7 +236,6 @@ export default function SettingsPage() {
 									"Fourth of July",
 									"Graduation",
 									"Baby Shower",
-									"Wedding",
 								].map((holiday) => {
 									const isSelected = localSettings.holidayChoices?.some(
 										(choice: { holiday: string; budget: number }) =>
@@ -440,6 +442,13 @@ export default function SettingsPage() {
 					</button>
 				</div>
 			</main>
+
+			<Toast
+				message="Settings saved successfully!"
+				isVisible={showToast}
+				onClose={() => setShowToast(false)}
+				type="success"
+			/>
 		</div>
 	);
 }
