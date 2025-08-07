@@ -3,6 +3,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 export interface GraduationCard {
 	id: string;
 	recipient: string;
+	address?: string;
 	message: string;
 	isCompleted: boolean;
 	completedDate?: string;
@@ -50,6 +51,7 @@ export const fetchGraduationCards = createAsyncThunk(
 					{
 						id: "1",
 						recipient: "Graduate",
+						address: "123 Graduation Ave, College Town, ST 12345",
 						message:
 							"Congratulations on your graduation! Wishing you success in all your future endeavors.",
 						isCompleted: false,

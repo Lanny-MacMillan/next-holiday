@@ -8,6 +8,11 @@ export interface GraduationContact {
 	address?: string;
 	relationship?: string;
 	notes?: string;
+	isCompleted?: boolean;
+	isDeclined?: boolean;
+	numberOfGuests?: number;
+	dietaryRestrictions?: string;
+	bringingDish?: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -53,6 +58,41 @@ export const fetchGraduationContacts = createAsyncThunk(
 						phone: "555-0123",
 						relationship: "Family",
 						notes: "Graduation party guest",
+						isCompleted: false,
+						isDeclined: false,
+						numberOfGuests: 3,
+						dietaryRestrictions: "Vegetarian",
+						bringingDish: "Graduation Cake",
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					},
+					{
+						id: "2",
+						name: "College Friend",
+						email: "friend@email.com",
+						phone: "555-0456",
+						relationship: "Friend",
+						notes: "Will bring graduation gift",
+						isCompleted: true,
+						isDeclined: false,
+						numberOfGuests: 2,
+						dietaryRestrictions: "",
+						bringingDish: "Graduation Cookies",
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					},
+					{
+						id: "3",
+						name: "Former Classmate",
+						email: "classmate@email.com",
+						phone: "555-0789",
+						relationship: "Classmate",
+						notes: "Unable to attend due to prior commitment",
+						isCompleted: false,
+						isDeclined: true,
+						numberOfGuests: 1,
+						dietaryRestrictions: "",
+						bringingDish: "",
 						createdAt: new Date().toISOString(),
 						updatedAt: new Date().toISOString(),
 					},
