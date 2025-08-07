@@ -89,3 +89,56 @@ export function getHolidayAccentColor(pathname: string): string {
 	const colors = getHolidayColors(pathname);
 	return colors.accent;
 }
+
+// Function to calculate countdown time for a holiday
+export const getHolidayCountdownTime = (
+	holidayName: string,
+	state: any
+): number => {
+	// Get the appropriate countdown state based on holiday name
+	let countdownState;
+
+	switch (holidayName) {
+		case "Hanukkah":
+			countdownState = state.hanukkahCountdown;
+			break;
+		case "Kwanzaa":
+			countdownState = state.kwanzaaCountdown;
+			break;
+		case "New Year":
+			countdownState = state.newYearCountdown;
+			break;
+		case "Valentine's Day":
+			countdownState = state.valentinesCountdown;
+			break;
+		case "Easter":
+			countdownState = state.easterCountdown;
+			break;
+		case "Halloween":
+			countdownState = state.halloweenCountdown;
+			break;
+		case "Thanksgiving":
+			countdownState = state.thanksgivingCountdown;
+			break;
+		default:
+			countdownState = state.countdown;
+			break;
+	}
+
+	// If no countdown is set or not active, return Infinity (will be sorted last)
+	if (!countdownState.targetDate || !countdownState.isActive) {
+		return Infinity;
+	}
+
+	// Calculate time remaining in milliseconds
+	const now = new Date().getTime();
+	const target = new Date(countdownState.targetDate).getTime();
+	const difference = target - now;
+
+	// If the date has passed, return 0 (will be sorted first)
+	if (difference <= 0) {
+		return 0;
+	}
+
+	return difference;
+};

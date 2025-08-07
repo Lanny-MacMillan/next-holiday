@@ -6,6 +6,7 @@ import { useAppSelector } from "@/store/hooks";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import HolidayCard from "@/components/cards/HolidayCard";
 import { holidayData } from "@/data/holidayData";
+import { getHolidayCountdownTime } from "@/utils/holidayUtils";
 import GamifiedHolidayCardExample from "@/components/examples/GamifiedHolidayCardExample";
 // import ReduxExample from "@/components/ReduxExample";
 // import ReduxTest from "@/components/ReduxTest";
@@ -40,6 +41,22 @@ export default function Home() {
 	);
 	const hanukkahTasks = useAppSelector(
 		(state) => state.hanukkahTasks?.tasks || []
+	);
+
+	// Get countdown states
+	const countdown = useAppSelector((state) => state.countdown);
+	const hanukkahCountdown = useAppSelector((state) => state.hanukkahCountdown);
+	const kwanzaaCountdown = useAppSelector((state) => state.kwanzaaCountdown);
+	const newYearCountdown = useAppSelector((state) => state.newYearCountdown);
+	const valentinesCountdown = useAppSelector(
+		(state) => state.valentinesCountdown
+	);
+	const easterCountdown = useAppSelector((state) => state.easterCountdown);
+	const halloweenCountdown = useAppSelector(
+		(state) => state.halloweenCountdown
+	);
+	const thanksgivingCountdown = useAppSelector(
+		(state) => state.thanksgivingCountdown
 	);
 	const kwanzaaGifts = useAppSelector(
 		(state) => state.kwanzaaGiftList?.gifts || []
@@ -185,6 +202,63 @@ export default function Home() {
 	// Get filtered holidays
 	const filteredHolidays = getSelectedHolidays();
 
+	// Sort holidays by countdown timer
+	const sortedHolidays = [...filteredHolidays].sort((a, b) => {
+		const state = {
+			cards: { cards },
+			giftList: { gifts },
+			tasks: { tasks },
+			addressBook: { contacts },
+			hanukkahGiftList: { gifts: hanukkahGifts },
+			hanukkahTasks: { tasks: hanukkahTasks },
+			kwanzaaGiftList: { gifts: kwanzaaGifts },
+			kwanzaaTasks: { tasks: kwanzaaTasks },
+			newYearGiftList: { gifts: newYearGifts },
+			newYearTasks: { tasks: newYearTasks },
+			valentinesGiftList: { gifts: valentinesGifts },
+			valentinesTasks: { tasks: valentinesTasks },
+			easterGiftList: { gifts: easterGifts },
+			easterTasks: { tasks: easterTasks },
+			halloweenGiftList: { gifts: halloweenGifts },
+			halloweenTasks: { tasks: halloweenTasks },
+			thanksgivingGiftList: { gifts: thanksgivingGifts },
+			thanksgivingTasks: { tasks: thanksgivingTasks },
+			mothersDayGiftList: { gifts: mothersDayGifts },
+			mothersDayTasks: { tasks: mothersDayTasks },
+			fathersDayGiftList: { gifts: fathersDayGifts },
+			fathersDayTasks: { tasks: fathersDayTasks },
+			fourthOfJulyTasks: { tasks: fourthOfJulyTasks },
+			birthdayGiftList: { gifts: birthdayGifts },
+			birthdayTasks: { tasks: birthdayTasks },
+			birthdayCards: { cards: birthdayCards },
+			birthdayAddressBook: { contacts: birthdayContacts },
+			anniversaryGiftList: { gifts: anniversaryGifts },
+			anniversaryTasks: { tasks: anniversaryTasks },
+			graduationGiftList: { gifts: graduationGifts },
+			graduationTasks: { tasks: graduationTasks },
+			graduationCards: { cards: graduationCards },
+			graduationAddressBook: { contacts: graduationContacts },
+			babyShowerGiftList: { gifts: babyShowerGifts },
+			babyShowerTasks: { tasks: babyShowerTasks },
+			babyShowerAddressBook: { contacts: babyShowerContacts },
+			// Add countdown states
+			countdown,
+			hanukkahCountdown,
+			kwanzaaCountdown,
+			newYearCountdown,
+			valentinesCountdown,
+			easterCountdown,
+			halloweenCountdown,
+			thanksgivingCountdown,
+		};
+
+		const aCountdown = getHolidayCountdownTime(a.name, state);
+		const bCountdown = getHolidayCountdownTime(b.name, state);
+
+		// Sort by countdown time (closest first, then expired, then no countdown)
+		return aCountdown - bCountdown;
+	});
+
 	return (
 		<div className="min-h-screen christmas-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<header className="w-full max-w-md py-6">
@@ -199,7 +273,7 @@ export default function Home() {
 				<h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-white">
 					Upcoming Holidays
 				</h2>
-				{filteredHolidays.length === 0 ? (
+				{sortedHolidays.length === 0 ? (
 					<div className="text-center py-8">
 						<p className="text-gray-600 dark:text-gray-400 mb-4">
 							No holidays selected in your preferences.
@@ -213,7 +287,7 @@ export default function Home() {
 					</div>
 				) : (
 					<ul className="flex flex-col gap-4">
-						{filteredHolidays.map((holiday) => {
+						{sortedHolidays.map((holiday) => {
 							const state = {
 								cards: { cards },
 								giftList: { gifts },
