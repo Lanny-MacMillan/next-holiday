@@ -54,7 +54,7 @@ export const fetchBabyShowerTasks = createAsyncThunk(
 						description: "Organize fun baby shower activities",
 						isCompleted: false,
 						priority: "high",
-						category: "Events",
+						category: "Games",
 						notes: "Include prizes for winners",
 						createdAt: new Date().toISOString(),
 						updatedAt: new Date().toISOString(),
@@ -102,6 +102,36 @@ export const deleteBabyShowerTask = createAsyncThunk(
 		// Simulate API call
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		return taskId;
+	}
+);
+
+export const toggleBabyShowerTaskCompletion = createAsyncThunk(
+	"babyShowerTasks/toggleBabyShowerTaskCompletion",
+	async (taskId: string, { getState }) => {
+		const state = getState() as any;
+		const task = state.babyShowerTasks.tasks.find(
+			(t: BabyShowerTask) => t.id === taskId
+		);
+
+		if (!task) {
+			throw new Error("Task not found");
+		}
+
+		// Simulate API call
+		const response = await new Promise<BabyShowerTask>((resolve) => {
+			setTimeout(() => {
+				const updatedTask: BabyShowerTask = {
+					...task,
+					isCompleted: !task.isCompleted,
+					completedDate: !task.isCompleted
+						? new Date().toISOString()
+						: undefined,
+					updatedAt: new Date().toISOString(),
+				};
+				resolve(updatedTask);
+			}, 500);
+		});
+		return response;
 	}
 );
 
@@ -174,6 +204,25 @@ const babyShowerTasksSlice = createSlice({
 				state.loading = false;
 				state.error =
 					action.error.message || "Failed to delete baby shower task";
+			})
+			.addCase(toggleBabyShowerTaskCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleBabyShowerTaskCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.tasks.findIndex(
+					(task) => task.id === action.payload.id
+				);
+				if (index !== -1) {
+					state.tasks[index] = action.payload;
+				}
+			})
+			.addCase(toggleBabyShowerTaskCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message ||
+					"Failed to toggle baby shower task completion";
 			});
 	},
 });

@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchBabyShowerGifts } from "@/store/slices/baby-shower/babyShowerGiftListSlice";
 import { fetchBabyShowerTasks } from "@/store/slices/baby-shower/babyShowerTasksSlice";
 import { fetchBabyShowerContacts } from "@/store/slices/baby-shower/babyShowerAddressBookSlice";
+import { fetchBabyShowerGuests } from "@/store/slices/baby-shower/babyShowerGuestListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 
@@ -21,7 +22,7 @@ const subsections = [
 		name: "Guest List",
 		description: "Manage your baby shower guest list",
 		href: "/baby-shower/guest-list",
-		sliceKey: "addressBook",
+		sliceKey: "guestList",
 		type: "task",
 	},
 	{
@@ -30,7 +31,7 @@ const subsections = [
 		href: "/baby-shower/games",
 		sliceKey: "tasks",
 		type: "task",
-		category: "Events",
+		category: "Games",
 	},
 ];
 
@@ -42,12 +43,16 @@ export default function BabyShowerPage() {
 	const contacts = useAppSelector(
 		(state: any) => state.babyShowerAddressBook.contacts
 	);
+	const guests = useAppSelector(
+		(state: any) => state.babyShowerGuestList.guests
+	);
 
 	useEffect(() => {
 		// Fetch all data when component mounts if not already initialized
 		dispatch(fetchBabyShowerGifts());
 		dispatch(fetchBabyShowerTasks());
 		dispatch(fetchBabyShowerContacts());
+		dispatch(fetchBabyShowerGuests());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string): {
@@ -66,6 +71,10 @@ export default function BabyShowerPage() {
 			case "tasks":
 				total = tasks.length;
 				completed = tasks.filter((task: any) => task.isCompleted).length;
+				break;
+			case "guestList":
+				total = guests.length;
+				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
 			case "addressBook":
 				total = contacts.length;

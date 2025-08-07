@@ -50,6 +50,7 @@ import graduationAddressBookReducer from "./slices/graduation/graduationAddressB
 import babyShowerGiftListReducer from "./slices/baby-shower/babyShowerGiftListSlice";
 import babyShowerTasksReducer from "./slices/baby-shower/babyShowerTasksSlice";
 import babyShowerAddressBookReducer from "./slices/baby-shower/babyShowerAddressBookSlice";
+import babyShowerGuestListReducer from "./slices/baby-shower/babyShowerGuestListSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -104,6 +105,7 @@ export const store = configureStore({
 		babyShowerGiftList: babyShowerGiftListReducer,
 		babyShowerTasks: babyShowerTasksReducer,
 		babyShowerAddressBook: babyShowerAddressBookReducer,
+		babyShowerGuestList: babyShowerGuestListReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

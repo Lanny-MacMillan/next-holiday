@@ -107,6 +107,36 @@ export const deleteBabyShowerGift = createAsyncThunk(
 	}
 );
 
+export const toggleBabyShowerGiftCompletion = createAsyncThunk(
+	"babyShowerGiftList/toggleBabyShowerGiftCompletion",
+	async (giftId: string, { getState }) => {
+		const state = getState() as any;
+		const gift = state.babyShowerGiftList.gifts.find(
+			(g: BabyShowerGift) => g.id === giftId
+		);
+
+		if (!gift) {
+			throw new Error("Gift not found");
+		}
+
+		// Simulate API call
+		const response = await new Promise<BabyShowerGift>((resolve) => {
+			setTimeout(() => {
+				const updatedGift: BabyShowerGift = {
+					...gift,
+					isCompleted: !gift.isCompleted,
+					completedDate: !gift.isCompleted
+						? new Date().toISOString()
+						: undefined,
+					updatedAt: new Date().toISOString(),
+				};
+				resolve(updatedGift);
+			}, 500);
+		});
+		return response;
+	}
+);
+
 const babyShowerGiftListSlice = createSlice({
 	name: "babyShowerGiftList",
 	initialState,
@@ -176,6 +206,25 @@ const babyShowerGiftListSlice = createSlice({
 				state.loading = false;
 				state.error =
 					action.error.message || "Failed to delete baby shower gift";
+			})
+			.addCase(toggleBabyShowerGiftCompletion.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(toggleBabyShowerGiftCompletion.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.gifts.findIndex(
+					(gift) => gift.id === action.payload.id
+				);
+				if (index !== -1) {
+					state.gifts[index] = action.payload;
+				}
+			})
+			.addCase(toggleBabyShowerGiftCompletion.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message ||
+					"Failed to toggle baby shower gift completion";
 			});
 	},
 });
