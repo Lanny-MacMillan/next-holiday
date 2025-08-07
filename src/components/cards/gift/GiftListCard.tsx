@@ -136,7 +136,7 @@ export default function GiftListCard({
 
 	const cardContent = (
 		<div
-			className={`max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden transition hover:scale-[1.02] active:scale-100 ${className}`}
+			className={`max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden transition hover:scale-[1.02] active:scale-100 ${className}`}
 			style={{
 				backgroundColor,
 				borderLeft: `4px solid ${primaryColor}`, // Green line on left edge
