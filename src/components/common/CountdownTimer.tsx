@@ -42,6 +42,41 @@ import {
 	clearThanksgivingCountdown,
 	updateThanksgivingCountdown,
 } from "@/store/slices/thanksgiving/thanksgivingCountdownSlice";
+import {
+	setGraduationCountdown,
+	clearGraduationCountdown,
+	updateGraduationCountdown,
+} from "@/store/slices/graduation/graduationCountdownSlice";
+import {
+	setAnniversaryCountdown,
+	clearAnniversaryCountdown,
+	updateAnniversaryCountdown,
+} from "@/store/slices/anniversary/anniversaryCountdownSlice";
+import {
+	setBirthdayCountdown,
+	clearBirthdayCountdown,
+	updateBirthdayCountdown,
+} from "@/store/slices/birthday/birthdayCountdownSlice";
+import {
+	setFourthOfJulyCountdown,
+	clearFourthOfJulyCountdown,
+	updateFourthOfJulyCountdown,
+} from "@/store/slices/fourth-of-july/fourthOfJulyCountdownSlice";
+import {
+	setFathersDayCountdown,
+	clearFathersDayCountdown,
+	updateFathersDayCountdown,
+} from "@/store/slices/fathers-day/fathersDayCountdownSlice";
+import {
+	setMothersDayCountdown,
+	clearMothersDayCountdown,
+	updateMothersDayCountdown,
+} from "@/store/slices/mothers-day/mothersDayCountdownSlice";
+import {
+	setChristmasCountdown,
+	clearChristmasCountdown,
+	updateChristmasCountdown,
+} from "@/store/slices/christmas/christmasCountdownSlice";
 import DatePickerModal from "../modals/DatePickerModal";
 
 interface CountdownTimerProps {
@@ -57,24 +92,40 @@ export default function CountdownTimer({
 
 	// Determine which countdown slice to use based on holiday
 	const countdownState = useAppSelector((state) => {
-		if (holiday === "Hanukkah") {
-			return state.hanukkahCountdown;
-		} else if (holiday === "Kwanzaa") {
-			return state.kwanzaaCountdown;
-		} else if (holiday === "New Year") {
-			return state.newYearCountdown;
-		} else if (holiday === "Valentine's Day") {
-			return state.valentinesCountdown;
-		} else if (holiday === "Easter") {
-			return state.easterCountdown;
-		} else if (holiday === "Halloween") {
-			return state.halloweenCountdown;
-		} else if (holiday === "Thanksgiving") {
-			return state.thanksgivingCountdown;
-		} else {
-			return state.countdown;
+		switch (holiday) {
+			case "Hanukkah":
+				return state.hanukkahCountdown;
+			case "Kwanzaa":
+				return state.kwanzaaCountdown;
+			case "New Year":
+				return state.newYearCountdown;
+			case "Valentine's Day":
+				return state.valentinesCountdown;
+			case "Easter":
+				return state.easterCountdown;
+			case "Halloween":
+				return state.halloweenCountdown;
+			case "Thanksgiving":
+				return state.thanksgivingCountdown;
+			case "Graduation":
+				return state.graduationCountdown;
+			case "Anniversary":
+				return state.anniversaryCountdown;
+			case "Birthday":
+				return state.birthdayCountdown;
+			case "Fourth of July":
+				return state.fourthOfJulyCountdown;
+			case "Father's Day":
+				return state.fathersDayCountdown;
+			case "Mother's Day":
+				return state.mothersDayCountdown;
+			case "Christmas":
+				return state.christmasCountdown;
+			default:
+				return state.countdown;
 		}
 	});
+
 	const { targetDate, isActive } = countdownState;
 
 	const [timeLeft, setTimeLeft] = useState<{
@@ -149,6 +200,20 @@ export default function CountdownTimer({
 			dispatch(setHalloweenCountdown(date));
 		} else if (holiday === "Thanksgiving") {
 			dispatch(setThanksgivingCountdown(date));
+		} else if (holiday === "Graduation") {
+			dispatch(setGraduationCountdown(date));
+		} else if (holiday === "Anniversary") {
+			dispatch(setAnniversaryCountdown(date));
+		} else if (holiday === "Birthday") {
+			dispatch(setBirthdayCountdown(date));
+		} else if (holiday === "Fourth of July") {
+			dispatch(setFourthOfJulyCountdown(date));
+		} else if (holiday === "Father's Day") {
+			dispatch(setFathersDayCountdown(date));
+		} else if (holiday === "Mother's Day") {
+			dispatch(setMothersDayCountdown(date));
+		} else if (holiday === "Christmas") {
+			dispatch(setChristmasCountdown(date));
 		} else {
 			dispatch(setCountdown(date));
 		}
@@ -170,6 +235,20 @@ export default function CountdownTimer({
 			dispatch(updateHalloweenCountdown(date));
 		} else if (holiday === "Thanksgiving") {
 			dispatch(updateThanksgivingCountdown(date));
+		} else if (holiday === "Graduation") {
+			dispatch(updateGraduationCountdown(date));
+		} else if (holiday === "Anniversary") {
+			dispatch(updateAnniversaryCountdown(date));
+		} else if (holiday === "Birthday") {
+			dispatch(updateBirthdayCountdown(date));
+		} else if (holiday === "Fourth of July") {
+			dispatch(updateFourthOfJulyCountdown(date));
+		} else if (holiday === "Father's Day") {
+			dispatch(updateFathersDayCountdown(date));
+		} else if (holiday === "Mother's Day") {
+			dispatch(updateMothersDayCountdown(date));
+		} else if (holiday === "Christmas") {
+			dispatch(updateChristmasCountdown(date));
 		} else {
 			dispatch(updateCountdown(date));
 		}
@@ -191,6 +270,20 @@ export default function CountdownTimer({
 			dispatch(clearHalloweenCountdown());
 		} else if (holiday === "Thanksgiving") {
 			dispatch(clearThanksgivingCountdown());
+		} else if (holiday === "Graduation") {
+			dispatch(clearGraduationCountdown());
+		} else if (holiday === "Anniversary") {
+			dispatch(clearAnniversaryCountdown());
+		} else if (holiday === "Birthday") {
+			dispatch(clearBirthdayCountdown());
+		} else if (holiday === "Fourth of July") {
+			dispatch(clearFourthOfJulyCountdown());
+		} else if (holiday === "Father's Day") {
+			dispatch(clearFathersDayCountdown());
+		} else if (holiday === "Mother's Day") {
+			dispatch(clearMothersDayCountdown());
+		} else if (holiday === "Christmas") {
+			dispatch(clearChristmasCountdown());
 		} else {
 			dispatch(clearCountdown());
 		}
@@ -233,6 +326,18 @@ export default function CountdownTimer({
 				return "Halloween is here! 🎃";
 			case "Thanksgiving":
 				return "Thanksgiving is here! 🦃";
+			case "Graduation":
+				return "Graduation is here! 🎓";
+			case "Anniversary":
+				return "Anniversary is here! 💍";
+			case "Birthday":
+				return "Birthday is here! 🎂";
+			case "Fourth of July":
+				return "Fourth of July is here! 🇺🇸";
+			case "Father's Day":
+				return "Father's Day is here! 👨‍👧‍👦";
+			case "Mother's Day":
+				return "Mother's Day is here! 👩‍👧‍👦";
 			default:
 				return "The holiday is here!";
 		}
@@ -246,7 +351,7 @@ export default function CountdownTimer({
 						e.stopPropagation();
 						setShowDatePicker(true);
 					}}
-					className="text-xs text-blue-500 dark:text-blue-400 font-medium"
+					className="text-xs text-white font-medium hover:text-gray-200 transition-colors"
 				>
 					Set Countdown
 				</button>

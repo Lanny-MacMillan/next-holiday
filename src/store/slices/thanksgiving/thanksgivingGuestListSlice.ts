@@ -151,12 +151,13 @@ export const toggleThanksgivingGuestCompletion = createAsyncThunk(
 		// Simulate API call
 		const response = await new Promise<Guest>((resolve) => {
 			setTimeout(() => {
+				// Toggle RSVP status between pending and confirmed
+				const newRsvpStatus =
+					guest.rsvpStatus === "pending" ? "confirmed" : "pending";
+
 				const updatedGuest: Guest = {
 					...guest,
-					isCompleted: !guest.isCompleted,
-					completedDate: !guest.isCompleted
-						? new Date().toISOString()
-						: undefined,
+					rsvpStatus: newRsvpStatus,
 					updatedAt: new Date().toISOString(),
 				};
 				resolve(updatedGuest);
@@ -255,8 +256,7 @@ const thanksgivingGuestListSlice = createSlice({
 			})
 			.addCase(toggleThanksgivingGuestCompletion.rejected, (state, action) => {
 				state.loading = false;
-				state.error =
-					action.error.message || "Failed to toggle guest completion";
+				state.error = action.error.message || "Failed to toggle RSVP status";
 			});
 	},
 });

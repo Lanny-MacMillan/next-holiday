@@ -4,15 +4,15 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
 import {
-	fetchGifts,
-	addGift,
-	updateGift,
-	deleteGift,
-	toggleGiftCompletion,
+	fetchHalloweenGifts,
+	addHalloweenGift,
+	updateHalloweenGift,
+	deleteHalloweenGift,
+	toggleHalloweenGiftCompletion,
 	setSelectedGift,
 	clearError,
-	Gift,
-} from "@/store/slices/giftListSlice";
+	HalloweenGift,
+} from "@/store/slices/halloween/halloweenGiftListSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
@@ -27,32 +27,48 @@ export default function HalloweenGiftListPage() {
 	const dispatch = useDispatch<AppDispatch>();
 	const pathname = usePathname();
 	const { gifts, loading, error, selectedGift } = useSelector(
-		(state: RootState) => state.giftList
+		(state: RootState) => state.halloweenGiftList
 	);
 
 	// Modal states
 	const [isSortModalOpen, setIsSortModalOpen] = useState(false);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-	const [giftToDelete, setGiftToDelete] = useState<Gift | null>(null);
+	const [giftToDelete, setGiftToDelete] = useState<HalloweenGift | null>(null);
 
 	// Sort state
 	const [sortBy, setSortBy] = useState("name");
 
 	// Form fields for adding/editing gifts
 	const formFields = [
-		{ id: "name", label: "Gift Name", type: "text" as const, required: true },
 		{
-			id: "recipient",
-			label: "Recipient",
+			id: "name",
 			type: "text" as const,
 			required: true,
+			placeholder: "Enter gift name",
 		},
-		{ id: "description", label: "Description", type: "textarea" as const },
-		{ id: "price", label: "Price", type: "number" as const, step: "0.01" },
-		{ id: "store", label: "Store", type: "text" as const },
-		{ id: "productLink", label: "Product Link", type: "url" as const },
-		{ id: "notes", label: "Notes", type: "textarea" as const },
+		{
+			id: "recipient",
+			type: "text" as const,
+			required: true,
+			placeholder: "Who is this gift for?",
+		},
+		{
+			id: "description",
+			type: "textarea" as const,
+			placeholder: "Describe the gift",
+		},
+		{
+			id: "price",
+			type: "number" as const,
+			step: "0.01",
+			placeholder: "0.00",
+		},
+		{
+			id: "category",
+			type: "text" as const,
+			placeholder: "e.g., Decorations, Candy, Costumes",
+		},
 	];
 
 	const sortOptions = [
@@ -63,7 +79,7 @@ export default function HalloweenGiftListPage() {
 	];
 
 	useEffect(() => {
-		dispatch(fetchGifts());
+		dispatch(fetchHalloweenGifts());
 	}, [dispatch]);
 
 	useEffect(() => {
@@ -84,7 +100,7 @@ export default function HalloweenGiftListPage() {
 		setIsFormModalOpen(true);
 	};
 
-	const handleEditGift = (gift: Gift) => {
+	const handleEditGift = (gift: HalloweenGift) => {
 		dispatch(setSelectedGift(gift));
 		setIsFormModalOpen(true);
 	};
@@ -99,7 +115,7 @@ export default function HalloweenGiftListPage() {
 
 	const handleConfirmDelete = () => {
 		if (giftToDelete) {
-			dispatch(deleteGift(giftToDelete.id));
+			dispatch(deleteHalloweenGift(giftToDelete.id));
 			setGiftToDelete(null);
 			setIsDeleteModalOpen(false);
 		}
@@ -111,31 +127,29 @@ export default function HalloweenGiftListPage() {
 			recipient: values.recipient,
 			description: values.description || "",
 			price: parseFloat(values.price) || 0,
-			store: values.store || "",
-			productLink: values.productLink || "",
-			notes: values.notes || "",
+			category: values.category || "",
 			isCompleted: false,
 		};
 
 		if (selectedGift) {
-			dispatch(updateGift({ ...selectedGift, ...giftData }));
+			dispatch(updateHalloweenGift({ ...selectedGift, ...giftData }));
 		} else {
-			dispatch(addGift(giftData));
+			dispatch(addHalloweenGift(giftData));
 		}
 		setIsFormModalOpen(false);
 	};
 
 	const handleToggleGift = (giftId: string) => {
-		dispatch(toggleGiftCompletion(giftId));
+		dispatch(toggleHalloweenGiftCompletion(giftId));
 	};
 
-	const sortGifts = (giftsToSort: Gift[]) => {
+	const sortGifts = (giftsToSort: HalloweenGift[]) => {
 		return [...giftsToSort].sort((a, b) => {
 			switch (sortBy) {
 				case "name":
 					return a.name.localeCompare(b.name);
 				case "recipient":
-					return a.recipient.localeCompare(b.recipient);
+					return (a.recipient || "").localeCompare(b.recipient || "");
 				case "price":
 					return a.price - b.price;
 				case "createdAt":
@@ -154,19 +168,30 @@ export default function HalloweenGiftListPage() {
 
 	const accentColor = getHolidayAccentColor(pathname);
 
-	const renderGiftItem = (gift: Gift) => (
-		<GiftCardItem
-			key={gift.id}
-			gift={gift}
-			isCompleted={gift.isCompleted}
-			onToggle={handleToggleGift}
-			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
-			loading={loading}
-			theme={{ accentColor }}
-			borderColor={accentColor}
-		/>
-	);
+	const renderGiftItem = (gift: HalloweenGift) => {
+		// Convert HalloweenGift to Gift for compatibility
+		const giftForCard = {
+			...gift,
+			recipient: gift.recipient || "Unknown",
+			store: gift.category || "",
+			productLink: "",
+			notes: "",
+		};
+
+		return (
+			<GiftCardItem
+				key={gift.id}
+				gift={giftForCard}
+				isCompleted={gift.isCompleted}
+				onToggle={handleToggleGift}
+				onEdit={handleEditGift}
+				onDelete={handleDeleteGift}
+				loading={loading}
+				theme={{ accentColor }}
+				borderColor={accentColor}
+			/>
+		);
+	};
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-orange-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
@@ -247,9 +272,7 @@ export default function HalloweenGiftListPage() {
 									recipient: selectedGift.recipient,
 									description: selectedGift.description,
 									price: selectedGift.price,
-									store: selectedGift.store,
-									productLink: selectedGift.productLink,
-									notes: selectedGift.notes,
+									category: selectedGift.category,
 							  }
 							: {}
 					}

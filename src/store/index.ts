@@ -51,6 +51,13 @@ import babyShowerGiftListReducer from "./slices/baby-shower/babyShowerGiftListSl
 import babyShowerTasksReducer from "./slices/baby-shower/babyShowerTasksSlice";
 import babyShowerAddressBookReducer from "./slices/baby-shower/babyShowerAddressBookSlice";
 import babyShowerGuestListReducer from "./slices/baby-shower/babyShowerGuestListSlice";
+import graduationCountdownReducer from "./slices/graduation/graduationCountdownSlice";
+import anniversaryCountdownReducer from "./slices/anniversary/anniversaryCountdownSlice";
+import birthdayCountdownReducer from "./slices/birthday/birthdayCountdownSlice";
+import fourthOfJulyCountdownReducer from "./slices/fourth-of-july/fourthOfJulyCountdownSlice";
+import fathersDayCountdownReducer from "./slices/fathers-day/fathersDayCountdownSlice";
+import mothersDayCountdownReducer from "./slices/mothers-day/mothersDayCountdownSlice";
+import christmasCountdownReducer from "./slices/christmas/christmasCountdownSlice";
 
 export const store = configureStore({
 	reducer: {
@@ -106,6 +113,13 @@ export const store = configureStore({
 		babyShowerTasks: babyShowerTasksReducer,
 		babyShowerAddressBook: babyShowerAddressBookReducer,
 		babyShowerGuestList: babyShowerGuestListReducer,
+		graduationCountdown: graduationCountdownReducer,
+		anniversaryCountdown: anniversaryCountdownReducer,
+		birthdayCountdown: birthdayCountdownReducer,
+		fourthOfJulyCountdown: fourthOfJulyCountdownReducer,
+		fathersDayCountdown: fathersDayCountdownReducer,
+		mothersDayCountdown: mothersDayCountdownReducer,
+		christmasCountdown: christmasCountdownReducer,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({

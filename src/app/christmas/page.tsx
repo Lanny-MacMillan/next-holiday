@@ -1,11 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCards } from "@/store/slices/cardsSlice";
-import { fetchGifts } from "@/store/slices/giftListSlice";
-import { fetchTasks } from "@/store/slices/tasksSlice";
+import { useAppSelector } from "@/store/hooks";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -35,19 +31,12 @@ const subsections = [
 ];
 
 export default function ChristmasPage() {
-	const dispatch = useAppDispatch();
-
 	const cards = useAppSelector((state: any) => state.cards.cards);
 	const gifts = useAppSelector((state: any) => state.giftList.gifts);
 	const tasks = useAppSelector((state: any) => state.tasks.tasks);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchCards());
-		dispatch(fetchGifts());
-		dispatch(fetchTasks());
-	}, [dispatch]);
+	// DataInitializer component handles data fetching
+	// No need to fetch here as it's already handled globally
 
 	function getProgressData(sliceKey: string): {
 		total: number;

@@ -28,10 +28,8 @@ export const holidayData: HolidayData[] = [
 			const cards = state.cards.cards;
 			const gifts = state.giftList.gifts;
 			const tasks = state.tasks.tasks;
-			const contacts = state.addressBook.contacts;
 
-			const totalItems =
-				cards.length + gifts.length + tasks.length + contacts.length;
+			const totalItems = cards.length + gifts.length + tasks.length;
 			const completedItems =
 				cards.filter((card: any) => card.isCompleted).length +
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -54,9 +52,8 @@ export const holidayData: HolidayData[] = [
 			const cards = state.cards.cards;
 			const gifts = state.giftList.gifts;
 			const tasks = state.tasks.tasks;
-			const contacts = state.addressBook.contacts;
 
-			return cards.length + gifts.length + tasks.length + contacts.length;
+			return cards.length + gifts.length + tasks.length;
 		},
 	},
 	{
