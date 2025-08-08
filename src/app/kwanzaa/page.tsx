@@ -39,7 +39,7 @@ const subsections = [
 	},
 ];
 
-export default function HanukkahPage() {
+export default function KwanzaaPage() {
 	const dispatch = useAppDispatch();
 
 	const gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);

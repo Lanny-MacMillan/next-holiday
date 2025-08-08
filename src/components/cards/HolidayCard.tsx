@@ -218,8 +218,11 @@ export default function HolidayCard({
 								<div className="flex-1">
 									<div className="w-full bg-white bg-opacity-20 rounded-full h-3 mb-2">
 										<div
-											className="bg-white h-3 rounded-full transition-all"
-											style={{ width: `${progress * 100}%` }}
+											className="h-3 rounded-full transition-all"
+											style={{
+												width: `${progress * 100}%`,
+												backgroundColor: color.light,
+											}}
 										/>
 									</div>
 									<div className="flex justify-between items-center text-xs text-white opacity-80">

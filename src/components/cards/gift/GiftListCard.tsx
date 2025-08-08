@@ -37,6 +37,8 @@ export function useGiftListCardData(holiday?: string) {
 		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
 	} else if (holiday === "Easter") {
 		gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
+	} else if (holiday === "Kwanzaa") {
+		gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
 	} else {
 		gifts = useAppSelector((state: any) => state.giftList.gifts);
 	}
@@ -231,9 +233,10 @@ export default function GiftListCard({
 						{/* Budget Progress bar */}
 						<div className="w-full bg-white bg-opacity-20 rounded-full h-2 mb-2">
 							<div
-								className="bg-white h-2 rounded-full transition-all duration-300"
+								className="h-2 rounded-full transition-all duration-300"
 								style={{
 									width: `${Math.min(budgetPercentage, 100)}%`,
+									backgroundColor: primaryColor,
 								}}
 							></div>
 						</div>
@@ -258,9 +261,10 @@ export default function GiftListCard({
 						{/* Gift List Progress bar */}
 						<div className="w-full bg-white bg-opacity-20 rounded-full h-2 mb-2">
 							<div
-								className="bg-white h-2 rounded-full transition-all duration-300"
+								className="h-2 rounded-full transition-all duration-300"
 								style={{
 									width: `${Math.min(giftListPercentage, 100)}%`,
+									backgroundColor: primaryColor,
 								}}
 							></div>
 						</div>

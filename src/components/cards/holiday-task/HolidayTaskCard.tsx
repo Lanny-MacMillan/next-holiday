@@ -110,9 +110,10 @@ export default function HolidayTaskCard({
 					{/* Progress bar */}
 					<div className="mt-3 w-full bg-white bg-opacity-20 rounded-full h-2">
 						<div
-							className="bg-white h-2 rounded-full transition-all"
+							className="h-2 rounded-full transition-all"
 							style={{
 								width: `${progressPercentage}%`,
+								backgroundColor: primaryColor,
 							}}
 						/>
 					</div>
