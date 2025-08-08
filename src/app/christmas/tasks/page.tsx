@@ -191,7 +191,6 @@ export default function TasksPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
-							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 					// cardClassName="card-tasks"
@@ -215,7 +214,6 @@ export default function TasksPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
-							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 					// cardClassName="card-tasks"
@@ -232,7 +230,7 @@ export default function TasksPage() {
 				loading={loading}
 				submitText={loading ? "Adding..." : "Add Task"}
 				cancelText="Cancel"
-				cardClassName="card card-tasks"
+				cardClassName="card"
 				submitButtonColor="#22c55e"
 			/>
 

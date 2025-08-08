@@ -18,6 +18,7 @@ export interface ToDoCardProps {
 	};
 	borderColor?: string; // Border color for the left border
 	gamified?: boolean; // New prop to control display mode
+	gamifiedBackgroundColor?: string; // Optional override for background color
 }
 
 // Task-themed icons for gamified mode
@@ -48,6 +49,7 @@ export default function ToDoCard({
 	theme = {},
 	borderColor,
 	gamified = false,
+	gamifiedBackgroundColor: propGamifiedBackgroundColor,
 }: ToDoCardProps) {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -100,7 +102,9 @@ export default function ToDoCard({
 		}
 	};
 
-	const gamifiedBackgroundColor = getTaskGamifiedBackgroundColor(task.priority);
+	const gamifiedBackgroundColor =
+		propGamifiedBackgroundColor ||
+		getTaskGamifiedBackgroundColor(task.priority);
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString();
