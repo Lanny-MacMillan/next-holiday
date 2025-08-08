@@ -1,4 +1,7 @@
 import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
+import { getHolidayAccentColor } from "@/utils/holidayUtils";
+import { usePathname } from "next/navigation";
 
 interface BudgetInfo {
 	budgetLimit: number;
@@ -12,6 +15,7 @@ interface BudgetInfo {
 
 interface BudgetDisplayProps {
 	holiday?: string;
+	holidayColor?: string;
 }
 
 export function useBudgetInfo(holiday?: string): BudgetInfo {
@@ -99,8 +103,11 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 	};
 }
 
-export function BudgetDisplay({ holiday }: BudgetDisplayProps) {
+export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
 	const budgetInfo = useBudgetInfo(holiday);
+	const pathname = usePathname();
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamified = settings.displayMode === "gamified";
 
 	if (budgetInfo.budgetLimit === 0) {
 		return null; // Don't show if no budget is set
@@ -108,6 +115,108 @@ export function BudgetDisplay({ holiday }: BudgetDisplayProps) {
 
 	const displayTitle = holiday ? `${holiday} Budget` : "Gift Budget";
 
+	// If gamified is true, render the playful design
+	if (isGamified) {
+		const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
+
+		return (
+			<div
+				className={`relative card rounded-2xl p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${holidayColor}`}
+				style={{
+					...getCardStyling({
+						isDarkMode: false,
+						isGamified: true,
+						intensity: "heavy",
+					}),
+				}}
+			>
+				{/* Background texture overlay */}
+				<div className="absolute inset-0 opacity-10 pointer-events-none">
+					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>
+					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15 pointer-events-none"></div>
+					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10 pointer-events-none"></div>
+					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20 pointer-events-none"></div>
+				</div>
+
+				<div className="relative z-10">
+					<div className="flex justify-between items-center mb-3">
+						<h3
+							className="font-semibold text-white"
+							style={{ fontFamily: "var(--font-family-fredoka)" }}
+						>
+							{displayTitle}
+						</h3>
+						<span
+							className="text-sm font-medium text-white opacity-90"
+							style={{ fontFamily: "var(--font-family-fredoka)" }}
+						>
+							{budgetInfo.statusText}
+						</span>
+					</div>
+
+					<div className="flex justify-between items-center text-sm mb-3">
+						<div>
+							<span
+								className="font-medium text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								Spent:{" "}
+							</span>
+							<span
+								className="font-bold text-white"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								${budgetInfo.totalSpent.toFixed(2)}
+							</span>
+						</div>
+						<div>
+							<span
+								className="font-medium text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								Remaining:{" "}
+							</span>
+							<span
+								className={`font-bold ${
+									budgetInfo.remaining < 0 ? "text-red-200" : "text-white"
+								}`}
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								${budgetInfo.remaining.toFixed(2)}
+							</span>
+						</div>
+					</div>
+
+					<div className="mt-3">
+						<div className="flex justify-between text-xs mb-2">
+							<span
+								className="text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								Budget: ${budgetInfo.budgetLimit.toFixed(2)}
+							</span>
+							<span
+								className="text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								{budgetInfo.percentageUsed.toFixed(1)}% used
+							</span>
+						</div>
+						<div className="w-full bg-white bg-opacity-20 rounded-full h-3 border border-white border-opacity-30">
+							<div
+								className={`h-3 rounded-full transition-all ${budgetInfo.progressBarColor}`}
+								style={{
+									width: `${Math.min(budgetInfo.percentageUsed, 100)}%`,
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Original clean, professional design
 	return (
 		<div className={`card rounded-lg p-4 mb-4 ${budgetInfo.colorClass}`}>
 			<div className="flex justify-between items-center mb-2">

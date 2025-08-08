@@ -1,12 +1,23 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { getHolidayAccentColor } from "@/utils/holidayUtils";
+import { getCardStyling } from "@/utils/cardShadows";
+import { useAppSelector } from "@/store/hooks";
 
 interface AddButtonProps {
 	title: string;
 	onClick: () => void;
-	color?: "red" | "green" | "blue" | "purple" | "orange" | "yellow" | "amber" | "holiday";
+	color?:
+		| "red"
+		| "green"
+		| "blue"
+		| "purple"
+		| "orange"
+		| "yellow"
+		| "amber"
+		| "holiday";
 	disabled?: boolean;
+	holidayColor?: string;
 }
 
 const AddButton: React.FC<AddButtonProps> = ({
@@ -14,8 +25,12 @@ const AddButton: React.FC<AddButtonProps> = ({
 	onClick,
 	color = "holiday",
 	disabled = false,
+	holidayColor,
 }) => {
 	const pathname = usePathname();
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamified = settings.displayMode === "gamified";
+
 	const getColorClasses = () => {
 		switch (color) {
 			case "red":
@@ -65,6 +80,30 @@ const AddButton: React.FC<AddButtonProps> = ({
 		}
 	};
 
+	// If gamified is true, render the playful design
+	if (isGamified) {
+		const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
+
+		return (
+			<button
+				onClick={onClick}
+				className={`${getColorClasses()} text-white px-4 py-2 rounded transition-colors  tracking-wide  ${
+					disabled ? "opacity-50 cursor-not-allowed" : ""
+				}`}
+				style={
+					(getColorStyle(),
+					{
+						fontFamily: "var(--font-family-fredoka)",
+					})
+				}
+				disabled={disabled}
+			>
+				Add New {title}
+			</button>
+		);
+	}
+
+	// Original clean, professional design
 	return (
 		<button
 			onClick={onClick}

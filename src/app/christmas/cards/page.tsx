@@ -156,6 +156,8 @@ export default function CardsPage() {
 				backHref="/christmas"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">

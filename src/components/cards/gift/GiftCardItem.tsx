@@ -75,7 +75,7 @@ export default function GiftCardItem({
 		return (
 			<li
 				key={gift.id}
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white ${completedClasses}`}
+				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white tracking-wide  ${completedClasses}`}
 				style={getCardStyling({
 					isDarkMode,
 					isGamified: true,
@@ -122,7 +122,10 @@ export default function GiftCardItem({
 						</div>
 
 						{/* Gift Content */}
-						<div className="flex-1 min-w-0">
+						<div
+							className="flex-1 min-w-0"
+							style={{ fontFamily: "var(--font-family-fredoka)" }}
+						>
 							<div
 								className={`font-semibold text-white ${
 									isCompleted ? "line-through opacity-60" : ""

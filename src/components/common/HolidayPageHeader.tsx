@@ -25,42 +25,62 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 	const { theme } = useAppSelector((state: any) => state.theme.settings);
 	const isGamified = displayMode === "gamified";
 
-	// Get outline color based on holiday (similar to HolidayHeader)
-	const getOutlineColor = () => {
-		if (holidayColor) return holidayColor;
+	console.log("holidayColor", holidayColor);
+	const textColor = theme === "dark" ? "white" : "black";
+	const defaultColor = "#000000"; // Default color
 
-		const outlineColorMap: { [key: string]: string } = {
-			christmas: "#dc2626", // red-600
-			hanukkah: "#2563eb", // blue-600
-			kwanzaa: "#dc2626", // red-600
-			"new-year": "#d97706", // amber-600
-			"new year": "#d97706", // amber-600
-			valentines: "#db2777", // pink-600
-			"valentine's day": "#db2777", // pink-600
-			easter: "#9333ea", // purple-600
-			halloween: "#ea580c", // orange-600
-			"🎃 halloween": "#ea580c", // orange-600 (with emoji)
-			thanksgiving: "#d97706", // amber-600
-			"🦃 thanksgiving": "#d97706", // amber-600 (with emoji)
-			"mothers-day": "#db2777", // pink-600
-			"mother's day": "#db2777", // pink-600
-			"🌸 mother's day": "#db2777", // pink-600 (with emoji)
-			"fathers-day": "#2563eb", // blue-600
-			"father's day": "#2563eb", // blue-600
-			"👨 father's day": "#2563eb", // blue-600 (with emoji)
-			"fourth-of-july": "#dc2626", // red-600
-			"fourth of july": "#dc2626", // red-600
-			"🎆 fourth of july": "#dc2626", // red-600 (with emoji)
-			birthday: "#eab308", // yellow-500
-			anniversary: "#db2777", // pink-600
-			graduation: "#9333ea", // purple-600
-			"baby-shower": "#0891b2", // cyan-600
-			"baby shower": "#0891b2", // cyan-600
+	// Convert Tailwind classes to actual colors
+	const getHoverColor = () => {
+		if (!holidayColor) return defaultColor;
+
+		// If it's already a hex color, use it directly
+		if (holidayColor.startsWith("#")) {
+			return holidayColor;
+		}
+
+		// Convert common Tailwind colors to hex values
+		const colorMap: { [key: string]: string } = {
+			"red-500": "#ef4444",
+			"red-600": "#dc2626",
+			"red-400": "#f87171",
+			"blue-500": "#3b82f6",
+			"blue-600": "#2563eb",
+			"green-500": "#22c55e",
+			"green-600": "#16a34a",
+			"yellow-500": "#eab308",
+			"yellow-600": "#ca8a04",
+			"purple-500": "#8b5cf6",
+			"purple-600": "#7c3aed",
+			"pink-500": "#ec4899",
+			"pink-600": "#db2777",
+			"orange-500": "#f97316",
+			"orange-600": "#ea580c",
+			"amber-500": "#f59e0b",
+			"amber-600": "#d97706",
+			"cyan-500": "#06b6d4",
+			"cyan-600": "#0891b2",
 		};
-		return outlineColorMap[title.toLowerCase()] || "#2563eb"; // default to blue
+
+		// Check if it's a simple color class
+		if (colorMap[holidayColor]) {
+			return colorMap[holidayColor];
+		}
+
+		// For gradient classes, extract the first color
+		if (holidayColor.includes("from-")) {
+			const fromMatch = holidayColor.match(/from-(\w+)-(\d+)/);
+			if (fromMatch) {
+				const colorName = fromMatch[1];
+				const shade = fromMatch[2];
+				const key = `${colorName}-${shade}`;
+				return colorMap[key] || defaultColor;
+			}
+		}
+
+		return defaultColor;
 	};
 
-	const textColor = theme === "dark" ? "white" : "black";
+	const hoverColor = getHoverColor();
 
 	if (isGamified) {
 		return (
@@ -68,12 +88,15 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 				<div className="flex items-center justify-center relative">
 					<Link
 						href={backHref}
-						className="absolute left-0 text-blue-600 dark:text-blue-400 text-5xl transition-colors duration-200"
+						className="absolute left-0 text-5xl transition-all duration-200 hover:scale-110"
+						style={{
+							color: defaultColor,
+						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.color = getOutlineColor();
+							e.currentTarget.style.color = hoverColor;
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.color = "";
+							e.currentTarget.style.color = defaultColor;
 						}}
 					>
 						←
@@ -112,13 +135,16 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 					{onSortClick && (
 						<button
 							onClick={onSortClick}
-							className="absolute right-0 text-blue-600 dark:text-blue-400 text-5xl transition-colors duration-200"
+							className="absolute right-0 text-5xl transition-all duration-200 hover:scale-110"
 							title={sortTitle}
+							style={{
+								color: defaultColor,
+							}}
 							onMouseEnter={(e) => {
-								e.currentTarget.style.color = getOutlineColor();
+								e.currentTarget.style.color = hoverColor;
 							}}
 							onMouseLeave={(e) => {
-								e.currentTarget.style.color = "";
+								e.currentTarget.style.color = defaultColor;
 							}}
 						>
 							<div className="flex flex-col gap-1">
@@ -145,12 +171,15 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 			<div className="flex items-center justify-center relative">
 				<Link
 					href={backHref}
-					className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+					className="absolute left-0 text-xl transition-all duration-200 hover:scale-110"
+					style={{
+						color: defaultColor,
+					}}
 					onMouseEnter={(e) => {
-						e.currentTarget.style.color = getOutlineColor();
+						e.currentTarget.style.color = hoverColor;
 					}}
 					onMouseLeave={(e) => {
-						e.currentTarget.style.color = "";
+						e.currentTarget.style.color = defaultColor;
 					}}
 				>
 					←
@@ -173,13 +202,16 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 				{onSortClick && (
 					<button
 						onClick={onSortClick}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
+						className="absolute right-0 text-xl transition-all duration-200 hover:scale-110"
 						title={sortTitle}
+						style={{
+							color: defaultColor,
+						}}
 						onMouseEnter={(e) => {
-							e.currentTarget.style.color = getOutlineColor();
+							e.currentTarget.style.color = hoverColor;
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.color = "";
+							e.currentTarget.style.color = defaultColor;
 						}}
 					>
 						<div className="flex flex-col gap-0.5">

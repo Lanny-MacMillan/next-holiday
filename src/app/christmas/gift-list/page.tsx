@@ -251,12 +251,15 @@ export default function GiftListPage() {
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
 				description="Keep track of gift ideas and purchases!"
-				holidayColor="#dc2626"
+				holidayColor="red-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Christmas" />
+				<BudgetDisplay
+					holiday="Christmas"
+					holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+				/>
 
 				<AddButton title="Gift" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">

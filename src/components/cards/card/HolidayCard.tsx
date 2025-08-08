@@ -147,7 +147,7 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
 						</div>
 					</div>
 
-					<div className="flex gap-2 mt-3">
+					<div className="flex flex-col gap-1 mt-3">
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
