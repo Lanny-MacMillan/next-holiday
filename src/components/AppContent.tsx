@@ -30,7 +30,16 @@ export default function AppContent({ children }: AppContentProps) {
 	useEffect(() => {
 		if (initialized) {
 			const html = document.documentElement;
-			console.log("Theme state:", settings.theme, "Initialized:", initialized);
+			console.log(
+				"Theme state:",
+				settings.theme,
+				"Display mode:",
+				settings.displayMode,
+				"Initialized:",
+				initialized
+			);
+
+			// Apply dark/light theme
 			if (settings.theme === "dark") {
 				html.classList.add("dark");
 				console.log("Added dark class to html");
@@ -38,8 +47,17 @@ export default function AppContent({ children }: AppContentProps) {
 				html.classList.remove("dark");
 				console.log("Removed dark class from html");
 			}
+
+			// Apply gamified/professional mode
+			if (settings.displayMode === "gamified") {
+				html.classList.add("gamified-mode");
+				console.log("Added gamified-mode class to html");
+			} else {
+				html.classList.remove("gamified-mode");
+				console.log("Removed gamified-mode class from html");
+			}
 		}
-	}, [settings.theme, initialized]);
+	}, [settings.theme, settings.displayMode, initialized]);
 
 	if (isLoading) {
 		return (

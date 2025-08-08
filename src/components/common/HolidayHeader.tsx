@@ -48,7 +48,7 @@ export default function HolidayHeader({
 					>
 						{holidayName}
 					</h1>
-					<p className="text-center text-gray-600 dark:text-gray-400">
+					<p className="text-center text-gray-600 dark:text-white">
 						{description}
 					</p>
 				</div>

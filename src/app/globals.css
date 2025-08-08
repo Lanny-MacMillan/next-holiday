@@ -463,6 +463,15 @@ body {
 	border-left: 4px solid rgb(var(--color-green-500));
 }
 
+/* Remove green border in gamified mode */
+.gamified-mode .card-cards {
+	border-left: none !important;
+}
+
+.gamified-mode .card-events-christmas {
+	border-left: none !important;
+}
+
 /* Removed .card-gifts - now controlled by component props */
 
 .card-tasks {

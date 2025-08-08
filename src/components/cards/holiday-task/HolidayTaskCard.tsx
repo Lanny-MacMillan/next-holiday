@@ -68,11 +68,16 @@ export default function HolidayTaskCard({
 	};
 
 	if (isGamifiedMode) {
-		// Gamified mode design
+		// Gamified mode design - NO green border
 		return (
 			<Link
 				href={href}
 				className={`block card card-cards rounded-2xl p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${getGamifiedBackgroundColor()} text-white ${className}`}
+				style={{
+					// Explicitly ensure no border in gamified mode
+					border: "none",
+					borderLeft: "none",
+				}}
 			>
 				{/* Background texture overlay */}
 				<div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -113,7 +118,7 @@ export default function HolidayTaskCard({
 		);
 	}
 
-	// Professional mode (existing design)
+	// Professional mode (existing design) - WITH green border
 	return (
 		<Link
 			href={href}
