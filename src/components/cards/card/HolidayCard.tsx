@@ -76,10 +76,33 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
 			>
 				{/* Background texture overlay */}
 				<div className="absolute inset-0 opacity-10 pointer-events-none">
-					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20"></div>
-					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15"></div>
-					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10"></div>
-					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20"></div>
+					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>
+					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15 pointer-events-none"></div>
+					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10 pointer-events-none"></div>
+					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20 pointer-events-none"></div>
+				</div>
+
+				{/* Delete Button - Top Right Corner */}
+				<div
+					className="absolute top-2 right-2 z-50"
+					onClick={(e) => {
+						e.stopPropagation();
+					}}
+				>
+					<button
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							onDelete(card.id);
+						}}
+						className="text-red-700 hover:text-red-900 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+						title="Delete card"
+						style={{
+							pointerEvents: "auto",
+						}}
+					>
+						<span className="text-3xl font-bold select-none">×</span>
+					</button>
 				</div>
 
 				<div className="relative z-10">
@@ -130,20 +153,10 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
 								e.stopPropagation();
 								onEdit(card);
 							}}
-							className="text-white hover:text-red-200 text-sm bg-white bg-opacity-20 px-2 py-1 rounded transition-colors"
+							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-sm px-2 py-1 rounded transition-colors"
 							disabled={loading}
 						>
 							Edit
-						</button>
-						<button
-							onClick={(e) => {
-								e.stopPropagation();
-								onDelete(card.id);
-							}}
-							className="text-white hover:text-red-200 text-sm bg-white bg-opacity-20 px-2 py-1 rounded transition-colors"
-							disabled={loading}
-						>
-							Delete
 						</button>
 					</div>
 				</div>

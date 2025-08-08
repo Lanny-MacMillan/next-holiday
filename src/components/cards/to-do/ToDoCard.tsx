@@ -120,23 +120,34 @@ export default function ToDoCard({
 			>
 				{/* Background texture overlay */}
 				<div className="absolute inset-0 opacity-10 pointer-events-none">
-					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20"></div>
-					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15"></div>
-					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10"></div>
-					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20"></div>
+					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>
+					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15 pointer-events-none"></div>
+					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10 pointer-events-none"></div>
+					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20 pointer-events-none"></div>
 				</div>
 
-				{/* Close Button (White X) */}
-				<button
+				{/* Delete Button - Top Right Corner */}
+				<div
+					className="absolute top-2 right-2 z-50"
 					onClick={(e) => {
 						e.stopPropagation();
-						handleDelete(e);
 					}}
-					className="absolute top-2 right-2 text-white hover:text-red-200 text-lg font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-white hover:bg-opacity-20 transition-colors z-10"
-					title="Delete task"
 				>
-					×
-				</button>
+					<button
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handleDelete(e);
+						}}
+						className="text-red-700 hover:text-red-900 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+						title="Delete task"
+						style={{
+							pointerEvents: "auto",
+						}}
+					>
+						<span className="text-3xl font-bold select-none">×</span>
+					</button>
+				</div>
 
 				{/* Delete Confirmation Modal */}
 				<DeleteModal
@@ -240,7 +251,7 @@ export default function ToDoCard({
 					{/* Edit Button - Centered on Right Side */}
 					<button
 						onClick={handleEdit}
-						className="absolute top-1/2 right-4 transform -translate-y-1/2 text-white hover:text-red-200 text-xs px-2 py-1 rounded hover:bg-white hover:bg-opacity-20 transition-colors z-10"
+						className="absolute top-1/2 right-4 transform -translate-y-1/2 text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs px-2 py-1 rounded transition-colors z-10"
 						title="Edit task"
 					>
 						Edit
