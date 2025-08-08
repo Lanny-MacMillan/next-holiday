@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchBabyShowerGifts } from "@/store/slices/baby-shower/babyShowerGiftListSlice";
@@ -9,6 +8,7 @@ import { fetchBabyShowerContacts } from "@/store/slices/baby-shower/babyShowerAd
 import { fetchBabyShowerGuests } from "@/store/slices/baby-shower/babyShowerGuestListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import HolidayHeader from "@/components/common/HolidayHeader";
 
 const subsections = [
 	{
@@ -92,24 +92,10 @@ export default function BabyShowerPage() {
 
 	return (
 		<div className="min-h-screen baby-shower-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/"
-						className="absolute left-0 text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							Baby Shower
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Plan the perfect baby shower celebration!
-						</p>
-					</div>
-				</div>
-			</header>
+			<HolidayHeader
+				holidayName="Baby Shower"
+				description="Plan the perfect baby shower celebration!"
+			/>
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {

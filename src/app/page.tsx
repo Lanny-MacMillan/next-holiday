@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import HolidayCard from "@/components/cards/HolidayCard";
+import HolidayHeader from "@/components/common/HolidayHeader";
 import { holidayData } from "@/data/holidayData";
 import { getHolidayCountdownTime } from "@/utils/holidayUtils";
 import GamifiedHolidayCardExample from "@/components/examples/GamifiedHolidayCardExample";
@@ -261,14 +262,11 @@ export default function Home() {
 
 	return (
 		<div className="min-h-screen christmas-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<h1 className="text-3xl font-bold text-center mb-2 text-gray-800 dark:text-white">
-					Next Holiday
-				</h1>
-				<p className="text-center text-gray-600 dark:text-gray-400">
-					Plan your holidays, stay organized, and have fun!
-				</p>
-			</header>
+			<HolidayHeader
+				holidayName="Next Holiday"
+				description="Plan your holidays, stay organized, and have fun!"
+				showBackButton={false}
+			/>
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-white">
 					Upcoming Holidays

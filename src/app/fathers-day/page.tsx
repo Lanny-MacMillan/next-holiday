@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchFathersDayGifts } from "@/store/slices/fathers-day/fathersDayGiftListSlice";
@@ -8,6 +7,7 @@ import { fetchFathersDayTasks } from "@/store/slices/fathers-day/fathersDayTasks
 import { fetchFathersDayCards } from "@/store/slices/fathers-day/fathersDayCardsSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import HolidayHeader from "@/components/common/HolidayHeader";
 
 const fathersDaySubsections = [
 	{
@@ -77,24 +77,10 @@ export default function FathersDayPage() {
 
 	return (
 		<div className="min-h-screen fathers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							👨 Father's Day
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Honor and celebrate Dad!
-						</p>
-					</div>
-				</div>
-			</header>
+			<HolidayHeader
+				holidayName="👨 Father's Day"
+				description="Honor and celebrate Dad!"
+			/>
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{fathersDaySubsections.map((section) => {
