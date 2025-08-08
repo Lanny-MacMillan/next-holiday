@@ -208,7 +208,7 @@ export default function ThanksgivingMealPlanningPage() {
 				sortTitle="Sort recipes"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Meal Planning Summary */}
 				<div className="bg-white rounded-lg shadow-lg p-6">
 					<h2 className="text-xl font-bold mb-4 text-gray-800">

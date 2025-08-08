@@ -472,6 +472,19 @@ body {
 	border-left: none !important;
 }
 
+/* Override white backgrounds in gamified mode */
+.gamified-mode .card-tasks {
+	background: none !important;
+}
+
+.gamified-mode .card-events-easter {
+	background: none !important;
+}
+
+.gamified-mode .card-events-fourth-of-july {
+	background: none !important;
+}
+
 /* Removed .card-gifts - now controlled by component props */
 
 .card-tasks {

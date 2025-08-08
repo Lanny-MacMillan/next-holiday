@@ -204,7 +204,7 @@ export default function HalloweenGiftListPage() {
 					error={error}
 				/>
 
-				<main className="w-full max-w-md flex flex-col gap-6">
+				<main className="w-full max-w-4xl flex flex-col gap-6">
 					<AddButton
 						title="Gift"
 						onClick={handleAddGift}

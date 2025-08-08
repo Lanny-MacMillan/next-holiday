@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchHanukkahGifts } from "@/store/slices/hanukkah/hanukkahGiftListSlice";
@@ -127,6 +128,7 @@ export default function HanukkahPage() {
 											primaryColor: "#3b82f6", // Blue for Hanukkah
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
 									/>
 								</li>
 							);
@@ -148,6 +150,7 @@ export default function HanukkahPage() {
 											accentColor: "#eab308",
 											progressColor: "#3b82f6", // Blue for Hanukkah
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
 									/>
 								</li>
 							);

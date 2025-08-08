@@ -21,6 +21,7 @@ interface HolidayCardProps {
 	totalItems: number;
 	customBlobSvg?: string; // Optional custom SVG for the blob/germ
 	gamified?: boolean; // New prop to control display mode
+	gamifiedBackgroundColor?: string; // New prop for background color
 }
 
 // Default blob SVG component
@@ -110,6 +111,7 @@ export default function HolidayCard({
 	totalItems,
 	customBlobSvg,
 	gamified = false,
+	gamifiedBackgroundColor,
 }: HolidayCardProps) {
 	// Get display mode from Redux settings (fallback to prop)
 	const { settings } = useAppSelector((state: any) => state.theme);
@@ -134,34 +136,16 @@ export default function HolidayCard({
 
 	const blobPositions = generateBlobPositions(incompleteItems);
 
-	// Get gamified background gradient based on holiday
-	const getGamifiedBackgroundColor = () => {
-		const gradientMap: { [key: string]: string } = {
-			christmas: "bg-gradient-to-br from-red-400 to-red-600",
-			hanukkah: "bg-gradient-to-br from-blue-400 to-blue-600",
-			kwanzaa: "bg-gradient-to-br from-red-400 to-red-600",
-			"new-year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
-			valentines: "bg-gradient-to-br from-pink-300 to-pink-500",
-			easter: "bg-gradient-to-br from-purple-300 to-purple-500",
-			halloween: "bg-gradient-to-br from-orange-400 to-orange-600",
-			thanksgiving: "bg-gradient-to-br from-amber-400 to-amber-600",
-			"mothers-day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			"fathers-day": "bg-gradient-to-br from-blue-300 to-blue-500",
-			"fourth-of-july": "bg-gradient-to-br from-red-400 to-red-600",
-			birthday: "bg-gradient-to-br from-yellow-300 to-yellow-500",
-			anniversary: "bg-gradient-to-br from-pink-300 to-pink-500",
-			graduation: "bg-gradient-to-br from-purple-300 to-purple-500",
-			"baby-shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
-		};
-		return gradientMap[id] || "bg-gradient-to-br from-gray-400 to-gray-600";
-	};
+	// Use provided background color or fallback to default
+	const backgroundColor =
+		gamifiedBackgroundColor || "bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design
 		return (
 			<li>
 				<div
-					className={`relative card rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${getGamifiedBackgroundColor()} text-white`}
+					className={`relative card rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white`}
 					style={getCardStyling({
 						isDarkMode,
 						isGamified: true,

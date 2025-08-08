@@ -24,8 +24,11 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 	borderColor,
 }) => {
 	const accentColor = theme.accentColor;
-	const hoverColor = theme.hoverColor || "hover:bg-amber-50 dark:hover:bg-amber-900/20";
-	const borderStyle = borderColor ? { borderLeft: `4px solid ${borderColor}` } : {};
+	const hoverColor =
+		theme.hoverColor || "hover:bg-amber-50 dark:hover:bg-amber-900/20";
+	const borderStyle = borderColor
+		? { borderLeft: `4px solid ${borderColor}` }
+		: {};
 
 	return (
 		<li
@@ -45,7 +48,9 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 			<div className="flex-1">
 				<div
 					className={`text-gray-800 dark:text-white ${
-						card.isCompleted ? "line-through text-gray-400 dark:text-gray-500" : ""
+						card.isCompleted
+							? "line-through text-gray-400 dark:text-gray-500"
+							: ""
 					}`}
 				>
 					To: {card.recipient}
@@ -104,4 +109,4 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 	);
 };
 
-export default BirthdayHolidayCard; 
+export default BirthdayHolidayCard;

@@ -251,7 +251,7 @@ export default function GraduationGiftListPage() {
 				sortTitle="Sort gifts"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<BudgetDisplay holiday="Graduation" />
 				<AddButton title="Gift" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">

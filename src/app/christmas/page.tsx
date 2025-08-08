@@ -93,6 +93,7 @@ export default function ChristmasPage() {
 											primaryColor: "#22c55e", // Green for Christmas
 											accentColor: "#22c55e", // Green accent
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 									/>
 								</li>
 							);
@@ -112,6 +113,7 @@ export default function ChristmasPage() {
 											accentColor: "#22c55e", // Green accent
 											progressColor: "#22c55e", // Green for progress bar
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 									/>
 								</li>
 							);

@@ -150,8 +150,12 @@ export default function BirthdayCardsPage() {
 	}
 
 	const sortedCards = sortCards(cards);
-	const incompleteCards = sortedCards.filter((card: BirthdayCard) => !card.isCompleted);
-	const completedCards = sortedCards.filter((card: BirthdayCard) => card.isCompleted);
+	const incompleteCards = sortedCards.filter(
+		(card: BirthdayCard) => !card.isCompleted
+	);
+	const completedCards = sortedCards.filter(
+		(card: BirthdayCard) => card.isCompleted
+	);
 
 	return (
 		<div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -162,7 +166,7 @@ export default function BirthdayCardsPage() {
 				sortTitle="Sort cards"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Card" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -289,4 +293,4 @@ export default function BirthdayCardsPage() {
 			/>
 		</div>
 	);
-} 
+}

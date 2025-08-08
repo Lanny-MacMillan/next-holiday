@@ -216,7 +216,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 				sortTitle="Sort tasks"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Modal */}
 				{showDefaultTasks && (
 					<div className="card rounded-lg p-6 mb-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700">

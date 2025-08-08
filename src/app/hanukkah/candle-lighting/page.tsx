@@ -212,7 +212,7 @@ export default function CandleLightingPage() {
 				sortTitle="Sort tasks"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

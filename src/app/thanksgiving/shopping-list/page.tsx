@@ -212,7 +212,7 @@ export default function ThanksgivingShoppingListPage() {
 				sortTitle="Sort shopping items"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay holiday="Thanksgiving" />
 

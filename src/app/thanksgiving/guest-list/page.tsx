@@ -181,7 +181,7 @@ export default function ThanksgivingGuestListPage() {
 				sortTitle="Sort guests"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Guest" onClick={openForm} color="orange" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (

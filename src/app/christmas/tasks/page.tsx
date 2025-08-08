@@ -161,7 +161,7 @@ export default function TasksPage() {
 				sortTitle="Sort tasks"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Task" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -191,6 +191,7 @@ export default function TasksPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 					// cardClassName="card-tasks"
@@ -214,6 +215,7 @@ export default function TasksPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 					// cardClassName="card-tasks"

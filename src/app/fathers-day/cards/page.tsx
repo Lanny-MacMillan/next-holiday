@@ -136,8 +136,12 @@ export default function FathersDayCardsPage() {
 	}
 
 	const sortedCards = sortCards(cards);
-	const incompleteCards = sortedCards.filter((card: FathersDayCard) => !card.isCompleted);
-	const completedCards = sortedCards.filter((card: FathersDayCard) => card.isCompleted);
+	const incompleteCards = sortedCards.filter(
+		(card: FathersDayCard) => !card.isCompleted
+	);
+	const completedCards = sortedCards.filter(
+		(card: FathersDayCard) => card.isCompleted
+	);
 
 	return (
 		<div className="min-h-screen fathers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -148,9 +152,13 @@ export default function FathersDayCardsPage() {
 				sortTitle="Sort cards"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
-				<AddButton title="Card" onClick={() => setShowForm(true)} color="blue" />
-				
+			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<AddButton
+					title="Card"
+					onClick={() => setShowForm(true)}
+					color="blue"
+				/>
+
 				<TaskSection
 					title="Not Sent"
 					items={incompleteCards}
@@ -254,4 +262,4 @@ export default function FathersDayCardsPage() {
 			/>
 		</div>
 	);
-} 
+}

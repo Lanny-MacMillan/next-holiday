@@ -317,7 +317,7 @@ export default function HanukkahDecorationsPage() {
 				sortTitle="Sort tasks"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}
 				{showDefaultTasks && (
 					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">

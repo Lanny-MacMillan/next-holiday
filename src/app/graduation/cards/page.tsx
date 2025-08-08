@@ -162,7 +162,7 @@ export default function GraduationCardsPage() {
 				sortTitle="Sort cards"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Card" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (

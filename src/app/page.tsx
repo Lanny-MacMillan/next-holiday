@@ -326,6 +326,31 @@ export default function Home() {
 							const completedItems = holiday.getCompletedItems(state);
 							const totalItems = holiday.getTotalItems(state);
 
+							// Get gamified background color for each holiday
+							const getGamifiedBackgroundColor = (holidayId: string) => {
+								const colorMap: { [key: string]: string } = {
+									christmas: "bg-gradient-to-br from-red-400 to-red-600",
+									hanukkah: "bg-gradient-to-br from-blue-400 to-blue-600",
+									kwanzaa: "bg-gradient-to-br from-red-400 to-red-600",
+									"new-year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
+									valentines: "bg-gradient-to-br from-pink-300 to-pink-500",
+									easter: "bg-gradient-to-br from-purple-300 to-purple-500",
+									halloween: "bg-gradient-to-br from-orange-400 to-orange-600",
+									thanksgiving: "bg-gradient-to-br from-amber-400 to-amber-600",
+									"mothers-day": "bg-gradient-to-br from-pink-300 to-pink-500",
+									"fathers-day": "bg-gradient-to-br from-blue-300 to-blue-500",
+									"fourth-of-july": "bg-gradient-to-br from-red-400 to-red-600",
+									birthday: "bg-gradient-to-br from-yellow-300 to-yellow-500",
+									anniversary: "bg-gradient-to-br from-pink-300 to-pink-500",
+									graduation: "bg-gradient-to-br from-purple-300 to-purple-500",
+									"baby-shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
+								};
+								return (
+									colorMap[holidayId] ||
+									"bg-gradient-to-br from-gray-400 to-gray-600"
+								);
+							};
+
 							return (
 								<HolidayCard
 									key={holiday.id}
@@ -337,6 +362,9 @@ export default function Home() {
 									progress={progress}
 									completedItems={completedItems}
 									totalItems={totalItems}
+									gamifiedBackgroundColor={getGamifiedBackgroundColor(
+										holiday.id
+									)}
 								/>
 							);
 						})}

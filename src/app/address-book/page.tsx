@@ -321,7 +321,7 @@ export default function AddressBookPage() {
 					</div>
 				)}
 			</header>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<button
 					onClick={openForm}
 					className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
