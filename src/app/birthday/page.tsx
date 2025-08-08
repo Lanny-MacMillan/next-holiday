@@ -116,7 +116,7 @@ export default function BirthdayPage() {
 					</div>
 				</div>
 			</header>
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
@@ -137,45 +137,45 @@ export default function BirthdayPage() {
 									/>
 								</li>
 							);
-								} else if (section.name === "Party Planning") {
-			// Use PartyPlanningCard for party planning section
-			return (
-				<li key={section.name}>
-					<PartyPlanningCard
-						holidayName="Birthday"
-						sectionName={section.name}
-						description={section.description}
-						href={section.href}
-						totalItems={total}
-						completedItems={completed}
-						theme={{
-							primaryColor: "#f59e0b", // Amber for Birthday
-							accentColor: "#f59e0b", // Amber accent
-							progressColor: "#f59e0b", // Amber for progress bar
-						}}
-					/>
-				</li>
-			);
-		} else {
-			// Use HolidayTaskCard for tasks and other sections
-			return (
-				<li key={section.name}>
-					<HolidayTaskCard
-						holidayName="Birthday"
-						sectionName={section.name}
-						description={section.description}
-						href={section.href}
-						totalItems={total}
-						completedItems={completed}
-						theme={{
-							primaryColor: "#f59e0b", // Amber for Birthday
-							accentColor: "#f59e0b", // Amber accent
-							progressColor: "#f59e0b", // Amber for progress bar
-						}}
-					/>
-				</li>
-			);
-		}
+						} else if (section.name === "Party Planning") {
+							// Use PartyPlanningCard for party planning section
+							return (
+								<li key={section.name}>
+									<PartyPlanningCard
+										holidayName="Birthday"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#f59e0b", // Amber for Birthday
+											accentColor: "#f59e0b", // Amber accent
+											progressColor: "#f59e0b", // Amber for progress bar
+										}}
+									/>
+								</li>
+							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Birthday"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#f59e0b", // Amber for Birthday
+											accentColor: "#f59e0b", // Amber accent
+											progressColor: "#f59e0b", // Amber for progress bar
+										}}
+									/>
+								</li>
+							);
+						}
 					})}
 				</ul>
 			</main>

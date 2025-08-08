@@ -59,6 +59,11 @@ import fathersDayCountdownReducer from "./slices/fathers-day/fathersDayCountdown
 import mothersDayCountdownReducer from "./slices/mothers-day/mothersDayCountdownSlice";
 import christmasCountdownReducer from "./slices/christmas/christmasCountdownSlice";
 
+// Check if we should disable serializable checks in development
+const shouldDisableSerializableCheck =
+	process.env.NODE_ENV === "development" &&
+	process.env.NEXT_PUBLIC_DISABLE_SERIALIZABLE_CHECK === "true";
+
 export const store = configureStore({
 	reducer: {
 		addressBook: addressBookReducer,
@@ -121,12 +126,48 @@ export const store = configureStore({
 		mothersDayCountdown: mothersDayCountdownReducer,
 		christmasCountdown: christmasCountdownReducer,
 	},
-	middleware: (getDefaultMiddleware) =>
-		getDefaultMiddleware({
-			serializableCheck: {
-				ignoredActions: ["persist/PERSIST"],
+	middleware: (getDefaultMiddleware) => {
+		const middleware = getDefaultMiddleware({
+			serializableCheck: shouldDisableSerializableCheck
+				? false
+				: {
+						// Ignore specific actions that might contain non-serializable data
+						ignoredActions: [
+							"persist/PERSIST",
+							"persist/REHYDRATE",
+							"persist/PAUSE",
+							"persist/PURGE",
+							"persist/REGISTER",
+							"persist/FLUSH",
+						],
+						// Ignore specific paths in the state that might contain non-serializable data
+						ignoredPaths: [
+							"user.user", // Auth0 user object might contain non-serializable data
+						],
+						// Increase the warning threshold for development
+						warnAfter: 128, // Increase from default 32ms to 128ms
+				  },
+			// Disable immutable check in development to improve performance
+			immutableCheck: {
+				warnAfter: 128,
 			},
-		}),
+		});
+
+		// Log middleware configuration in development
+		if (process.env.NODE_ENV === "development") {
+			console.log("Redux middleware configuration:", {
+				serializableCheck: shouldDisableSerializableCheck
+					? "disabled"
+					: "enabled",
+				immutableCheck: "enabled with 128ms threshold",
+				reducerCount: 50, // Approximate count of reducers
+			});
+		}
+
+		return middleware;
+	},
+	// Enable Redux DevTools in development
+	devTools: process.env.NODE_ENV !== "production",
 });
 
 export type RootState = ReturnType<typeof store.getState>;

@@ -1,252 +1,103 @@
-# Redux Store Documentation
+# Redux Store Configuration
 
-This document describes the Redux store setup and available slices for the Holiday Planner app.
+## Overview
 
-## Store Configuration
+This Redux store manages the application state for holiday planning, including user data, theme settings, and holiday-specific data.
 
-The store is configured in `src/store/index.ts` and includes the following slices:
+## Performance Optimization
 
-- `addressBook` - Contact management
-- `cards` - Holiday cards tracking
-- `giftList` - Gift list management
-- `tasks` - To-do list management
-- `user` - Authentication user data
-- `theme` - Theme and user settings
+### Serializable State Warning
 
-## Available Slices
+If you see a warning about `SerializableStateInvariantMiddleware` taking too long, this is due to the large number of reducers in the store. The warning is development-only and won't affect production.
 
-### Address Book Slice
+### Solutions
 
-- Track contact information
-- Manage relationships and addresses
-- Sort contacts by various criteria
+1. **Increased Threshold (Recommended)**
 
-**Available Actions:**
+   - The middleware warning threshold has been increased from 32ms to 128ms
+   - This should resolve most warnings while maintaining safety checks
 
-- `fetchContacts()` - Load all contacts
-- `addContact(contact)` - Add new contact
-- `updateContact(contact)` - Update existing contact
-- `deleteContact(id)` - Delete contact
+2. **Disable Serializable Check (Development Only)**
 
-**State Structure:**
+   - Create a `.env.local` file in your project root
+   - Add: `NEXT_PUBLIC_DISABLE_SERIALIZABLE_CHECK=true`
+   - This completely disables the serializable check in development
 
-```typescript
-{
-  contacts: Contact[],
-  loading: boolean,
-  error: string | null,
-  initialized: boolean
-}
-```
+3. **Production Build**
+   - The warning is automatically disabled in production builds
+   - No action needed for production
 
-### Cards Slice
+### Middleware Configuration
 
-- Track card completion status
-- Mark cards as completed
-- Message and recipient management
+- **Serializable Check**: Validates that actions and state are serializable
+- **Immutable Check**: Validates that state mutations are handled correctly
+- **Ignored Actions**: Persist-related actions are ignored
+- **Ignored Paths**: User object from Auth0 is ignored (may contain non-serializable data)
 
-**Available Actions:**
+## Store Structure
 
-- `fetchCards()` - Load all cards
-- `addCard(card)` - Add new card
-- `deleteCard(id)` - Delete card
-- `toggleCardCompletion(id)` - Toggle card completion status
+### Core Slices
 
-**State Structure:**
+- `user`: User authentication and profile data
+- `theme`: UI theme and display settings
+- `cards`: Holiday card management
+- `giftList`: Gift tracking
+- `tasks`: Task management
+- `countdown`: Holiday countdown timers
 
-```typescript
-{
-  cards: Card[],
-  loading: boolean,
-  error: string | null,
-  initialized: boolean
-}
-```
+### Holiday-Specific Slices
 
-### Gift List Slice
+Each holiday has its own set of slices:
 
-- Track gift completion status
-- Mark gifts as completed
-- Price and store information
-- Product link management
-- Recipient management
+- `{holiday}GiftList`: Gift tracking for specific holiday
+- `{holiday}Tasks`: Task management for specific holiday
+- `{holiday}Countdown`: Countdown timer for specific holiday
 
-**Available Actions:**
+### Example Holiday Slices
 
-- `fetchGifts()` - Load all gifts
-- `addGift(gift)` - Add new gift
-- `updateGift(gift)` - Update existing gift
-- `deleteGift(id)` - Delete gift
-- `toggleGiftCompletion(id)` - Toggle gift completion status
-
-**State Structure:**
-
-```typescript
-{
-  gifts: Gift[],
-  loading: boolean,
-  error: string | null,
-  initialized: boolean
-}
-```
-
-### Tasks Slice
-
-- Track task completion status
-- Mark tasks as completed
-- Priority and due date management
-- Category and assignment tracking
-
-**Available Actions:**
-
-- `fetchTasks()` - Load all tasks
-- `addTask(task)` - Add new task
-- `updateTask(task)` - Update existing task
-- `deleteTask(id)` - Delete task
-- `toggleTaskCompletion(id)` - Toggle task completion status
-
-**State Structure:**
-
-```typescript
-{
-  tasks: Task[],
-  loading: boolean,
-  error: string | null,
-  initialized: boolean
-}
-```
-
-### User Slice
-
-- Store authenticated user information
-- Track first-login status
-- Manage user database presence
-
-**Available Actions:**
-
-- `setUser(user)` - Set current user
-- `clearUser()` - Clear user data
-- `checkUserInDb(sub)` - Check if user exists in database
-- `addUserToDb(userData)` - Add user to database
-
-**State Structure:**
-
-```typescript
-{
-  user: User | null,
-  loading: boolean,
-  error: string | null,
-  initialized: boolean
-}
-```
-
-### Theme Slice
-
-- Manage dark/light mode theme
-- Store user preferences and settings
-- Persist settings in localStorage
-
-**Available Actions:**
-
-- `toggleTheme()` - Toggle between light and dark mode
-- `setTheme(theme)` - Set specific theme
-- `updateSettings(settings)` - Update user settings
-- `initializeTheme()` - Initialize theme from localStorage
-
-**State Structure:**
-
-```typescript
-{
-  settings: {
-    theme: "light" | "dark",
-    defaultHoliday: string,
-    giftBudgetLimit: number,
-    greetingStyle: "formal" | "informal",
-    notifications: {
-      reminders: boolean,
-      shippingAlerts: boolean,
-      upcomingEvents: boolean
-    }
-  },
-  initialized: boolean
-}
-```
-
-## Authentication Setup
-
-### Auth0 Configuration
-
-1. Create a `.env.local` file in the root directory with your Auth0 credentials:
-
-```
-NEXT_PUBLIC_AUTH0_DOMAIN=your-domain.auth0.com
-NEXT_PUBLIC_AUTH0_CLIENT_ID=your-client-id
-NEXT_PUBLIC_AUTH0_CALLBACK_URL=http://localhost:3000
-```
-
-2. Configure your Auth0 application:
-   - Set the callback URL to `http://localhost:3000`
-   - Set the logout URL to `http://localhost:3000`
-   - Enable the appropriate grant types (Authorization Code, Refresh Token)
-
-### First-Login Check
-
-The app automatically detects first-time users and:
-
-1. Checks if the user exists in the database (simulated)
-2. Adds new users to the database (simulated)
-3. Stores user information in Redux state
-4. Logs the first-login event to console
-
-### Components
-
-- `Auth0ProviderWrapper` - Wraps the app with Auth0 provider
-- `AuthWrapper` - Handles authentication state and user management
-- `Header` - Responsive header with logout functionality and theme toggle
-- `Login` - Login page for unauthenticated users
-- `ThemeToggle` - Theme toggle component for dark/light mode
-- `SettingsPage` - User settings page with preferences
-
-## Theme and Settings
-
-### Dark Mode Support
-
-The app includes full dark mode support with:
-
-- Automatic theme detection and persistence
-- localStorage storage for user preferences
-- Tailwind CSS dark mode classes
-- Responsive design for both themes
-
-### Settings Page
-
-The `/settings` page includes:
-
-- User information display (name, email, profile picture)
-- Theme toggle (light/dark mode)
-- Holiday preferences (default holiday, budget limit, greeting style)
-- Notification preferences (reminders, shipping alerts, upcoming events)
-
-### Theme Components
-
-- **ThemeToggle**: Toggle button with sun/moon icons
-- **Settings Integration**: Theme settings in the settings page
-- **Automatic Persistence**: Settings saved to localStorage
-- **Global Application**: Theme applied to entire app
+- `christmasGiftList`, `christmasTasks`, `christmasCountdown`
+- `valentinesGiftList`, `valentinesTasks`, `valentinesCountdown`
+- `halloweenGiftList`, `halloweenTasks`, `halloweenCountdown`
+- And many more...
 
 ## Usage
 
-The store provides typed hooks for easy access:
-
-- `useAppDispatch()` - Typed dispatch function
-- `useAppSelector()` - Typed selector function
-
-Example usage:
+### Accessing State
 
 ```typescript
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAppSelector } from "@/store/hooks";
+
+const user = useAppSelector((state) => state.user.user);
+const theme = useAppSelector((state) => state.theme.settings);
+```
+
+### Dispatching Actions
+
+```typescript
+import { useAppDispatch } from "@/store/hooks";
+import { updateSettings } from "@/store/slices/themeSlice";
 
 const dispatch = useAppDispatch();
-const { user } = useAppSelector((state) => state.user);
-const { settings } = useAppSelector((state) => state.theme);
+dispatch(updateSettings({ displayMode: "gamified" }));
 ```
+
+## Development Tips
+
+1. **Redux DevTools**: Available in development mode
+2. **Middleware Logging**: Configuration is logged in development
+3. **Performance**: Large store size is normal due to many holiday-specific slices
+4. **Serializable Check**: Can be disabled if performance is an issue
+
+## Troubleshooting
+
+### Performance Issues
+
+- Check browser console for middleware configuration logs
+- Consider disabling serializable check in development
+- Monitor Redux DevTools for large state changes
+
+### State Persistence
+
+- Theme settings are automatically saved to localStorage
+- User data is managed by Auth0
+- Other state is ephemeral (resets on page reload)

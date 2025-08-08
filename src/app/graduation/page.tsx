@@ -115,7 +115,7 @@ export default function GraduationPage() {
 					</div>
 				</div>
 			</header>
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
