@@ -136,7 +136,12 @@ export default function HolidayHeader({
 							{getHolidayEmoji()} {getCleanHolidayName()}
 						</h1>
 					</div>
-					<p className="text-center text-gray-600 dark:text-white">
+					<p
+						className="text-center text-gray-600 dark:text-white"
+						style={{
+							fontFamily: "var(--font-family-fredoka)",
+						}}
+					>
 						{description}
 					</p>
 				</div>

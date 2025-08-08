@@ -250,6 +250,8 @@ export default function GiftListPage() {
 				backHref="/christmas"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="#dc2626"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
