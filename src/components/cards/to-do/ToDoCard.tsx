@@ -248,14 +248,16 @@ export default function ToDoCard({
 						</div>
 					</div>
 
-					{/* Edit Button - Centered on Right Side */}
-					<button
-						onClick={handleEdit}
-						className="absolute top-1/2 right-4 transform -translate-y-1/2 text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs px-2 py-1 rounded transition-colors z-10"
-						title="Edit task"
-					>
-						Edit
-					</button>
+					{/* Edit Button - Full Bottom Area */}
+					<div className="flex flex-col gap-1 mt-3">
+						<button
+							onClick={handleEdit}
+							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-sm px-2 py-1 rounded transition-colors"
+							title="Edit task"
+						>
+							Edit
+						</button>
+					</div>
 				</div>
 			</div>
 		);
