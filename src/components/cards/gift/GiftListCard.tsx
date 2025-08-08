@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
 
 export interface GiftListCardProps {
 	holiday?: string;
@@ -107,6 +108,7 @@ export default function GiftListCard({
 	// Get display mode from Redux settings
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const isGamifiedMode = settings.displayMode === "gamified";
+	const isDarkMode = settings.theme === "dark";
 
 	// Use holiday-specific data if holiday prop is provided, otherwise use passed props
 	const holidayData = holiday ? useGiftListCardData(holiday) : null;
@@ -173,7 +175,12 @@ export default function GiftListCard({
 		// Gamified mode design
 		const cardContent = (
 			<div
-				className={`max-w-4xl mx-auto rounded-lg shadow-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${getGamifiedBackgroundColor()} text-white ${className}`}
+				className={`max-w-4xl mx-auto rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${getGamifiedBackgroundColor()} text-white ${className}`}
+				style={getCardStyling({
+					isDarkMode,
+					isGamified: true,
+					intensity: "heavy",
+				})}
 			>
 				{/* Background texture overlay */}
 				<div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -285,10 +292,15 @@ export default function GiftListCard({
 	// Professional mode (existing design)
 	const cardContent = (
 		<div
-			className={`max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
+			className={`max-w-4xl mx-auto bg-white rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
 			style={{
 				backgroundColor,
 				borderLeft: `4px solid ${primaryColor}`, // Green line on left edge
+				...getCardStyling({
+					isDarkMode,
+					isGamified: false,
+					intensity: "medium",
+				}),
 			}}
 		>
 			{/* Main card content */}

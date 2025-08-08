@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
 
 interface GuestListCardProps {
 	holiday: string;
@@ -16,6 +17,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 	href,
 	theme,
 }) => {
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isDarkMode = settings.theme === "dark";
 	const guests = useAppSelector((state: any) => {
 		// Get the appropriate guest list based on holiday
 		switch (holiday.toLowerCase()) {
@@ -62,8 +65,15 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 	return (
 		<Link href={href} className="block group">
 			<div
-				className="card rounded-lg p-6 hover:shadow-lg transition-all duration-200 border-l-4"
-				style={{ borderLeftColor: theme.primaryColor }}
+				className="card rounded-lg p-6 transition-all duration-200 border-l-4"
+				style={{
+					borderLeftColor: theme.primaryColor,
+					...getCardStyling({
+						isDarkMode,
+						isGamified: false,
+						intensity: "medium",
+					}),
+				}}
 			>
 				<div className="flex justify-between items-start mb-4">
 					<div>

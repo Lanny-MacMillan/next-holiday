@@ -268,9 +268,6 @@ export default function Home() {
 				showBackButton={false}
 			/>
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
-				<h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-white">
-					Upcoming Holidays
-				</h2>
 				{sortedHolidays.length === 0 ? (
 					<div className="text-center py-8">
 						<p className="text-gray-600 dark:text-gray-400 mb-4">

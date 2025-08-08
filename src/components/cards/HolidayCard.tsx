@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
 
 interface HolidayCardProps {
 	id: string;
@@ -113,6 +114,7 @@ export default function HolidayCard({
 	// Get display mode from Redux settings (fallback to prop)
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const isGamifiedMode = gamified || settings.displayMode === "gamified";
+	const isDarkMode = settings.theme === "dark";
 
 	const incompleteItems = totalItems - completedItems;
 
@@ -160,6 +162,11 @@ export default function HolidayCard({
 			<li>
 				<div
 					className={`relative card rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${getGamifiedBackgroundColor()} text-white`}
+					style={getCardStyling({
+						isDarkMode,
+						isGamified: true,
+						intensity: "heavy",
+					})}
 				>
 					{/* Background texture overlay */}
 					<div className="absolute inset-0 opacity-10">
@@ -246,7 +253,14 @@ export default function HolidayCard({
 	// Professional mode (existing design)
 	return (
 		<li>
-			<div className="relative card rounded-2xl p-5 flex items-center gap-4 transition hover:scale-[1.02] active:scale-100">
+			<div
+				className="relative card rounded-2xl p-5 flex items-center gap-4 transition hover:scale-[1.02] active:scale-100"
+				style={getCardStyling({
+					isDarkMode,
+					isGamified: false,
+					intensity: "medium",
+				})}
+			>
 				<div className="relative w-16 h-16 flex-shrink-0">
 					<>
 						<Image

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
 
 export interface HolidayTaskCardProps {
 	holidayName: string;
@@ -38,6 +39,7 @@ export default function HolidayTaskCard({
 	// Get display mode from Redux settings
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const isGamifiedMode = settings.displayMode === "gamified";
+	const isDarkMode = settings.theme === "dark";
 
 	const progress = totalItems > 0 ? completedItems / totalItems : 0;
 	const progressPercentage = progress * 100;
@@ -80,9 +82,13 @@ export default function HolidayTaskCard({
 				href={href}
 				className={`block card card-cards rounded-2xl p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${getGamifiedBackgroundColor()} text-white ${className}`}
 				style={{
-					// Explicitly ensure no border in gamified mode
-					border: "none",
+					// Explicitly ensure no border conflicts in gamified mode
 					borderLeft: "none",
+					...getCardStyling({
+						isDarkMode,
+						isGamified: true,
+						intensity: "heavy",
+					}),
 				}}
 			>
 				{/* Background texture overlay */}
@@ -132,6 +138,11 @@ export default function HolidayTaskCard({
 			style={{
 				backgroundColor,
 				borderLeft: `4px solid ${primaryColor}`, // Colored line on left edge
+				...getCardStyling({
+					isDarkMode,
+					isGamified: false,
+					intensity: "medium",
+				}),
 			}}
 		>
 			<div className="flex items-center justify-between mb-1">
