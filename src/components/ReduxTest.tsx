@@ -19,10 +19,14 @@ export default function ReduxTest() {
 	};
 
 	return (
-		<div className="p-4 bg-green-50 rounded-lg">
-			<h3 className="font-semibold text-green-800">Redux Test</h3>
-			<p className="text-sm text-green-600">{testRedux()}</p>
-			<div className="text-xs text-green-500 mt-2 space-y-1">
+		<div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+			<h3 className="font-semibold text-green-800 dark:text-green-300">
+				Redux Test
+			</h3>
+			<p className="text-sm text-green-600 dark:text-green-400">
+				{testRedux()}
+			</p>
+			<div className="text-xs text-green-500 dark:text-green-400 mt-2 space-y-1">
 				<p>
 					Address Book: {addressBook.contacts.length} contacts (initialized:{" "}
 					{addressBook.initialized ? "Yes" : "No"})
@@ -40,7 +44,7 @@ export default function ReduxTest() {
 					{tasks.initialized ? "Yes" : "No"})
 				</p>
 			</div>
-			<p className="text-xs text-green-500 mt-2">
+			<p className="text-xs text-green-500 dark:text-green-400 mt-2">
 				Check browser console for store state
 			</p>
 		</div>

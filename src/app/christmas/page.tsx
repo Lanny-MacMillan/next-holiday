@@ -1,105 +1,125 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCards } from "@/store/slices/cardsSlice";
-import { fetchGifts } from "@/store/slices/giftListSlice";
-import { fetchTasks } from "@/store/slices/tasksSlice";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useAppSelector } from "@/store/hooks";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import HolidayHeader from "@/components/common/HolidayHeader";
 
 const subsections = [
-	{
-		name: "Cards",
-		description: "Track your holiday cards",
-		href: "/christmas/cards",
-		sliceKey: "cards",
-	},
 	{
 		name: "Gift List",
 		description: "Track your gift ideas",
 		href: "/christmas/gift-list",
 		sliceKey: "giftList",
+		type: "gift-list",
+	},
+	{
+		name: "Cards",
+		description: "Track your holiday cards",
+		href: "/christmas/cards",
+		sliceKey: "cards",
+		type: "task",
 	},
 	{
 		name: "Tasks",
 		description: "Stay on top of your holiday to-dos",
 		href: "/christmas/tasks",
 		sliceKey: "tasks",
-	},
-	{
-		name: "Address Book",
-		description: "Keep track of all your loved ones",
-		href: "/christmas/address-book",
-		sliceKey: "addressBook",
+		type: "task",
 	},
 ];
 
 export default function ChristmasPage() {
-	const dispatch = useAppDispatch();
 	const cards = useAppSelector((state: any) => state.cards.cards);
 	const gifts = useAppSelector((state: any) => state.giftList.gifts);
 	const tasks = useAppSelector((state: any) => state.tasks.tasks);
-	const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
-	useEffect(() => {
-		// Fetch all data when component mounts
-		dispatch(fetchCards());
-		dispatch(fetchGifts());
-		dispatch(fetchTasks());
-		dispatch(fetchContacts());
-	}, [dispatch]);
+	// DataInitializer component handles data fetching
+	// No need to fetch here as it's already handled globally
 
-	function getCount(sliceKey: string): number {
+	function getProgressData(sliceKey: string): {
+		total: number;
+		completed: number;
+		progress: number;
+	} {
+		let total = 0;
+		let completed = 0;
+
 		switch (sliceKey) {
 			case "cards":
-				return cards.length;
+				total = cards.length;
+				completed = cards.filter((card: any) => card.isCompleted).length;
+				break;
 			case "giftList":
-				return gifts.length;
+				total = gifts.length;
+				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
 			case "tasks":
-				return tasks.length;
-			case "addressBook":
-				return contacts.length;
+				total = tasks.length;
+				completed = tasks.filter((task: any) => task.isCompleted).length;
+				break;
 			default:
-				return 0;
+				total = 0;
+				completed = 0;
 		}
+
+		const progress = total > 0 ? completed / total : 0;
+
+		return { total, completed, progress };
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-3xl font-bold mb-2 text-gray-900">Christmas</h1>
-				<p className="text-center text-gray-500">
-					Plan your Christmas with ease!
-				</p>
-				<Link href="/" className="mt-2 text-blue-500 text-sm hover:underline">
-					← Back to Holidays
-				</Link>
-			</header>
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
-				<h2 className="text-xl font-semibold mb-2">Sections</h2>
+		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+			<HolidayHeader
+				holidayName="Christmas"
+				description="Plan your Christmas with ease!"
+			/>
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
-					{subsections.map((section) => (
-						<li key={section.name}>
-							<Link
-								href={section.href}
-								className="block bg-white rounded-2xl shadow-md p-5 transition hover:scale-[1.02] active:scale-100 border-l-4 border-green-400"
-							>
-								<div className="flex items-center justify-between mb-1">
-									<h3 className="text-lg font-bold text-gray-900">
-										{section.name}
-									</h3>
-									<span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-										{getCount(section.sliceKey)}
-									</span>
-								</div>
-								<p className="text-gray-500 text-sm">{section.description}</p>
-							</Link>
-						</li>
-					))}
+					{subsections.map((section) => {
+						const { total, completed, progress } = getProgressData(
+							section.sliceKey
+						);
+
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Christmas"
+										href={section.href}
+										theme={{
+											primaryColor: "#22c55e", // Green for Christmas
+											accentColor: "#22c55e", // Green accent
+										}}
+									/>
+								</li>
+							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Christmas"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#22c55e", // Green for Christmas
+											accentColor: "#22c55e", // Green accent
+											progressColor: "#22c55e", // Green for progress bar
+										}}
+									/>
+								</li>
+							);
+						}
+					})}
 				</ul>
 			</main>
-			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-400 mt-8">
+			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday
 			</footer>
 		</div>

@@ -1,155 +1,103 @@
-# Redux Store Setup
+# Redux Store Configuration
 
-### node v20.9.0
+## Overview
 
-This project uses Redux Toolkit with Redux Thunk middleware for state management.
+This Redux store manages the application state for holiday planning, including user data, theme settings, and holiday-specific data.
 
-## Structure
+## Performance Optimization
 
-```
-src/store/
-├── index.ts          # Main store configuration
-├── provider.tsx      # Redux Provider component
-├── hooks.ts          # Typed Redux hooks
-└── slices/           # Feature slices
-    ├── addressBookSlice.ts
-    ├── cardsSlice.ts
-    ├── giftListSlice.ts
-    └── tasksSlice.ts
-```
+### Serializable State Warning
 
-## Features
+If you see a warning about `SerializableStateInvariantMiddleware` taking too long, this is due to the large number of reducers in the store. The warning is development-only and won't affect production.
 
-### Address Book Slice
+### Solutions
 
-- Manage contacts with CRUD operations
-- Async thunks for API calls
-- Loading and error states
-- Selected contact management
+1. **Increased Threshold (Recommended)**
 
-### Cards Slice
+   - The middleware warning threshold has been increased from 32ms to 128ms
+   - This should resolve most warnings while maintaining safety checks
 
-- Manage greeting cards
-- Track card completion status
-- Recipient and message management
-- Async operations for card management
+2. **Disable Serializable Check (Development Only)**
 
-### Gift List Slice
+   - Create a `.env.local` file in your project root
+   - Add: `NEXT_PUBLIC_DISABLE_SERIALIZABLE_CHECK=true`
+   - This completely disables the serializable check in development
 
-- Track gift completion status
-- Mark gifts as completed
-- Price and store information
-- Product link management
-- Recipient management
+3. **Production Build**
+   - The warning is automatically disabled in production builds
+   - No action needed for production
 
-### Tasks Slice
+### Middleware Configuration
 
-- Holiday task management
-- Priority levels (low, medium, high)
-- Task categories (shopping, decorating, cooking, cleaning, other)
-- Completion tracking
+- **Serializable Check**: Validates that actions and state are serializable
+- **Immutable Check**: Validates that state mutations are handled correctly
+- **Ignored Actions**: Persist-related actions are ignored
+- **Ignored Paths**: User object from Auth0 is ignored (may contain non-serializable data)
+
+## Store Structure
+
+### Core Slices
+
+- `user`: User authentication and profile data
+- `theme`: UI theme and display settings
+- `cards`: Holiday card management
+- `giftList`: Gift tracking
+- `tasks`: Task management
+- `countdown`: Holiday countdown timers
+
+### Holiday-Specific Slices
+
+Each holiday has its own set of slices:
+
+- `{holiday}GiftList`: Gift tracking for specific holiday
+- `{holiday}Tasks`: Task management for specific holiday
+- `{holiday}Countdown`: Countdown timer for specific holiday
+
+### Example Holiday Slices
+
+- `christmasGiftList`, `christmasTasks`, `christmasCountdown`
+- `valentinesGiftList`, `valentinesTasks`, `valentinesCountdown`
+- `halloweenGiftList`, `halloweenTasks`, `halloweenCountdown`
+- And many more...
 
 ## Usage
 
-### In Components
-
-```tsx
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchContacts, addContact } from "@/store/slices/addressBookSlice";
-
-function MyComponent() {
-	const dispatch = useAppDispatch();
-	const { contacts, loading } = useAppSelector((state) => state.addressBook);
-
-	useEffect(() => {
-		dispatch(fetchContacts());
-	}, [dispatch]);
-
-	const handleAddContact = (contactData) => {
-		dispatch(addContact(contactData));
-	};
-
-	return (
-		<div>
-			{loading
-				? "Loading..."
-				: contacts.map((contact) => <div key={contact.id}>{contact.name}</div>)}
-		</div>
-	);
-}
-```
-
-### Available Actions
-
-Each slice provides the following async thunks:
-
-**Address Book:**
-
-- `fetchContacts()` - Load all contacts
-- `addContact(contact)` - Add new contact
-- `updateContact(contact)` - Update existing contact
-- `deleteContact(id)` - Delete contact
-
-**Cards:**
-
-- `fetchCards()` - Load all cards
-- `addCard(card)` - Add new card
-- `updateCard(card)` - Update existing card
-- `deleteCard(id)` - Delete card
-- `toggleCardCompletion(id)` - Toggle card completion status
-
-**Gift List:**
-
-- `fetchGifts()` - Load all gifts
-- `addGift(gift)` - Add new gift
-- `updateGift(gift)` - Update existing gift
-- `deleteGift(id)` - Delete gift
-- `toggleGiftCompletion(id)` - Toggle gift completion status
-
-**Tasks:**
-
-- `fetchTasks()` - Load all tasks
-- `addTask(task)` - Add new task
-- `updateTask(task)` - Update existing task
-- `deleteTask(id)` - Delete task
-- `toggleTaskCompletion(id)` - Toggle task completion
-
-### State Structure
+### Accessing State
 
 ```typescript
-interface RootState {
-	addressBook: {
-		contacts: Contact[];
-		loading: boolean;
-		error: string | null;
-		selectedContact: Contact | null;
-	};
-	cards: {
-		cards: Card[];
-		loading: boolean;
-		error: string | null;
-		selectedCard: Card | null;
-		initialized: boolean;
-	};
-	giftList: {
-		gifts: Gift[];
-		loading: boolean;
-		error: string | null;
-		selectedGift: Gift | null;
-	};
-	tasks: {
-		tasks: Task[];
-		loading: boolean;
-		error: string | null;
-		selectedTask: Task | null;
-	};
-}
+import { useAppSelector } from "@/store/hooks";
+
+const user = useAppSelector((state) => state.user.user);
+const theme = useAppSelector((state) => state.theme.settings);
 ```
 
-## Middleware
+### Dispatching Actions
 
-The store is configured with Redux Thunk middleware by default (included in Redux Toolkit). This allows for async actions and side effects.
+```typescript
+import { useAppDispatch } from "@/store/hooks";
+import { updateSettings } from "@/store/slices/themeSlice";
 
-## Provider Setup
+const dispatch = useAppDispatch();
+dispatch(updateSettings({ displayMode: "gamified" }));
+```
 
-The Redux Provider is configured in `src/app/layout.tsx` to wrap the entire application, making the store available to all components.
+## Development Tips
+
+1. **Redux DevTools**: Available in development mode
+2. **Middleware Logging**: Configuration is logged in development
+3. **Performance**: Large store size is normal due to many holiday-specific slices
+4. **Serializable Check**: Can be disabled if performance is an issue
+
+## Troubleshooting
+
+### Performance Issues
+
+- Check browser console for middleware configuration logs
+- Consider disabling serializable check in development
+- Monitor Redux DevTools for large state changes
+
+### State Persistence
+
+- Theme settings are automatically saved to localStorage
+- User data is managed by Auth0
+- Other state is ephemeral (resets on page reload)

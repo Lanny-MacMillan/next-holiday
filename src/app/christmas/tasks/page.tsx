@@ -11,6 +11,16 @@ import {
 	toggleTaskCompletion,
 	Task,
 } from "@/store/slices/tasksSlice";
+import SortModal from "@/components/modals/SortModal";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
+import EditTaskModal from "@/components/modals/EditTaskModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -20,15 +30,10 @@ export default function TasksPage() {
 		(state: any) => state.tasks
 	);
 
-	const [form, setForm] = useState({
-		title: "",
-		description: "",
-		priority: "medium",
-		assignedTo: "",
-		category: "",
-		dueDate: "",
-	});
 	const [sortBy, setSortBy] = useState<SortOption>("none");
+	const [showForm, setShowForm] = useState(false);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<Task | null>(null);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
@@ -36,61 +41,37 @@ export default function TasksPage() {
 		show: false,
 		taskId: null,
 	});
-	const [showForm, setShowForm] = useState(false);
 
 	useEffect(() => {
-		// Fetch tasks when component mounts
-		dispatch(fetchTasks());
-	}, [dispatch]);
+		// Fetch tasks when component mounts if not already initialized
+		if (!initialized) {
+			dispatch(fetchTasks());
+		}
+	}, [dispatch, initialized]);
 
-	function handleAddTask(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.title.trim()) return;
+	function handleAddTask(formValues: Record<string, any>) {
+		if (!formValues.title?.trim()) return;
 
 		const newTask: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
-			title: form.title,
-			description: form.description || undefined,
-			priority: form.priority as "low" | "medium" | "high",
-			assignedTo: form.assignedTo || undefined,
-			category: form.category || undefined,
-			dueDate: form.dueDate || undefined,
+			title: formValues.title,
+			description: formValues.description || undefined,
+			priority: formValues.priority as "low" | "medium" | "high",
+			assignedTo: formValues.assignedTo || undefined,
+			category: formValues.category || undefined,
+			dueDate: formValues.dueDate || undefined,
 			isCompleted: false,
 		};
 
 		dispatch(addTask(newTask));
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "",
-			dueDate: "",
-		});
 		setShowForm(false);
 	}
 
 	function openForm() {
 		setShowForm(true);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "",
-			dueDate: "",
-		});
 	}
 
 	function closeForm() {
 		setShowForm(false);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "",
-			dueDate: "",
-		});
 	}
 
 	function handleToggleTask(taskId: string) {
@@ -99,6 +80,23 @@ export default function TasksPage() {
 
 	function handleDeleteTask(taskId: string) {
 		setDeleteConfirm({ show: true, taskId });
+	}
+
+	function handleEditTask(task: Task) {
+		setEditingTask(task);
+	}
+
+	function handleSaveEdit(
+		updatedTask: Omit<Task, "id" | "createdAt" | "updatedAt">
+	) {
+		if (editingTask) {
+			dispatch(updateTask({ ...editingTask, ...updatedTask }));
+			setEditingTask(null);
+		}
+	}
+
+	function handleCloseEdit() {
+		setEditingTask(null);
 	}
 
 	function confirmDelete() {
@@ -141,10 +139,10 @@ export default function TasksPage() {
 
 	if (loading && !initialized) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
+			<div className="min-h-screen christmas-tasks-gradient flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-					<p className="text-gray-600">Loading tasks...</p>
+					<p className="text-gray-600 dark:text-gray-300">Loading tasks...</p>
 				</div>
 			</div>
 		);
@@ -155,239 +153,122 @@ export default function TasksPage() {
 	const completedTasks = sortedTasks.filter((task: Task) => task.isCompleted);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6 flex flex-col items-center">
-				<h1 className="text-2xl font-bold mb-2 text-gray-900">To-Do List</h1>
-				<Link
-					href="/christmas"
-					className="text-blue-500 text-sm hover:underline mb-2"
-				>
-					← Back
-				</Link>
-				{error && (
-					<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
+		<div className="min-h-screen christmas-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+			<HolidayPageHeader
+				title="To-Do List"
+				backHref="/christmas"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort tasks"
+				error={error}
+			/>
 			<main className="w-full max-w-md flex flex-col gap-6">
-				<button
-					onClick={openForm}
-					className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
-				>
-					Add New Task
-				</button>
-
-				{/* Sort Controls */}
-				<div className="bg-white rounded shadow p-4">
-					<h3 className="font-semibold mb-2">Sort By</h3>
-					<div className="flex flex-wrap gap-2">
-						<button
-							onClick={() => setSortBy("none")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "none"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-							}`}
-						>
-							None
-						</button>
-						<button
-							onClick={() => setSortBy("priority")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "priority"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-							}`}
-						>
-							Priority
-						</button>
-						<button
-							onClick={() => setSortBy("dateDue")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "dateDue"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-							}`}
-						>
-							Date Due
-						</button>
-						<button
-							onClick={() => setSortBy("assignedTo")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "assignedTo"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-							}`}
-						>
-							Assigned To
-						</button>
-						<button
-							onClick={() => setSortBy("category")}
-							className={`px-3 py-1 rounded text-sm ${
-								sortBy === "category"
-									? "bg-green-500 text-white"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-							}`}
-						>
-							Category
-						</button>
-					</div>
+				<AddButton title="Task" onClick={openForm} color="green" />
+				<div className="flex items-center justify-center">
+					{sortBy !== "none" && (
+						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
+							{sortBy === "priority" && "Sorted by Priority"}
+							{sortBy === "dateDue" && "Sorted by Date Due"}
+							{sortBy === "assignedTo" && "Sorted by Assigned To"}
+							{sortBy === "category" && "Sorted by Category"}
+						</div>
+					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-900 mb-2">
-						Incomplete ({incompleteTasks.length})
-					</h2>
-					<div className="bg-white rounded shadow">
-						{incompleteTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 text-center">
-								All tasks completed! 🎉
-							</div>
-						) : (
-							<ul className="divide-y">
-								{incompleteTasks.map((task: Task) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-green-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900">{task.title}</div>
-											{task.description && (
-												<div className="text-xs text-gray-500 mt-1">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 text-red-700"
-															: task.priority === "medium"
-															? "bg-yellow-100 text-yellow-700"
-															: "bg-green-100 text-green-700"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.assignedTo && (
-													<span>Assigned: {task.assignedTo}</span>
-												)}
-												{task.category && <span>{task.category}</span>}
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Incomplete"
+					items={incompleteTasks}
+					isCompleted={false}
+					emptyMessage="All tasks completed! 🎉"
+					completedMessage="All tasks completed! 🎉"
+					renderItem={(task: Task) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							theme={{
+								accentColor: "#22c55e", // Green for Christmas
+							}}
+							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+						/>
+					)}
+					// cardClassName="card-tasks"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-400 mb-2">
-						Completed ({completedTasks.length})
-					</h2>
-					<div className="bg-white rounded shadow">
-						{completedTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 text-center">
-								No completed tasks yet.
-							</div>
-						) : (
-							<ul className="divide-y">
-								{completedTasks.map((task: Task) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-green-50 opacity-60"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-green-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-400 line-through">
-													{task.description}
-												</div>
-											)}
-											{task.completedDate && (
-												<div className="text-xs text-green-600 mt-1">
-													Completed:{" "}
-													{new Date(task.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Completed"
+					items={completedTasks}
+					isCompleted={true}
+					emptyMessage="No completed tasks yet."
+					completedMessage="No completed tasks yet."
+					renderItem={(task: Task) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							className="opacity-60"
+							theme={{
+								accentColor: "#22c55e", // Green for Christmas
+							}}
+							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+						/>
+					)}
+					// cardClassName="card-tasks"
+				/>
 			</main>
 
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showForm}
+				title="Add New Task"
+				fields={getFormConfig("tasks", "add").fields}
+				onSubmit={handleAddTask}
+				onClose={closeForm}
+				loading={loading}
+				submitText={loading ? "Adding..." : "Add Task"}
+				cancelText="Cancel"
+				cardClassName="card card-tasks"
+				submitButtonColor="#22c55e"
+			/>
+
+			{/* Edit Task Modal */}
+			<EditTaskModal
+				isOpen={editingTask !== null}
+				task={editingTask}
+				onClose={handleCloseEdit}
+				onSave={handleSaveEdit}
+				loading={loading}
+			/>
+
 			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
-						<p className="text-gray-600 mb-6">
-							Are you sure you want to delete this task? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				{...getDeleteConfig("tasks")}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={loading}
+			/>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "priority", label: "Priority" },
+					{ value: "dateDue", label: "Date Due" },
+					{ value: "assignedTo", label: "Assigned To" },
+					{ value: "category", label: "Category" },
+				]}
+				title="Sort Tasks"
+			/>
 		</div>
 	);
 }
