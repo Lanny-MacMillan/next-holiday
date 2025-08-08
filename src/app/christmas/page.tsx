@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import HolidayHeader from "@/components/common/HolidayHeader";
 
 const subsections = [
 	{
@@ -71,24 +71,10 @@ export default function ChristmasPage() {
 
 	return (
 		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							Christmas
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Plan your Christmas with ease!
-						</p>
-					</div>
-				</div>
-			</header>
+			<HolidayHeader
+				holidayName="Christmas"
+				description="Plan your Christmas with ease!"
+			/>
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
