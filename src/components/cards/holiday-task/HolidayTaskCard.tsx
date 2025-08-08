@@ -49,17 +49,23 @@ export default function HolidayTaskCard({
 			hanukkah: "bg-gradient-to-br from-blue-400 to-blue-600",
 			kwanzaa: "bg-gradient-to-br from-red-400 to-red-600",
 			"new-year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
+			"new year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
 			valentines: "bg-gradient-to-br from-pink-300 to-pink-500",
+			"valentine's day": "bg-gradient-to-br from-pink-300 to-pink-500",
 			easter: "bg-gradient-to-br from-purple-300 to-purple-500",
 			halloween: "bg-gradient-to-br from-orange-400 to-orange-600",
 			thanksgiving: "bg-gradient-to-br from-amber-400 to-amber-600",
 			"mothers-day": "bg-gradient-to-br from-pink-300 to-pink-500",
+			"mother's day": "bg-gradient-to-br from-pink-300 to-pink-500",
 			"fathers-day": "bg-gradient-to-br from-blue-300 to-blue-500",
+			"father's day": "bg-gradient-to-br from-blue-300 to-blue-500",
 			"fourth-of-july": "bg-gradient-to-br from-red-400 to-red-600",
+			"fourth of july": "bg-gradient-to-br from-red-400 to-red-600",
 			birthday: "bg-gradient-to-br from-yellow-300 to-yellow-500",
 			anniversary: "bg-gradient-to-br from-pink-300 to-pink-500",
 			graduation: "bg-gradient-to-br from-purple-300 to-purple-500",
 			"baby-shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
+			"baby shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
 		};
 		return (
 			gradientMap[holidayName.toLowerCase()] ||
