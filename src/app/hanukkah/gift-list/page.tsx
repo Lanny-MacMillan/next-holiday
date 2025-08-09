@@ -169,6 +169,7 @@ export default function HanukkahGiftListPage() {
 				hoverColor: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
 			}}
 			borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
+			gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
 	);
 
@@ -186,6 +187,7 @@ export default function HanukkahGiftListPage() {
 				hoverColor: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
 			}}
 			borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
+			gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
 	);
 
@@ -239,11 +241,16 @@ export default function HanukkahGiftListPage() {
 				backHref="/hanukkah"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="blue-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Hanukkah" />
+				<BudgetDisplay
+					holiday="Hanukkah"
+					holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
+				/>
 
 				<AddButton title="Gift" onClick={openForm} color="blue" />
 				<div className="flex items-center justify-center">

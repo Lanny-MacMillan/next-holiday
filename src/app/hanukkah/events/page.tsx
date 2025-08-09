@@ -335,6 +335,8 @@ export default function HanukkahEventsPage() {
 				backHref="/hanukkah"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of Hanukkah events or plans!"
+				holidayColor="blue-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">

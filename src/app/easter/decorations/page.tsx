@@ -19,6 +19,7 @@ import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
+import { DecorationsListItem } from "@/components/decorations";
 
 export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();
@@ -152,12 +153,12 @@ export default function EasterDecorationsPage() {
 					emptyMessage="All decoration items completed! 🎉"
 					completedMessage=""
 					renderItem={(task) => (
-						<ToDoCard
+						<DecorationsListItem
 							key={task.id}
 							task={convertEasterTaskToTask(task)}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEditTask}
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDeleteTask}
+							loading={loading}
 						/>
 					)}
 				/>
@@ -169,13 +170,12 @@ export default function EasterDecorationsPage() {
 					emptyMessage="No completed decoration items yet."
 					completedMessage="No completed decoration items yet."
 					renderItem={(task) => (
-						<ToDoCard
+						<DecorationsListItem
 							key={task.id}
 							task={convertEasterTaskToTask(task)}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEditTask}
-							className="opacity-60"
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDeleteTask}
+							loading={loading}
 						/>
 					)}
 				/>

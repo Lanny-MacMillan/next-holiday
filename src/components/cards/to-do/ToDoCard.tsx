@@ -19,6 +19,7 @@ export interface ToDoCardProps {
 	borderColor?: string; // Border color for the left border
 	gamified?: boolean; // New prop to control display mode
 	gamifiedBackgroundColor?: string; // Optional override for background color
+	disableInternalModal?: boolean; // Disable the card's internal delete modal
 }
 
 // Task-themed icons for gamified mode
@@ -50,6 +51,7 @@ export default function ToDoCard({
 	borderColor,
 	gamified = false,
 	gamifiedBackgroundColor: propGamifiedBackgroundColor,
+	disableInternalModal = false,
 }: ToDoCardProps) {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -72,7 +74,13 @@ export default function ToDoCard({
 
 	const handleDelete = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		setShowDeleteConfirm(true);
+		if (disableInternalModal) {
+			// Call the external delete handler directly
+			onDelete(task.id);
+		} else {
+			// Show the internal modal
+			setShowDeleteConfirm(true);
+		}
 	};
 
 	const confirmDelete = () => {
@@ -154,13 +162,15 @@ export default function ToDoCard({
 				</div>
 
 				{/* Delete Confirmation Modal */}
-				<DeleteModal
-					isOpen={showDeleteConfirm}
-					{...getDeleteConfig("tasks")}
-					itemName={task.title}
-					onConfirm={confirmDelete}
-					onCancel={cancelDelete}
-				/>
+				{!disableInternalModal && (
+					<DeleteModal
+						isOpen={showDeleteConfirm}
+						{...getDeleteConfig("tasks")}
+						itemName={task.title}
+						onConfirm={confirmDelete}
+						onCancel={cancelDelete}
+					/>
+				)}
 
 				<div className="relative z-10">
 					{/* Main Card Content */}
@@ -286,13 +296,15 @@ export default function ToDoCard({
 				×
 			</button>
 			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={showDeleteConfirm}
-				{...getDeleteConfig("tasks")}
-				itemName={task.title}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-			/>
+			{!disableInternalModal && (
+				<DeleteModal
+					isOpen={showDeleteConfirm}
+					{...getDeleteConfig("tasks")}
+					itemName={task.title}
+					onConfirm={confirmDelete}
+					onCancel={cancelDelete}
+				/>
+			)}
 
 			{/* Main Card Content */}
 			<div className="flex items-start space-x-3">

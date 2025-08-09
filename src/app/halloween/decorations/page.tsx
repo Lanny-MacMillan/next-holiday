@@ -19,6 +19,7 @@ import TaskSection from "@/components/common/TaskSection";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { DecorationsListItem } from "@/components/decorations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -174,17 +175,12 @@ export default function HalloweenDecorationsPage() {
 	const completedTasks = sortedTasks.filter((task) => task.isCompleted);
 
 	const renderTaskCard = (task: HalloweenTask) => (
-		<ToDoCard
+		<DecorationsListItem
 			key={task.id}
 			task={task}
-			onToggleComplete={handleToggleTask}
-			onDelete={handleDeleteTask}
-			onEdit={handleEdit}
-			theme={{
-				accentColor: "#f97316",
-				hoverColor: "hover:bg-orange-50 dark:hover:bg-orange-900/20",
-			}}
-			borderColor="#f97316"
+			onToggleTask={handleToggleTask}
+			onDeleteTask={handleDeleteTask}
+			loading={loading}
 		/>
 	);
 

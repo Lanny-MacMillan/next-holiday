@@ -99,9 +99,16 @@ export default function GraduationEventsPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: GraduationTask) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskOrId: GraduationTask | string) => {
+		// Handle both task object and task ID for compatibility
+		const task =
+			typeof taskOrId === "string"
+				? tasks.find((t) => t.id === taskOrId)
+				: taskOrId;
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -138,7 +145,7 @@ export default function GraduationEventsPage() {
 				sortTitle="Sort Events"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
@@ -158,6 +165,7 @@ export default function GraduationEventsPage() {
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
 							onEdit={handleEdit}
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -176,6 +184,7 @@ export default function GraduationEventsPage() {
 							onDelete={handleDelete}
 							onEdit={handleEdit}
 							className="opacity-60"
+							disableInternalModal={true}
 						/>
 					)}
 				/>

@@ -206,10 +206,12 @@ export default function CandleLightingPage() {
 	return (
 		<div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Candle Lighting Tracker"
+				title="Candle Lighting"
 				backHref="/hanukkah"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of candle lighting tasks!"
+				holidayColor="blue-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
