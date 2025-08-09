@@ -113,6 +113,7 @@ export default function KwanzaaPage() {
 											primaryColor: "#dc2626", // Red for Kwanzaa
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 									/>
 								</li>
 							);
@@ -133,6 +134,7 @@ export default function KwanzaaPage() {
 										accentColor: "#eab308",
 										progressColor: "#dc2626",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 								/>
 							</li>
 						);

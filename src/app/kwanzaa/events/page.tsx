@@ -228,7 +228,7 @@ export default function KwanzaaEventsPage() {
 			onDeleteTask={handleDeleteTask}
 			loading={loading}
 			themeColor="red"
-			holidayColor="bg-gradient-to-br from-red-500 to-red-700"
+			holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 		/>
 	);
 
@@ -239,6 +239,8 @@ export default function KwanzaaEventsPage() {
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of your Events!"
+				holidayColor="red-500"
 				error={error}
 			/>
 
@@ -294,7 +296,7 @@ export default function KwanzaaEventsPage() {
 					emptyMessage="All events planned! 🎉"
 					completedMessage=""
 					renderItem={renderEventItem}
-					cardClassName="card-events-kwanzaa"
+					// cardClassName="card-events-kwanzaa"
 				/>
 
 				<TaskSection
@@ -304,7 +306,7 @@ export default function KwanzaaEventsPage() {
 					emptyMessage=""
 					completedMessage="No completed tasks yet."
 					renderItem={renderEventItem}
-					cardClassName="card-events-kwanzaa"
+					// cardClassName="card-events-kwanzaa"
 				/>
 			</main>
 

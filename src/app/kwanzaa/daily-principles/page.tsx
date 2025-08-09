@@ -14,6 +14,8 @@ import {
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import TaskSection from "@/components/common/TaskSection";
+import EventItems from "@/components/cards/event/EventItems";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -113,102 +115,28 @@ export default function DailyPrinciplesPage() {
 	);
 
 	const renderTaskItem = (task: KwanzaaTask) => (
-		<li
+		<EventItems
 			key={task.id}
-			className="flex items-center px-4 py-3 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20"
-			onClick={() => handleToggleTask(task.id)}
-		>
-			<input
-				type="checkbox"
-				checked={task.isCompleted}
-				readOnly
-				className="mr-3 accent-red-500"
-			/>
-			<div className="flex-1">
-				<div
-					className={`text-gray-900 dark:text-white ${
-						task.isCompleted ? "line-through" : ""
-					}`}
-				>
-					{task.title}
-				</div>
-				{task.description && (
-					<div
-						className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${
-							task.isCompleted ? "line-through" : ""
-						}`}
-					>
-						{task.description}
-					</div>
-				)}
-				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-					<span
-						className={`px-2 py-1 rounded ${
-							task.priority === "high"
-								? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-								: task.priority === "medium"
-								? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-								: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-						}`}
-					>
-						{task.priority}
-					</span>
-					{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}
-					{task.category && <span>{task.category}</span>}
-					{task.dueDate && (
-						<span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-					)}
-				</div>
-				{task.isCompleted && task.completedDate && (
-					<div className="text-xs text-red-600 dark:text-red-400 mt-1">
-						Completed: {new Date(task.completedDate).toLocaleDateString()}
-					</div>
-				)}
-			</div>
-			<button
-				onClick={(e) => {
-					e.stopPropagation();
-					handleDeleteTask(task.id, task.title);
-				}}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-				disabled={loading}
-			>
-				Delete
-			</button>
-		</li>
+			task={task}
+			onToggleTask={handleToggleTask}
+			onDeleteTask={handleDeleteTask}
+			loading={loading}
+			themeColor="red"
+			holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+		/>
 	);
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/kwanzaa"
-						className="absolute left-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Daily Principle Tracker
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-						title="Sort tasks"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
+			<HolidayPageHeader
+				title="Daily Principles"
+				backHref="/kwanzaa"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort gifts"
+				description="Keep track of Daily Prinicles!"
+				holidayColor="red-500"
+				error={error}
+			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -225,7 +153,7 @@ export default function DailyPrinciplesPage() {
 					title="Incomplete"
 					items={incompleteTasks}
 					isCompleted={false}
-					emptyMessage="All candles lit! 🕯️✨"
+					emptyMessage="All principles practiced! 🕯️✨"
 					completedMessage=""
 					renderItem={renderTaskItem}
 					cardClassName="card-tasks"
@@ -236,8 +164,8 @@ export default function DailyPrinciplesPage() {
 					title="Completed"
 					items={completedTasks}
 					isCompleted={true}
-					emptyMessage=""
-					completedMessage="No completed tasks yet."
+					emptyMessage="No completed principles yet."
+					completedMessage="No completed principles yet."
 					renderItem={renderTaskItem}
 					cardClassName="card-tasks"
 					borderColor="rgb(var(--color-red-500))"
