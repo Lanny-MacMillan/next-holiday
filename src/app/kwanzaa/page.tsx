@@ -13,11 +13,11 @@ const subsections = [
 		name: "Gift List",
 		description: "Track your Kwanzaa gift ideas",
 		href: "/kwanzaa/gift-list",
-		sliceKey: "giftList",
-		category: undefined,
+		sliceKey: "kwanzaaGiftList",
+		category: "Gifts",
 	},
 	{
-		name: "Daily Principle Tracker",
+		name: "Daily Principles",
 		description: "Track the seven principles of Kwanzaa",
 		href: "/kwanzaa/daily-principles",
 		sliceKey: "tasks",
@@ -31,7 +31,7 @@ const subsections = [
 		category: "Events",
 	},
 	{
-		name: "Decorations Checklist",
+		name: "Decorations",
 		description: "Stay on top of your Kwanzaa decorations",
 		href: "/kwanzaa/decorations",
 		sliceKey: "tasks",
@@ -65,6 +65,7 @@ export default function KwanzaaPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "kwanzaaGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -103,7 +104,10 @@ export default function KwanzaaPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "kwanzaaGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard

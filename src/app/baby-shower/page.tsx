@@ -15,7 +15,8 @@ const subsections = [
 		name: "Gift Registry Tracker",
 		description: "Track baby shower gifts and registry items",
 		href: "/baby-shower/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "babyShowerGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
@@ -65,6 +66,7 @@ export default function BabyShowerPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "babyShowerGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;

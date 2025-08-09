@@ -13,7 +13,8 @@ const subsections = [
 		name: "Gift Ideas",
 		description: "Track anniversary gift ideas",
 		href: "/anniversary/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "anniversaryGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
@@ -48,6 +49,7 @@ export default function AnniversaryPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "anniversaryGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;

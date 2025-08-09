@@ -14,7 +14,8 @@ const fathersDaySubsections = [
 		name: "Gift Ideas",
 		description: "Track gift ideas for Father's Day",
 		href: "/fathers-day/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "fathersDayGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Card List",
@@ -50,6 +51,7 @@ export default function FathersDayPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "fathersDayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -90,7 +92,10 @@ export default function FathersDayPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "fathersDayGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard

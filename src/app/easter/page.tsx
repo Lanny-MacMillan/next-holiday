@@ -13,7 +13,8 @@ const subsections = [
 		name: "Gift List",
 		description: "Track your Easter gift ideas",
 		href: "/easter/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "easterGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Basket List",
@@ -64,6 +65,7 @@ export default function EasterPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "easterGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -102,7 +104,10 @@ export default function EasterPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "easterGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard

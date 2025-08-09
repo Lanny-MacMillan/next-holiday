@@ -185,108 +185,129 @@ export default function CountdownTimer({
 		}
 	};
 
-	const handleSetCountdown = (date: string) => {
-		if (holiday === "Hanukkah") {
-			dispatch(setHanukkahCountdown(date));
-		} else if (holiday === "Kwanzaa") {
-			dispatch(setKwanzaaCountdown(date));
-		} else if (holiday === "New Year") {
-			dispatch(setNewYearCountdown(date));
-		} else if (holiday === "Valentine's Day") {
-			dispatch(setValentinesCountdown(date));
-		} else if (holiday === "Easter") {
-			dispatch(setEasterCountdown(date));
-		} else if (holiday === "Halloween") {
-			dispatch(setHalloweenCountdown(date));
-		} else if (holiday === "Thanksgiving") {
-			dispatch(setThanksgivingCountdown(date));
-		} else if (holiday === "Graduation") {
-			dispatch(setGraduationCountdown(date));
-		} else if (holiday === "Anniversary") {
-			dispatch(setAnniversaryCountdown(date));
-		} else if (holiday === "Birthday") {
-			dispatch(setBirthdayCountdown(date));
-		} else if (holiday === "Fourth of July") {
-			dispatch(setFourthOfJulyCountdown(date));
-		} else if (holiday === "Father's Day") {
-			dispatch(setFathersDayCountdown(date));
-		} else if (holiday === "Mother's Day") {
-			dispatch(setMothersDayCountdown(date));
-		} else if (holiday === "Christmas") {
-			dispatch(setChristmasCountdown(date));
-		} else {
-			dispatch(setCountdown(date));
+	// Helper function to dispatch set countdown action based on holiday
+	const dispatchSetCountdown = (holiday: string | undefined, date: string) => {
+		switch (holiday) {
+			case "Hanukkah":
+				return setHanukkahCountdown(date);
+			case "Kwanzaa":
+				return setKwanzaaCountdown(date);
+			case "New Year":
+				return setNewYearCountdown(date);
+			case "Valentine's Day":
+				return setValentinesCountdown(date);
+			case "Easter":
+				return setEasterCountdown(date);
+			case "Halloween":
+				return setHalloweenCountdown(date);
+			case "Thanksgiving":
+				return setThanksgivingCountdown(date);
+			case "Graduation":
+				return setGraduationCountdown(date);
+			case "Anniversary":
+				return setAnniversaryCountdown(date);
+			case "Birthday":
+				return setBirthdayCountdown(date);
+			case "Fourth of July":
+				return setFourthOfJulyCountdown(date);
+			case "Father's Day":
+				return setFathersDayCountdown(date);
+			case "Mother's Day":
+				return setMothersDayCountdown(date);
+			case "Christmas":
+				return setChristmasCountdown(date);
+			default:
+				return setCountdown(date);
 		}
+	};
+
+	const handleSetCountdown = (date: string) => {
+		dispatch(dispatchSetCountdown(holiday, date));
 		setShowDatePicker(false);
+	};
+
+	// Helper function to dispatch update countdown action based on holiday
+	const dispatchUpdateCountdown = (
+		holiday: string | undefined,
+		date: string
+	) => {
+		switch (holiday) {
+			case "Hanukkah":
+				return updateHanukkahCountdown(date);
+			case "Kwanzaa":
+				return updateKwanzaaCountdown(date);
+			case "New Year":
+				return updateNewYearCountdown(date);
+			case "Valentine's Day":
+				return updateValentinesCountdown(date);
+			case "Easter":
+				return updateEasterCountdown(date);
+			case "Halloween":
+				return updateHalloweenCountdown(date);
+			case "Thanksgiving":
+				return updateThanksgivingCountdown(date);
+			case "Graduation":
+				return updateGraduationCountdown(date);
+			case "Anniversary":
+				return updateAnniversaryCountdown(date);
+			case "Birthday":
+				return updateBirthdayCountdown(date);
+			case "Fourth of July":
+				return updateFourthOfJulyCountdown(date);
+			case "Father's Day":
+				return updateFathersDayCountdown(date);
+			case "Mother's Day":
+				return updateMothersDayCountdown(date);
+			case "Christmas":
+				return updateChristmasCountdown(date);
+			default:
+				return updateCountdown(date);
+		}
 	};
 
 	const handleUpdateCountdown = (date: string) => {
-		if (holiday === "Hanukkah") {
-			dispatch(updateHanukkahCountdown(date));
-		} else if (holiday === "Kwanzaa") {
-			dispatch(updateKwanzaaCountdown(date));
-		} else if (holiday === "New Year") {
-			dispatch(updateNewYearCountdown(date));
-		} else if (holiday === "Valentine's Day") {
-			dispatch(updateValentinesCountdown(date));
-		} else if (holiday === "Easter") {
-			dispatch(updateEasterCountdown(date));
-		} else if (holiday === "Halloween") {
-			dispatch(updateHalloweenCountdown(date));
-		} else if (holiday === "Thanksgiving") {
-			dispatch(updateThanksgivingCountdown(date));
-		} else if (holiday === "Graduation") {
-			dispatch(updateGraduationCountdown(date));
-		} else if (holiday === "Anniversary") {
-			dispatch(updateAnniversaryCountdown(date));
-		} else if (holiday === "Birthday") {
-			dispatch(updateBirthdayCountdown(date));
-		} else if (holiday === "Fourth of July") {
-			dispatch(updateFourthOfJulyCountdown(date));
-		} else if (holiday === "Father's Day") {
-			dispatch(updateFathersDayCountdown(date));
-		} else if (holiday === "Mother's Day") {
-			dispatch(updateMothersDayCountdown(date));
-		} else if (holiday === "Christmas") {
-			dispatch(updateChristmasCountdown(date));
-		} else {
-			dispatch(updateCountdown(date));
-		}
+		dispatch(dispatchUpdateCountdown(holiday, date));
 		setShowDatePicker(false);
 	};
 
-	const handleClearCountdown = () => {
-		if (holiday === "Hanukkah") {
-			dispatch(clearHanukkahCountdown());
-		} else if (holiday === "Kwanzaa") {
-			dispatch(clearKwanzaaCountdown());
-		} else if (holiday === "New Year") {
-			dispatch(clearNewYearCountdown());
-		} else if (holiday === "Valentine's Day") {
-			dispatch(clearValentinesCountdown());
-		} else if (holiday === "Easter") {
-			dispatch(clearEasterCountdown());
-		} else if (holiday === "Halloween") {
-			dispatch(clearHalloweenCountdown());
-		} else if (holiday === "Thanksgiving") {
-			dispatch(clearThanksgivingCountdown());
-		} else if (holiday === "Graduation") {
-			dispatch(clearGraduationCountdown());
-		} else if (holiday === "Anniversary") {
-			dispatch(clearAnniversaryCountdown());
-		} else if (holiday === "Birthday") {
-			dispatch(clearBirthdayCountdown());
-		} else if (holiday === "Fourth of July") {
-			dispatch(clearFourthOfJulyCountdown());
-		} else if (holiday === "Father's Day") {
-			dispatch(clearFathersDayCountdown());
-		} else if (holiday === "Mother's Day") {
-			dispatch(clearMothersDayCountdown());
-		} else if (holiday === "Christmas") {
-			dispatch(clearChristmasCountdown());
-		} else {
-			dispatch(clearCountdown());
+	// Helper function to dispatch clear countdown action based on holiday
+	const dispatchClearCountdown = (holiday: string | undefined) => {
+		switch (holiday) {
+			case "Hanukkah":
+				return clearHanukkahCountdown();
+			case "Kwanzaa":
+				return clearKwanzaaCountdown();
+			case "New Year":
+				return clearNewYearCountdown();
+			case "Valentine's Day":
+				return clearValentinesCountdown();
+			case "Easter":
+				return clearEasterCountdown();
+			case "Halloween":
+				return clearHalloweenCountdown();
+			case "Thanksgiving":
+				return clearThanksgivingCountdown();
+			case "Graduation":
+				return clearGraduationCountdown();
+			case "Anniversary":
+				return clearAnniversaryCountdown();
+			case "Birthday":
+				return clearBirthdayCountdown();
+			case "Fourth of July":
+				return clearFourthOfJulyCountdown();
+			case "Father's Day":
+				return clearFathersDayCountdown();
+			case "Mother's Day":
+				return clearMothersDayCountdown();
+			case "Christmas":
+				return clearChristmasCountdown();
+			default:
+				return clearCountdown();
 		}
+	};
+
+	const handleClearCountdown = () => {
+		dispatch(dispatchClearCountdown(holiday));
 		setShowDatePicker(false);
 	};
 

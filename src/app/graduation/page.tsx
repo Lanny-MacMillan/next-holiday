@@ -15,7 +15,8 @@ const subsections = [
 		name: "Gift List",
 		description: "Track graduation gift ideas",
 		href: "/graduation/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "graduationGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
@@ -74,6 +75,7 @@ export default function GraduationPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
+			case "graduationGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;

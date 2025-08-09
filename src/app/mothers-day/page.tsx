@@ -13,7 +13,8 @@ const mothersDaySubsections = [
 		name: "Gift Ideas",
 		description: "Track gift ideas for Mother's Day",
 		href: "/mothers-day/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "mothersDayGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Card List",
@@ -48,6 +49,7 @@ export default function MothersDayPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "mothersDayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -84,7 +86,10 @@ export default function MothersDayPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "mothersDayGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard

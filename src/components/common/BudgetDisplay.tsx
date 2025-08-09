@@ -23,18 +23,52 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 
 	// Determine which gift list to use based on holiday
 	let gifts: any[] = [];
-	if (holiday === "Hanukkah") {
-		gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
-	} else if (holiday === "Valentine's Day") {
-		gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
-	} else if (holiday === "Halloween") {
-		gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
-	} else if (holiday === "Thanksgiving") {
-		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
-	} else if (holiday === "New Year") {
-		gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
-	} else {
-		gifts = useAppSelector((state: any) => state.giftList.gifts);
+	switch (holiday) {
+		case "Hanukkah":
+			gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
+			break;
+		case "Valentine's Day":
+			gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
+			break;
+		case "Halloween":
+			gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
+			break;
+		case "Thanksgiving":
+			gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
+			break;
+		case "New Year":
+			gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
+			break;
+		case "Kwanzaa":
+			gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
+			break;
+		case "Easter":
+			gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
+			break;
+		case "Mother's Day":
+			gifts = useAppSelector((state: any) => state.mothersDayGiftList.gifts);
+			break;
+		case "Father's Day":
+			gifts = useAppSelector((state: any) => state.fathersDayGiftList.gifts);
+			break;
+		case "Fourth of July":
+			gifts = useAppSelector((state: any) => state.fourthOfJulyGiftList.gifts);
+			break;
+		case "Birthday":
+			gifts = useAppSelector((state: any) => state.birthdayGiftList.gifts);
+			break;
+		case "Anniversary":
+			gifts = useAppSelector((state: any) => state.anniversaryGiftList.gifts);
+			break;
+		case "Graduation":
+			gifts = useAppSelector((state: any) => state.graduationGiftList.gifts);
+			break;
+		case "Baby Shower":
+			gifts = useAppSelector((state: any) => state.babyShowerGiftList.gifts);
+			break;
+		default:
+			gifts = useAppSelector((state: any) => state.giftList.gifts);
+			break;
 	}
 
 	// Get budget limit based on holiday

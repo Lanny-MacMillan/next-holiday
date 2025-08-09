@@ -16,7 +16,8 @@ const subsections = [
 		name: "Gift List",
 		description: "Track birthday gift ideas",
 		href: "/birthday/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "birthdayGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
@@ -75,6 +76,7 @@ export default function BirthdayPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
+			case "birthdayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;

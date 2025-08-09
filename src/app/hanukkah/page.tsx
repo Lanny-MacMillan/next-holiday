@@ -16,8 +16,8 @@ const subsections = [
 		name: "Gift List",
 		description: "Track your Hanukkah gift ideas",
 		href: "/hanukkah/gift-list",
-		sliceKey: "giftList",
-		category: undefined,
+		sliceKey: "hanukkahGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Candle Lighting Tracker",
@@ -76,6 +76,7 @@ export default function HanukkahPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
+			case "hanukkahGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -118,7 +119,10 @@ export default function HanukkahPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "hanukkahGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
