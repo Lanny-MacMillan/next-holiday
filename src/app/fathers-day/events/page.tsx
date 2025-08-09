@@ -13,6 +13,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
@@ -144,12 +145,13 @@ export default function FathersDayEventsPage() {
 					emptyMessage="All events completed! 🎉"
 					completedMessage=""
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="blue"
 						/>
 					)}
 				/>
@@ -161,13 +163,13 @@ export default function FathersDayEventsPage() {
 					emptyMessage="No completed events yet."
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
-							className="opacity-60"
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="blue"
 						/>
 					)}
 				/>

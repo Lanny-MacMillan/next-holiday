@@ -16,6 +16,7 @@ import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { EventItems } from "@/components/cards/event";
 
 type SortOption = "priority" | "dueDate" | "title" | "none";
 
@@ -176,62 +177,14 @@ export default function NewYearEventsPage() {
 	];
 
 	const renderEventItem = (task: NewYearTask) => (
-		<li
+		<EventItems
 			key={task.id}
-			className="flex items-center px-4 py-3 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20"
-			onClick={() => handleToggleTask(task.id)}
-		>
-			<input
-				type="checkbox"
-				checked={task.isCompleted}
-				readOnly
-				className="mr-3 accent-amber-500"
-			/>
-			<div className="flex-1">
-				<div
-					className={`text-gray-900 dark:text-white ${
-						task.isCompleted ? "line-through" : ""
-					}`}
-				>
-					{task.title}
-				</div>
-				{task.description && (
-					<div
-						className={`text-sm text-gray-600 dark:text-gray-300 ${
-							task.isCompleted ? "line-through" : ""
-						}`}
-					>
-						{task.description}
-					</div>
-				)}
-				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-					<span
-						className={`px-2 py-1 rounded ${
-							task.priority === "high"
-								? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-								: task.priority === "medium"
-								? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-								: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-						}`}
-					>
-						{task.priority}
-					</span>
-					{task.dueDate && (
-						<span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-					)}
-				</div>
-			</div>
-			<button
-				onClick={(e) => {
-					e.stopPropagation();
-					handleDeleteTask(task.id);
-				}}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-2"
-				title="Delete event"
-			>
-				×
-			</button>
-		</li>
+			task={task}
+			onToggleTask={handleToggleTask}
+			onDeleteTask={(taskId, taskTitle) => handleDeleteTask(taskId)}
+			loading={loading}
+			themeColor="amber"
+		/>
 	);
 
 	return (

@@ -182,9 +182,9 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 							</div>
 						</div>
 
-						{/* Edit Button */}
+						{/* Edit Button - Larger styling to match GiftListItem */}
 						{onEditTask && (
-							<div className="mt-3">
+							<div className="flex flex-col gap-1 mt-3">
 								<button
 									onClick={(e) => {
 										e.stopPropagation();
@@ -331,9 +331,9 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 						</div>
 					</div>
 
-					{/* Edit Button */}
+					{/* Edit Button - Larger styling to match GiftListItem */}
 					{onEditTask && (
-						<div className="mt-3">
+						<div className="flex flex-col gap-1 mt-3">
 							<button
 								onClick={(e) => {
 									e.stopPropagation();
