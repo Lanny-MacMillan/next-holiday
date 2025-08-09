@@ -14,8 +14,8 @@ const subsections = [
 		name: "Supplies List",
 		description: "Track your party supplies and fireworks",
 		href: "/new-year/supplies-list",
-		sliceKey: "giftList",
-		category: undefined,
+		sliceKey: "newYearGiftList",
+		category: "Supplies",
 	},
 	{
 		name: "Resolution Tracker",
@@ -66,6 +66,7 @@ export default function NewYearPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "newYearGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -104,7 +105,7 @@ export default function NewYearPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (section.sliceKey.includes("GiftList")) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -114,6 +115,7 @@ export default function NewYearPage() {
 											primaryColor: "#f59e0b", // Amber for New Year
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
 									/>
 								</li>
 							);
@@ -134,6 +136,7 @@ export default function NewYearPage() {
 										accentColor: "#eab308",
 										progressColor: "#f59e0b",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
 								/>
 							</li>
 						);

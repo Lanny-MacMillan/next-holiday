@@ -184,6 +184,7 @@ export default function NewYearEventsPage() {
 			onDeleteTask={(taskId, taskTitle) => handleDeleteTask(taskId)}
 			loading={loading}
 			themeColor="amber"
+			holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
 		/>
 	);
 
@@ -194,11 +195,13 @@ export default function NewYearEventsPage() {
 				backHref="/new-year"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort events"
+				description="Keep track of all your Events!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
-				<AddButton title="Event" onClick={openForm} color="orange" />
+				<AddButton title="Event" onClick={openForm} color="yellow" />
 
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -217,7 +220,7 @@ export default function NewYearEventsPage() {
 					emptyMessage="All events completed! 🎉"
 					completedMessage=""
 					renderItem={renderEventItem}
-					cardClassName="card-events-new-year"
+					// cardClassName="card-events-new-year"
 				/>
 
 				<TaskSection
@@ -227,7 +230,7 @@ export default function NewYearEventsPage() {
 					emptyMessage="No completed events yet."
 					completedMessage="No completed events yet."
 					renderItem={renderEventItem}
-					cardClassName="card-events-new-year"
+					// cardClassName="card-events-new-year"
 				/>
 
 				{/* Form Modal */}

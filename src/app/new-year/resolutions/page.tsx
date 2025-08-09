@@ -237,6 +237,8 @@ export default function NewYearResolutionsPage() {
 				backHref="/new-year"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort resolutions"
+				description="Keep track of all your Resolutions!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 
@@ -244,7 +246,7 @@ export default function NewYearResolutionsPage() {
 				<AddButton
 					title="Resolution"
 					onClick={() => setShowForm(true)}
-					color="orange"
+					color="yellow"
 				/>
 
 				<div className="flex items-center justify-center">

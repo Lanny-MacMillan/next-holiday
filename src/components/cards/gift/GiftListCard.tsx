@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
+import { getHolidayGiftListConfig } from "@/utils/holidayGiftListConfig";
 
 export interface GiftListCardProps {
 	holiday?: string;
@@ -27,23 +28,13 @@ export interface GiftListCardProps {
 }
 
 export function useGiftListCardData(holiday?: string) {
-	// Determine which gift list to use based on holiday
-	let gifts: any[] = [];
-	if (holiday === "Hanukkah") {
-		gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
-	} else if (holiday === "Valentine's Day") {
-		gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
-	} else if (holiday === "Halloween") {
-		gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
-	} else if (holiday === "Thanksgiving") {
-		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
-	} else if (holiday === "Easter") {
-		gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
-	} else if (holiday === "Kwanzaa") {
-		gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
-	} else {
-		gifts = useAppSelector((state: any) => state.giftList.gifts);
-	}
+	// Get holiday configuration
+	const config = getHolidayGiftListConfig(holiday);
+
+	// Use the configured slice name to get gifts
+	const gifts = useAppSelector(
+		(state: any) => state[config.sliceName]?.gifts || []
+	);
 
 	// Get budget limit based on holiday
 	const { settings } = useAppSelector((state: any) => state.theme);
@@ -141,6 +132,7 @@ export default function GiftListCard({
 		(finalGiftList.totalItems > 0
 			? (finalGiftList.completedItems / finalGiftList.totalItems) * 100
 			: 0);
+	console.log("holiday", holiday);
 
 	// Generate href if not provided
 	const finalHref =
@@ -269,7 +261,6 @@ export default function GiftListCard({
 			cardContent
 		);
 	}
-
 	// Professional mode (existing design)
 	const cardContent = (
 		<div
@@ -336,7 +327,7 @@ export default function GiftListCard({
 				<div className="mt-6">
 					<div className="flex items-center justify-between mb-2">
 						<h4 className="font-bold text-gray-900 text-lg">
-							{holiday === "Thanksgiving" ? "Shopping List" : "Gift List"}
+							{getHolidayGiftListConfig(holiday).displayText}
 						</h4>
 						<span
 							className="text-xs font-medium px-2.5 py-0.5 rounded-full"

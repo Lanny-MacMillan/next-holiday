@@ -31,6 +31,8 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 		gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
 	} else if (holiday === "Thanksgiving") {
 		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
+	} else if (holiday === "New Year") {
+		gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
 	} else {
 		gifts = useAppSelector((state: any) => state.giftList.gifts);
 	}
