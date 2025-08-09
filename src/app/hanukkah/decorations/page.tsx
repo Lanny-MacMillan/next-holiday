@@ -239,7 +239,7 @@ export default function HanukkahDecorationsPage() {
 	return (
 		<div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Decorations Checklist"
+				title="Decorations"
 				backHref="/hanukkah"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"

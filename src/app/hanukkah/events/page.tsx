@@ -246,6 +246,7 @@ export default function HanukkahEventsPage() {
 			onDeleteTask={handleDeleteTask}
 			loading={loading}
 			themeColor="blue"
+			holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
 	);
 
