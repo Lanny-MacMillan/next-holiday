@@ -19,7 +19,7 @@ import TaskSection from "@/components/common/TaskSection";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { DecorationsListItem } from "@/components/decorations";
+import { DecorationsListItem } from "@/components/cards/decorations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -174,13 +174,21 @@ export default function HalloweenDecorationsPage() {
 	const incompleteTasks = sortedTasks.filter((task) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task) => task.isCompleted);
 
+	// Placeholder edit function - can be implemented later
+	const handleEditTaskDecoration = (task: any) => {
+		console.log("Edit task functionality not yet implemented for:", task);
+		// TODO: Implement edit modal/functionality
+	};
+
 	const renderTaskCard = (task: HalloweenTask) => (
 		<DecorationsListItem
 			key={task.id}
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}
+			onEditTask={handleEditTaskDecoration}
 			loading={loading}
+			holidayColor="#f97316" // Halloween orange color
 		/>
 	);
 

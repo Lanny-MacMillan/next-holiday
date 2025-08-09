@@ -19,7 +19,7 @@ import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
-import { DecorationsListItem } from "@/components/decorations";
+import { DecorationsListItem } from "@/components/cards/decorations";
 
 export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();
@@ -158,7 +158,9 @@ export default function EasterDecorationsPage() {
 							task={convertEasterTaskToTask(task)}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDeleteTask}
+							onEditTask={handleEditTask}
 							loading={loading}
+							holidayColor="#a855f7" // Easter purple color
 						/>
 					)}
 				/>
@@ -175,7 +177,9 @@ export default function EasterDecorationsPage() {
 							task={convertEasterTaskToTask(task)}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDeleteTask}
+							onEditTask={handleEditTask}
 							loading={loading}
+							holidayColor="#a855f7" // Easter purple color
 						/>
 					)}
 				/>

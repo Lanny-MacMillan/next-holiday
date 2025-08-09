@@ -17,7 +17,7 @@ import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
-import { DecorationsListItem } from "@/components/decorations";
+import { DecorationsListItem } from "@/components/cards/decorations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -218,13 +218,21 @@ export default function HanukkahDecorationsPage() {
 		(task: HanukkahTask) => task.isCompleted
 	);
 
+	// Placeholder edit function - can be implemented later
+	const handleEditTask = (task: any) => {
+		console.log("Edit task functionality not yet implemented for:", task);
+		// TODO: Implement edit modal/functionality
+	};
+
 	const renderTaskItem = (task: HanukkahTask) => (
 		<DecorationsListItem
 			key={task.id}
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}
+			onEditTask={handleEditTask}
 			loading={loading}
+			holidayColor="#3b82f6" // Hanukkah blue color
 		/>
 	);
 
