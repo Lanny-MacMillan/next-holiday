@@ -71,19 +71,26 @@ const AddButton: React.FC<AddButtonProps> = ({
 
 	// If gamified is true, render the playful design
 	if (isGamified) {
+		const isDarkMode = settings.theme === "dark";
+
 		// For holiday color in gamified mode, use dynamic background
 		if (color === "holiday") {
 			const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
 			return (
 				<button
 					onClick={onClick}
-					className={`hover:opacity-90 text-white px-4 py-2 rounded transition-colors tracking-wide ${
+					className={`hover:opacity-90 text-white px-4 py-2 rounded transition-colors tracking-wide border-2 border-white ${
 						disabled ? "opacity-50 cursor-not-allowed" : ""
 					}`}
 					style={{
 						backgroundColor,
 						color: "white",
 						fontFamily: "var(--font-family-fredoka)",
+						...getCardStyling({
+							isDarkMode,
+							isGamified: true,
+							intensity: "heavy",
+						}),
 					}}
 					disabled={disabled}
 				>
@@ -96,11 +103,16 @@ const AddButton: React.FC<AddButtonProps> = ({
 		return (
 			<button
 				onClick={onClick}
-				className={`${getColorClasses()} text-white px-4 py-2 rounded transition-colors tracking-wide ${
+				className={`${getColorClasses()} text-white px-4 py-2 rounded transition-colors tracking-wide border-2 border-white ${
 					disabled ? "opacity-50 cursor-not-allowed" : ""
 				}`}
 				style={{
 					fontFamily: "var(--font-family-fredoka)",
+					...getCardStyling({
+						isDarkMode,
+						isGamified: true,
+						intensity: "heavy",
+					}),
 				}}
 				disabled={disabled}
 			>
