@@ -129,6 +129,8 @@ export default function ValentinesCardsPage() {
 				title="Valentine's Cards"
 				backHref="/valentines"
 				onSortClick={() => setShowSortModal(true)}
+				description="Keep track of your cards!"
+				holidayColor="pink-500"
 				sortTitle="Sort Cards"
 			/>
 
@@ -143,7 +145,8 @@ export default function ValentinesCardsPage() {
 				<AddButton
 					title="Card"
 					onClick={() => setShowFormModal(true)}
-					color="purple"
+					color="pink"
+					disabled={loading}
 				/>
 
 				{/* Card List */}
