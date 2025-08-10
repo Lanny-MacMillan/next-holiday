@@ -26,13 +26,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
 			case "high":
-				return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+				return "bg-red-500 text-white";
 			case "medium":
-				return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+				return "bg-yellow-500 text-white";
 			case "low":
-				return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+				return "bg-green-500 text-white";
 			default:
-				return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+				return "bg-gray-500 text-white";
 		}
 	};
 
@@ -60,7 +60,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 						{priority.charAt(0).toUpperCase() + priority.slice(1)}
 					</span>
 					{isCompleted && (
-						<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full">
+						<span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
 							Confirmed
 						</span>
 					)}
@@ -90,17 +90,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 			<div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
 				<button
 					onClick={() => onToggleCompletion(id)}
-					className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
-						isCompleted
-							? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-							: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
-					}`}
+					className="flex-1 px-3 py-2 rounded text-sm font-medium transition-all duration-200 border border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
 				>
 					{isCompleted ? "Confirmed" : "Mark Confirmed"}
 				</button>
 				<button
 					onClick={() => onDelete(id)}
-					className="flex-1 px-3 py-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-sm font-medium transition-colors"
+					className="flex-1 px-3 py-2 bg-red-500 text-white rounded text-sm font-medium transition-colors hover:bg-red-600"
 				>
 					Delete
 				</button>

@@ -145,7 +145,7 @@ export default function ValentinesReservationsPage() {
 				holidayColor="pink-500"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
 				<ReservationsTracker
 					totalReservations={tasks.length}
