@@ -149,9 +149,9 @@ export default function DateIdeaCard({
 									</div>
 								</div>
 								{task.notes && (
-									<div className="mt-2 p-2  bg-opacity-10 rounded">
+									<div className="mt-2 p-2 bg-white bg-opacity-30 rounded">
 										<p
-											className="text-sm text-white opacity-90"
+											className="text-sm text-black opacity-90"
 											style={{ fontFamily: "var(--font-family-fredoka)" }}
 										>
 											<strong>Notes:</strong> {task.notes}
