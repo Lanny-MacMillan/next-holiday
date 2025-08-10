@@ -12,6 +12,10 @@ import {
 	setSelectedValentinesTask,
 } from "@/store/slices/valentines/valentinesTasksSlice";
 import SortModal from "@/components/modals/SortModal";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import DateTrackerCard from "@/components/cards/DateTrackerCard";
@@ -19,21 +23,12 @@ import DateIdeaCard from "@/components/cards/DateIdeaCard";
 
 export default function ValentinesDateIdeasPage() {
 	const dispatch = useAppDispatch();
-	const [isAddingTask, setIsAddingTask] = useState(false);
-	const [newTask, setNewTask] = useState({
-		title: "",
-		description: "",
-		priority: "medium" as "low" | "medium" | "high",
-		category: "Date Ideas" as
-			| "Date Ideas"
-			| "Reservations"
-			| "Decorations"
-			| "General",
-		dueDate: "",
-		notes: "",
-	});
+
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 	const [sortBy, setSortBy] = useState("title");
 
 	const allTasks = useAppSelector((state) => state.valentinesTasks.tasks);
@@ -49,44 +44,70 @@ export default function ValentinesDateIdeasPage() {
 		dispatch(fetchValentinesTasks());
 	}, [dispatch]);
 
-	const handleAddTask = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!newTask.title.trim()) return;
-
-		await dispatch(
-			addValentinesTask({
-				...newTask,
+	const handleFormSubmit = (values: Record<string, any>) => {
+		if (editingTask) {
+			// Update existing task
+			const updatedTask = {
+				...editingTask,
+				title: values.title,
+				description: values.description || "",
+				priority: values.priority as "low" | "medium" | "high",
+				dueDate: values.dueDate || "",
+				notes: values.notes || "",
+			};
+			dispatch(updateValentinesTask(updatedTask));
+			setEditingTask(null);
+		} else {
+			// Add new task
+			const newTaskData = {
+				title: values.title,
+				description: values.description || "",
+				priority: values.priority as "low" | "medium" | "high",
+				category: "Date Ideas" as const,
+				dueDate: values.dueDate || "",
+				notes: values.notes || "",
 				isCompleted: false,
-			})
-		);
-
-		setNewTask({
-			title: "",
-			description: "",
-			priority: "medium",
-			category: "Date Ideas",
-			dueDate: "",
-			notes: "",
-		});
-		setIsAddingTask(false);
-	};
-
-	const handleUpdateTask = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!editingTask.title.trim()) return;
-
-		await dispatch(updateValentinesTask(editingTask));
-		setEditingTask(null);
-	};
-
-	const handleDeleteTask = async (taskId: string) => {
-		if (confirm("Are you sure you want to delete this date idea?")) {
-			await dispatch(deleteValentinesTask(taskId));
+			};
+			dispatch(addValentinesTask(newTaskData));
 		}
+		setShowFormModal(false);
+	};
+
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowFormModal(true);
+	};
+
+	const handleDeleteTask = (taskId: string) => {
+		setTaskToDelete(taskId);
+		setShowDeleteModal(true);
+	};
+
+	const confirmDelete = async () => {
+		if (taskToDelete) {
+			await dispatch(deleteValentinesTask(taskToDelete));
+			setTaskToDelete(null);
+		}
+		setShowDeleteModal(false);
+	};
+
+	const cancelDelete = () => {
+		setTaskToDelete(null);
+		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
 		await dispatch(toggleValentinesTaskCompletion(taskId));
+	};
+
+	const openAddForm = () => {
+		setEditingTask(null);
+		setShowFormModal(true);
+	};
+
+	const closeForm = () => {
+		setShowFormModal(false);
+		setEditingTask(null);
 	};
 
 	const sortedTasks = [...tasks].sort((a, b) => {
@@ -124,6 +145,21 @@ export default function ValentinesDateIdeasPage() {
 		}
 	};
 
+	// Get form configuration with custom titles for date ideas
+	const formConfig = getFormConfig(
+		"tasks",
+		editingTask ? "edit" : "add",
+		editingTask ? "Edit Date Idea" : "Add New Date Idea",
+		"Date Idea Title*",
+		editingTask ? "Update Date Idea" : "Add Date Idea"
+	);
+	const deleteConfig = getDeleteConfig("tasks");
+
+	// Get the task name for delete confirmation
+	const taskToDeleteName = taskToDelete
+		? tasks.find((task) => task.id === taskToDelete)?.title
+		: undefined;
+
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
@@ -154,114 +190,15 @@ export default function ValentinesDateIdeasPage() {
 							return diffDays <= 7 && diffDays >= 0;
 						}).length
 					}
+					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 				/>
 
 				<AddButton
 					title="Date Idea"
-					onClick={() => setIsAddingTask(true)}
+					onClick={openAddForm}
 					color="pink"
 					disabled={loading}
 				/>
-
-				{/* Add Task Form */}
-				{isAddingTask && (
-					<div className="card card-valentines rounded-2xl p-4">
-						<h3 className="text-lg font-bold mb-4 text-gray-800 dark:text-white">
-							Add New Date Idea
-						</h3>
-						<form onSubmit={handleAddTask} className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									Date Idea *
-								</label>
-								<input
-									type="text"
-									value={newTask.title}
-									onChange={(e) =>
-										setNewTask({ ...newTask, title: e.target.value })
-									}
-									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-									required
-								/>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									Description
-								</label>
-								<textarea
-									value={newTask.description}
-									onChange={(e) =>
-										setNewTask({ ...newTask, description: e.target.value })
-									}
-									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-									rows={2}
-								/>
-							</div>
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Priority
-									</label>
-									<select
-										value={newTask.priority}
-										onChange={(e) =>
-											setNewTask({
-												...newTask,
-												priority: e.target.value as "low" | "medium" | "high",
-											})
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-									>
-										<option value="low">Low</option>
-										<option value="medium">Medium</option>
-										<option value="high">High</option>
-									</select>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-										Due Date
-									</label>
-									<input
-										type="date"
-										value={newTask.dueDate}
-										onChange={(e) =>
-											setNewTask({ ...newTask, dueDate: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-									/>
-								</div>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									Notes
-								</label>
-								<textarea
-									value={newTask.notes}
-									onChange={(e) =>
-										setNewTask({ ...newTask, notes: e.target.value })
-									}
-									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-									rows={2}
-								/>
-							</div>
-							<div className="flex gap-2">
-								<button
-									type="submit"
-									className="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-								>
-									Add Date Idea
-								</button>
-								<button
-									type="button"
-									onClick={() => setIsAddingTask(false)}
-									className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-								>
-									Cancel
-								</button>
-							</div>
-						</form>
-					</div>
-				)}
 
 				{/* Task List */}
 				<div className="space-y-4">
@@ -278,7 +215,7 @@ export default function ValentinesDateIdeasPage() {
 								No date ideas added yet.
 							</p>
 							<button
-								onClick={() => setIsAddingTask(true)}
+								onClick={openAddForm}
 								className="mt-2 text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300"
 							>
 								Add your first date idea
@@ -289,14 +226,11 @@ export default function ValentinesDateIdeasPage() {
 							<DateIdeaCard
 								key={task.id}
 								task={task}
-								editingTask={editingTask}
 								onToggleCompletion={handleToggleCompletion}
-								onEdit={setEditingTask}
+								onEdit={handleEditTask}
 								onDelete={handleDeleteTask}
-								onUpdateTask={handleUpdateTask}
-								onCancelEdit={() => setEditingTask(null)}
-								setEditingTask={setEditingTask}
 								getPriorityColor={getPriorityColor}
+								holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 							/>
 						))
 					)}
@@ -316,6 +250,46 @@ export default function ValentinesDateIdeasPage() {
 					{ value: "completed", label: "Completion Status" },
 				]}
 				title="Sort Date Ideas"
+			/>
+
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showFormModal}
+				title={formConfig.title}
+				fields={formConfig.fields}
+				initialValues={
+					editingTask
+						? {
+								title: editingTask.title,
+								description: editingTask.description || "",
+								priority: editingTask.priority,
+								dueDate: editingTask.dueDate || "",
+								notes: editingTask.notes || "",
+						  }
+						: {}
+				}
+				onSubmit={handleFormSubmit}
+				onClose={closeForm}
+				loading={loading}
+				submitText={formConfig.submitText}
+				cancelText={formConfig.cancelText}
+				cardClassName={formConfig.cardClassName}
+				submitButtonColor={formConfig.submitButtonColor}
+			/>
+
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title="Delete Date Idea?"
+				message="Are you sure you want to delete this date idea? This action cannot be undone."
+				itemName={taskToDeleteName}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={loading}
+				cardClassName="card card-cards"
+				confirmText={deleteConfig.confirmText}
+				cancelText={deleteConfig.cancelText}
+				confirmButtonColor={deleteConfig.confirmButtonColor}
 			/>
 
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">

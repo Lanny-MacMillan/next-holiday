@@ -23,7 +23,7 @@ export const tasksDeleteConfig: DeleteModalConfig = {
 	title: "Delete Task?",
 	message:
 		"Are you sure you want to delete this task? This action cannot be undone.",
-	cardClassName: "bg-white dark:bg-gray-800",
+	cardClassName: "bg-white dark:bg-gray-800 rounded-lg shadow-lg",
 	confirmText: "Delete",
 	cancelText: "Cancel",
 	confirmButtonColor: "#ef4444", // Red

@@ -8,6 +8,9 @@ export interface FormConfig {
 	cardClassName: string;
 	submitButtonColor: string;
 	showAddressBook?: boolean;
+	customTitle?: string;
+	customFieldLabel?: string;
+	customSubmitText?: string;
 }
 
 // Cards form configuration
@@ -84,7 +87,7 @@ export const tasksFormConfig: FormConfig = {
 	],
 	submitText: "Add Task",
 	cancelText: "Cancel",
-	cardClassName: "card card-tasks",
+	cardClassName: "bg-white dark:bg-gray-800 rounded-lg shadow-lg",
 	submitButtonColor: "#22c55e", // Green
 };
 
@@ -132,7 +135,7 @@ export const eventsFormConfig: FormConfig = {
 	],
 	submitText: "Add Event Task",
 	cancelText: "Cancel",
-	cardClassName: "card card-tasks",
+	cardClassName: "bg-white dark:bg-gray-800 rounded-lg shadow-lg",
 	submitButtonColor: "#3b82f6", // Blue for events
 };
 
@@ -279,9 +282,16 @@ export const editGuestsFormConfig: FormConfig = {
 };
 
 // Helper function to get form config based on type and mode
+// Optional parameters:
+// - customTitle: Override the modal title (e.g., "Edit Date Idea" instead of "Edit Task")
+// - customFieldLabel: Override the title field placeholder (e.g., "Date Idea Title*" instead of "Task Title*")
+// - customSubmitText: Override the submit button text (e.g., "Update Date" instead of "Update Task")
 export function getFormConfig(
 	type: "cards" | "tasks" | "events" | "gifts" | "guests",
-	mode: "add" | "edit" = "add"
+	mode: "add" | "edit" = "add",
+	customTitle?: string,
+	customFieldLabel?: string,
+	customSubmitText?: string
 ): FormConfig {
 	const configs = {
 		cards: mode === "add" ? cardsFormConfig : editCardsFormConfig,
@@ -291,5 +301,35 @@ export function getFormConfig(
 		guests: mode === "add" ? guestsFormConfig : editGuestsFormConfig,
 	};
 
-	return configs[type];
+	const baseConfig = configs[type];
+
+	// If custom values are provided, create a modified config
+	if (customTitle || customFieldLabel || customSubmitText) {
+		const modifiedConfig = { ...baseConfig };
+
+		if (customTitle) {
+			modifiedConfig.title = customTitle;
+		}
+
+		if (customFieldLabel) {
+			// Update the title field placeholder if it exists
+			modifiedConfig.fields = baseConfig.fields.map((field) => {
+				if (field.id === "title") {
+					return {
+						...field,
+						placeholder: customFieldLabel,
+					};
+				}
+				return field;
+			});
+		}
+
+		if (customSubmitText) {
+			modifiedConfig.submitText = customSubmitText;
+		}
+
+		return modifiedConfig;
+	}
+
+	return baseConfig;
 }
