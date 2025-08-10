@@ -195,12 +195,37 @@ body {
 	background-color: rgb(220, 38, 38) !important;
 }
 
+.bg-pink-300 {
+	background-color: rgb(249, 168, 212) !important;
+}
+
+.dark .bg-pink-300 {
+	background-color: rgb(249, 168, 212) !important;
+}
+
 .bg-pink-400 {
 	background-color: rgb(236, 72, 153) !important;
 }
 
 .dark .bg-pink-400 {
 	background-color: rgb(244, 114, 182) !important;
+}
+
+.bg-pink-500 {
+	background-color: rgb(236, 72, 153) !important;
+}
+
+.dark .bg-pink-500 {
+	background-color: rgb(236, 72, 153) !important;
+}
+
+/* Fix for pink button hover effects */
+.bg-pink-300:hover {
+	background-color: rgb(236, 72, 153) !important;
+}
+
+.dark .bg-pink-300:hover {
+	background-color: rgb(236, 72, 153) !important;
 }
 
 .bg-purple-400 {

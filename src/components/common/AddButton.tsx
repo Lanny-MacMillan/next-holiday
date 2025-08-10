@@ -12,6 +12,7 @@ interface AddButtonProps {
 		| "green"
 		| "blue"
 		| "purple"
+		| "pink"
 		| "orange"
 		| "yellow"
 		| "amber"
@@ -41,6 +42,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return "bg-blue-500 hover:bg-blue-600";
 			case "purple":
 				return "bg-purple-500 hover:bg-purple-600";
+			case "pink":
+				return "bg-pink-300 hover:bg-pink-500";
 			case "orange":
 				return "bg-orange-500 hover:bg-orange-600";
 			case "yellow":
@@ -55,47 +58,50 @@ const AddButton: React.FC<AddButtonProps> = ({
 	};
 
 	const getColorStyle = () => {
-		switch (color) {
-			case "red":
-				return { backgroundColor: "#ef4444", color: "white" };
-			case "green":
-				return { backgroundColor: "#22c55e", color: "white" };
-			case "blue":
-				return { backgroundColor: "#3b82f6", color: "white" };
-			case "purple":
-				return { backgroundColor: "#8b5cf6", color: "white" };
-			case "orange":
-				return { backgroundColor: "#f97316", color: "white" };
-			case "yellow":
-				return { backgroundColor: "#eab308", color: "white" };
-			case "amber":
-				return { backgroundColor: "#f59e0b", color: "white" };
-			case "holiday":
-				return {
-					backgroundColor: getHolidayAccentColor(pathname),
-					color: "white",
-				};
-			default:
-				return { backgroundColor: "#ef4444", color: "white" };
+		// For specific colors, let CSS classes handle the styling to allow hover effects
+		if (color !== "holiday") {
+			return { color: "white" };
 		}
+		// Only use inline background color for "holiday" which needs dynamic colors
+		return {
+			backgroundColor: getHolidayAccentColor(pathname),
+			color: "white",
+		};
 	};
 
 	// If gamified is true, render the playful design
 	if (isGamified) {
-		const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
+		// For holiday color in gamified mode, use dynamic background
+		if (color === "holiday") {
+			const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
+			return (
+				<button
+					onClick={onClick}
+					className={`hover:opacity-90 text-white px-4 py-2 rounded transition-colors tracking-wide ${
+						disabled ? "opacity-50 cursor-not-allowed" : ""
+					}`}
+					style={{
+						backgroundColor,
+						color: "white",
+						fontFamily: "var(--font-family-fredoka)",
+					}}
+					disabled={disabled}
+				>
+					Add New {title}
+				</button>
+			);
+		}
 
+		// For specific colors in gamified mode, use CSS classes only
 		return (
 			<button
 				onClick={onClick}
-				className={`${getColorClasses()} text-white px-4 py-2 rounded transition-colors  tracking-wide  ${
+				className={`${getColorClasses()} text-white px-4 py-2 rounded transition-colors tracking-wide ${
 					disabled ? "opacity-50 cursor-not-allowed" : ""
 				}`}
-				style={
-					(getColorStyle(),
-					{
-						fontFamily: "var(--font-family-fredoka)",
-					})
-				}
+				style={{
+					fontFamily: "var(--font-family-fredoka)",
+				}}
 				disabled={disabled}
 			>
 				Add New {title}
@@ -104,13 +110,31 @@ const AddButton: React.FC<AddButtonProps> = ({
 	}
 
 	// Original clean, professional design
+	if (color === "holiday") {
+		return (
+			<button
+				onClick={onClick}
+				className={`hover:opacity-90 text-white px-4 py-2 rounded transition-colors ${
+					disabled ? "opacity-50 cursor-not-allowed" : ""
+				}`}
+				style={{
+					backgroundColor: getHolidayAccentColor(pathname),
+					color: "white",
+				}}
+				disabled={disabled}
+			>
+				Add New {title}
+			</button>
+		);
+	}
+
+	// For specific colors, use CSS classes only to allow hover effects
 	return (
 		<button
 			onClick={onClick}
 			className={`${getColorClasses()} text-white px-4 py-2 rounded transition-colors ${
 				disabled ? "opacity-50 cursor-not-allowed" : ""
 			}`}
-			style={getColorStyle()}
 			disabled={disabled}
 		>
 			Add New {title}
