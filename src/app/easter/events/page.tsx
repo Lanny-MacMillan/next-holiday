@@ -102,9 +102,12 @@ export default function EasterEventsPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskId: string, taskTitle?: string) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {

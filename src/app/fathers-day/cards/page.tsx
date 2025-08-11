@@ -150,6 +150,8 @@ export default function FathersDayCardsPage() {
 				backHref="/fathers-day"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Keep track of holiday cards!"
+				holidayColor="blue-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -177,6 +179,7 @@ export default function FathersDayCardsPage() {
 								accentColor: "#3b82f6",
 							}}
 							borderColor="rgb(var(--color-blue-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
 					)}
 				/>
@@ -199,6 +202,7 @@ export default function FathersDayCardsPage() {
 								accentColor: "#3b82f6",
 							}}
 							borderColor="rgb(var(--color-blue-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
 					)}
 				/>

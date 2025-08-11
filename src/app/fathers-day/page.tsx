@@ -105,6 +105,7 @@ export default function FathersDayPage() {
 											primaryColor: "#3b82f6", // Blue for Father's Day
 											accentColor: "#60a5fa",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 									/>
 								</li>
 							);
@@ -125,6 +126,7 @@ export default function FathersDayPage() {
 										accentColor: "#60a5fa",
 										progressColor: "#3b82f6",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 								/>
 							</li>
 						);
