@@ -24,6 +24,7 @@ import easterCountdownReducer from "./slices/easter/easterCountdownSlice";
 import halloweenGiftListReducer from "./slices/halloween/halloweenGiftListSlice";
 import halloweenTasksReducer from "./slices/halloween/halloweenTasksSlice";
 import halloweenCountdownReducer from "./slices/halloween/halloweenCountdownSlice";
+import halloweenBudgetReducer from "./slices/halloween/halloweenBudgetSlice";
 import thanksgivingGiftListReducer from "./slices/thanksgiving/thanksgivingGiftListSlice";
 import thanksgivingTasksReducer from "./slices/thanksgiving/thanksgivingTasksSlice";
 import thanksgivingCountdownReducer from "./slices/thanksgiving/thanksgivingCountdownSlice";
@@ -91,6 +92,7 @@ export const store = configureStore({
 		halloweenGiftList: halloweenGiftListReducer,
 		halloweenTasks: halloweenTasksReducer,
 		halloweenCountdown: halloweenCountdownReducer,
+		halloweenBudget: halloweenBudgetReducer,
 		thanksgivingGiftList: thanksgivingGiftListReducer,
 		thanksgivingTasks: thanksgivingTasksReducer,
 		thanksgivingCountdown: thanksgivingCountdownReducer,

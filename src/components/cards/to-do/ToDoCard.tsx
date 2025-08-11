@@ -100,16 +100,28 @@ export default function ToDoCard({
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
 			case "high":
-				return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+				return "#ef4444"; // red-500
 			case "medium":
-				return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+				return "#f97316"; // orange-500
 			case "low":
-				return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+				return "#10b981"; // green-500
 			default:
-				return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300";
+				return "#6b7280"; // gray-500
 		}
 	};
 
+	const getPriorityStyles = (priority: string) => {
+		switch (priority) {
+			case "high":
+				return "bg-white text-red-600 border border-red-200";
+			case "medium":
+				return "bg-white text-orange-600 border border-orange-200";
+			case "low":
+				return "bg-white text-green-600 border border-green-200";
+			default:
+				return "bg-white text-gray-600 border border-gray-200";
+		}
+	};
 	const gamifiedBackgroundColor =
 		propGamifiedBackgroundColor ||
 		getTaskGamifiedBackgroundColor(task.priority);
@@ -234,16 +246,15 @@ export default function ToDoCard({
 							{/* Task Metadata */}
 							<div className="flex flex-wrap gap-2 mt-2">
 								{/* Priority Tag */}
-								<span className="px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-20 text-white">
-									{task.priority}
+								<span
+									className="px-2 py-1 rounded-full text-sm font-medium"
+									style={{
+										color: getPriorityColor(task.priority),
+										backgroundColor: "white",
+									}}
+								>
+									{task.priority} priority
 								</span>
-
-								{/* Category Tag */}
-								{task.category && (
-									<span className="px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-20 text-white">
-										{task.category}
-									</span>
-								)}
 
 								{/* Due Date */}
 								{task.dueDate && !task.isCompleted && (
@@ -377,7 +388,7 @@ export default function ToDoCard({
 					<div className="flex flex-wrap gap-2 mt-2">
 						{/* Priority Tag */}
 						<span
-							className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+							className={`px-2 py-1 rounded ${getPriorityStyles(
 								task.priority
 							)}`}
 						>

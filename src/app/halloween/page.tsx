@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchHalloweenTasks } from "@/store/slices/halloween/halloweenTasksSlice";
+import { fetchHalloweenBudgetItems } from "@/store/slices/halloween/halloweenBudgetSlice";
+import { fetchHalloweenGifts } from "@/store/slices/halloween/halloweenGiftListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
@@ -35,9 +37,15 @@ export default function HalloweenPage() {
 	const dispatch = useAppDispatch();
 
 	const tasks = useAppSelector((state: any) => state.halloweenTasks.tasks);
+	const budgetItems = useAppSelector(
+		(state: any) => state.halloweenBudget.budgetItems
+	);
+	const gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
 
 	useEffect(() => {
 		dispatch(fetchHalloweenTasks());
+		dispatch(fetchHalloweenBudgetItems());
+		dispatch(fetchHalloweenGifts());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string, category?: string) {
@@ -53,6 +61,26 @@ export default function HalloweenPage() {
 				completed = filteredTasks.filter(
 					(task: any) => task.isCompleted
 				).length;
+				break;
+			case "budget":
+				// Include both budget items and gift list items for total spending tracking
+				const filteredBudgetItems = category
+					? budgetItems.filter((item: any) => item.category === category)
+					: budgetItems;
+				const filteredGifts = category
+					? gifts.filter((gift: any) => gift.category === category)
+					: gifts;
+
+				// Count budget items (expenses)
+				const budgetExpenses = filteredBudgetItems.filter(
+					(item: any) => item.isExpense
+				).length;
+
+				// Count gift items (all gifts are expenses)
+				const giftExpenses = filteredGifts.length;
+
+				total = filteredBudgetItems.length + filteredGifts.length;
+				completed = budgetExpenses + giftExpenses;
 				break;
 			default:
 				total = 0;
@@ -80,6 +108,8 @@ export default function HalloweenPage() {
 								primaryColor: "#f97316", // Orange for Halloween
 								accentColor: "#eab308",
 							}}
+							gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
+							gamified={true}
 						/>
 					</li>
 
@@ -103,6 +133,7 @@ export default function HalloweenPage() {
 										accentColor: "#eab308",
 										progressColor: "#f97316",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
 								/>
 							</li>
 						);

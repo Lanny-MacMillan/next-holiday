@@ -258,6 +258,8 @@ export default function HalloweenCostumeIdeasPage() {
 				backHref="/halloween"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of costume ideas!"
+				holidayColor="orange-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -279,7 +281,7 @@ export default function HalloweenCostumeIdeasPage() {
 					</div>
 				)}
 
-				<AddButton title="Task" onClick={openForm} color="orange" />
+				<AddButton title="Task" onClick={openForm} holidayColor="orange" />
 
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -309,6 +311,7 @@ export default function HalloweenCostumeIdeasPage() {
 								accentColor: "#f97316", // Orange for Halloween
 							}}
 							borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -331,6 +334,7 @@ export default function HalloweenCostumeIdeasPage() {
 								accentColor: "#f97316", // Orange for Halloween
 							}}
 							borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -346,7 +350,7 @@ export default function HalloweenCostumeIdeasPage() {
 				loading={loading}
 				submitText={loading ? "Adding..." : costumeFormConfig.submitText}
 				cancelText={costumeFormConfig.cancelText}
-				cardClassName={costumeFormConfig.cardClassName}
+				cardClassName="card"
 				submitButtonColor={costumeFormConfig.submitButtonColor}
 			/>
 
@@ -366,6 +370,9 @@ export default function HalloweenCostumeIdeasPage() {
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
 				loading={loading}
+				cardClassName="card"
+				confirmText="Delete"
+				cancelText="Cancel"
 			/>
 
 			{/* Sort Modal */}
