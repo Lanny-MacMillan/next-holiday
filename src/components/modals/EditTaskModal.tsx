@@ -74,7 +74,7 @@ export default function EditTaskModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="card card-tasks rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+			<div className="card  rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
 				<div className="flex justify-between items-center mb-4">
 					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Edit Task
@@ -138,14 +138,6 @@ export default function EditTaskModal({
 
 					{/* Category and Due Date */}
 					<div className="flex gap-2">
-						<input
-							className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-							placeholder="Category"
-							value={form.category}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, category: e.target.value }))
-							}
-						/>
 						<input
 							className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							placeholder="Due Date"

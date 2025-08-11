@@ -232,7 +232,7 @@ export default function HanukkahDecorationsPage() {
 			onDeleteTask={handleDeleteTask}
 			onEditTask={handleEditTask}
 			loading={loading}
-			holidayColor="#3b82f6" // Hanukkah blue color
+			holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
 	);
 
@@ -335,7 +335,6 @@ export default function HanukkahDecorationsPage() {
 						],
 					},
 					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
-					{ id: "category", type: "text", placeholder: "Category" },
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={{
@@ -343,7 +342,6 @@ export default function HanukkahDecorationsPage() {
 					description: "",
 					priority: "medium",
 					assignedTo: "",
-					category: "Decorations",
 					dueDate: "",
 				}}
 				onSubmit={handleAddTask}

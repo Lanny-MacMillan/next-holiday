@@ -130,10 +130,12 @@ export default function EasterEventsPage() {
 				backHref="/easter"
 				error={error}
 				onSortClick={() => setShowSortModal(true)}
+				holidayColor="purple-500"
+				description="Keep track of Easter events!"
 				sortTitle="Sort Events"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
@@ -154,7 +156,7 @@ export default function EasterEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="green"
-							holidayColor="bg-gradient-to-br from-green-400 to-green-600"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -173,7 +175,7 @@ export default function EasterEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="green"
-							holidayColor="bg-gradient-to-br from-green-400 to-green-600"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -244,7 +246,6 @@ export default function EasterEventsPage() {
 				}}
 				loading={loading}
 				submitText={editingTask ? "Update Event" : "Add Event"}
-				cardClassName="card-events-easter"
 				submitButtonColor="#a855f7"
 			/>
 
@@ -259,7 +260,6 @@ export default function EasterEventsPage() {
 					setTaskToDelete(null);
 				}}
 				loading={loading}
-				cardClassName="card-events-easter"
 				confirmButtonColor="#a855f7"
 			/>
 		</div>

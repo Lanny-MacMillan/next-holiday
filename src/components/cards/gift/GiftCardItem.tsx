@@ -150,7 +150,9 @@ export default function GiftCardItem({
 								</div>
 							)}
 							<div className="flex gap-4 text-xs text-white opacity-80 mt-1">
-								{gift.price > 0 && <span>${gift.price.toFixed(2)}</span>}
+								{typeof gift.price === "number" && gift.price > 0 && (
+									<span>${gift.price.toFixed(2)}</span>
+								)}
 								{gift.store && <span>Store: {gift.store}</span>}
 							</div>
 							{gift.notes && (
@@ -244,7 +246,9 @@ export default function GiftCardItem({
 					</div>
 				)}
 				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-					{gift.price > 0 && <span>${gift.price.toFixed(2)}</span>}
+					{typeof gift.price === "number" && gift.price > 0 && (
+						<span>${gift.price.toFixed(2)}</span>
+					)}
 					{gift.store && <span>Store: {gift.store}</span>}
 				</div>
 				{gift.notes && (

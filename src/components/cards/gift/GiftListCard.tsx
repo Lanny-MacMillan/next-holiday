@@ -136,7 +136,11 @@ export default function GiftListCard({
 
 	// Generate href if not provided
 	const finalHref =
-		href || `/${holiday?.toLowerCase()}/gift-list` || "/gift-list";
+		href ||
+		(holiday?.toLowerCase() === "easter"
+			? "/easter/basket-list"
+			: `/${holiday?.toLowerCase()}/gift-list`) ||
+		"/gift-list";
 
 	// Get gamified background gradient based on holiday
 	const backgroundColor =
@@ -215,7 +219,11 @@ export default function GiftListCard({
 					<div className="mt-6">
 						<div className="flex items-center justify-between mb-2">
 							<h4 className="font-bold text-white text-lg">
-								{holiday === "Thanksgiving" ? "Shopping List" : "Gift List"}
+								{holiday === "Thanksgiving"
+									? "Shopping List"
+									: holiday === "Easter"
+									? "Basket List"
+									: "Gift List"}
 							</h4>
 							<span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white bg-opacity-20 text-white">
 								{finalGiftList.totalItems}
@@ -224,6 +232,8 @@ export default function GiftListCard({
 						<p className="text-white opacity-90 text-sm mb-3">
 							{holiday === "Thanksgiving"
 								? "Track your Thanksgiving shopping budget"
+								: holiday === "Easter"
+								? "Track your Easter basket items"
 								: `Track your ${displayHolidayName} gift ideas`}
 						</p>
 

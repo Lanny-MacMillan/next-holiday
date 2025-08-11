@@ -23,7 +23,7 @@ interface DecorationsListItemProps {
 	onEditTask?: (task: Task) => void; // New prop for edit functionality
 	loading?: boolean;
 	gamified?: boolean; // New prop to control display mode
-	holidayColor?: string; // New prop for holiday background color
+	holidayColor?: string; // New prop for holiday background color (can be gradient class or hex color)
 }
 
 const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
@@ -39,6 +39,12 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const isGamifiedMode = gamified || settings.displayMode === "gamified";
 	const isDarkMode = settings.theme === "dark";
+
+	// Handle holiday color - check if it's a gradient class or hex color
+	const isGradientClass =
+		holidayColor && holidayColor.startsWith("bg-gradient");
+	const backgroundColor = holidayColor || "#3b82f6"; // blue-500 fallback
+
 	const handleToggleTask = () => {
 		onToggleTask(task.id);
 	};
@@ -51,12 +57,12 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 	const getPriorityStyles = (priority: string) => {
 		switch (priority) {
 			case "high":
-				return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300";
+				return "bg-white text-red-600 border border-red-200";
 			case "medium":
-				return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300";
+				return "bg-white text-orange-600 border border-orange-200";
 			case "low":
 			default:
-				return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300";
+				return "bg-white text-green-600 border border-green-200";
 		}
 	};
 
@@ -95,9 +101,13 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 			return (
 				<li
 					key={task.id}
-					className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden opacity-60 text-white tracking-wide border-2 border-white border-opacity-30`}
+					className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden opacity-60 text-white tracking-wide border-2 border-white border-opacity-30 ${
+						isGradientClass ? holidayColor : ""
+					}`}
 					style={{
-						backgroundColor: holidayColor || "#6b7280", // gray-500 fallback
+						backgroundColor: isGradientClass
+							? undefined
+							: holidayColor || "#6b7280", // gray-500 fallback
 						...getCardStyling({
 							isDarkMode,
 							isGamified: true,
@@ -147,7 +157,7 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 					<div className="relative z-10">
 						<div className="flex items-start space-x-3">
 							{/* Decoration Icon */}
-							<div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+							<div className="w-12 h-12 bg-white bg-opacity-10 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
 								<DecorationIcon priority={task.priority} />
 							</div>
 
@@ -246,9 +256,13 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 		return (
 			<li
 				key={task.id}
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden text-white tracking-wide border-2 border-white border-opacity-30`}
+				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden text-white tracking-wide border-2 border-white border-opacity-30 ${
+					isGradientClass ? holidayColor : ""
+				}`}
 				style={{
-					backgroundColor: holidayColor || "#3b82f6", // blue-500 fallback
+					backgroundColor: isGradientClass
+						? undefined
+						: holidayColor || "#3b82f6", // blue-500 fallback
 					...getCardStyling({
 						isDarkMode,
 						isGamified: true,
@@ -317,7 +331,13 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 								</div>
 							)}
 							<div className="flex gap-2 text-xs text-white opacity-75 mt-2">
-								<span className="px-2 py-1 rounded-full bg-white bg-opacity-20">
+								<span
+									className="px-2 py-1 rounded-full bg-white text-sm font-medium"
+									style={{
+										color: getPriorityColor(task.priority),
+										backgroundColor: "white",
+									}}
+								>
 									{task.priority} priority
 								</span>
 								{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}

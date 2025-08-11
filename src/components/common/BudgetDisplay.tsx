@@ -85,7 +85,8 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 
 	// Calculate total spent from all gifts (both completed and incomplete)
 	let totalSpent = gifts.reduce((sum: number, gift: any) => {
-		return sum + (gift.price || 0);
+		const price = typeof gift.price === "number" ? gift.price : 0;
+		return sum + price;
 	}, 0);
 
 	// For Thanksgiving, also include shopping list costs
@@ -96,7 +97,8 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 		const shoppingCosts = shoppingTasks.reduce((sum: number, task: any) => {
 			if (!task.description) return sum;
 			const costMatch = task.description.match(/Cost: \$(\d+\.?\d*)/);
-			return sum + (costMatch ? parseFloat(costMatch[1]) : 0);
+			const cost = costMatch ? parseFloat(costMatch[1]) : 0;
+			return sum + (isNaN(cost) ? 0 : cost);
 		}, 0);
 		totalSpent += shoppingCosts;
 	}

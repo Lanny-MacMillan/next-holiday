@@ -75,11 +75,6 @@ export const tasksFormConfig: FormConfig = {
 			placeholder: "Assigned To",
 		},
 		{
-			id: "category",
-			type: "text",
-			placeholder: "Category",
-		},
-		{
 			id: "dueDate",
 			type: "date",
 			placeholder: "Due Date",
@@ -121,11 +116,6 @@ export const eventsFormConfig: FormConfig = {
 			id: "assignedTo",
 			type: "text",
 			placeholder: "Assigned To",
-		},
-		{
-			id: "category",
-			type: "text",
-			placeholder: "Category",
 		},
 		{
 			id: "dueDate",

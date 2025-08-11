@@ -100,9 +100,18 @@ export default function FormModal({
 	};
 
 	const handleInputChange = (fieldId: string, value: any) => {
+		// Find the field to determine its type
+		const field = fields.find((f) => f.id === fieldId);
+
+		// Convert value based on field type
+		let processedValue = value;
+		if (field?.type === "number") {
+			processedValue = value === "" ? 0 : parseFloat(value) || 0;
+		}
+
 		setFormValues((prev) => ({
 			...prev,
-			[fieldId]: value,
+			[fieldId]: processedValue,
 		}));
 	};
 

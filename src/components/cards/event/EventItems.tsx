@@ -51,13 +51,13 @@ const EventItems = <T extends BaseEventTask>({
 	const getPriorityStyles = (priority: string) => {
 		switch (priority) {
 			case "high":
-				return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300";
+				return "bg-white text-red-600 border border-red-200";
 			case "medium":
-				return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300";
+				return "bg-white text-orange-600 border border-orange-200";
 			case "low":
-				return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300";
+				return "bg-white text-green-600 border border-green-200";
 			default:
-				return "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300";
+				return "bg-white text-gray-600 border border-gray-200";
 		}
 	};
 
@@ -171,7 +171,16 @@ const EventItems = <T extends BaseEventTask>({
 									{task.description}
 								</div>
 							)}
-							<div className="flex gap-2 text-xs text-white opacity-90 mt-2 flex-wrap">
+							<div className="flex gap-2 text-xs text-black opacity-90 mt-2 flex-wrap">
+								<span
+									className="px-2 py-1 rounded-full bg-white text-sm font-medium"
+									style={{
+										color: getPriorityColor(task.priority),
+										backgroundColor: "white",
+									}}
+								>
+									{task.priority} priority
+								</span>
 								{task.assignedTo && (
 									<span className="bg-white bg-opacity-20 px-2 py-1 rounded-full">
 										👤 {task.assignedTo}

@@ -93,13 +93,12 @@ export default function EasterDecorationsPage() {
 		await dispatch(toggleEasterTaskCompletion(taskId));
 	};
 
-	const handleDeleteTask = async (taskId: string) => {
-		await dispatch(deleteEasterTask(taskId));
-	};
-
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskId: string) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -136,10 +135,12 @@ export default function EasterDecorationsPage() {
 				backHref="/easter"
 				error={error}
 				onSortClick={() => setShowSortModal(true)}
+				holidayColor="purple-500"
+				description="Keep track of Easter decorations!"
 				sortTitle="Sort Decorations"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Decoration Item"
 					onClick={() => setShowAddForm(true)}
@@ -157,10 +158,10 @@ export default function EasterDecorationsPage() {
 							key={task.id}
 							task={convertEasterTaskToTask(task)}
 							onToggleTask={handleToggleCompletion}
-							onDeleteTask={handleDeleteTask}
+							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
 							loading={loading}
-							holidayColor="#a855f7" // Easter purple color
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500" // Easter purple color
 						/>
 					)}
 				/>
@@ -176,10 +177,10 @@ export default function EasterDecorationsPage() {
 							key={task.id}
 							task={convertEasterTaskToTask(task)}
 							onToggleTask={handleToggleCompletion}
-							onDeleteTask={handleDeleteTask}
+							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
 							loading={loading}
-							holidayColor="#a855f7" // Easter purple color
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500" // Easter purple color
 						/>
 					)}
 				/>
@@ -255,7 +256,6 @@ export default function EasterDecorationsPage() {
 				onClose={() => setShowAddForm(false)}
 				loading={loading}
 				submitText="Add Item"
-				cardClassName="card-tasks"
 				submitButtonColor="#a855f7"
 			/>
 
@@ -270,7 +270,6 @@ export default function EasterDecorationsPage() {
 					setTaskToDelete(null);
 				}}
 				loading={loading}
-				cardClassName="card-tasks"
 				confirmButtonColor="#a855f7"
 			/>
 		</div>

@@ -56,11 +56,6 @@ const costumeFormConfig = {
 			placeholder: "Recipient",
 		},
 		{
-			id: "category",
-			type: "text" as const,
-			placeholder: "Category",
-		},
-		{
 			id: "dueDate",
 			type: "date" as const,
 			placeholder: "Due Date",

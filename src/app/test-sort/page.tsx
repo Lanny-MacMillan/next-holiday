@@ -150,7 +150,7 @@ export default function TestSortPage() {
 							href="/valentines/gift-list"
 						/>
 						<GiftListCard holiday="Halloween" href="/halloween/gift-list" />
-						<GiftListCard holiday="Easter" href="/easter/gift-list" />
+						<GiftListCard holiday="Easter" href="/easter/basket-list" />
 						<HolidayTaskCard
 							holidayName="Valentine's Day"
 							sectionName="Tasks"

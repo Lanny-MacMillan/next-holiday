@@ -10,17 +10,10 @@ import HolidayHeader from "@/components/common/HolidayHeader";
 
 const subsections = [
 	{
-		name: "Gift List",
-		description: "Track your Easter gift ideas",
-		href: "/easter/gift-list",
-		sliceKey: "easterGiftList",
-		category: "Gifts",
-	},
-	{
 		name: "Basket List",
 		description: "Track your Easter basket items",
 		href: "/easter/basket-list",
-		sliceKey: "tasks",
+		sliceKey: "easterGiftList",
 		category: "Basket List",
 	},
 	{
@@ -117,6 +110,7 @@ export default function EasterPage() {
 											primaryColor: "#a855f7", // Purple for Easter
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 									/>
 								</li>
 							);
@@ -137,6 +131,7 @@ export default function EasterPage() {
 										accentColor: "#eab308",
 										progressColor: "#a855f7",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 								/>
 							</li>
 						);
