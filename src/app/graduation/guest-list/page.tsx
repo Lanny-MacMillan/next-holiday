@@ -15,6 +15,7 @@ import GuestCardItem from "@/components/cards/guest/GuestCardItem";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import RSVPSection from "@/components/common/RSVPSection";
+import ReservationsTracker from "@/components/cards/reservation/ReservationsTracker";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
@@ -179,6 +180,11 @@ export default function GraduationGuestListPage() {
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<ReservationsTracker
+					guests={guests}
+					title="Graduation Guest Tracker"
+					accentColor="#8b5cf6"
+				/>
 				<AddButton title="Guest" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -198,6 +204,7 @@ export default function GraduationGuestListPage() {
 					)}
 					rsvpStatus="pending"
 					emptyMessage="No pending guests yet."
+					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 					renderItem={(contact: GraduationContact) => (
 						<GuestCardItem
 							key={contact.id}
@@ -239,6 +246,7 @@ export default function GraduationGuestListPage() {
 					)}
 					rsvpStatus="confirmed"
 					emptyMessage="No confirmed guests yet."
+					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 					renderItem={(contact: GraduationContact) => (
 						<GuestCardItem
 							key={contact.id}
@@ -279,6 +287,7 @@ export default function GraduationGuestListPage() {
 					)}
 					rsvpStatus="declined"
 					emptyMessage="No declined guests yet."
+					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 					renderItem={(contact: GraduationContact) => (
 						<GuestCardItem
 							key={contact.id}

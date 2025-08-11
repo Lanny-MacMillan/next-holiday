@@ -17,6 +17,7 @@ import GuestCardItem from "@/components/cards/guest/GuestCardItem";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import RSVPSection from "@/components/common/RSVPSection";
+import ReservationsTracker from "@/components/cards/reservation/ReservationsTracker";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
@@ -179,10 +180,17 @@ export default function ThanksgivingGuestListPage() {
 				backHref="/thanksgiving"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
+				description="Keep track of your Thanksgiving guests!"
+				holidayColor="amber-600"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
-				<AddButton title="Guest" onClick={openForm} color="orange" />
+				<ReservationsTracker
+					guests={guests}
+					title="Thanksgiving Guest Tracker"
+					accentColor="#f97316"
+				/>
+				<AddButton title="Guest" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -199,6 +207,7 @@ export default function ThanksgivingGuestListPage() {
 					items={pendingGuests}
 					rsvpStatus="pending"
 					emptyMessage="No pending RSVPs yet."
+					// holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
 					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}

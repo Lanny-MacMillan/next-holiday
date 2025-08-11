@@ -17,6 +17,7 @@ import GuestCardItem from "@/components/cards/guest/GuestCardItem";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import RSVPSection from "@/components/common/RSVPSection";
+import ReservationsTracker from "@/components/cards/reservation/ReservationsTracker";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
@@ -179,9 +180,16 @@ export default function BirthdayGuestListPage() {
 				backHref="/birthday"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
+				description="Keep track of your birthday guests!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<ReservationsTracker
+					guests={guests}
+					title="Birthday Guest Tracker"
+					accentColor="#f59e0b"
+				/>
 				<AddButton title="Guest" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -199,6 +207,7 @@ export default function BirthdayGuestListPage() {
 					items={pendingGuests}
 					rsvpStatus="pending"
 					emptyMessage="No pending RSVPs yet."
+					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 					renderItem={(guest: BirthdayGuest) => (
 						<GuestCardItem
 							key={guest.id}
@@ -223,6 +232,7 @@ export default function BirthdayGuestListPage() {
 					items={confirmedGuests}
 					rsvpStatus="confirmed"
 					emptyMessage="No confirmed RSVPs yet."
+					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 					renderItem={(guest: BirthdayGuest) => (
 						<GuestCardItem
 							key={guest.id}
@@ -247,6 +257,7 @@ export default function BirthdayGuestListPage() {
 					items={declinedGuests}
 					rsvpStatus="declined"
 					emptyMessage="No declined RSVPs yet."
+					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 					renderItem={(guest: BirthdayGuest) => (
 						<GuestCardItem
 							key={guest.id}

@@ -225,20 +225,23 @@ export default function ThanksgivingDecorationsPage() {
 				hoverColor: "hover:bg-amber-50 dark:hover:bg-amber-900/20",
 			}}
 			borderColor="#d97706"
+			gamifiedBackgroundColor="bg-gradient-to-br from-amber-400 to-amber-600"
 		/>
 	);
 
 	return (
 		<div className="min-h-screen thanksgiving-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="🦃 Decorations Checklist"
+				title="🦃 Decorations"
 				backHref="/thanksgiving"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Tasks"
+				description="Keep track of your Thanksgiving decorations!"
+				holidayColor="amber-600"
 				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				{/* Default Tasks Modal */}
 				{showDefaultTasks && (
 					<div className="card rounded-lg p-6 mb-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
@@ -261,7 +264,7 @@ export default function ThanksgivingDecorationsPage() {
 				<AddButton
 					title="Task"
 					onClick={() => setShowForm(true)}
-					color="orange"
+					color="amber"
 				/>
 
 				{/* Task Sections */}

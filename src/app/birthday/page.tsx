@@ -122,6 +122,7 @@ export default function BirthdayPage() {
 											primaryColor: "#f59e0b", // Amber for Birthday
 											accentColor: "#f59e0b", // Amber accent
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 									/>
 								</li>
 							);
@@ -160,6 +161,7 @@ export default function BirthdayPage() {
 											accentColor: "#f59e0b", // Amber accent
 											progressColor: "#f59e0b", // Amber for progress bar
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 									/>
 								</li>
 							);

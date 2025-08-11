@@ -30,6 +30,7 @@ import thanksgivingTasksReducer from "./slices/thanksgiving/thanksgivingTasksSli
 import thanksgivingCountdownReducer from "./slices/thanksgiving/thanksgivingCountdownSlice";
 import thanksgivingGuestListReducer from "./slices/thanksgiving/thanksgivingGuestListSlice";
 import thanksgivingMealPlanningReducer from "./slices/thanksgiving/thanksgivingMealPlanningSlice";
+import thanksgivingBudgetReducer from "./slices/thanksgiving/thanksgivingBudgetSlice";
 import mothersDayGiftListReducer from "./slices/mothers-day/mothersDayGiftListSlice";
 import mothersDayTasksReducer from "./slices/mothers-day/mothersDayTasksSlice";
 import fathersDayGiftListReducer from "./slices/fathers-day/fathersDayGiftListSlice";
@@ -98,6 +99,7 @@ export const store = configureStore({
 		thanksgivingCountdown: thanksgivingCountdownReducer,
 		thanksgivingGuestList: thanksgivingGuestListReducer,
 		thanksgivingMealPlanning: thanksgivingMealPlanningReducer,
+		thanksgivingBudget: thanksgivingBudgetReducer,
 		mothersDayGiftList: mothersDayGiftListReducer,
 		mothersDayTasks: mothersDayTasksReducer,
 		fathersDayGiftList: fathersDayGiftListReducer,

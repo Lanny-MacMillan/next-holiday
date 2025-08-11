@@ -18,7 +18,7 @@ const fourthOfJulySubsections = [
 	{
 		name: "Guest List",
 		description: "Manage your guest list",
-		href: "/fourth-of-july/guest-list",
+		href: "/fourth-of-july/",
 		sliceKey: "addressBook",
 	},
 	{

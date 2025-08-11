@@ -142,6 +142,15 @@ export default function ToDoCard({
 				})}
 				onClick={handleToggle}
 			>
+				{/* Priority indicator - 10px wide strip on left side */}
+				<div
+					className="absolute left-0 top-0 bottom-0"
+					style={{
+						backgroundColor: getPriorityColor(task.priority),
+						width: "10px",
+					}}
+				></div>
+
 				{/* Background texture overlay */}
 				<div className="absolute inset-0 opacity-10 pointer-events-none">
 					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>

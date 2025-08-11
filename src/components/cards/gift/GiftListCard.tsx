@@ -31,9 +31,17 @@ export function useGiftListCardData(holiday?: string) {
 	// Get holiday configuration
 	const config = getHolidayGiftListConfig(holiday);
 
-	// Use the configured slice name to get gifts
+	// Determine data source based on holiday
+	const isThanksgiving = holiday === "Thanksgiving";
+
+	// Gifts for most holidays
 	const gifts = useAppSelector(
-		(state: any) => state[config.sliceName]?.gifts || []
+		(state: any) => (state[config.sliceName]?.gifts as any[]) || []
+	);
+
+	// Thanksgiving budget items
+	const thanksgivingBudgetItems = useAppSelector(
+		(state: any) => state.thanksgivingBudget?.budgetItems || []
 	);
 
 	// Get budget limit based on holiday
@@ -49,19 +57,35 @@ export function useGiftListCardData(holiday?: string) {
 		budgetLimit = settings.giftBudgetLimit || 0;
 	}
 
-	// Calculate total spent from all gifts (both completed and incomplete)
-	const totalSpent = gifts.reduce((sum: number, gift: any) => {
-		return sum + (gift.price || 0);
-	}, 0);
+	// Calculate totals
+	let totalSpent = 0;
+	let totalItems = 0;
+	let completedItems = 0;
+
+	if (isThanksgiving) {
+		// Use dedicated Thanksgiving budget slice
+		totalSpent = thanksgivingBudgetItems.reduce(
+			(sum: number, item: any) =>
+				sum + (typeof item.amount === "number" ? item.amount : 0),
+			0
+		);
+		totalItems = thanksgivingBudgetItems.length;
+		completedItems = 0; // No completion state for budget items
+	} else {
+		// Default gift-based calculation
+		totalSpent = gifts.reduce(
+			(sum: number, gift: any) => sum + (gift.price || 0),
+			0
+		);
+		totalItems = gifts.length;
+		completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
+	}
 
 	const remaining = budgetLimit - totalSpent;
 	const budgetPercentage =
 		budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
 	const giftListPercentage =
-		gifts.length > 0
-			? (gifts.filter((gift: any) => gift.isCompleted).length / gifts.length) *
-			  100
-			: 0;
+		totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
 	const getBudgetStatus = () => {
 		if (budgetPercentage >= 80) return "Budget nearly exhausted";
@@ -77,8 +101,8 @@ export function useGiftListCardData(holiday?: string) {
 			percentage: budgetPercentage,
 		},
 		giftList: {
-			totalItems: gifts.length,
-			completedItems: gifts.filter((gift: any) => gift.isCompleted).length,
+			totalItems,
+			completedItems,
 			percentage: giftListPercentage,
 		},
 		budgetStatus: getBudgetStatus(),

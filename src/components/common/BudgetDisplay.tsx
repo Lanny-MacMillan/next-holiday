@@ -89,18 +89,16 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 		return sum + price;
 	}, 0);
 
-	// For Thanksgiving, also include shopping list costs
+	// For Thanksgiving, use the dedicated budget slice
 	if (holiday === "Thanksgiving") {
-		const shoppingTasks = useAppSelector(
-			(state: any) => state.thanksgivingTasks.tasks
+		const budgetItems = useAppSelector(
+			(state: any) => state.thanksgivingBudget.budgetItems
 		);
-		const shoppingCosts = shoppingTasks.reduce((sum: number, task: any) => {
-			if (!task.description) return sum;
-			const costMatch = task.description.match(/Cost: \$(\d+\.?\d*)/);
-			const cost = costMatch ? parseFloat(costMatch[1]) : 0;
-			return sum + (isNaN(cost) ? 0 : cost);
+		const budgetCosts = budgetItems.reduce((sum: number, item: any) => {
+			const amount = typeof item.amount === "number" ? item.amount : 0;
+			return sum + amount;
 		}, 0);
-		totalSpent += shoppingCosts;
+		totalSpent = budgetCosts; // Replace gift costs with budget costs for Thanksgiving
 	}
 
 	const remaining = budgetLimit - totalSpent;

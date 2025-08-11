@@ -13,7 +13,6 @@ import {
 } from "@/store/slices/hanukkah/hanukkahTasksSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
-import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
@@ -66,6 +65,14 @@ export default function HanukkahEventsPage() {
 		(state: any) => state.hanukkahTasks
 	);
 
+	const [form, setForm] = useState({
+		title: "",
+		description: "",
+		priority: "medium",
+		assignedTo: "",
+		category: "Events",
+		dueDate: "",
+	});
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -97,20 +104,29 @@ export default function HanukkahEventsPage() {
 		}
 	}, [tasks]);
 
-	function handleAddTask(values: Record<string, any>) {
-		if (!values.title?.trim()) return;
+	function handleAddTask(e: React.FormEvent) {
+		e.preventDefault();
+		if (!form.title.trim()) return;
 
 		const newTask: Omit<HanukkahTask, "id" | "createdAt" | "updatedAt"> = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			category: values.category || "Events",
-			dueDate: values.dueDate || undefined,
+			title: form.title,
+			description: form.description || undefined,
+			priority: form.priority as "low" | "medium" | "high",
+			assignedTo: form.assignedTo || undefined,
+			category: form.category || undefined,
+			dueDate: form.dueDate || undefined,
 			isCompleted: false,
 		};
 
 		dispatch(addHanukkahTask(newTask));
+		setForm({
+			title: "",
+			description: "",
+			priority: "medium",
+			assignedTo: "",
+			category: "Events",
+			dueDate: "",
+		});
 		setShowForm(false);
 	}
 
@@ -132,10 +148,26 @@ export default function HanukkahEventsPage() {
 
 	function openForm() {
 		setShowForm(true);
+		setForm({
+			title: "",
+			description: "",
+			priority: "medium",
+			assignedTo: "",
+			category: "Events",
+			dueDate: "",
+		});
 	}
 
 	function closeForm() {
 		setShowForm(false);
+		setForm({
+			title: "",
+			description: "",
+			priority: "medium",
+			assignedTo: "",
+			category: "Events",
+			dueDate: "",
+		});
 	}
 
 	function handleToggleTask(taskId: string) {
@@ -214,7 +246,6 @@ export default function HanukkahEventsPage() {
 			onDeleteTask={handleDeleteTask}
 			loading={loading}
 			themeColor="blue"
-			holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
 	);
 
@@ -290,52 +321,111 @@ export default function HanukkahEventsPage() {
 			</main>
 
 			{/* Form Modal */}
-			<FormModal
-				isOpen={showForm}
-				title="Add New Event Task"
-				fields={[
-					{
-						id: "title",
-						type: "text" as const,
-						placeholder: "Task Title*",
-						required: true,
-					},
-					{
-						id: "description",
-						type: "textarea" as const,
-						placeholder: "Description",
-						rows: 2,
-					},
-					{
-						id: "priority",
-						type: "select" as const,
-						placeholder: "Priority",
-						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
-						],
-					},
-					{
-						id: "assignedTo",
-						type: "text" as const,
-						placeholder: "Assigned To",
-					},
-					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
-				]}
-				initialValues={{
-					title: "",
-					description: "",
-					priority: "medium",
-					assignedTo: "",
-					dueDate: "",
-				}}
-				onSubmit={handleAddTask}
-				onClose={closeForm}
-				loading={loading}
-				submitText="Add Task"
-				submitButtonColor="#3b82f6"
-			/>
+			{showForm && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="card card-events-hanukkah rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+						<div className="flex justify-between items-center mb-4">
+							<h3
+								className="text-lg font-semibold text-gray-900 dark:text-white"
+								style={{ color: "#111827" }}
+							>
+								Add New Event Task
+							</h3>
+							<button
+								onClick={closeForm}
+								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+								style={{ color: "#4b5563" }}
+							>
+								×
+							</button>
+						</div>
+						<form onSubmit={handleAddTask} className="space-y-4">
+							<input
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								placeholder="Task Title*"
+								value={form.title}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, title: e.target.value }))
+								}
+								required
+								style={{ color: "#111827", backgroundColor: "white" }}
+							/>
+							<textarea
+								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								placeholder="Description"
+								value={form.description}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, description: e.target.value }))
+								}
+								rows={2}
+								style={{ color: "#111827", backgroundColor: "white" }}
+							/>
+							<div className="flex gap-2">
+								<select
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									value={form.priority}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, priority: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								>
+									<option value="low">Low Priority</option>
+									<option value="medium">Medium Priority</option>
+									<option value="high">High Priority</option>
+								</select>
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									placeholder="Assigned To"
+									value={form.assignedTo}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								/>
+							</div>
+							<div className="flex gap-2">
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									placeholder="Category"
+									value={form.category}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, category: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								/>
+								<input
+									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+									placeholder="Due Date"
+									type="date"
+									value={form.dueDate}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, dueDate: e.target.value }))
+									}
+									style={{ color: "#111827", backgroundColor: "white" }}
+								/>
+							</div>
+							<div className="flex gap-3 pt-2">
+								<button
+									type="button"
+									onClick={closeForm}
+									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+									style={{ color: "#374151", borderColor: "#d1d5db" }}
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+									disabled={loading}
+									style={{ backgroundColor: "#3b82f6", color: "white" }}
+								>
+									{loading ? "Adding..." : "Add Task"}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 
 			{/* Delete Modal */}
 			<DeleteModal

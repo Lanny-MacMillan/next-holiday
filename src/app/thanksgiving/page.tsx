@@ -6,6 +6,7 @@ import { fetchThanksgivingGifts } from "@/store/slices/thanksgiving/thanksgiving
 import { fetchThanksgivingTasks } from "@/store/slices/thanksgiving/thanksgivingTasksSlice";
 import { fetchThanksgivingGuests } from "@/store/slices/thanksgiving/thanksgivingGuestListSlice";
 import { fetchThanksgivingRecipes } from "@/store/slices/thanksgiving/thanksgivingMealPlanningSlice";
+import { fetchThanksgivingBudgetItems } from "@/store/slices/thanksgiving/thanksgivingBudgetSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -17,7 +18,7 @@ const subsections = [
 		name: "Shopping List",
 		description: "List of ingredients and supplies needed",
 		href: "/thanksgiving/shopping-list",
-		sliceKey: "giftList", // Changed from "tasks" to "giftList" to use GiftListCard
+		sliceKey: "thanksgivingBudgetSlice",
 		category: "Shopping List",
 	},
 	{
@@ -62,6 +63,7 @@ export default function ThanksgivingPage() {
 		dispatch(fetchThanksgivingTasks());
 		dispatch(fetchThanksgivingGuests());
 		dispatch(fetchThanksgivingRecipes());
+		dispatch(fetchThanksgivingBudgetItems());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string, category?: string) {
@@ -114,7 +116,7 @@ export default function ThanksgivingPage() {
 						);
 
 						// Use GiftListCard for shopping list (budget tracking) and gift list sections
-						if (section.sliceKey === "giftList") {
+						if (section.sliceKey === "thanksgivingBudgetSlice") {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -124,6 +126,7 @@ export default function ThanksgivingPage() {
 											primaryColor: "#d97706", // Amber for Thanksgiving
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-amber-400 to-amber-600"
 									/>
 								</li>
 							);
@@ -140,6 +143,8 @@ export default function ThanksgivingPage() {
 											primaryColor: "#d97706", // Amber for Thanksgiving
 											accentColor: "#eab308",
 										}}
+										gamified={true}
+										holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
 									/>
 								</li>
 							);
@@ -160,6 +165,7 @@ export default function ThanksgivingPage() {
 										accentColor: "#eab308",
 										progressColor: "#d97706",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-amber-400 to-amber-600"
 								/>
 							</li>
 						);

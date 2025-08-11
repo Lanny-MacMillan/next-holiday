@@ -21,6 +21,7 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 
 export default function BirthdayGiftListPage() {
 	const dispatch = useAppDispatch();
@@ -165,9 +166,15 @@ export default function BirthdayGiftListPage() {
 				backHref="/birthday"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<BudgetDisplay
+					holiday="Birthday"
+					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+				/>
 				<AddButton title="Gift" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -201,6 +208,7 @@ export default function BirthdayGiftListPage() {
 								accentColor: "#f59e0b", // Amber for Birthday
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 						/>
 					)}
 				/>
@@ -226,6 +234,7 @@ export default function BirthdayGiftListPage() {
 								accentColor: "#f59e0b", // Amber for Birthday
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 						/>
 					)}
 				/>
