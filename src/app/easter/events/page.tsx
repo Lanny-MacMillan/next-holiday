@@ -154,6 +154,7 @@ export default function EasterEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="green"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -172,6 +173,7 @@ export default function EasterEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="green"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>

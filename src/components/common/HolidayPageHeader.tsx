@@ -85,10 +85,10 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 	if (isGamified) {
 		return (
 			<header className="w-full max-w-4xl py-6">
-				<div className="flex items-center justify-center relative">
+				<div className="flex items-center justify-between relative">
 					<Link
 						href={backHref}
-						className="absolute left-0 text-5xl transition-all duration-200 hover:scale-110"
+						className="flex-shrink-0 text-5xl transition-all duration-200 hover:scale-110 z-10"
 						style={{
 							color: defaultColor,
 						}}
@@ -101,7 +101,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 					>
 						←
 					</Link>
-					<div className="text-center">
+					<div className="flex-1 text-center px-8 min-w-0">
 						<div className="relative inline-block">
 							<div
 								className="absolute top-0 left-0 w-full h-full rounded-2xl blur-lg opacity-70"
@@ -111,7 +111,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 								}}
 							/>
 							<h1
-								className="font-display text-7xl tracking-wide relative z-10 font-bold mb-2"
+								className="font-display text-7xl tracking-wide relative z-10 font-bold mb-2 break-words"
 								style={{
 									fontFamily: "var(--font-family-fredoka)",
 									color: textColor,
@@ -123,7 +123,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 						</div>
 						{description && (
 							<p
-								className="text-center text-gray-600 dark:text-white"
+								className="text-center text-gray-600 dark:text-white break-words"
 								style={{
 									fontFamily: "var(--font-family-fredoka)",
 								}}
@@ -135,7 +135,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 					{onSortClick && (
 						<button
 							onClick={onSortClick}
-							className="absolute right-0 text-5xl transition-all duration-200 hover:scale-110"
+							className="flex-shrink-0 text-5xl transition-all duration-200 hover:scale-110 z-10"
 							title={sortTitle}
 							style={{
 								color: defaultColor,
@@ -168,10 +168,10 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 	// Original clean, professional design
 	return (
 		<header className="w-full max-w-md py-6">
-			<div className="flex items-center justify-center relative">
+			<div className="flex items-center justify-between relative">
 				<Link
 					href={backHref}
-					className="absolute left-0 text-xl transition-all duration-200 hover:scale-110"
+					className="flex-shrink-0 text-xl transition-all duration-200 hover:scale-110 z-10"
 					style={{
 						color: defaultColor,
 					}}
@@ -184,13 +184,13 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 				>
 					←
 				</Link>
-				<div className="text-center">
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+				<div className="flex-1 text-center px-4 min-w-0">
+					<h1 className="text-2xl font-bold text-gray-800 dark:text-white truncate">
 						{title}
 					</h1>
 					{description && (
 						<p
-							className="text-center text-gray-600 dark:text-white mt-1"
+							className="text-center text-gray-600 dark:text-white mt-1 text-sm truncate"
 							style={{
 								fontFamily: "var(--font-family-fredoka)",
 							}}
@@ -202,7 +202,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 				{onSortClick && (
 					<button
 						onClick={onSortClick}
-						className="absolute right-0 text-xl transition-all duration-200 hover:scale-110"
+						className="flex-shrink-0 text-xl transition-all duration-200 hover:scale-110 z-10"
 						title={sortTitle}
 						style={{
 							color: defaultColor,

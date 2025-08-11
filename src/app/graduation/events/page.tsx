@@ -167,6 +167,7 @@ export default function GraduationEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="purple"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -185,6 +186,7 @@ export default function GraduationEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="purple"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>

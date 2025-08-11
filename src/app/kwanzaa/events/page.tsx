@@ -228,6 +228,7 @@ export default function KwanzaaEventsPage() {
 			onDeleteTask={handleDeleteTask}
 			loading={loading}
 			themeColor="red"
+			holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 		/>
 	);
 

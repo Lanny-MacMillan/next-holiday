@@ -130,12 +130,14 @@ export default function FourthOfJulyEventsPage() {
 			<HolidayPageHeader
 				title="Fourth of July Events"
 				backHref="/fourth-of-july"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Events"
+				description="Keep track of your Fourth of July events!"
+				holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
@@ -156,6 +158,7 @@ export default function FourthOfJulyEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="red"
+							holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 				/>
@@ -174,6 +177,7 @@ export default function FourthOfJulyEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="red"
+							holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 				/>

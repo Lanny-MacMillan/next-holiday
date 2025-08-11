@@ -18,7 +18,7 @@ const fourthOfJulySubsections = [
 	{
 		name: "Guest List",
 		description: "Manage your guest list",
-		href: "/fourth-of-july/",
+		href: "/fourth-of-july/guest-list",
 		sliceKey: "addressBook",
 	},
 	{
@@ -87,6 +87,7 @@ export default function FourthOfJulyPage() {
 											primaryColor: "#dc2626", // Red for Fourth of July
 											accentColor: "#f87171",
 										}}
+										holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 									/>
 								</li>
 							);
@@ -107,6 +108,7 @@ export default function FourthOfJulyPage() {
 										accentColor: "#f87171",
 										progressColor: "#dc2626",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 								/>
 							</li>
 						);
