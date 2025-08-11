@@ -102,9 +102,12 @@ export default function MothersDayEventsPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskId: string, taskTitle?: string) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -130,14 +133,16 @@ export default function MothersDayEventsPage() {
 				backHref="/mothers-day"
 				error={error}
 				onSortClick={() => setShowSortModal(true)}
+				description="Keep track of your Mother's Day events!"
+				holidayColor="pink-500"
 				sortTitle="Sort Events"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
-					color="red"
+					color="pink"
 				/>
 
 				<TaskSection
@@ -154,6 +159,7 @@ export default function MothersDayEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="pink"
+							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 						/>
 					)}
 				/>
@@ -172,6 +178,7 @@ export default function MothersDayEventsPage() {
 							onDeleteTask={handleDelete}
 							loading={loading}
 							themeColor="pink"
+							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 						/>
 					)}
 				/>

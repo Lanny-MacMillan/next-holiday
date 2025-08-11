@@ -175,6 +175,7 @@ export default function MothersDayGiftListPage() {
 				accentColor: "#ec4899", // Pink for Mother's Day
 			}}
 			borderColor="rgb(var(--color-pink-500))" // Pink border for Mother's Day
+			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 		/>
 	);
 
@@ -191,6 +192,7 @@ export default function MothersDayGiftListPage() {
 				accentColor: "#ec4899", // Pink for Mother's Day
 			}}
 			borderColor="rgb(var(--color-pink-500))" // Pink border for Mother's Day
+			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 		/>
 	);
 
@@ -253,13 +255,18 @@ export default function MothersDayGiftListPage() {
 				backHref="/mothers-day"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="pink"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Mother's Day" />
+				<BudgetDisplay
+					holiday="Mother's Day"
+					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+				/>
 
-				<AddButton title="Gift" onClick={openForm} color="red" />
+				<AddButton title="Gift" onClick={openForm} color="pink" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

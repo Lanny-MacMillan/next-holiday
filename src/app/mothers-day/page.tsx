@@ -99,6 +99,7 @@ export default function MothersDayPage() {
 											primaryColor: "#ec4899", // Pink for Mother's Day
 											accentColor: "#f472b6",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);
@@ -119,6 +120,7 @@ export default function MothersDayPage() {
 										accentColor: "#f472b6",
 										progressColor: "#ec4899",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 								/>
 							</li>
 						);

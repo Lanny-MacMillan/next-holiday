@@ -156,10 +156,12 @@ export default function MothersDayCardsPage() {
 				backHref="/mothers-day"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Keep track of holiday cards!"
+				holidayColor="pink-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
-				<AddButton title="Card" onClick={openForm} color="red" />
+				<AddButton title="Card" onClick={openForm} color="pink" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -192,6 +194,7 @@ export default function MothersDayCardsPage() {
 								accentColor: "#ec4899", // Pink for Mother's Day
 							}}
 							borderColor="rgb(var(--color-pink-500))" // Pink border for Mother's Day
+							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 						/>
 					)}
 				/>
@@ -217,6 +220,7 @@ export default function MothersDayCardsPage() {
 								accentColor: "#ec4899", // Pink for Mother's Day
 							}}
 							borderColor="rgb(var(--color-pink-500))" // Pink border for Mother's Day
+							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 						/>
 					)}
 				/>
