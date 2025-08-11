@@ -25,6 +25,7 @@ import halloweenGiftListReducer from "./slices/halloween/halloweenGiftListSlice"
 import halloweenTasksReducer from "./slices/halloween/halloweenTasksSlice";
 import halloweenCountdownReducer from "./slices/halloween/halloweenCountdownSlice";
 import halloweenBudgetReducer from "./slices/halloween/halloweenBudgetSlice";
+import halloweenGuestListReducer from "./slices/halloween/halloweenGuestListSlice";
 import thanksgivingGiftListReducer from "./slices/thanksgiving/thanksgivingGiftListSlice";
 import thanksgivingTasksReducer from "./slices/thanksgiving/thanksgivingTasksSlice";
 import thanksgivingCountdownReducer from "./slices/thanksgiving/thanksgivingCountdownSlice";
@@ -49,10 +50,17 @@ import graduationGiftListReducer from "./slices/graduation/graduationGiftListSli
 import graduationTasksReducer from "./slices/graduation/graduationTasksSlice";
 import graduationCardsReducer from "./slices/graduation/graduationCardsSlice";
 import graduationAddressBookReducer from "./slices/graduation/graduationAddressBookSlice";
+import graduationGuestListReducer from "./slices/graduation/graduationGuestListSlice";
 import babyShowerGiftListReducer from "./slices/baby-shower/babyShowerGiftListSlice";
 import babyShowerTasksReducer from "./slices/baby-shower/babyShowerTasksSlice";
 import babyShowerAddressBookReducer from "./slices/baby-shower/babyShowerAddressBookSlice";
 import babyShowerGuestListReducer from "./slices/baby-shower/babyShowerGuestListSlice";
+import christmasGuestListReducer from "./slices/christmas/christmasGuestListSlice";
+import easterGuestListReducer from "./slices/easter/easterGuestListSlice";
+import hanukkahGuestListReducer from "./slices/hanukkah/hanukkahGuestListSlice";
+import kwanzaaGuestListReducer from "./slices/kwanzaa/kwanzaaGuestListSlice";
+import newYearGuestListReducer from "./slices/new-year/newYearGuestListSlice";
+import valentinesGuestListReducer from "./slices/valentines/valentinesGuestListSlice";
 import graduationCountdownReducer from "./slices/graduation/graduationCountdownSlice";
 import anniversaryCountdownReducer from "./slices/anniversary/anniversaryCountdownSlice";
 import birthdayCountdownReducer from "./slices/birthday/birthdayCountdownSlice";
@@ -94,6 +102,7 @@ export const store = configureStore({
 		halloweenTasks: halloweenTasksReducer,
 		halloweenCountdown: halloweenCountdownReducer,
 		halloweenBudget: halloweenBudgetReducer,
+		halloweenGuestList: halloweenGuestListReducer,
 		thanksgivingGiftList: thanksgivingGiftListReducer,
 		thanksgivingTasks: thanksgivingTasksReducer,
 		thanksgivingCountdown: thanksgivingCountdownReducer,
@@ -118,10 +127,17 @@ export const store = configureStore({
 		graduationTasks: graduationTasksReducer,
 		graduationCards: graduationCardsReducer,
 		graduationAddressBook: graduationAddressBookReducer,
+		graduationGuestList: graduationGuestListReducer,
 		babyShowerGiftList: babyShowerGiftListReducer,
 		babyShowerTasks: babyShowerTasksReducer,
 		babyShowerAddressBook: babyShowerAddressBookReducer,
 		babyShowerGuestList: babyShowerGuestListReducer,
+		christmasGuestList: christmasGuestListReducer,
+		easterGuestList: easterGuestListReducer,
+		hanukkahGuestList: hanukkahGuestListReducer,
+		kwanzaaGuestList: kwanzaaGuestListReducer,
+		newYearGuestList: newYearGuestListReducer,
+		valentinesGuestList: valentinesGuestListReducer,
 		graduationCountdown: graduationCountdownReducer,
 		anniversaryCountdown: anniversaryCountdownReducer,
 		birthdayCountdown: birthdayCountdownReducer,

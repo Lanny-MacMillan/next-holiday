@@ -41,6 +41,16 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 				return state.newYearGuestList?.guests || [];
 			case "valentines":
 				return state.valentinesGuestList?.guests || [];
+			case "fourth of july":
+				return state.fourthOfJulyGuestList?.guests || [];
+			case "birthday":
+				return state.birthdayGuestList?.guests || [];
+			case "baby shower":
+				return state.babyShowerGuestList?.guests || [];
+			case "graduation":
+				return state.graduationGuestList?.guests || [];
+			case "halloween":
+				return state.halloweenGuestList?.guests || [];
 			default:
 				return [];
 		}
@@ -48,15 +58,26 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 
 	// Calculate RSVP statistics
 	const totalGuests = guests.length;
-	const confirmedGuests = guests.filter(
+	const confirmedParties = guests.filter(
 		(guest: any) => guest.rsvpStatus === "confirmed"
 	).length;
-	const pendingGuests = guests.filter(
+	const pendingParties = guests.filter(
 		(guest: any) => guest.rsvpStatus === "pending"
 	).length;
-	const declinedGuests = guests.filter(
+	const declinedParties = guests.filter(
 		(guest: any) => guest.rsvpStatus === "declined"
 	).length;
+
+	// Calculate total guests for each status
+	const confirmedGuests = guests
+		.filter((guest: any) => guest.rsvpStatus === "confirmed")
+		.reduce((sum: number, guest: any) => sum + guest.numberOfGuests, 0);
+	const pendingGuests = guests
+		.filter((guest: any) => guest.rsvpStatus === "pending")
+		.reduce((sum: number, guest: any) => sum + guest.numberOfGuests, 0);
+	const declinedGuests = guests
+		.filter((guest: any) => guest.rsvpStatus === "declined")
+		.reduce((sum: number, guest: any) => sum + guest.numberOfGuests, 0);
 
 	// Calculate total people (including +1s)
 	const totalPeople = guests.reduce(
@@ -139,7 +160,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									className="text-xs text-white opacity-90"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
-									guests
+									invites
 								</div>
 							</div>
 						</div>
@@ -157,7 +178,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									className="font-medium text-green-200"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
-									{confirmedGuests}
+									{confirmedParties} party{confirmedParties !== 1 ? "ies" : ""},{" "}
+									{confirmedGuests} guests
 								</span>
 							</div>
 							<div className="flex justify-between items-center text-sm">
@@ -171,7 +193,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									className="font-medium text-yellow-200"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
-									{pendingGuests}
+									{pendingParties} party{pendingParties !== 1 ? "ies" : ""},{" "}
+									{pendingGuests} guests
 								</span>
 							</div>
 							<div className="flex justify-between items-center text-sm">
@@ -185,7 +208,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									className="font-medium text-red-200"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
-									{declinedGuests}
+									{declinedParties} part{declinedParties > 1 ? "ies" : "y"},{" "}
+									{declinedGuests} guests
 								</span>
 							</div>
 						</div>
@@ -231,7 +255,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 								>
 									{totalGuests > 0
 										? Math.round(
-												((confirmedGuests + declinedGuests) / totalGuests) * 100
+												((confirmedParties + declinedParties) / totalGuests) *
+													100
 										  )
 										: 0}
 									%
@@ -239,11 +264,12 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 							</div>
 							<div className="w-full bg-white bg-opacity-20 rounded-full h-2 border border-white border-opacity-30">
 								<div
-									className="h-2 rounded-full transition-all duration-300 bg-white"
+									className="h-2 rounded-full transition-all duration-300"
 									style={{
+										backgroundColor: theme.primaryColor,
 										width: `${
 											totalGuests > 0
-												? ((confirmedGuests + declinedGuests) / totalGuests) *
+												? ((confirmedParties + declinedParties) / totalGuests) *
 												  100
 												: 0
 										}%`,
@@ -295,19 +321,22 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 					<div className="flex justify-between items-center text-sm">
 						<span className="text-gray-600 dark:text-gray-400">Confirmed:</span>
 						<span className="font-medium text-green-600 dark:text-green-500">
-							{confirmedGuests}
+							{confirmedParties} party{confirmedParties !== 1 ? "ies" : ""},{" "}
+							{confirmedGuests} guests
 						</span>
 					</div>
 					<div className="flex justify-between items-center text-sm">
 						<span className="text-gray-600 dark:text-gray-400">Pending:</span>
 						<span className="font-medium text-yellow-600 dark:text-yellow-500">
-							{pendingGuests}
+							{pendingParties} party{pendingParties !== 1 ? "ies" : ""},{" "}
+							{pendingGuests} guests
 						</span>
 					</div>
 					<div className="flex justify-between items-center text-sm">
 						<span className="text-gray-600 dark:text-gray-400">Declined:</span>
 						<span className="font-medium text-red-600 dark:text-red-500">
-							{declinedGuests}
+							{declinedParties} party{declinedParties !== 1 ? "ies" : ""},{" "}
+							{declinedGuests} guests
 						</span>
 					</div>
 				</div>
@@ -336,7 +365,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 						<span>
 							{totalGuests > 0
 								? Math.round(
-										((confirmedGuests + declinedGuests) / totalGuests) * 100
+										((confirmedParties + declinedParties) / totalGuests) * 100
 								  )
 								: 0}
 							%
@@ -349,7 +378,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 								backgroundColor: theme.primaryColor,
 								width: `${
 									totalGuests > 0
-										? ((confirmedGuests + declinedGuests) / totalGuests) * 100
+										? ((confirmedParties + declinedParties) / totalGuests) * 100
 										: 0
 								}%`,
 							}}

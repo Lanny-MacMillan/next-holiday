@@ -175,6 +175,8 @@ export default function FourthOfJulyGuestListPage() {
 				backHref="/fourth-of-july"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
+				description="Keep track of your Fourth of July guests!"
+				holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -303,7 +305,6 @@ export default function FourthOfJulyGuestListPage() {
 						: "Add Guest"
 				}
 				cancelText="Cancel"
-				cardClassName="card-events-fourth-of-july"
 				submitButtonColor="#dc2626"
 				showAddressBook={true}
 				contacts={contacts}
@@ -318,7 +319,6 @@ export default function FourthOfJulyGuestListPage() {
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
 				loading={loading}
-				cardClassName="card-events-fourth-of-july"
 			/>
 
 			<SortModal
