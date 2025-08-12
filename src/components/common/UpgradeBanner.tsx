@@ -39,12 +39,14 @@ export default function UpgradeBanner() {
 						: "linear-gradient(to right, #000000, #2563eb)",
 				}}
 			>
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+				<div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-2 sm:py-3">
 					<div className="flex items-center justify-between">
-						<div className="flex items-center space-x-3">
-							<div className="text-xl">✨</div>
-							<div>
-								<h3 className="text-base font-semibold">Upgrade to Plus</h3>
+						<div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+							<div className="text-lg sm:text-xl flex-shrink-0">✨</div>
+							<div className="min-w-0 flex-1">
+								<h3 className="text-sm sm:text-base font-semibold truncate">
+									Upgrade to Plus
+								</h3>
 								<p className="text-gray-200 text-xs">
 									Unlock all features and collaborate with family & friends
 								</p>
@@ -52,10 +54,11 @@ export default function UpgradeBanner() {
 						</div>
 						<button
 							onClick={() => setShowUpgradeModal(true)}
-							className="bg-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-100 transition-colors text-sm"
+							className="bg-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium hover:bg-gray-100 transition-colors text-xs sm:text-sm flex-shrink-0 ml-2"
 							style={{ color: "#000000" }}
 						>
-							Upgrade Now
+							<span className="hidden sm:inline">Upgrade Now</span>
+							<span className="sm:hidden">Upgrade</span>
 						</button>
 					</div>
 				</div>
