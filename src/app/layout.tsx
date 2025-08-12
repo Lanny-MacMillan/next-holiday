@@ -8,7 +8,7 @@ import AppContent from "@/components/AppContent";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-	title: "Holiday Planner",
+	title: "Next Holiday",
 	description: "Plan your holidays with ease",
 };
 

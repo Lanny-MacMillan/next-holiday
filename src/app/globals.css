@@ -559,9 +559,9 @@ button.dark .hover\:bg-purple-500:hover {
 	border-left: 4px solid rgb(var(--color-green-500));
 }
 
-/* Remove green border in gamified mode */
+/* Remove green border in gamified mode - now handled by component */
 .gamified-mode .card-cards {
-	border-left: none !important;
+	/* Border handling moved to component level */
 }
 
 .gamified-mode .card-events-christmas {
@@ -757,6 +757,33 @@ button.dark .hover\:bg-purple-500:hover {
 		rgb(10, 8, 15) 50%,
 		rgb(15, 15, 20) 100%
 	);
+}
+
+/* Rainbow gradient border for gamified mode settings cards */
+.rainbow-gradient-border {
+	position: relative;
+	border-left: none !important;
+}
+
+.rainbow-gradient-border::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	background: linear-gradient(
+		to bottom,
+		#ff0000,
+		/* Red */ #ff8000,
+		/* Orange */ #ffff00,
+		/* Yellow */ #00ff00,
+		/* Green */ #0080ff,
+		/* Blue */ #8000ff,
+		/* Indigo */ #ff0080 /* Violet */
+	);
+	border-radius: 2px 0 0 2px;
+	z-index: 1;
 }
 
 /* Hanukkah-themed gradient backgrounds */

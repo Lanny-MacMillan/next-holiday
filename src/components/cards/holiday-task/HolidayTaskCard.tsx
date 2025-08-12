@@ -59,8 +59,8 @@ export default function HolidayTaskCard({
 				href={href}
 				className={`block card card-cards rounded-2xl p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${backgroundColor} text-white ${className}`}
 				style={{
-					// Explicitly ensure no border conflicts in gamified mode
-					borderLeft: "none",
+					border: isDarkMode ? "3px solid rgba(255, 255, 255, 1)" : "none",
+					borderLeft: isDarkMode ? "3px solid rgba(255, 255, 255, 1)" : "none",
 					...getCardStyling({
 						isDarkMode,
 						isGamified: true,

@@ -6,6 +6,7 @@ import { updateSettings } from "@/store/slices/themeSlice";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
+import { getCardStyling } from "@/utils/cardShadows";
 
 export default function SettingsPage() {
 	const { user } = useAuth0();
@@ -14,6 +15,11 @@ export default function SettingsPage() {
 	const [localSettings, setLocalSettings] = useState(settings);
 	const [imageError, setImageError] = useState(false);
 	const [showToast, setShowToast] = useState(false);
+
+	// Sync localSettings with Redux store when settings change
+	useEffect(() => {
+		setLocalSettings(settings);
+	}, [settings]);
 
 	// Reset image error when user changes
 	useEffect(() => {
@@ -51,6 +57,38 @@ export default function SettingsPage() {
 		setShowToast(true);
 	};
 
+	// Check if gamified mode is enabled
+	const isGamified = localSettings.displayMode === "gamified";
+	const isDarkMode = localSettings.theme === "dark";
+
+	// Get gamified styling for cards
+	const getGamifiedCardStyle = () => {
+		if (!isGamified) return {};
+
+		return getCardStyling({
+			isDarkMode,
+			isGamified: true,
+			intensity: "heavy",
+		});
+	};
+
+	// Get conditional card classes based on gamified mode
+	const getCardClasses = () => {
+		const baseClasses = "card rounded-lg p-6";
+
+		if (isGamified) {
+			// In gamified mode, use white border for dark mode, same as professional for light mode
+			if (isDarkMode) {
+				return `${baseClasses} border-l-4 border-white`;
+			} else {
+				return `${baseClasses} card-settings`;
+			}
+		} else {
+			// Professional mode - use existing card-settings class
+			return `${baseClasses} card-settings`;
+		}
+	};
+
 	return (
 		<div className="min-h-screen christmas-settings-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<header className="w-full max-w-2xl py-6 flex flex-col items-center relative">
@@ -82,7 +120,7 @@ export default function SettingsPage() {
 
 			<main className="w-full max-w-2xl flex flex-col gap-8">
 				{/* User Information */}
-				<div className="card card-settings rounded-lg p-6">
+				<div className={getCardClasses()} style={getGamifiedCardStyle()}>
 					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
 						👤 User Information
 					</h2>
@@ -136,7 +174,7 @@ export default function SettingsPage() {
 				</div>
 
 				{/* Theme Settings */}
-				<div className="card card-settings rounded-lg p-6">
+				<div className={getCardClasses()} style={getGamifiedCardStyle()}>
 					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
 						🎨 Theme
 					</h2>
@@ -207,7 +245,7 @@ export default function SettingsPage() {
 				</div>
 
 				{/* Holiday Settings */}
-				<div className="card card-settings rounded-lg p-6">
+				<div className={getCardClasses()} style={getGamifiedCardStyle()}>
 					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
 						🎄 Holiday Preferences
 					</h2>
@@ -331,7 +369,7 @@ export default function SettingsPage() {
 				</div>
 
 				{/* Notification Settings */}
-				<div className="card card-settings rounded-lg p-6">
+				<div className={getCardClasses()} style={getGamifiedCardStyle()}>
 					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
 						🔔 Notification Preferences
 					</h2>

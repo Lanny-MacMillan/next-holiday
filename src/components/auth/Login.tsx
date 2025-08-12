@@ -10,7 +10,7 @@ export default function Login() {
 			<div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
 				<div className="text-center">
 					<h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-						Holiday Planner
+						Next Holiday
 					</h1>
 					<p className="text-gray-600 dark:text-gray-300 mb-8">
 						Plan your holidays with ease and keep track of everything in one

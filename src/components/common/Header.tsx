@@ -48,7 +48,7 @@ export default function Header() {
 					{/* Left side - App title */}
 					<div className="flex items-center">
 						<h1 className="text-xl font-bold text-gray-800 dark:text-white">
-							Holiday Planner
+							Next Holiday
 						</h1>
 					</div>
 

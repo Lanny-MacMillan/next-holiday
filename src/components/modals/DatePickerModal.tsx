@@ -91,7 +91,7 @@ export default function DatePickerModal({
 							type="datetime-local"
 							value={selectedDate}
 							onChange={(e) => setSelectedDate(e.target.value)}
-							className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [&::-webkit-calendar-picker-indicator]:dark:invert"
 						/>
 					</div>
 					<div className="flex gap-2">

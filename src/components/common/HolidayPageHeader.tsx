@@ -24,10 +24,8 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 	const { displayMode } = useAppSelector((state: any) => state.theme.settings);
 	const { theme } = useAppSelector((state: any) => state.theme.settings);
 	const isGamified = displayMode === "gamified";
-
-	console.log("holidayColor", holidayColor);
 	const textColor = theme === "dark" ? "white" : "black";
-	const defaultColor = "#000000"; // Default color
+	const defaultColor = theme === "dark" ? "#ffffff" : "#000000f";
 
 	// Convert Tailwind classes to actual colors
 	const getHoverColor = () => {
