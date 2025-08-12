@@ -100,9 +100,17 @@ export default function BabyShowerGamesPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskOrId: any) => {
+		// Handle both task object and task ID
+		const task =
+			typeof taskOrId === "string"
+				? tasks.find((t) => t.id === taskOrId)
+				: taskOrId;
+
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -126,16 +134,18 @@ export default function BabyShowerGamesPage() {
 			<HolidayPageHeader
 				title="Baby Shower Games"
 				backHref="/baby-shower"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Games"
+				description="Plan your baby shower games with style!"
+				holidayColor="cyan-500"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Game"
 					onClick={() => setShowAddForm(true)}
-					color="blue"
+					color="cyan"
 				/>
 
 				<TaskSection
@@ -151,6 +161,8 @@ export default function BabyShowerGamesPage() {
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
 							onEdit={handleEdit}
+							gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -169,6 +181,7 @@ export default function BabyShowerGamesPage() {
 							onDelete={handleDelete}
 							onEdit={handleEdit}
 							className="opacity-60"
+							gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 						/>
 					)}
 				/>

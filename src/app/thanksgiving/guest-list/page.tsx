@@ -52,7 +52,12 @@ export default function ThanksgivingGuestListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGuest(formValues: Record<string, any>) {
-		if (!formValues.name?.trim() || !formValues.numberOfGuests) return;
+		if (
+			!formValues.name ||
+			(typeof formValues.name === "string" && !formValues.name.trim()) ||
+			!formValues.numberOfGuests
+		)
+			return;
 
 		if (editingGuest) {
 			// Update existing guest

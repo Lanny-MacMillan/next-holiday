@@ -46,6 +46,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 			case "birthday":
 				return state.birthdayGuestList?.guests || [];
 			case "baby shower":
+			case "Baby Shower":
 				return state.babyShowerGuestList?.guests || [];
 			case "graduation":
 				return state.graduationGuestList?.guests || [];

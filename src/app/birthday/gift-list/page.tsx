@@ -52,7 +52,7 @@ export default function BirthdayGiftListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGift(formValues: Record<string, any>) {
-		if (!formValues.description?.trim() || !formValues.recipient?.trim())
+		if (!formValues.description || (typeof formValues.description === "string" && !formValues.description.trim()) || !formValues.recipient || (typeof formValues.recipient === "string" && !formValues.recipient.trim()))
 			return;
 
 		if (editingGift) {

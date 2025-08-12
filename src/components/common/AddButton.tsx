@@ -16,6 +16,7 @@ interface AddButtonProps {
 		| "orange"
 		| "yellow"
 		| "amber"
+		| "cyan"
 		| "holiday";
 	disabled?: boolean;
 	holidayColor?: string;
@@ -50,6 +51,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 				return "bg-yellow-300 hover:bg-yellow-500";
 			case "amber":
 				return "bg-amber-500 hover:bg-amber-600";
+			case "cyan":
+				return "bg-cyan-500 hover:bg-cyan-600";
 			case "holiday":
 				return "hover:opacity-90";
 			default:

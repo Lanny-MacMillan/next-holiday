@@ -51,7 +51,7 @@ export default function BirthdayCardsPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddCard(formValues: Record<string, any>) {
-		if (!formValues.recipient?.trim() || !formValues.message?.trim()) return;
+		if (!formValues.recipient || (typeof formValues.recipient === "string" && !formValues.recipient.trim()) || !formValues.message || (typeof formValues.message === "string" && !formValues.message.trim())) return;
 
 		if (editingCard) {
 			// Update existing card

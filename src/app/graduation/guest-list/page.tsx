@@ -52,7 +52,7 @@ export default function GraduationGuestListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGuest(formValues: Record<string, any>) {
-		if (!formValues.name?.trim()) return;
+		if (!formValues.name || (typeof formValues.name === "string" && !formValues.name.trim())) return;
 
 		if (editingGuest) {
 			const updatedGuest: GraduationGuest = {

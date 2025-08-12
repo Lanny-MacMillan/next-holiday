@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { isEmptyString, isEmptyNumber } from "@/utils/formValidation";
 
 export interface FormField {
 	id: string;
@@ -93,9 +94,15 @@ export default function FormModal({
 
 		// Check if all required fields are filled
 		const requiredFields = fields.filter((field) => field.required);
-		const missingFields = requiredFields.filter(
-			(field) => !formValues[field.id]?.trim()
-		);
+		const missingFields = requiredFields.filter((field) => {
+			const value = formValues[field.id];
+			// Handle different field types for validation
+			if (field.type === "number") {
+				return isEmptyNumber(value);
+			}
+			// For text-based fields, check if string is empty after trimming
+			return isEmptyString(value);
+		});
 
 		if (missingFields.length > 0) {
 			alert(
