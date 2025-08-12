@@ -91,6 +91,7 @@ export default function AnniversaryPage() {
 											primaryColor: "#ec4899", // Pink for Anniversary
 											accentColor: "#ec4899", // Pink accent
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);
@@ -110,6 +111,7 @@ export default function AnniversaryPage() {
 											accentColor: "#ec4899", // Pink accent
 											progressColor: "#ec4899", // Pink for progress bar
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);

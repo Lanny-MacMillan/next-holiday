@@ -54,7 +54,15 @@ export default function GiftListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGift(values: Record<string, any>) {
-		if (!values.description?.trim() || !values.recipient?.trim()) return;
+		// Check if required fields are present
+		if (!values.description?.trim()) {
+			alert("Please enter a gift description");
+			return;
+		}
+		if (!values.recipient?.trim()) {
+			alert("Please enter a recipient");
+			return;
+		}
 
 		if (editingGift) {
 			// Update existing gift
@@ -175,6 +183,7 @@ export default function GiftListPage() {
 				accentColor: "#ec4899", // Pink for Anniversary
 			}}
 			borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
+			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 		/>
 	);
 
@@ -191,6 +200,7 @@ export default function GiftListPage() {
 				accentColor: "#ec4899", // Pink for Anniversary
 			}}
 			borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
+			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 		/>
 	);
 
@@ -205,7 +215,8 @@ export default function GiftListPage() {
 		{
 			id: "description",
 			type: "text" as const,
-			placeholder: "Gift",
+			placeholder: "Gift*",
+			required: true,
 		},
 		{
 			id: "price",
@@ -252,13 +263,18 @@ export default function GiftListPage() {
 				backHref="/anniversary"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Plan your anniversary gift list with style!"
+				holidayColor="pink-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Anniversary" />
+				<BudgetDisplay
+					holiday="Anniversary"
+					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+				/>
 
-				<AddButton title="Gift" onClick={openForm} color="purple" />
+				<AddButton title="Gift" onClick={openForm} color="pink" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

@@ -90,6 +90,22 @@ export default function FormModal({
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Check if all required fields are filled
+		const requiredFields = fields.filter((field) => field.required);
+		const missingFields = requiredFields.filter(
+			(field) => !formValues[field.id]?.trim()
+		);
+
+		if (missingFields.length > 0) {
+			alert(
+				`Please fill in all required fields: ${missingFields
+					.map((f) => f.placeholder || f.id)
+					.join(", ")}`
+			);
+			return;
+		}
+
 		onSubmit(formValues);
 	};
 
