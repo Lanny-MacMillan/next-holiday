@@ -175,6 +175,7 @@ export default function GraduationGiftListPage() {
 				accentColor: "#8b5cf6",
 			}}
 			borderColor="rgb(var(--color-purple-500))"
+			gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 		/>
 	);
 
@@ -191,6 +192,7 @@ export default function GraduationGiftListPage() {
 				accentColor: "#8b5cf6",
 			}}
 			borderColor="rgb(var(--color-purple-500))"
+			gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 		/>
 	);
 
@@ -249,10 +251,15 @@ export default function GraduationGiftListPage() {
 				backHref="/graduation"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Plan your graduation gift list with style!"
+				holidayColor="purple-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
-				<BudgetDisplay holiday="Graduation" />
+				<BudgetDisplay
+					holiday="Graduation"
+					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+				/>
 				<AddButton title="Gift" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -270,7 +277,7 @@ export default function GraduationGiftListPage() {
 					items={incompleteGifts}
 					isCompleted={false}
 					emptyMessage="All gifts completed! 🎉"
-					completedMessage=""
+					completedMessage="All gifts completed! 🎉"
 					renderItem={renderGiftItem}
 				/>
 
@@ -279,7 +286,7 @@ export default function GraduationGiftListPage() {
 					items={completedGifts}
 					isCompleted={true}
 					emptyMessage="No completed gifts yet."
-					completedMessage=""
+					completedMessage="No completed gifts yet."
 					renderItem={renderCompletedGiftItem}
 				/>
 			</main>

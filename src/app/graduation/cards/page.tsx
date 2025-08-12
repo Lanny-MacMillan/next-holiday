@@ -160,6 +160,8 @@ export default function GraduationCardsPage() {
 				backHref="/graduation"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Plan your graduation cards with style!"
+				holidayColor="purple-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -196,6 +198,7 @@ export default function GraduationCardsPage() {
 								accentColor: "#8b5cf6",
 							}}
 							borderColor="rgb(var(--color-purple-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -221,6 +224,7 @@ export default function GraduationCardsPage() {
 								accentColor: "#8b5cf6",
 							}}
 							borderColor="rgb(var(--color-purple-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>

@@ -141,9 +141,11 @@ export default function GraduationEventsPage() {
 			<HolidayPageHeader
 				title="Graduation Events"
 				backHref="/graduation"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Events"
+				description="Plan your graduation events with style!"
+				holidayColor="purple-500"
+				error={error}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6 mt-4">
