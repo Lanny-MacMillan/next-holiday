@@ -3,7 +3,12 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
-import { useState, useEffect } from "react";
+import {
+	updateUserName,
+	updateUserEmail,
+	updateUserPicture,
+} from "@/store/slices/userSlice";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
 import { getCardStyling } from "@/utils/cardShadows";
@@ -18,6 +23,17 @@ export default function SettingsPage() {
 	const [showToast, setShowToast] = useState(false);
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+	// Editing states
+	const [editingName, setEditingName] = useState(false);
+	const [editingEmail, setEditingEmail] = useState(false);
+	const [editingPicture, setEditingPicture] = useState(false);
+	const [tempName, setTempName] = useState(user?.name || "");
+	const [tempEmail, setTempEmail] = useState(user?.email || "");
+	const [tempPicture, setTempPicture] = useState(user?.picture || "");
+
+	// File input ref for image upload
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
 	// Sync localSettings with Redux store when settings change
 	useEffect(() => {
 		setLocalSettings(settings);
@@ -27,6 +43,13 @@ export default function SettingsPage() {
 	useEffect(() => {
 		setImageError(false);
 	}, [user?.picture]);
+
+	// Update temp values when user changes
+	useEffect(() => {
+		setTempName(user?.name || "");
+		setTempEmail(user?.email || "");
+		setTempPicture(user?.picture || "");
+	}, [user]);
 
 	function getInitials(name: string): string {
 		const words = name
@@ -63,6 +86,66 @@ export default function SettingsPage() {
 		// TODO: Implement upgrade logic
 		console.log("Upgrade clicked");
 		setShowUpgradeModal(false);
+	};
+
+	// User editing handlers
+	const handleSaveName = () => {
+		if (tempName.trim() && tempName !== user?.name) {
+			dispatch(updateUserName(tempName.trim()));
+			// Update local state immediately for UI feedback
+			setTempName(tempName.trim());
+			setShowToast(true);
+		}
+		setEditingName(false);
+	};
+
+	const handleSaveEmail = () => {
+		if (tempEmail.trim() && tempEmail !== user?.email) {
+			dispatch(updateUserEmail(tempEmail.trim()));
+			// Update local state immediately for UI feedback
+			setTempEmail(tempEmail.trim());
+			setShowToast(true);
+		}
+		setEditingEmail(false);
+	};
+
+	const handleSavePicture = () => {
+		if (tempPicture && tempPicture !== user?.picture) {
+			dispatch(updateUserPicture(tempPicture));
+			// Update local state immediately for UI feedback
+			setTempPicture(tempPicture);
+			setShowToast(true);
+		}
+		setEditingPicture(false);
+	};
+
+	const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const result = e.target?.result as string;
+				setTempPicture(result);
+			};
+			reader.readAsDataURL(file);
+		}
+	};
+
+	const handleCancelEdit = (field: "name" | "email" | "picture") => {
+		switch (field) {
+			case "name":
+				setTempName(user?.name || "");
+				setEditingName(false);
+				break;
+			case "email":
+				setTempEmail(user?.email || "");
+				setEditingEmail(false);
+				break;
+			case "picture":
+				setTempPicture(user?.picture || "");
+				setEditingPicture(false);
+				break;
+		}
 	};
 
 	// Check if gamified mode is enabled
@@ -136,41 +219,193 @@ export default function SettingsPage() {
 						</h2>
 						<div className="space-y-4">
 							<div className="flex items-center space-x-4">
-								{user?.picture && !imageError ? (
-									<img
-										src={user.picture}
-										alt="Profile"
-										className="w-16 h-16 rounded-full"
-										onError={() => setImageError(true)}
-									/>
-								) : (
-									<div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-										<span className="text-blue-600 dark:text-blue-300 font-semibold text-lg">
-											{getInitials(user?.name || "User")}
-										</span>
-									</div>
-								)}
-								<div>
+								<div className="relative">
+									{editingPicture ? (
+										<div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0 border-2 border-blue-500">
+											<input
+												ref={fileInputRef}
+												type="file"
+												accept="image/*"
+												onChange={handleImageUpload}
+												className="hidden"
+											/>
+											<button
+												onClick={() => fileInputRef.current?.click()}
+												className="text-blue-600 dark:text-blue-300 text-xs text-center"
+											>
+												Click to upload
+											</button>
+										</div>
+									) : (
+										<>
+											{tempPicture && !imageError ? (
+												<img
+													src={tempPicture}
+													alt="Profile"
+													className="w-16 h-16 rounded-full"
+													onError={() => setImageError(true)}
+												/>
+											) : (
+												<div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+													<span className="text-blue-600 dark:text-blue-300 font-semibold text-lg">
+														{getInitials(tempName || user?.name || "User")}
+													</span>
+												</div>
+											)}
+										</>
+									)}
+									<button
+										onClick={() => setEditingPicture(!editingPicture)}
+										className="absolute -top-1 -right-1 p-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+									>
+										<svg
+											className="w-3 h-3"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											/>
+										</svg>
+									</button>
+								</div>
+								<div className="flex-1">
 									<p className="text-sm text-gray-800 dark:text-gray-400">
 										Profile Picture
 									</p>
+									{editingPicture && (
+										<div className="flex space-x-2 mt-2">
+											<button
+												onClick={handleSavePicture}
+												className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+											>
+												Save
+											</button>
+											<button
+												onClick={() => handleCancelEdit("picture")}
+												className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+											>
+												Cancel
+											</button>
+										</div>
+									)}
 								</div>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-									Name
-								</label>
-								<p className="mt-1 text-sm text-gray-800 dark:text-white">
-									{user?.name || "Not provided"}
-								</p>
+								<div className="flex items-center justify-between">
+									<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
+										Name
+									</label>
+									<button
+										onClick={() => setEditingName(!editingName)}
+										className="p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+									>
+										<svg
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											/>
+										</svg>
+									</button>
+								</div>
+								{editingName ? (
+									<div className="mt-1">
+										<div className="flex space-x-2">
+											<input
+												type="text"
+												value={tempName}
+												onChange={(e) => setTempName(e.target.value)}
+												className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+												placeholder="Enter your name"
+											/>
+											<button
+												onClick={handleSaveName}
+												className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+											>
+												Save
+											</button>
+										</div>
+										<div className="flex justify-end mt-1">
+											<button
+												onClick={() => handleCancelEdit("name")}
+												className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+											>
+												Cancel
+											</button>
+										</div>
+									</div>
+								) : (
+									<p className="mt-1 text-sm text-gray-800 dark:text-white">
+										{tempName || user?.name || "Not provided"}
+									</p>
+								)}
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-									Email
-								</label>
-								<p className="mt-1 text-sm text-gray-800 dark:text-white">
-									{user?.email || "Not provided"}
-								</p>
+								<div className="flex items-center justify-between">
+									<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
+										Email
+									</label>
+									<button
+										onClick={() => setEditingEmail(!editingEmail)}
+										className="p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+									>
+										<svg
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											/>
+										</svg>
+									</button>
+								</div>
+								{editingEmail ? (
+									<div className="mt-1">
+										<div className="flex space-x-2">
+											<input
+												type="email"
+												value={tempEmail}
+												onChange={(e) => setTempEmail(e.target.value)}
+												className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+												placeholder="Enter your email"
+											/>
+											<button
+												onClick={handleSaveEmail}
+												className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+											>
+												Save
+											</button>
+										</div>
+										<div className="flex justify-end mt-1">
+											<button
+												onClick={() => handleCancelEdit("email")}
+												className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+											>
+												Cancel
+											</button>
+										</div>
+									</div>
+								) : (
+									<p className="mt-1 text-sm text-gray-800 dark:text-white">
+										{tempEmail || user?.email || "Not provided"}
+									</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">

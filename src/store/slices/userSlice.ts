@@ -51,6 +51,20 @@ export const addUserToDb = createAsyncThunk(
 	}
 );
 
+// Async thunk to update user information
+export const updateUserInfo = createAsyncThunk(
+	"user/updateUserInfo",
+	async (userData: Partial<User>) => {
+		// Simulate API call to update user info
+		const response = await new Promise<User>((resolve) => {
+			setTimeout(() => {
+				resolve(userData as User);
+			}, 500);
+		});
+		return response;
+	}
+);
+
 const userSlice = createSlice({
 	name: "user",
 	initialState,
@@ -65,6 +79,21 @@ const userSlice = createSlice({
 		},
 		clearError: (state) => {
 			state.error = null;
+		},
+		updateUserName: (state, action: PayloadAction<string>) => {
+			if (state.user) {
+				state.user.name = action.payload;
+			}
+		},
+		updateUserEmail: (state, action: PayloadAction<string>) => {
+			if (state.user) {
+				state.user.email = action.payload;
+			}
+		},
+		updateUserPicture: (state, action: PayloadAction<string>) => {
+			if (state.user) {
+				state.user.picture = action.payload;
+			}
 		},
 	},
 	extraReducers: (builder) => {
@@ -96,9 +125,31 @@ const userSlice = createSlice({
 			.addCase(addUserToDb.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to add user to DB";
+			})
+			// Update user info
+			.addCase(updateUserInfo.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(updateUserInfo.fulfilled, (state, action) => {
+				state.loading = false;
+				if (state.user) {
+					state.user = { ...state.user, ...action.payload };
+				}
+			})
+			.addCase(updateUserInfo.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to update user info";
 			});
 	},
 });
 
-export const { setUser, clearUser, clearError } = userSlice.actions;
+export const {
+	setUser,
+	clearUser,
+	clearError,
+	updateUserName,
+	updateUserEmail,
+	updateUserPicture,
+} = userSlice.actions;
 export default userSlice.reducer;
