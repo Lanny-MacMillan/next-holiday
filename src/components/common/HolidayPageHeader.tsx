@@ -25,7 +25,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 	const { theme } = useAppSelector((state: any) => state.theme.settings);
 	const isGamified = displayMode === "gamified";
 	const textColor = theme === "dark" ? "white" : "black";
-	const defaultColor = theme === "dark" ? "#ffffff" : "#000000f";
+	const defaultColor = theme === "dark" ? "#ffffff" : "#000000";
 
 	// Convert Tailwind classes to actual colors
 	const getHoverColor = () => {
@@ -165,7 +165,7 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 
 	// Original clean, professional design
 	return (
-		<header className="w-full max-w-md py-6">
+		<header className="w-full max-w-4xl py-6">
 			<div className="flex items-center justify-between relative">
 				<Link
 					href={backHref}
