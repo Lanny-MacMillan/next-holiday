@@ -1,0 +1,391 @@
+import React, { useState, useEffect } from "react";
+
+export interface UpgradeModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	onUpgrade: () => void;
+}
+
+interface CreditCardForm {
+	cardNumber: string;
+	expiryDate: string;
+	cvv: string;
+	cardholderName: string;
+}
+
+export default function UpgradeModal({
+	isOpen,
+	onClose,
+	onUpgrade,
+}: UpgradeModalProps) {
+	const [currentPage, setCurrentPage] = useState<"features" | "payment">(
+		"features"
+	);
+	const [isLoading, setIsLoading] = useState(false);
+	const [formData, setFormData] = useState<CreditCardForm>({
+		cardNumber: "",
+		expiryDate: "",
+		cvv: "",
+		cardholderName: "",
+	});
+
+	// Reset modal state when it opens
+	useEffect(() => {
+		if (isOpen) {
+			setCurrentPage("features");
+			setFormData({
+				cardNumber: "",
+				expiryDate: "",
+				cvv: "",
+				cardholderName: "",
+			});
+			setIsLoading(false);
+		}
+	}, [isOpen]);
+
+	if (!isOpen) return null;
+
+	const features = [
+		{
+			key: "invites",
+			title: "Invite Family & Friends",
+			label: "Invites",
+			blurb: "Share your holiday space so everyone can plan together.",
+		},
+		{
+			key: "assignments",
+			title: "Assign Tasks",
+			label: "Assignments",
+			blurb: "Delegate to‑dos to specific people and track ownership.",
+		},
+		{
+			key: "customHolidays",
+			title: "Custom Holidays",
+			label: "Custom Events",
+			blurb: "Create your own events with dates, colors, and sections.",
+		},
+		{
+			key: "budget",
+			title: "Budget Tracker",
+			label: "Budget",
+			blurb: "Set a budget, log spending, and stay on target.",
+		},
+		{
+			key: "rsvp",
+			title: "RSVP Manager",
+			label: "RSVPs",
+			blurb: "Collect guest responses and headcounts in one place.",
+		},
+		{
+			key: "smsInvites",
+			title: "Text Invites + Reply Tracking",
+			label: "Text Invites",
+			blurb: "Send SMS invites and capture replies automatically.",
+		},
+	];
+
+	const handleUpgradeClick = () => {
+		setCurrentPage("payment");
+	};
+
+	const handleBackToFeatures = () => {
+		setCurrentPage("features");
+		setFormData({
+			cardNumber: "",
+			expiryDate: "",
+			cvv: "",
+			cardholderName: "",
+		});
+	};
+
+	const handleInputChange = (field: keyof CreditCardForm, value: string) => {
+		setFormData((prev) => ({
+			...prev,
+			[field]: value,
+		}));
+	};
+
+	const formatCardNumber = (value: string) => {
+		const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+		const matches = v.match(/\d{4,16}/g);
+		const match = (matches && matches[0]) || "";
+		const parts = [];
+		for (let i = 0, len = match.length; i < len; i += 4) {
+			parts.push(match.substring(i, i + 4));
+		}
+		if (parts.length) {
+			return parts.join(" ");
+		} else {
+			return v;
+		}
+	};
+
+	const formatExpiryDate = (value: string) => {
+		const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+		if (v.length >= 2) {
+			return v.substring(0, 2) + "/" + v.substring(2, 4);
+		}
+		return v;
+	};
+
+	const handleSubmitPayment = async () => {
+		setIsLoading(true);
+		try {
+			// First API call to charge the card
+			const paymentResponse = await fetch("/api/charge-card", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					cardNumber: formData.cardNumber.replace(/\s/g, ""),
+					expiryDate: formData.expiryDate,
+					cvv: formData.cvv,
+					cardholderName: formData.cardholderName,
+					amount: 299, // $9.99 in cents
+				}),
+			});
+
+			if (paymentResponse.ok) {
+				// Second API call to update user status in DB
+				const userUpdateResponse = await fetch("/api/upgrade-user", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						userId: "current-user-id",
+						plan: "plus",
+					}),
+				});
+
+				if (userUpdateResponse.ok) {
+					onUpgrade();
+					onClose();
+				} else {
+					throw new Error("Failed to update user status");
+				}
+			} else {
+				throw new Error("Payment failed");
+			}
+		} catch (error) {
+			console.error("Payment error:", error);
+			alert("Payment failed. Please try again.");
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const isFormValid = () => {
+		return (
+			formData.cardNumber.replace(/\s/g, "").length >= 13 &&
+			formData.expiryDate.length === 5 &&
+			formData.cvv.length >= 3 &&
+			formData.cardholderName.trim().length > 0
+		);
+	};
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="card rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
+				<div className="flex justify-between items-center mb-6">
+					<div
+						className="text-xl font-black text-gray-900 dark:text-white"
+						style={{
+							fontWeight: "900 !important",
+							fontFamily:
+								'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+						}}
+					>
+						{currentPage === "features"
+							? "✨ Upgrade to Plus"
+							: "💳 Payment Details"}
+					</div>
+					<button
+						onClick={onClose}
+						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl hover:scale-110 transition-transform duration-200"
+					>
+						×
+					</button>
+				</div>
+
+				{currentPage === "features" ? (
+					<div className="space-y-6">
+						{/* Upgrade Benefits Section */}
+						<div>
+							<h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+								What you get with Plus:
+							</h4>
+							<ul className="space-y-4">
+								{features.map((feature, index) => (
+									<li key={feature.key} className="flex items-start space-x-3">
+										<span className="text-green-500 text-lg mt-0.5">✓</span>
+										<div className="flex-1">
+											<div className="text-gray-900 dark:text-white font-medium">
+												{feature.title}
+											</div>
+											<div className="text-gray-600 dark:text-gray-400 text-sm">
+												{feature.blurb}
+											</div>
+										</div>
+									</li>
+								))}
+							</ul>
+						</div>
+
+						{/* Pricing */}
+						<div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 rounded-lg">
+							<div className="text-center">
+								<span className="text-3xl font-bold text-gray-900 dark:text-white">
+									$2.99
+								</span>
+								<span className="text-gray-600 dark:text-gray-400">/month</span>
+							</div>
+						</div>
+
+						{/* Action Buttons */}
+						<div className="flex gap-3 pt-4">
+							<button
+								onClick={onClose}
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 transition-all duration-200"
+								style={{
+									backgroundColor: "transparent",
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.backgroundColor = "rgb(249, 250, 251)";
+									e.currentTarget.style.borderColor = "rgb(156, 163, 175)";
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.backgroundColor = "transparent";
+									e.currentTarget.style.borderColor = "rgb(209, 213, 219)";
+								}}
+							>
+								Cancel
+							</button>
+							<button
+								onClick={handleUpgradeClick}
+								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium"
+							>
+								Upgrade Now
+							</button>
+						</div>
+					</div>
+				) : (
+					<div className="space-y-6">
+						{/* Credit Card Form */}
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Card Number
+								</label>
+								<input
+									type="text"
+									value={formData.cardNumber}
+									onChange={(e) =>
+										handleInputChange(
+											"cardNumber",
+											formatCardNumber(e.target.value)
+										)
+									}
+									placeholder="1234 5678 9012 3456"
+									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+									maxLength={19}
+									style={{ borderStyle: "solid" }}
+								/>
+							</div>
+
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										Expiry Date
+									</label>
+									<input
+										type="text"
+										value={formData.expiryDate}
+										onChange={(e) =>
+											handleInputChange(
+												"expiryDate",
+												formatExpiryDate(e.target.value)
+											)
+										}
+										placeholder="MM/YY"
+										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+										maxLength={5}
+										style={{ borderStyle: "solid" }}
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										CVV
+									</label>
+									<input
+										type="text"
+										value={formData.cvv}
+										onChange={(e) =>
+											handleInputChange(
+												"cvv",
+												e.target.value.replace(/\D/g, "")
+											)
+										}
+										placeholder="123"
+										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+										maxLength={4}
+										style={{ borderStyle: "solid" }}
+									/>
+								</div>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Cardholder Name
+								</label>
+								<input
+									type="text"
+									value={formData.cardholderName}
+									onChange={(e) =>
+										handleInputChange("cardholderName", e.target.value)
+									}
+									placeholder="John Doe"
+									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+									style={{ borderStyle: "solid" }}
+								/>
+							</div>
+						</div>
+
+						{/* Action Buttons */}
+						<div className="flex gap-3 pt-4">
+							<button
+								onClick={handleBackToFeatures}
+								disabled={isLoading}
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 transition-all duration-200 disabled:opacity-50"
+								style={{
+									backgroundColor: "transparent",
+								}}
+								onMouseEnter={(e) => {
+									if (!isLoading) {
+										e.currentTarget.style.backgroundColor =
+											"rgb(249, 250, 251)";
+										e.currentTarget.style.borderColor = "rgb(156, 163, 175)";
+									}
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.backgroundColor = "transparent";
+									e.currentTarget.style.borderColor = "rgb(209, 213, 219)";
+								}}
+							>
+								Back
+							</button>
+							<button
+								onClick={handleSubmitPayment}
+								disabled={!isFormValid() || isLoading}
+								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isLoading ? "Processing..." : "Complete Payment"}
+							</button>
+						</div>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
