@@ -164,6 +164,8 @@ export default function BirthdayCardsPage() {
 				backHref="/birthday"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Plan your birthday celebrations with style!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -200,6 +202,7 @@ export default function BirthdayCardsPage() {
 								accentColor: "#f59e0b", // Amber for Birthday
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 						/>
 					)}
 				/>
@@ -225,6 +228,7 @@ export default function BirthdayCardsPage() {
 								accentColor: "#f59e0b", // Amber for Birthday
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 						/>
 					)}
 				/>

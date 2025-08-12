@@ -6,7 +6,9 @@ import { fetchBirthdayCards } from "@/store/slices/birthday/birthdayCardsSlice";
 import { fetchBirthdayGifts } from "@/store/slices/birthday/birthdayGiftListSlice";
 import { fetchBirthdayTasks } from "@/store/slices/birthday/birthdayTasksSlice";
 import { fetchBirthdayContacts } from "@/store/slices/birthday/birthdayAddressBookSlice";
+import { fetchBirthdayGuests } from "@/store/slices/birthday/birthdayGuestListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
+import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import PartyPlanningCard from "@/components/cards/holiday-task/PartyPlanningCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
@@ -24,8 +26,8 @@ const subsections = [
 		name: "Guest List",
 		description: "Track your birthday guests",
 		href: "/birthday/guest-list",
-		sliceKey: "addressBook",
-		type: "task",
+		sliceKey: "birthdayGuestList",
+		type: "guest-list",
 	},
 	{
 		name: "Party Planning",
@@ -53,6 +55,7 @@ export default function BirthdayPage() {
 	const contacts = useAppSelector(
 		(state: any) => state.birthdayAddressBook.contacts
 	);
+	const guests = useAppSelector((state: any) => state.birthdayGuestList.guests);
 
 	useEffect(() => {
 		// Fetch all data when component mounts if not already initialized
@@ -60,6 +63,7 @@ export default function BirthdayPage() {
 		dispatch(fetchBirthdayGifts());
 		dispatch(fetchBirthdayTasks());
 		dispatch(fetchBirthdayContacts());
+		dispatch(fetchBirthdayGuests());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string): {
@@ -87,6 +91,10 @@ export default function BirthdayPage() {
 			case "addressBook":
 				total = contacts.length;
 				completed = 0; // Address book doesn't have completion status
+				break;
+			case "birthdayGuestList":
+				total = guests.length;
+				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
 			default:
 				total = 0;
@@ -126,6 +134,20 @@ export default function BirthdayPage() {
 									/>
 								</li>
 							);
+						} else if (section.type === "guest-list") {
+							return (
+								<li key={section.name}>
+									<GuestListCard
+										holiday="Birthday"
+										href={section.href}
+										theme={{
+											primaryColor: "#f59e0b", // Amber for Birthday
+											accentColor: "#f59e0b", // Amber accent
+										}}
+										holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+									/>
+								</li>
+							);
 						} else if (section.name === "Party Planning") {
 							// Use PartyPlanningCard for party planning section
 							return (
@@ -142,6 +164,7 @@ export default function BirthdayPage() {
 											accentColor: "#f59e0b", // Amber accent
 											progressColor: "#f59e0b", // Amber for progress bar
 										}}
+										holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 									/>
 								</li>
 							);

@@ -47,7 +47,7 @@ const AddButton: React.FC<AddButtonProps> = ({
 			case "orange":
 				return "bg-orange-500 hover:bg-orange-700";
 			case "yellow":
-				return "bg-yellow-500 hover:bg-yellow-600";
+				return "bg-yellow-300 hover:bg-yellow-500";
 			case "amber":
 				return "bg-amber-500 hover:bg-amber-600";
 			case "holiday":
