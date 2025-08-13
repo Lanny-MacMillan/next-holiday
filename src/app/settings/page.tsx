@@ -15,13 +15,19 @@ import { getCardStyling } from "@/utils/cardShadows";
 import UpgradeModal from "@/components/modals/UpgradeModal";
 
 export default function SettingsPage() {
-	const { user } = useAuth0();
+	const { user: auth0User } = useAuth0();
 	const dispatch = useAppDispatch();
 	const { settings } = useAppSelector((state: any) => state.theme);
+	const { user: reduxUser, initialized: userInitialized } = useAppSelector(
+		(state: any) => state.user
+	);
 	const [localSettings, setLocalSettings] = useState(settings);
 	const [imageError, setImageError] = useState(false);
 	const [showToast, setShowToast] = useState(false);
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+	// Use Redux user data if available, otherwise fall back to Auth0
+	const user = reduxUser || auth0User;
 
 	// Editing states
 	const [editingName, setEditingName] = useState(false);
@@ -179,6 +185,19 @@ export default function SettingsPage() {
 			return `${baseClasses} card-settings`;
 		}
 	};
+	// Show loading state while user data is being initialized
+	if (!userInitialized) {
+		return (
+			<div className="min-h-screen christmas-settings-gradient flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+					<p className="text-gray-600 dark:text-gray-300">
+						Loading user data...
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-screen christmas-settings-gradient flex flex-col font-sans">
@@ -212,6 +231,42 @@ export default function SettingsPage() {
 				</header>
 
 				<main className="w-full max-w-2xl flex flex-col gap-8">
+					{/* First-time user welcome message */}
+					{reduxUser?.isFirstLogin && (
+						<div
+							className={`${getCardClasses()} bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500`}
+							style={getGamifiedCardStyle()}
+						>
+							<div className="flex items-start space-x-3">
+								<div className="flex-shrink-0">
+									<svg
+										className="w-6 h-6 text-blue-500"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+								</div>
+								<div>
+									<h3 className="text-lg font-medium text-blue-800 dark:text-blue-200">
+										Welcome to Next Holiday! 🎉
+									</h3>
+									<p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+										Your profile information has been saved from your OAuth
+										account. You can edit any of these details below if you'd
+										like to customize them.
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+
 					{/* User Information */}
 					<div className={getCardClasses()} style={getGamifiedCardStyle()}>
 						<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
@@ -415,6 +470,16 @@ export default function SettingsPage() {
 									{user?.sub || "Not available"}
 								</p>
 							</div>
+							{reduxUser && (
+								<div>
+									<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
+										Last Updated
+									</label>
+									<p className="mt-1 text-sm text-gray-800 dark:text-gray-400">
+										{new Date(reduxUser.lastUpdated).toLocaleString()}
+									</p>
+								</div>
+							)}
 						</div>
 					</div>
 

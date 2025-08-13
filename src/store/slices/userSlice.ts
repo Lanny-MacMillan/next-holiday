@@ -6,6 +6,8 @@ export interface User {
 	name?: string;
 	picture?: string;
 	isInDb: boolean;
+	isFirstLogin: boolean;
+	lastUpdated: string;
 }
 
 interface UserState {
@@ -27,27 +29,58 @@ export const checkUserInDb = createAsyncThunk(
 	"user/checkUserInDb",
 	async (userSub: string) => {
 		// Simulate API call to check if user exists in DB
-		const response = await new Promise<{ isInDb: boolean }>((resolve) => {
+		const response = await new Promise<{
+			isInDb: boolean;
+			isFirstLogin: boolean;
+		}>((resolve) => {
 			setTimeout(() => {
-				// Simulate that user is not in DB (first login)
-				resolve({ isInDb: false });
+				// Check localStorage for existing user data
+				const existingUser = localStorage.getItem(`user_${userSub}`);
+				if (existingUser) {
+					resolve({ isInDb: true, isFirstLogin: false });
+				} else {
+					resolve({ isInDb: false, isFirstLogin: true });
+				}
 			}, 500);
 		});
 		return response;
 	}
 );
 
-// Async thunk to add user to DB
+// Async thunk to add user to DB (first login)
 export const addUserToDb = createAsyncThunk(
 	"user/addUserToDb",
-	async (userData: Omit<User, "isInDb">) => {
+	async (userData: Omit<User, "isInDb" | "isFirstLogin" | "lastUpdated">) => {
 		// Simulate API call to add user to DB
 		const response = await new Promise<User>((resolve) => {
 			setTimeout(() => {
-				resolve({ ...userData, isInDb: true });
+				const newUser: User = {
+					...userData,
+					isInDb: true,
+					isFirstLogin: false,
+					lastUpdated: new Date().toISOString(),
+				};
+
+				// Save to localStorage for persistence
+				localStorage.setItem(`user_${userData.sub}`, JSON.stringify(newUser));
+
+				resolve(newUser);
 			}, 500);
 		});
 		return response;
+	}
+);
+
+// Async thunk to load existing user data
+export const loadUserData = createAsyncThunk(
+	"user/loadUserData",
+	async (userSub: string) => {
+		// Load user data from localStorage
+		const existingUser = localStorage.getItem(`user_${userSub}`);
+		if (existingUser) {
+			return JSON.parse(existingUser) as User;
+		}
+		throw new Error("User data not found");
 	}
 );
 
@@ -58,7 +91,20 @@ export const updateUserInfo = createAsyncThunk(
 		// Simulate API call to update user info
 		const response = await new Promise<User>((resolve) => {
 			setTimeout(() => {
-				resolve(userData as User);
+				const updatedUser: User = {
+					...userData,
+					lastUpdated: new Date().toISOString(),
+				} as User;
+
+				// Update localStorage
+				if (userData.sub) {
+					localStorage.setItem(
+						`user_${userData.sub}`,
+						JSON.stringify(updatedUser)
+					);
+				}
+
+				resolve(updatedUser);
 			}, 500);
 		});
 		return response;
@@ -83,16 +129,34 @@ const userSlice = createSlice({
 		updateUserName: (state, action: PayloadAction<string>) => {
 			if (state.user) {
 				state.user.name = action.payload;
+				state.user.lastUpdated = new Date().toISOString();
+				// Update localStorage
+				localStorage.setItem(
+					`user_${state.user.sub}`,
+					JSON.stringify(state.user)
+				);
 			}
 		},
 		updateUserEmail: (state, action: PayloadAction<string>) => {
 			if (state.user) {
 				state.user.email = action.payload;
+				state.user.lastUpdated = new Date().toISOString();
+				// Update localStorage
+				localStorage.setItem(
+					`user_${state.user.sub}`,
+					JSON.stringify(state.user)
+				);
 			}
 		},
 		updateUserPicture: (state, action: PayloadAction<string>) => {
 			if (state.user) {
 				state.user.picture = action.payload;
+				state.user.lastUpdated = new Date().toISOString();
+				// Update localStorage
+				localStorage.setItem(
+					`user_${state.user.sub}`,
+					JSON.stringify(state.user)
+				);
 			}
 		},
 	},
@@ -107,6 +171,7 @@ const userSlice = createSlice({
 				state.loading = false;
 				if (state.user) {
 					state.user.isInDb = action.payload.isInDb;
+					state.user.isFirstLogin = action.payload.isFirstLogin;
 				}
 			})
 			.addCase(checkUserInDb.rejected, (state, action) => {
@@ -125,6 +190,20 @@ const userSlice = createSlice({
 			.addCase(addUserToDb.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to add user to DB";
+			})
+			// Load user data
+			.addCase(loadUserData.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(loadUserData.fulfilled, (state, action) => {
+				state.loading = false;
+				state.user = action.payload;
+				state.initialized = true;
+			})
+			.addCase(loadUserData.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to load user data";
 			})
 			// Update user info
 			.addCase(updateUserInfo.pending, (state) => {

@@ -1,10 +1,27 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
+import {
+	IconChristmas,
+	IconHanukkah,
+	IconKwanzaa,
+	IconNewYear,
+	IconValentines,
+	IconEaster,
+	IconThanksgiving,
+	IconHalloween,
+	IconMothersDay,
+	IconFathersDay,
+	IconFourthOfJuly,
+	IconBirthday,
+	IconAnniversary,
+	IconGraduation,
+	IconBabyShower,
+	HolidayIcons,
+} from "../../../public/holiday-icons";
 
 interface HolidayCardProps {
 	id: string;
@@ -72,6 +89,29 @@ const HolidayIcon = ({
 	return (
 		<div className={`text-4xl ${className}`}>{iconMap[holidayId] || "🎉"}</div>
 	);
+};
+
+// Function to get the appropriate holiday SVG icon for professional mode
+const getHolidaySvgIcon = (holidayId: string) => {
+	const iconMap: { [key: string]: React.ComponentType<any> } = {
+		christmas: IconChristmas,
+		hanukkah: IconHanukkah,
+		kwanzaa: IconKwanzaa,
+		"new-year": IconNewYear,
+		valentines: IconValentines,
+		easter: IconEaster,
+		thanksgiving: IconThanksgiving,
+		halloween: IconHalloween,
+		"mothers-day": IconMothersDay,
+		"fathers-day": IconFathersDay,
+		"fourth-of-july": IconFourthOfJuly,
+		birthday: IconBirthday,
+		anniversary: IconAnniversary,
+		graduation: IconGraduation,
+		"baby-shower": IconBabyShower,
+	};
+
+	return iconMap[holidayId] || IconChristmas; // Fallback to Christmas icon
 };
 
 // Animated blob component for gamified mode
@@ -241,21 +281,34 @@ export default function HolidayCard({
 	return (
 		<li>
 			<div
-				className="relative card rounded-2xl p-5 flex items-center gap-4 transition hover:scale-[1.02] active:scale-100"
-				style={getCardStyling({
-					isDarkMode,
-					isGamified: false,
-					intensity: "medium",
-				})}
+				className="relative card rounded-2xl p-5 flex items-center gap-4 transition hover:scale-[1.02] active:scale-100 group"
+				style={
+					{
+						...getCardStyling({
+							isDarkMode,
+							isGamified: false,
+							intensity: "medium",
+						}),
+						"--holiday-color": color.light,
+					} as React.CSSProperties
+				}
 			>
 				<div className="relative w-16 h-16 flex-shrink-0">
 					<>
-						<Image
-							src="/globe.svg"
-							alt="Progress indicator"
-							fill
-							className="object-contain"
-						/>
+						{/* Holiday SVG Icon */}
+						<div className="absolute top-0 left-0 w-16 h-16 flex items-center justify-center">
+							{(() => {
+								const HolidayIconComponent = getHolidaySvgIcon(id);
+								return (
+									<HolidayIconComponent
+										size={60}
+										color={color.light}
+										className="dark:text-gray-300"
+									/>
+								);
+							})()}
+						</div>
+						{/* Progress circle overlay */}
 						<svg
 							className="absolute top-0 left-0 w-16 h-16"
 							viewBox="0 0 64 64"
@@ -304,9 +357,12 @@ export default function HolidayCard({
 							)}
 						</div>
 						{/* Countdown Timer - positioned on the right */}
-						<div className="flex flex-col items-end gap-2 z-20 relative">
-							<CountdownTimer className="" holiday={name} />
-							<span className="text-2xl text-gray-300 dark:text-gray-600">
+						<div className="flex flex-col items-end gap-2 z-30 relative">
+							<CountdownTimer
+								className="text-gray-600 dark:text-gray-400"
+								holiday={name}
+							/>
+							<span className="text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
 								→
 							</span>
 						</div>

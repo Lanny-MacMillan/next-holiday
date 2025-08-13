@@ -23,6 +23,7 @@ export interface EventItemsProps<T extends BaseEventTask> {
 	themeColor?: string; // For hover effects and accents (e.g., "blue", "red", "green")
 	gamified?: boolean; // New prop to control display mode
 	holidayColor?: string; // New prop for background color
+	backgroundColor?: string; // New prop for inline background style
 }
 
 const EventItems = <T extends BaseEventTask>({
@@ -33,6 +34,7 @@ const EventItems = <T extends BaseEventTask>({
 	themeColor = "blue",
 	gamified = false,
 	holidayColor,
+	backgroundColor,
 }: EventItemsProps<T>) => {
 	// Get display mode from Redux settings (fallback to prop)
 	const { settings } = useAppSelector((state: any) => state.theme);
@@ -97,18 +99,21 @@ const EventItems = <T extends BaseEventTask>({
 
 	// Gamified mode design
 	if (isGamifiedMode) {
-		const backgroundColor = holidayColor || `bg-${themeColor}-500`;
+		const bgColor = backgroundColor || holidayColor || `bg-${themeColor}-500`;
 
 		// Render completed task item (gamified)
 		if (task.isCompleted) {
 			return (
 				<li
-					className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white ${backgroundColor} opacity-60 border-2 border-white`}
-					style={getCardStyling({
-						isDarkMode,
-						isGamified: true,
-						intensity: "heavy",
-					})}
+					className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white opacity-60 border-2 border-white`}
+					style={{
+						...getCardStyling({
+							isDarkMode,
+							isGamified: true,
+							intensity: "heavy",
+						}),
+						background: backgroundColor || bgColor,
+					}}
 					onClick={handleToggleTask}
 				>
 					{/* Priority indicator - 10px wide strip on left side */}
@@ -188,12 +193,15 @@ const EventItems = <T extends BaseEventTask>({
 		// Render incomplete task item (gamified)
 		return (
 			<li
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white ${backgroundColor} border-2 border-white`}
-				style={getCardStyling({
-					isDarkMode,
-					isGamified: true,
-					intensity: "heavy",
-				})}
+				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white border-2 border-white`}
+				style={{
+					...getCardStyling({
+						isDarkMode,
+						isGamified: true,
+						intensity: "heavy",
+					}),
+					background: backgroundColor || bgColor,
+				}}
 				onClick={handleToggleTask}
 			>
 				{/* Priority indicator - 10px wide strip on left side */}

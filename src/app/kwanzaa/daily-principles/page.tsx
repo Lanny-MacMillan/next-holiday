@@ -19,6 +19,88 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
+// Helper function to get day number from principle ID
+const getDayNumber = (taskId: string): number => {
+	const match = taskId.match(/principle_(\d+)/);
+	return match ? parseInt(match[1]) : 0;
+};
+
+// Helper function to get alternating color for each day
+const getDayColor = (
+	dayNumber: number
+): { themeColor: string; holidayColor: string; backgroundColor: string } => {
+	switch (dayNumber) {
+		case 1:
+			return {
+				themeColor: "black",
+				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
+			};
+		case 2:
+			return {
+				themeColor: "red",
+				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
+			};
+		case 3:
+			return {
+				themeColor: "green",
+				holidayColor: "bg-gradient-to-br from-green-400 to-green-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(34, 197, 94), rgb(21, 128, 61))",
+			};
+		case 4:
+			return {
+				themeColor: "black",
+				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
+			};
+		case 5:
+			return {
+				themeColor: "red",
+				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
+			};
+		case 6:
+			return {
+				themeColor: "green",
+				holidayColor: "bg-gradient-to-br from-green-400 to-green-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(34, 197, 94), rgb(21, 128, 61))",
+			};
+		case 7:
+			return {
+				themeColor: "black",
+				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
+			};
+		default:
+			return {
+				themeColor: "red",
+				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
+			};
+	}
+};
+
+// Helper function to add day prefix to title
+const addDayPrefix = (task: KwanzaaTask): KwanzaaTask => {
+	const dayNumber = getDayNumber(task.id);
+	if (dayNumber > 0) {
+		return {
+			...task,
+			title: `Day ${dayNumber} — ${task.title}`,
+		};
+	}
+	return task;
+};
+
 export default function DailyPrinciplesPage() {
 	const dispatch = useAppDispatch();
 	const { tasks, loading, error, initialized } = useAppSelector(
@@ -106,7 +188,11 @@ export default function DailyPrinciplesPage() {
 	const principleTasks = tasks.filter(
 		(task: KwanzaaTask) => task.category === "Daily Principles"
 	);
-	const sortedTasks = sortTasks(principleTasks);
+
+	// Add day prefixes to principle tasks
+	const principleTasksWithPrefixes = principleTasks.map(addDayPrefix);
+
+	const sortedTasks = sortTasks(principleTasksWithPrefixes);
 	const incompleteTasks = sortedTasks.filter(
 		(task: KwanzaaTask) => !task.isCompleted
 	);
@@ -114,26 +200,34 @@ export default function DailyPrinciplesPage() {
 		(task: KwanzaaTask) => task.isCompleted
 	);
 
-	const renderTaskItem = (task: KwanzaaTask) => (
-		<EventItems
-			key={task.id}
-			task={task}
-			onToggleTask={handleToggleTask}
-			onDeleteTask={handleDeleteTask}
-			loading={loading}
-			themeColor="red"
-			holidayColor="bg-gradient-to-br from-red-400 to-red-600"
-		/>
-	);
+	const renderTaskItem = (task: KwanzaaTask) => {
+		const dayNumber = getDayNumber(task.id);
+		const { themeColor, holidayColor, backgroundColor } =
+			getDayColor(dayNumber);
+
+		return (
+			<EventItems
+				key={task.id}
+				task={task}
+				onToggleTask={handleToggleTask}
+				onDeleteTask={handleDeleteTask}
+				loading={loading}
+				themeColor={themeColor}
+				holidayColor={holidayColor}
+				backgroundColor={backgroundColor}
+				gamified={true}
+			/>
+		);
+	};
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Daily Principles"
+				title="Seven Principles of Kwanzaa"
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Keep track of Daily Prinicles!"
+				description="Track each day's candle and reflection"
 				holidayColor="red-500"
 				error={error}
 			/>
