@@ -12,6 +12,8 @@ import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import PartyPlanningCard from "@/components/cards/holiday-task/PartyPlanningCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const subsections = [
 	{

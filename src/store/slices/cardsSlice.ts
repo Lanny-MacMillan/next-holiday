@@ -7,6 +7,7 @@ export interface Card {
 	message: string;
 	isCompleted: boolean;
 	completedDate?: string;
+	shareId?: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -208,3 +209,28 @@ const cardsSlice = createSlice({
 
 export const { setSelectedCard, clearError } = cardsSlice.actions;
 export default cardsSlice.reducer;
+
+// Selectors for shared cards
+export const selectCardsByHolidayAndShare = (
+	state: any,
+	holidayKey: string,
+	shareId?: string
+) => {
+	const cards = state.cards.cards;
+
+	// If shareId is provided, return cards with that shareId
+	if (shareId) {
+		return cards.filter((card: Card) => card.shareId === shareId);
+	}
+
+	// If no shareId, return cards without shareId (private cards)
+	return cards.filter((card: Card) => !card.shareId);
+};
+
+export const selectCardsForHoliday = (
+	state: any,
+	holidayKey: string,
+	shareId?: string
+) => {
+	return selectCardsByHolidayAndShare(state, holidayKey, shareId);
+};

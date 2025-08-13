@@ -11,6 +11,7 @@ export interface Gift {
 	store?: string;
 	productLink?: string;
 	notes?: string;
+	shareId?: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -214,3 +215,28 @@ const giftListSlice = createSlice({
 
 export const { setSelectedGift, clearError } = giftListSlice.actions;
 export default giftListSlice.reducer;
+
+// Selectors for shared gifts
+export const selectGiftsByHolidayAndShare = (
+	state: any,
+	holidayKey: string,
+	shareId?: string
+) => {
+	const gifts = state.giftList.gifts;
+
+	// If shareId is provided, return gifts with that shareId
+	if (shareId) {
+		return gifts.filter((gift: Gift) => gift.shareId === shareId);
+	}
+
+	// If no shareId, return gifts without shareId (private gifts)
+	return gifts.filter((gift: Gift) => !gift.shareId);
+};
+
+export const selectGiftsForHoliday = (
+	state: any,
+	holidayKey: string,
+	shareId?: string
+) => {
+	return selectGiftsByHolidayAndShare(state, holidayKey, shareId);
+};

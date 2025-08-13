@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import ThemeToggle from "../ThemeToggle";
 import UpgradeModal from "../modals/UpgradeModal";
 import UpgradeBanner from "./UpgradeBanner";
+import AlertsBell from "./AlertsBell";
 
 export default function Header() {
 	const { logout } = useAuth0();
@@ -62,8 +63,9 @@ export default function Header() {
 							</h1>
 						</div>
 
-						{/* Right side - Theme toggle and burger menu */}
+						{/* Right side - Alerts bell, Theme toggle and burger menu */}
 						<div className="flex items-center space-x-2">
+							<AlertsBell />
 							<ThemeToggle />
 
 							<div className="relative">

@@ -6,6 +6,8 @@ import tasksReducer from "./slices/tasksSlice";
 import userReducer from "./slices/userSlice";
 import themeReducer from "./slices/themeSlice";
 import countdownReducer from "./slices/countdownSlice";
+import sharesReducer from "./slices/sharesSlice";
+import invitesReducer from "./slices/invitesSlice";
 import hanukkahGiftListReducer from "./slices/hanukkah/hanukkahGiftListSlice";
 import hanukkahTasksReducer from "./slices/hanukkah/hanukkahTasksSlice";
 import hanukkahCountdownReducer from "./slices/hanukkah/hanukkahCountdownSlice";
@@ -83,6 +85,8 @@ export const store = configureStore({
 		user: userReducer,
 		theme: themeReducer,
 		countdown: countdownReducer,
+		shares: sharesReducer,
+		invites: invitesReducer,
 		hanukkahGiftList: hanukkahGiftListReducer,
 		hanukkahTasks: hanukkahTasksReducer,
 		hanukkahCountdown: hanukkahCountdownReducer,

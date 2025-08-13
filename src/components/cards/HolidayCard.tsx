@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import CountdownTimer from "@/components/common/CountdownTimer";
+import CountdownWithInviteCompact from "@/components/common/CountdownWithInviteCompact";
+import SharedIndicatorCompact from "@/components/common/SharedIndicatorCompact";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
 import {
@@ -215,12 +217,15 @@ export default function HolidayCard({
 					))}
 
 					<div className="relative z-10">
-						{/* Header with holiday name */}
+						{/* Header with holiday name and shared indicator */}
 						<div className="flex justify-between items-start mb-3 sm:mb-4">
 							<div className="flex-1">
-								<h3 className="text-base sm:text-lg font-bold text-white mb-1">
-									{name}
-								</h3>
+								<div className="flex items-center gap-2 mb-1">
+									<h3 className="text-base sm:text-lg font-bold text-white">
+										{name}
+									</h3>
+									<SharedIndicatorCompact holidayKey={id} />
+								</div>
 								<p className="text-white opacity-90 text-xs sm:text-sm">
 									{description}
 								</p>
@@ -272,9 +277,13 @@ export default function HolidayCard({
 						<span className="sr-only">Go to {name} page</span>
 					</Link>
 
-					{/* Countdown Timer - positioned outside Link coverage */}
+					{/* Countdown Timer with Invite Button - positioned outside Link coverage */}
 					<div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
-						<CountdownTimer className="text-white" holiday={name} />
+						<CountdownWithInviteCompact
+							className="text-white"
+							holiday={name}
+							holidayKey={id}
+						/>
 					</div>
 				</div>
 			</li>
@@ -346,9 +355,12 @@ export default function HolidayCard({
 				<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-start">
 						<div className="flex-1 min-w-0">
-							<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">
-								{name}
-							</h3>
+							<div className="flex items-center gap-2 mb-1">
+								<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">
+									{name}
+								</h3>
+								<SharedIndicatorCompact holidayKey={id} />
+							</div>
 							<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
 								{description}
 							</p>
@@ -360,11 +372,12 @@ export default function HolidayCard({
 								</p>
 							)}
 						</div>
-						{/* Countdown Timer - positioned on the right */}
+						{/* Countdown Timer with Invite Button - positioned on the right */}
 						<div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
-							<CountdownTimer
+							<CountdownWithInviteCompact
 								className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
 								holiday={name}
+								holidayKey={id}
 							/>
 							<span className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
 								→

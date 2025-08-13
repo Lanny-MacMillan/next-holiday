@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
-import CountdownTimer from "@/components/common/CountdownTimer";
+
 import HolidayCard from "@/components/cards/HolidayCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
 import { holidayData } from "@/data/holidayData";
