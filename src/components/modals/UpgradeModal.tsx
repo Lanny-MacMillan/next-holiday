@@ -186,11 +186,11 @@ export default function UpgradeModal({
 	};
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="card rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-				<div className="flex justify-between items-center mb-6">
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+			<div className="card rounded-lg p-4 sm:p-6 max-w-md mx-auto w-full max-h-[90vh] overflow-y-auto">
+				<div className="flex justify-between items-center mb-4 sm:mb-6">
 					<div
-						className="text-xl font-black text-gray-900 dark:text-white"
+						className="text-lg sm:text-xl font-black text-gray-900 dark:text-white"
 						style={{
 							fontWeight: "900 !important",
 							fontFamily:
@@ -203,28 +203,30 @@ export default function UpgradeModal({
 					</div>
 					<button
 						onClick={onClose}
-						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl hover:scale-110 transition-transform duration-200"
+						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-lg sm:text-xl hover:scale-110 transition-transform duration-200"
 					>
 						×
 					</button>
 				</div>
 
 				{currentPage === "features" ? (
-					<div className="space-y-6">
+					<div className="space-y-4 sm:space-y-6">
 						{/* Upgrade Benefits Section */}
 						<div>
-							<h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+							<h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">
 								What you get with Plus:
 							</h4>
-							<ul className="space-y-4">
+							<ul className="space-y-3 sm:space-y-4">
 								{features.map((feature, index) => (
 									<li key={feature.key} className="flex items-start space-x-3">
-										<span className="text-green-500 text-lg mt-0.5">✓</span>
+										<span className="text-green-500 text-base sm:text-lg mt-0.5">
+											✓
+										</span>
 										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white font-medium">
+											<div className="text-sm sm:text-base text-gray-900 dark:text-white font-medium">
 												{feature.title}
 											</div>
-											<div className="text-gray-600 dark:text-gray-400 text-sm">
+											<div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 												{feature.blurb}
 											</div>
 										</div>
@@ -234,12 +236,14 @@ export default function UpgradeModal({
 						</div>
 
 						{/* Pricing */}
-						<div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 rounded-lg">
+						<div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-3 sm:p-4 rounded-lg">
 							<div className="text-center">
-								<span className="text-3xl font-bold text-gray-900 dark:text-white">
+								<span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
 									$2.99
 								</span>
-								<span className="text-gray-600 dark:text-gray-400">/month</span>
+								<span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+									/month
+								</span>
 							</div>
 						</div>
 
@@ -247,7 +251,7 @@ export default function UpgradeModal({
 						<div className="flex gap-3 pt-4">
 							<button
 								onClick={onClose}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 transition-all duration-200"
+								className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm sm:text-base text-gray-700 dark:text-gray-300 transition-all duration-200"
 								style={{
 									backgroundColor: "transparent",
 								}}
@@ -264,18 +268,18 @@ export default function UpgradeModal({
 							</button>
 							<button
 								onClick={handleUpgradeClick}
-								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium"
+								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-3 sm:px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium text-sm sm:text-base"
 							>
 								Upgrade Now
 							</button>
 						</div>
 					</div>
 				) : (
-					<div className="space-y-6">
+					<div className="space-y-4 sm:space-y-6">
 						{/* Credit Card Form */}
-						<div className="space-y-4">
+						<div className="space-y-3 sm:space-y-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+								<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 									Card Number
 								</label>
 								<input
@@ -288,15 +292,15 @@ export default function UpgradeModal({
 										)
 									}
 									placeholder="1234 5678 9012 3456"
-									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
 									maxLength={19}
 									style={{ borderStyle: "solid" }}
 								/>
 							</div>
 
-							<div className="grid grid-cols-2 gap-4">
+							<div className="grid grid-cols-2 gap-3 sm:gap-4">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 										Expiry Date
 									</label>
 									<input
@@ -309,13 +313,13 @@ export default function UpgradeModal({
 											)
 										}
 										placeholder="MM/YY"
-										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
 										maxLength={5}
 										style={{ borderStyle: "solid" }}
 									/>
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 										CVV
 									</label>
 									<input
@@ -328,7 +332,7 @@ export default function UpgradeModal({
 											)
 										}
 										placeholder="123"
-										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
 										maxLength={4}
 										style={{ borderStyle: "solid" }}
 									/>
@@ -336,7 +340,7 @@ export default function UpgradeModal({
 							</div>
 
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+								<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 									Cardholder Name
 								</label>
 								<input
@@ -346,7 +350,7 @@ export default function UpgradeModal({
 										handleInputChange("cardholderName", e.target.value)
 									}
 									placeholder="John Doe"
-									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
 									style={{ borderStyle: "solid" }}
 								/>
 							</div>
@@ -357,7 +361,7 @@ export default function UpgradeModal({
 							<button
 								onClick={handleBackToFeatures}
 								disabled={isLoading}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 transition-all duration-200 disabled:opacity-50"
+								className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm sm:text-base text-gray-700 dark:text-gray-300 transition-all duration-200 disabled:opacity-50"
 								style={{
 									backgroundColor: "transparent",
 								}}
@@ -378,9 +382,9 @@ export default function UpgradeModal({
 							<button
 								onClick={handleSubmitPayment}
 								disabled={!isFormValid() || isLoading}
-								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-3 sm:px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								{isLoading ? "Processing..." : "Complete Payment"}
+								{isLoading ? "Processing..." : "Submit Payment"}
 							</button>
 						</div>
 					</div>

@@ -31,6 +31,8 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 				name: user.name,
 				picture: user.picture,
 				isInDb: false, // Will be updated after DB check
+				isFirstLogin: false, // Will be updated after DB check
+				lastUpdated: new Date().toISOString(),
 			};
 
 			// Add user to Redux

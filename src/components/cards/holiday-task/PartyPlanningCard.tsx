@@ -49,14 +49,15 @@ export default function PartyPlanningCard({
 	const progressPercentage = progress * 100;
 
 	// Get gamified background gradient
-	const gamifiedBackground = holidayColor || "bg-gradient-to-br from-yellow-300 to-yellow-500";
+	const gamifiedBackground =
+		holidayColor || "bg-gradient-to-br from-yellow-300 to-yellow-500";
 
 	if (isGamifiedMode) {
 		// Gamified mode design
 		return (
 			<Link
 				href={href}
-				className={`block card rounded-2xl p-5 transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${gamifiedBackground} ${className}`}
+				className={`block card rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${gamifiedBackground} ${className}`}
 				style={getCardStyling({
 					isDarkMode,
 					isGamified: true,
@@ -73,21 +74,21 @@ export default function PartyPlanningCard({
 
 				<div className="relative z-10">
 					<div className="flex items-center justify-between mb-1">
-						<h3 
-							className="text-lg font-bold text-white"
+						<h3
+							className="text-base sm:text-lg font-bold text-white truncate flex-1 min-w-0 mr-2"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							{sectionName}
 						</h3>
 						<span
-							className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white bg-opacity-20 text-white"
+							className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white flex-shrink-0"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							{totalItems}
 						</span>
 					</div>
-					<p 
-						className="text-white opacity-90 text-sm"
+					<p
+						className="text-white opacity-90 text-xs sm:text-sm line-clamp-2"
 						style={{ fontFamily: "var(--font-family-fredoka)" }}
 					>
 						{description}
@@ -104,13 +105,13 @@ export default function PartyPlanningCard({
 					</div>
 					{/* Progress text */}
 					<div className="flex justify-between items-center mt-1">
-						<span 
+						<span
 							className="text-xs text-white opacity-80"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							{Math.round(progressPercentage)}% complete
 						</span>
-						<span 
+						<span
 							className="text-xs text-white opacity-80"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
@@ -126,18 +127,18 @@ export default function PartyPlanningCard({
 	return (
 		<Link
 			href={href}
-			className={`block card card-party-planning rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100 ${className}`}
+			className={`block card card-party-planning rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 ${className}`}
 			style={{
 				backgroundColor,
 				borderLeft: `4px solid ${primaryColor}`, // Colored line on left edge
 			}}
 		>
 			<div className="flex items-center justify-between mb-1">
-				<h3 className="text-lg font-bold text-gray-800 dark:text-white">
+				<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate flex-1 min-w-0 mr-2">
 					{sectionName}
 				</h3>
 				<span
-					className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+					className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full flex-shrink-0"
 					style={{
 						backgroundColor: `${primaryColor}20`,
 						color: primaryColor,
@@ -146,7 +147,9 @@ export default function PartyPlanningCard({
 					{totalItems}
 				</span>
 			</div>
-			<p className="text-gray-600 dark:text-gray-400 text-sm">{description}</p>
+			<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
+				{description}
+			</p>
 			{/* Progress bar */}
 			<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
 				<div
@@ -168,4 +171,4 @@ export default function PartyPlanningCard({
 			</div>
 		</Link>
 	);
-} 
+}

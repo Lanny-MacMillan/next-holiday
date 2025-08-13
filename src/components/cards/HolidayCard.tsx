@@ -185,7 +185,7 @@ export default function HolidayCard({
 		return (
 			<li>
 				<div
-					className={`relative card rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white`}
+					className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white`}
 					style={getCardStyling({
 						isDarkMode,
 						isGamified: true,
@@ -216,10 +216,14 @@ export default function HolidayCard({
 
 					<div className="relative z-10">
 						{/* Header with holiday name */}
-						<div className="flex justify-between items-start mb-4">
+						<div className="flex justify-between items-start mb-3 sm:mb-4">
 							<div className="flex-1">
-								<h3 className="text-xl font-bold text-white mb-1">{name}</h3>
-								<p className="text-white opacity-90 text-sm">{description}</p>
+								<h3 className="text-base sm:text-lg font-bold text-white mb-1">
+									{name}
+								</h3>
+								<p className="text-white opacity-90 text-xs sm:text-sm">
+									{description}
+								</p>
 								{incompleteItems > 0 && (
 									<p className="text-xs text-white opacity-80 mt-2">
 										{incompleteItems} task{incompleteItems !== 1 ? "s" : ""}{" "}
@@ -232,17 +236,17 @@ export default function HolidayCard({
 
 						{/* Holiday icon and progress */}
 						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-4">
+							<div className="flex items-center gap-3 sm:gap-4">
 								{/* Holiday icon */}
-								<div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
+								<div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
 									<HolidayIcon holidayId={id} />
 								</div>
 
 								{/* Progress info */}
 								<div className="flex-1">
-									<div className="w-full bg-white bg-opacity-20 rounded-full h-3 mb-2">
+									<div className="w-full bg-white bg-opacity-20 rounded-full h-2 sm:h-3 mb-2">
 										<div
-											className="h-3 rounded-full transition-all"
+											className="h-2 sm:h-3 rounded-full transition-all"
 											style={{
 												width: `${progress * 100}%`,
 												backgroundColor: color.light,
@@ -269,7 +273,7 @@ export default function HolidayCard({
 					</Link>
 
 					{/* Countdown Timer - positioned outside Link coverage */}
-					<div className="absolute top-4 right-4 z-20">
+					<div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
 						<CountdownTimer className="text-white" holiday={name} />
 					</div>
 				</div>
@@ -281,7 +285,7 @@ export default function HolidayCard({
 	return (
 		<li>
 			<div
-				className="relative card rounded-2xl p-5 flex items-center gap-4 transition hover:scale-[1.02] active:scale-100 group"
+				className="relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group"
 				style={
 					{
 						...getCardStyling({
@@ -293,24 +297,24 @@ export default function HolidayCard({
 					} as React.CSSProperties
 				}
 			>
-				<div className="relative w-16 h-16 flex-shrink-0">
+				<div className="relative w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 flex-shrink-0">
 					<>
 						{/* Holiday SVG Icon */}
-						<div className="absolute top-0 left-0 w-16 h-16 flex items-center justify-center">
+						<div className="absolute top-0 left-0 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 flex items-center justify-center">
 							{(() => {
 								const HolidayIconComponent = getHolidaySvgIcon(id);
 								return (
 									<HolidayIconComponent
-										size={60}
+										size={48}
 										color={color.light}
-										className="dark:text-gray-300"
+										className="dark:text-gray-300 w-8 h-8 sm:w-12 sm:h-12 lg:w-[60px] lg:h-[60px]"
 									/>
 								);
 							})()}
 						</div>
 						{/* Progress circle overlay */}
 						<svg
-							className="absolute top-0 left-0 w-16 h-16"
+							className="absolute top-0 left-0 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16"
 							viewBox="0 0 64 64"
 						>
 							<circle
@@ -339,13 +343,13 @@ export default function HolidayCard({
 					</>
 				</div>
 
-				<div className="flex-1">
+				<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-start">
-						<div>
-							<h3 className="text-lg font-bold text-gray-800 dark:text-white">
+						<div className="flex-1 min-w-0">
+							<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">
 								{name}
 							</h3>
-							<p className="text-gray-600 dark:text-gray-400 text-sm">
+							<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
 								{description}
 							</p>
 							{isGamifiedMode && incompleteItems > 0 && (
@@ -357,12 +361,12 @@ export default function HolidayCard({
 							)}
 						</div>
 						{/* Countdown Timer - positioned on the right */}
-						<div className="flex flex-col items-end gap-2 z-30 relative">
+						<div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
 							<CountdownTimer
-								className="text-gray-600 dark:text-gray-400"
+								className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
 								holiday={name}
 							/>
-							<span className="text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
+							<span className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
 								→
 							</span>
 						</div>

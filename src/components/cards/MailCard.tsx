@@ -39,7 +39,7 @@ export default function MailCard({
 
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor} ${
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor} ${
 					card.isCompleted ? "opacity-75" : ""
 				}`}
 				style={getCardStyling({
@@ -61,7 +61,7 @@ export default function MailCard({
 						<div className="flex-1">
 							<div className="flex items-center gap-2 mb-1">
 								<h3
-									className={`font-bold text-white ${
+									className={`font-bold text-white text-base sm:text-lg ${
 										card.isCompleted ? "line-through opacity-60" : ""
 									}`}
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
@@ -77,7 +77,7 @@ export default function MailCard({
 							{card.message && (
 								<div className="mt-2 p-3 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm">
 									<p
-										className="text-sm text-black italic"
+										className="text-xs sm:text-sm text-black italic"
 										style={{ fontFamily: "var(--font-family-fredoka)" }}
 									>
 										"{card.message}"
@@ -88,7 +88,7 @@ export default function MailCard({
 						<div className="flex flex-col gap-2 ml-4">
 							<button
 								onClick={() => onToggleCompletion(card.id)}
-								className={`px-3 py-1 rounded text-sm font-medium transition-colors border border-opacity-30 ${
+								className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium transition-colors border border-opacity-30 ${
 									card.isCompleted
 										? "border border-green-500 text-green-500 hover:bg-green-300"
 										: "border border-green-500 text-green-500 hover:bg-green-200"
@@ -99,14 +99,14 @@ export default function MailCard({
 							</button>
 							<button
 								onClick={() => onEditCard(card)}
-								className="px-3 py-1 text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white rounded text-sm font-medium transition-colors"
+								className="px-2 sm:px-3 py-1 text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white rounded text-xs sm:text-sm font-medium transition-colors"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Edit
 							</button>
 							<button
 								onClick={() => onDeleteCard(card.id)}
-								className="px-3 py-1 bg-red-500 bg-opacity-20 text-white hover:bg-red-500 hover:bg-opacity-30 rounded text-sm font-medium transition-colors border border-red-300 border-opacity-30"
+								className="px-2 sm:px-3 py-1 bg-red-500 bg-opacity-20 text-white hover:bg-red-500 hover:bg-opacity-30 rounded text-xs sm:text-sm font-medium transition-colors border border-red-300 border-opacity-30"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Delete
@@ -121,7 +121,7 @@ export default function MailCard({
 	// Professional mode (existing design)
 	return (
 		<div
-			className={`card card-valentines rounded-2xl p-4 transition-all ${
+			className={`card card-valentines rounded-2xl p-3 sm:p-4 transition-all ${
 				card.isCompleted ? "opacity-75" : ""
 			}`}
 		>
@@ -130,7 +130,7 @@ export default function MailCard({
 					<div className="flex-1">
 						<div className="flex items-center gap-2 mb-1">
 							<h3
-								className={`font-bold text-gray-800 dark:text-white ${
+								className={`font-bold text-gray-800 dark:text-white text-base sm:text-lg ${
 									card.isCompleted ? "line-through" : ""
 								}`}
 							>
@@ -144,7 +144,7 @@ export default function MailCard({
 						</div>
 						{card.message && (
 							<div className="mt-2 p-3 bg-pink-300 dark:bg-pink-900/20 rounded-lg">
-								<p className="text-sm text-white dark:text-gray-300 italic">
+								<p className="text-xs sm:text-sm text-white dark:text-gray-300 italic">
 									"{card.message}"
 								</p>
 							</div>
@@ -153,7 +153,7 @@ export default function MailCard({
 					<div className="flex flex-col gap-2 ml-4">
 						<button
 							onClick={() => onToggleCompletion(card.id)}
-							className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
+							className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium transition-colors border ${
 								card.isCompleted
 									? "border-green-500 text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30"
 									: "border-green-500 text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30"
@@ -163,13 +163,13 @@ export default function MailCard({
 						</button>
 						<button
 							onClick={() => onEditCard(card)}
-							className="px-3 py-1 border border-yellow-500 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded text-sm font-medium transition-colors"
+							className="px-2 sm:px-3 py-1 border border-yellow-500 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded text-xs sm:text-sm font-medium transition-colors"
 						>
 							Edit
 						</button>
 						<button
 							onClick={() => onDeleteCard(card.id)}
-							className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-sm font-medium transition-colors"
+							className="px-2 sm:px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-xs sm:text-sm font-medium transition-colors"
 						>
 							Delete
 						</button>

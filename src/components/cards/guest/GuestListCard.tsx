@@ -116,7 +116,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 		return (
 			<Link href={href} className="block group">
 				<div
-					className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor}`}
+					className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor}`}
 					style={getCardStyling({
 						isDarkMode,
 						isGamified: true,
@@ -132,27 +132,27 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 					</div>
 
 					<div className="relative z-10">
-						<div className="flex justify-between items-start mb-4">
-							<div>
+						<div className="flex justify-between items-start mb-3 sm:mb-4">
+							<div className="flex-1 min-w-0">
 								<h3
-									className="text-xl font-semibold text-white mb-2"
+									className="text-lg sm:text-xl font-semibold text-white mb-2 truncate"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									Guest List
 								</h3>
 								<p
-									className="text-white opacity-90 text-sm"
+									className="text-white opacity-90 text-xs sm:text-sm line-clamp-2"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									Manage your {holiday} guest list and RSVPs
 								</p>
 							</div>
-							<div className="text-right">
-								<div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
+							<div className="text-right flex-shrink-0 ml-3">
+								<div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
 									<GuestIcon count={totalGuests} />
 								</div>
 								<div
-									className="text-2xl font-bold text-white mt-2"
+									className="text-xl sm:text-2xl font-bold text-white mt-2"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									{totalGuests}
@@ -167,8 +167,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 						</div>
 
 						{/* RSVP Status Breakdown */}
-						<div className="space-y-2 mb-4">
-							<div className="flex justify-between items-center text-sm">
+						<div className="space-y-2 mb-3 sm:mb-4">
+							<div className="flex justify-between items-center text-xs sm:text-sm">
 								<span
 									className="text-white opacity-90"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
@@ -176,14 +176,14 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									Confirmed:
 								</span>
 								<span
-									className="font-medium text-green-200"
+									className="font-medium text-green-200 text-right"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									{confirmedParties} party{confirmedParties !== 1 ? "ies" : ""},{" "}
 									{confirmedGuests} guests
 								</span>
 							</div>
-							<div className="flex justify-between items-center text-sm">
+							<div className="flex justify-between items-center text-xs sm:text-sm">
 								<span
 									className="text-white opacity-90"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
@@ -191,14 +191,14 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									Pending:
 								</span>
 								<span
-									className="font-medium text-yellow-200"
+									className="font-medium text-yellow-200 text-right"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									{pendingParties} party{pendingParties !== 1 ? "ies" : ""},{" "}
 									{pendingGuests} guests
 								</span>
 							</div>
-							<div className="flex justify-between items-center text-sm">
+							<div className="flex justify-between items-center text-xs sm:text-sm">
 								<span
 									className="text-white opacity-90"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
@@ -206,7 +206,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 									Declined:
 								</span>
 								<span
-									className="font-medium text-red-200"
+									className="font-medium text-red-200 text-right"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									{declinedParties} part{declinedParties > 1 ? "ies" : "y"},{" "}
@@ -219,7 +219,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 						<div className="pt-3 border-t border-white border-opacity-30">
 							<div className="flex justify-between items-center">
 								<span
-									className="text-sm text-white opacity-90"
+									className="text-xs sm:text-sm text-white opacity-90"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									Total People:
@@ -242,7 +242,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 						</div>
 
 						{/* Progress indicator */}
-						<div className="mt-4">
+						<div className="mt-3 sm:mt-4">
 							<div className="flex justify-between text-xs mb-1">
 								<span
 									className="text-white opacity-90"
@@ -288,7 +288,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 	return (
 		<Link href={href} className="block group">
 			<div
-				className="card rounded-lg p-6 transition-all duration-200 border-l-4"
+				className="card rounded-lg p-4 sm:p-6 transition-all duration-200 border-l-4"
 				style={{
 					borderLeftColor: theme.primaryColor,
 					...getCardStyling({
@@ -298,17 +298,17 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 					}),
 				}}
 			>
-				<div className="flex justify-between items-start mb-4">
-					<div>
-						<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+				<div className="flex justify-between items-start mb-3 sm:mb-4">
+					<div className="flex-1 min-w-0">
+						<h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2 truncate">
 							Guest List
 						</h3>
-						<p className="text-gray-600 dark:text-gray-400 text-sm">
+						<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
 							Manage your {holiday} guest list and RSVPs
 						</p>
 					</div>
-					<div className="text-right">
-						<div className="text-2xl font-bold text-gray-900 dark:text-white">
+					<div className="text-right flex-shrink-0 ml-3">
+						<div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
 							{totalGuests}
 						</div>
 						<div className="text-xs text-gray-500 dark:text-gray-400">
@@ -318,24 +318,24 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 				</div>
 
 				{/* RSVP Status Breakdown */}
-				<div className="space-y-2 mb-4">
-					<div className="flex justify-between items-center text-sm">
+				<div className="space-y-2 mb-3 sm:mb-4">
+					<div className="flex justify-between items-center text-xs sm:text-sm">
 						<span className="text-gray-600 dark:text-gray-400">Confirmed:</span>
-						<span className="font-medium text-green-600 dark:text-green-500">
+						<span className="font-medium text-green-600 dark:text-green-500 text-right">
 							{confirmedParties} party{confirmedParties !== 1 ? "ies" : ""},{" "}
 							{confirmedGuests} guests
 						</span>
 					</div>
-					<div className="flex justify-between items-center text-sm">
+					<div className="flex justify-between items-center text-xs sm:text-sm">
 						<span className="text-gray-600 dark:text-gray-400">Pending:</span>
-						<span className="font-medium text-yellow-600 dark:text-yellow-500">
+						<span className="font-medium text-yellow-600 dark:text-yellow-500 text-right">
 							{pendingParties} party{pendingParties !== 1 ? "ies" : ""},{" "}
 							{pendingGuests} guests
 						</span>
 					</div>
-					<div className="flex justify-between items-center text-sm">
+					<div className="flex justify-between items-center text-xs sm:text-sm">
 						<span className="text-gray-600 dark:text-gray-400">Declined:</span>
-						<span className="font-medium text-red-600 dark:text-red-500">
+						<span className="font-medium text-red-600 dark:text-red-500 text-right">
 							{declinedParties} party{declinedParties !== 1 ? "ies" : ""},{" "}
 							{declinedGuests} guests
 						</span>
@@ -345,7 +345,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 				{/* Total People Count */}
 				<div className="pt-3 border-t border-gray-200 dark:border-gray-700">
 					<div className="flex justify-between items-center">
-						<span className="text-sm text-gray-600 dark:text-gray-400">
+						<span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 							Total People:
 						</span>
 						<span className="font-semibold text-gray-900 dark:text-white">
@@ -360,7 +360,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 				</div>
 
 				{/* Progress indicator */}
-				<div className="mt-4">
+				<div className="mt-3 sm:mt-4">
 					<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
 						<span>RSVP Response Rate</span>
 						<span>

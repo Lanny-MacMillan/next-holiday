@@ -73,24 +73,24 @@ export default function EditTaskModal({
 	if (!isOpen || !task) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="card  rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+			<div className="card  rounded-lg p-4 sm:p-6 max-w-md mx-auto w-full max-h-[90vh] overflow-y-auto">
+				<div className="flex justify-between items-center mb-3 sm:mb-4">
+					<h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
 						Edit Task
 					</h3>
 					<button
 						onClick={handleClose}
-						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-lg sm:text-xl"
 					>
 						×
 					</button>
 				</div>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
+				<form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
 					{/* Task Title */}
 					<input
-						className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+						className="border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 						placeholder="Task Title*"
 						value={form.title}
 						onChange={(e) =>
@@ -101,7 +101,7 @@ export default function EditTaskModal({
 
 					{/* Description */}
 					<textarea
-						className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+						className="border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 						placeholder="Description"
 						value={form.description}
 						onChange={(e) =>
@@ -113,7 +113,7 @@ export default function EditTaskModal({
 					{/* Priority and Assigned To */}
 					<div className="flex gap-2">
 						<select
-							className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+							className="flex-1 border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							value={form.priority}
 							onChange={(e) =>
 								setForm((prev) => ({
@@ -127,7 +127,7 @@ export default function EditTaskModal({
 							<option value="high">High Priority</option>
 						</select>
 						<input
-							className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+							className="flex-1 border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							placeholder="Assigned To"
 							value={form.assignedTo}
 							onChange={(e) =>
@@ -139,7 +139,7 @@ export default function EditTaskModal({
 					{/* Category and Due Date */}
 					<div className="flex gap-2">
 						<input
-							className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+							className="flex-1 border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							placeholder="Due Date"
 							type="date"
 							value={form.dueDate}
@@ -162,7 +162,7 @@ export default function EditTaskModal({
 						/>
 						<label
 							htmlFor="isCompleted"
-							className="text-gray-700 dark:text-gray-300 text-sm"
+							className="text-xs sm:text-sm text-gray-700 dark:text-gray-300"
 						>
 							Mark as completed
 						</label>
@@ -173,13 +173,13 @@ export default function EditTaskModal({
 						<button
 							type="button"
 							onClick={handleClose}
-							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+							className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 						>
 							Cancel
 						</button>
 						<button
 							type="submit"
-							className="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+							className="flex-1 bg-green-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-600 transition-colors text-sm sm:text-base"
 							disabled={loading}
 						>
 							{loading ? "Saving..." : "Save Changes"}

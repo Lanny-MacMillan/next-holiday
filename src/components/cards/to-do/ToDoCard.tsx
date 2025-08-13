@@ -37,7 +37,9 @@ const TaskIcon = ({
 	};
 
 	return (
-		<div className={`text-2xl ${className}`}>{iconMap[priority] || "📝"}</div>
+		<div className={`text-xl sm:text-2xl ${className}`}>
+			{iconMap[priority] || "📝"}
+		</div>
 	);
 };
 
@@ -134,7 +136,7 @@ export default function ToDoCard({
 		// Gamified mode design
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${gamifiedBackgroundColor} text-white ${className}`}
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${gamifiedBackgroundColor} text-white ${className}`}
 				style={getCardStyling({
 					isDarkMode,
 					isGamified: true,
@@ -172,13 +174,15 @@ export default function ToDoCard({
 							e.stopPropagation();
 							handleDelete(e);
 						}}
-						className="text-red-700 hover:text-red-900 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+						className="text-red-700 hover:text-red-900 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
 						title="Delete task"
 						style={{
 							pointerEvents: "auto",
 						}}
 					>
-						<span className="text-3xl font-bold select-none">×</span>
+						<span className="text-2xl sm:text-3xl font-bold select-none">
+							×
+						</span>
 					</button>
 				</div>
 
@@ -197,7 +201,7 @@ export default function ToDoCard({
 					{/* Main Card Content */}
 					<div className="flex items-start space-x-3">
 						{/* Task Icon */}
-						<div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+						<div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
 							<TaskIcon priority={task.priority} />
 						</div>
 
@@ -205,7 +209,7 @@ export default function ToDoCard({
 						<div className="flex-1 min-w-0">
 							{/* Task Title */}
 							<div
-								className={`font-semibold text-white ${
+								className={`font-semibold text-white text-sm sm:text-base ${
 									task.isCompleted ? "line-through opacity-60" : ""
 								}`}
 							>
@@ -228,7 +232,7 @@ export default function ToDoCard({
 											<>
 												{descriptionWithoutCost && (
 													<div
-														className={`text-sm mt-1 text-white opacity-90 ${
+														className={`text-xs sm:text-sm mt-1 text-white opacity-90 ${
 															task.isCompleted ? "line-through opacity-60" : ""
 														}`}
 													>
@@ -239,7 +243,7 @@ export default function ToDoCard({
 												{/* Display cost separately below description */}
 												{costMatch && (
 													<div
-														className={`text-sm mt-1 font-medium text-white opacity-90 ${
+														className={`text-xs sm:text-sm mt-1 font-medium text-white opacity-90 ${
 															task.isCompleted ? "line-through opacity-60" : ""
 														}`}
 													>
@@ -256,7 +260,7 @@ export default function ToDoCard({
 							<div className="flex flex-wrap gap-2 mt-2">
 								{/* Priority Tag */}
 								<span
-									className="px-2 py-1 rounded-full text-sm font-medium"
+									className="px-2 py-1 rounded-full text-xs sm:text-sm font-medium"
 									style={{
 										color: getPriorityColor(task.priority),
 										backgroundColor: "white",
@@ -286,7 +290,7 @@ export default function ToDoCard({
 					<div className="flex flex-col gap-1 mt-3">
 						<button
 							onClick={handleEdit}
-							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-sm px-2 py-1 rounded transition-colors"
+							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors"
 							title="Edit task"
 						>
 							Edit
@@ -300,7 +304,7 @@ export default function ToDoCard({
 	// Professional mode (existing design)
 	return (
 		<div
-			className={`relative card card-tasks p-4 cursor-pointer ${hoverColor} transition-shadow ${className}`}
+			className={`relative card card-tasks p-3 sm:p-4 cursor-pointer ${hoverColor} transition-shadow ${className}`}
 			style={borderStyle}
 			onClick={handleToggle}
 		>
@@ -341,7 +345,7 @@ export default function ToDoCard({
 				<div className="flex-1 min-w-0">
 					{/* Task Title */}
 					<div
-						className={`font-semibold ${
+						className={`font-semibold text-sm sm:text-base ${
 							task.isCompleted
 								? "line-through text-gray-400 dark:text-gray-500"
 								: "text-gray-900 dark:text-white"
@@ -365,7 +369,7 @@ export default function ToDoCard({
 									<>
 										{descriptionWithoutCost && (
 											<div
-												className={`text-sm mt-1 ${
+												className={`text-xs sm:text-sm mt-1 ${
 													task.isCompleted
 														? "line-through text-gray-400 dark:text-gray-500"
 														: "text-gray-500 dark:text-gray-400"
@@ -378,7 +382,7 @@ export default function ToDoCard({
 										{/* Display cost separately below description */}
 										{costMatch && (
 											<div
-												className={`text-sm mt-1 font-medium ${
+												className={`text-xs sm:text-sm mt-1 font-medium ${
 													task.isCompleted
 														? "line-through text-gray-400 dark:text-gray-500"
 														: "text-green-600 dark:text-green-400"
@@ -397,7 +401,7 @@ export default function ToDoCard({
 					<div className="flex flex-wrap gap-2 mt-2">
 						{/* Priority Tag */}
 						<span
-							className={`px-2 py-1 rounded ${getPriorityStyles(
+							className={`px-2 py-1 rounded text-xs sm:text-sm ${getPriorityStyles(
 								task.priority
 							)}`}
 						>

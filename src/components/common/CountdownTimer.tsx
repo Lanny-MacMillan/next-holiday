@@ -365,6 +365,54 @@ export default function CountdownTimer({
 	};
 
 	if (!isActive) {
+		// Get holiday color for professional mode
+		const getHolidayColor = () => {
+			const colorMap: { [key: string]: { light: string; dark: string } } = {
+				christmas: { light: "#22c55e", dark: "#16a34a" },
+				hanukkah: { light: "#3b82f6", dark: "#2563eb" },
+				kwanzaa: { light: "#dc2626", dark: "#b91c1c" },
+				"new-year": { light: "#f59e0b", dark: "#d97706" },
+				valentines: { light: "#ec4899", dark: "#db2777" },
+				easter: { light: "#a855f7", dark: "#9333ea" },
+				halloween: { light: "#f97316", dark: "#ea580c" },
+				thanksgiving: { light: "#f59e0b", dark: "#d97706" },
+				"mothers-day": { light: "#ec4899", dark: "#db2777" },
+				"fathers-day": { light: "#3b82f6", dark: "#2563eb" },
+				"fourth-of-july": { light: "#dc2626", dark: "#b91c1c" },
+				birthday: { light: "#f59e0b", dark: "#d97706" },
+				anniversary: { light: "#ec4899", dark: "#db2777" },
+				graduation: { light: "#a855f7", dark: "#9333ea" },
+				"baby-shower": { light: "#06b6d4", dark: "#0891b2" },
+			};
+
+			// Map holiday names to IDs
+			const holidayIdMap: { [key: string]: string } = {
+				Christmas: "christmas",
+				Hanukkah: "hanukkah",
+				Kwanzaa: "kwanzaa",
+				"New Year": "new-year",
+				"Valentine's Day": "valentines",
+				Easter: "easter",
+				Halloween: "halloween",
+				Thanksgiving: "thanksgiving",
+				"Mother's Day": "mothers-day",
+				"Father's Day": "fathers-day",
+				"Fourth of July": "fourth-of-july",
+				Birthday: "birthday",
+				Anniversary: "anniversary",
+				Graduation: "graduation",
+				"Baby Shower": "baby-shower",
+			};
+
+			const holidayId = holidayIdMap[holiday || ""];
+			return colorMap[holidayId] || { light: "#6b7280", dark: "#4b5563" };
+		};
+
+		// Get display mode from Redux settings
+		const { settings } = useAppSelector((state: any) => state.theme);
+		const isGamifiedMode = settings.displayMode === "gamified";
+		const holidayColor = getHolidayColor();
+
 		return (
 			<div className={`${className} relative z-20`}>
 				<button
@@ -372,7 +420,20 @@ export default function CountdownTimer({
 						e.stopPropagation();
 						setShowDatePicker(true);
 					}}
-					className="text-xs text-white font-medium hover:text-gray-200 transition-colors"
+					className={`text-xs font-medium transition-all duration-200 ${
+						isGamifiedMode
+							? "text-white hover:text-gray-200 hover:scale-110"
+							: `countdown-timer-professional hover:scale-105`
+					}`}
+					style={
+						!isGamifiedMode
+							? ({
+									color: holidayColor.light,
+									"--holiday-color": holidayColor.light,
+									"--holiday-color-dark": holidayColor.dark,
+							  } as React.CSSProperties)
+							: {}
+					}
 				>
 					Set Countdown
 				</button>
@@ -387,9 +448,17 @@ export default function CountdownTimer({
 	}
 
 	if (!timeLeft) {
+		// Get display mode from Redux settings
+		const { settings } = useAppSelector((state: any) => state.theme);
+		const isGamifiedMode = settings.displayMode === "gamified";
+
 		return (
 			<div
-				className={`${className} text-xs text-gray-500 dark:text-gray-400 relative z-20`}
+				className={`${className} text-xs relative z-20 ${
+					isGamifiedMode
+						? "text-gray-500 dark:text-gray-400"
+						: "countdown-timer-professional"
+				}`}
 			>
 				Calculating...
 			</div>
@@ -405,11 +474,19 @@ export default function CountdownTimer({
 
 	// Show completion message but still allow editing
 	if (completionMessage) {
+		// Get display mode from Redux settings
+		const { settings } = useAppSelector((state: any) => state.theme);
+		const isGamifiedMode = settings.displayMode === "gamified";
+
 		return (
 			<div className={`${className} relative z-20`}>
 				<button
 					onClick={handleCountdownClick}
-					className="text-xs text-red-500 cursor-pointer transition-colors font-medium"
+					className={`text-xs cursor-pointer transition-all duration-200 font-medium ${
+						isGamifiedMode
+							? "text-red-500 hover:scale-110"
+							: "countdown-timer-professional hover:scale-105"
+					}`}
 					title="Click to edit or delete countdown"
 				>
 					{completionMessage}
@@ -426,11 +503,19 @@ export default function CountdownTimer({
 		);
 	}
 
+	// Get display mode from Redux settings
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamifiedMode = settings.displayMode === "gamified";
+
 	return (
 		<div className={`${className} relative z-20`}>
 			<button
 				onClick={handleCountdownClick}
-				className={`text-xs ${getCountdownColor()} cursor-pointer transition-colors font-medium`}
+				className={`text-xs cursor-pointer transition-all duration-200 font-medium ${
+					isGamifiedMode
+						? `${getCountdownColor()} hover:scale-110`
+						: "countdown-timer-professional hover:scale-105"
+				}`}
 				title="Click to edit or delete countdown"
 			>
 				{timeLeft.days > 0 && `${timeLeft.days}d `}

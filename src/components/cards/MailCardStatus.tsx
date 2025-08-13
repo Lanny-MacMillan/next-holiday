@@ -31,7 +31,7 @@ export default function MailCardStatus({
 
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor}`}
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor}`}
 				style={getCardStyling({
 					isDarkMode,
 					isGamified: true,
@@ -47,16 +47,16 @@ export default function MailCardStatus({
 				</div>
 
 				<div className="relative z-10">
-					<div className="grid grid-cols-2 gap-4 text-center">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4 text-center">
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Total Cards
 							</p>
 							<p
-								className="text-2xl font-bold text-white"
+								className="text-xl sm:text-2xl font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{totalCards}
@@ -64,13 +64,13 @@ export default function MailCardStatus({
 						</div>
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Sent
 							</p>
 							<p
-								className="text-2xl font-bold text-white"
+								className="text-xl sm:text-2xl font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{completedCards}
@@ -78,13 +78,13 @@ export default function MailCardStatus({
 						</div>
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								To Send
 							</p>
 							<p
-								className="text-lg font-bold text-white"
+								className="text-base sm:text-lg font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{incompleteCards}
@@ -92,13 +92,13 @@ export default function MailCardStatus({
 						</div>
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Progress
 							</p>
 							<p
-								className="text-lg font-bold text-white"
+								className="text-base sm:text-lg font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{progressPercentage}%
@@ -112,31 +112,37 @@ export default function MailCardStatus({
 
 	// Professional mode (existing design)
 	return (
-		<div className="card card-valentines rounded-2xl p-4">
-			<div className="grid grid-cols-2 gap-4 text-center">
+		<div className="card card-valentines rounded-2xl p-3 sm:p-4">
+			<div className="grid grid-cols-2 gap-3 sm:gap-4 text-center">
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 						Total Cards
 					</p>
-					<p className="text-2xl font-bold text-gray-800 dark:text-white">
+					<p className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
 						{totalCards}
 					</p>
 				</div>
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">Sent</p>
-					<p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+						Sent
+					</p>
+					<p className="text-xl sm:text-2xl font-bold text-pink-600 dark:text-pink-400">
 						{completedCards}
 					</p>
 				</div>
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">To Send</p>
-					<p className="text-lg font-bold text-gray-800 dark:text-white">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+						To Send
+					</p>
+					<p className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">
 						{incompleteCards}
 					</p>
 				</div>
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">Progress</p>
-					<p className="text-lg font-bold text-pink-600 dark:text-pink-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+						Progress
+					</p>
+					<p className="text-base sm:text-lg font-bold text-pink-600 dark:text-pink-400">
 						{progressPercentage}%
 					</p>
 				</div>

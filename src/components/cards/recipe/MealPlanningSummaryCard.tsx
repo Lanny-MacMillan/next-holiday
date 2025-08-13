@@ -62,7 +62,7 @@ export default function MealPlanningSummaryCard({
 
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${backgroundColor} ${className}`}
+				className={`relative card rounded-2xl p-3 sm:p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${backgroundColor} ${className}`}
 				style={{
 					...getCardStyling({
 						isDarkMode,
@@ -82,7 +82,7 @@ export default function MealPlanningSummaryCard({
 
 				<div className="relative z-10">
 					<h2
-						className="text-xl font-bold mb-4 text-white text-center"
+						className="text-lg sm:text-xl font-bold mb-4 text-white text-center"
 						style={{ fontFamily: "var(--font-family-fredoka)" }}
 					>
 						{title}
@@ -90,13 +90,13 @@ export default function MealPlanningSummaryCard({
 					<div className="grid grid-cols-2 gap-4 mb-4">
 						<div className="text-center">
 							<div
-								className="text-2xl font-bold text-white"
+								className="text-xl sm:text-2xl font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{totalRecipes}
 							</div>
 							<div
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Total Recipes
@@ -104,13 +104,13 @@ export default function MealPlanningSummaryCard({
 						</div>
 						<div className="text-center">
 							<div
-								className="text-2xl font-bold text-green-200"
+								className="text-xl sm:text-2xl font-bold text-green-200"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{completedRecipesCount}
 							</div>
 							<div
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Completed
@@ -119,13 +119,13 @@ export default function MealPlanningSummaryCard({
 					</div>
 					<div className="text-center">
 						<div
-							className="text-2xl font-bold text-white"
+							className="text-xl sm:text-2xl font-bold text-white"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							{completionRate}%
 						</div>
 						<div
-							className="text-sm text-white opacity-90"
+							className="text-xs sm:text-sm text-white opacity-90"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							Completion Rate
@@ -138,29 +138,29 @@ export default function MealPlanningSummaryCard({
 
 	// Original clean, professional design
 	return (
-		<div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
-			<h2 className="text-xl font-bold mb-4 text-gray-800 text-center">
+		<div className={`bg-white rounded-lg shadow-lg p-4 sm:p-6 ${className}`}>
+			<h2 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 text-center">
 				{title}
 			</h2>
 			<div className="grid grid-cols-2 gap-4 mb-4">
 				<div className="text-center">
-					<div className={`text-2xl font-bold text-${accentColor}`}>
+					<div className={`text-xl sm:text-2xl font-bold text-${accentColor}`}>
 						{totalRecipes}
 					</div>
-					<div className="text-sm text-gray-600">Total Recipes</div>
+					<div className="text-xs sm:text-sm text-gray-600">Total Recipes</div>
 				</div>
 				<div className="text-center">
-					<div className="text-2xl font-bold text-green-600">
+					<div className="text-xl sm:text-2xl font-bold text-green-600">
 						{completedRecipesCount}
 					</div>
-					<div className="text-sm text-gray-600">Completed</div>
+					<div className="text-xs sm:text-sm text-gray-600">Completed</div>
 				</div>
 			</div>
 			<div className="text-center">
-				<div className={`text-2xl font-bold text-${accentColor}`}>
+				<div className={`text-xl sm:text-2xl font-bold text-${accentColor}`}>
 					{completionRate}%
 				</div>
-				<div className="text-sm text-gray-600">Completion Rate</div>
+				<div className="text-xs sm:text-sm text-gray-600">Completion Rate</div>
 			</div>
 		</div>
 	);

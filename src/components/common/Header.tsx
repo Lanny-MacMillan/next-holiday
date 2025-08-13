@@ -133,13 +133,13 @@ export default function Header() {
 												onMouseEnter={(e) => {
 													e.currentTarget.style.background =
 														"linear-gradient(to right, #c084fc, #60a5fa)";
-													e.currentTarget.style.WebkitBackgroundClip = "text";
+													e.currentTarget.style.webkitBackgroundClip = "text";
 													e.currentTarget.style.backgroundClip = "text";
 												}}
 												onMouseLeave={(e) => {
 													e.currentTarget.style.background =
 														"linear-gradient(to right, #a855f7, #3b82f6)";
-													e.currentTarget.style.WebkitBackgroundClip = "text";
+													e.currentTarget.style.webkitBackgroundClip = "text";
 													e.currentTarget.style.backgroundClip = "text";
 												}}
 											>

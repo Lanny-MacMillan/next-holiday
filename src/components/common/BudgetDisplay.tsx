@@ -157,7 +157,7 @@ export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
 
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${holidayColor}`}
+				className={`relative card rounded-2xl p-3 sm:p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${holidayColor}`}
 				style={{
 					...getCardStyling({
 						isDarkMode: false,
@@ -177,20 +177,20 @@ export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
 				<div className="relative z-10">
 					<div className="flex justify-between items-center mb-3">
 						<h3
-							className="font-semibold text-white"
+							className="font-semibold text-white text-sm sm:text-base"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							{displayTitle}
 						</h3>
 						<span
-							className="text-sm font-medium text-white opacity-90"
+							className="text-xs sm:text-sm font-medium text-white opacity-90"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							{budgetInfo.statusText}
 						</span>
 					</div>
 
-					<div className="flex justify-between items-center text-sm mb-3">
+					<div className="flex justify-between items-center text-xs sm:text-sm mb-3">
 						<div>
 							<span
 								className="font-medium text-white opacity-90"
@@ -238,9 +238,9 @@ export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
 								{budgetInfo.percentageUsed.toFixed(1)}% used
 							</span>
 						</div>
-						<div className="w-full bg-white bg-opacity-20 rounded-full h-3 border border-white border-opacity-30">
+						<div className="w-full bg-white bg-opacity-20 rounded-full h-2 sm:h-3 border border-white border-opacity-30">
 							<div
-								className={`h-3 rounded-full transition-all ${budgetInfo.progressBarColor}`}
+								className={`h-2 sm:h-3 rounded-full transition-all ${budgetInfo.progressBarColor}`}
 								style={{
 									width: `${Math.min(budgetInfo.percentageUsed, 100)}%`,
 								}}
@@ -254,12 +254,14 @@ export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
 
 	// Original clean, professional design
 	return (
-		<div className={`card rounded-lg p-4 mb-4 ${budgetInfo.colorClass}`}>
+		<div className={`card rounded-lg p-3 sm:p-4 mb-4 ${budgetInfo.colorClass}`}>
 			<div className="flex justify-between items-center mb-2">
-				<h3 className="font-semibold">{displayTitle}</h3>
-				<span className="text-sm font-medium">{budgetInfo.statusText}</span>
+				<h3 className="font-semibold text-sm sm:text-base">{displayTitle}</h3>
+				<span className="text-xs sm:text-sm font-medium">
+					{budgetInfo.statusText}
+				</span>
 			</div>
-			<div className="flex justify-between items-center text-sm">
+			<div className="flex justify-between items-center text-xs sm:text-sm">
 				<div>
 					<span className="font-medium">Spent: </span>
 					<span className="font-bold">${budgetInfo.totalSpent.toFixed(2)}</span>

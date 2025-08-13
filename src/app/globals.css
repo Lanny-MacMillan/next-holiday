@@ -79,6 +79,28 @@
 	font-family: var(--font-family-fredoka);
 }
 
+/* Line clamp utilities for text truncation */
+.line-clamp-1 {
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+}
+
 /* Cursor Dark Theme Colors with Christmas touches */
 .dark {
 	--color-background: 10 8 15; /* Deep dark with subtle Christmas purple */
@@ -1106,4 +1128,13 @@ button.dark .hover\:bg-purple-500:hover {
 		rgb(8, 15, 20) 50%,
 		rgb(10, 20, 25) 100%
 	);
+}
+
+/* Countdown timer hover effects for professional mode */
+.countdown-timer-professional {
+	color: var(--holiday-color) !important;
+}
+
+.countdown-timer-professional:hover {
+	color: var(--holiday-color-dark) !important;
 }

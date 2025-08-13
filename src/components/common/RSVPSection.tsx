@@ -99,7 +99,7 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
 		return (
 			<div>
 				<h2
-					className={`font-semibold mb-2 ${getTitleColor()}`}
+					className={`font-semibold mb-2 text-base sm:text-lg ${getTitleColor()}`}
 					style={{ fontFamily: "var(--font-family-fredoka)" }}
 				>
 					{getSectionTitle()}
@@ -116,8 +116,8 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
 							}),
 						}}
 					>
-						<div className="px-4 py-3 text-center">
-							<div className="w-full text-gray-600 dark:text-gray-400 text-sm">
+						<div className="px-3 py-3 sm:px-4 sm:py-3 text-center">
+							<div className="w-full text-gray-600 dark:text-gray-400 text-sm sm:text-base">
 								{emptyMessage}
 							</div>
 						</div>
@@ -125,7 +125,7 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
 				) : (
 					// Non-empty state - use gamified styling
 					<div
-						className={`card rounded-2xl p-4 transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden text-white tracking-wide ${cardClassName} ${
+						className={`card rounded-2xl p-3 sm:p-4 transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden text-white tracking-wide ${cardClassName} ${
 							holidayColor || "bg-gradient-to-br from-amber-400 to-amber-600"
 						}`}
 						style={{
@@ -159,7 +159,9 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
 	// Professional mode (existing design)
 	return (
 		<div>
-			<h2 className={`font-semibold mb-2 ${getTitleColor()}`}>
+			<h2
+				className={`font-semibold mb-2 text-base sm:text-lg ${getTitleColor()}`}
+			>
 				{getSectionTitle()}
 			</h2>
 			{items.length === 0 ? (
@@ -173,8 +175,8 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
 						}),
 					}}
 				>
-					<div className="px-4 py-3 text-center">
-						<div className={`${getEmptyMessageColor()} text-sm`}>
+					<div className="px-3 py-3 sm:px-4 sm:py-3 text-center">
+						<div className={`${getEmptyMessageColor()} text-sm sm:text-base`}>
 							{emptyMessage}
 						</div>
 					</div>

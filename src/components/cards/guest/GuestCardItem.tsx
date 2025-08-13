@@ -94,21 +94,23 @@ export default function GuestCardItem({
 							e.stopPropagation();
 							onDelete(guest.id);
 						}}
-						className="text-red-700 hover:text-red-900 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+						className="text-red-700 hover:text-red-900 text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
 						title="Delete guest"
 						style={{
 							pointerEvents: "auto",
 						}}
 					>
-						<span className="text-3xl font-bold select-none">×</span>
+						<span className="text-2xl sm:text-3xl font-bold select-none">
+							×
+						</span>
 					</button>
 				</div>
 
-				<div className="relative z-10">
+				<div className="relative z-10 p-3 sm:p-4">
 					<div className="flex items-start space-x-3">
 						{/* Guest Icon */}
-						<div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-							<div className="text-2xl">👤</div>
+						<div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+							<div className="text-xl sm:text-2xl">👤</div>
 						</div>
 
 						{/* Guest Content */}
@@ -117,14 +119,14 @@ export default function GuestCardItem({
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
 							<div
-								className={`font-bold text-white text-lg ${
+								className={`font-bold text-white text-base sm:text-lg ${
 									isCompleted ? "line-through opacity-60" : ""
 								}`}
 							>
 								{guest.name}
 							</div>
 							<div
-								className={`text-sm text-white opacity-90 ${
+								className={`text-xs sm:text-sm text-white opacity-90 ${
 									isCompleted ? "line-through opacity-60" : ""
 								}`}
 							>
@@ -132,7 +134,7 @@ export default function GuestCardItem({
 								{guest.numberOfGuests === 1 ? "guest" : "guests"}
 							</div>
 							<div
-								className={`text-sm text-white opacity-90 ${
+								className={`text-xs sm:text-sm text-white opacity-90 ${
 									isCompleted ? "line-through opacity-60" : ""
 								}`}
 							>
@@ -209,7 +211,7 @@ export default function GuestCardItem({
 								e.stopPropagation();
 								onEdit(guest);
 							}}
-							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-sm px-2 py-1 rounded transition-colors"
+							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors"
 							disabled={loading}
 						>
 							Edit
@@ -224,7 +226,7 @@ export default function GuestCardItem({
 	return (
 		<li
 			key={guest.id}
-			className={`${baseClasses} ${completedClasses}`}
+			className={`${baseClasses} ${completedClasses} px-3 sm:px-4 py-3 sm:py-4`}
 			style={borderStyle}
 			onClick={() => onToggle(guest.id)}
 		>
@@ -237,7 +239,7 @@ export default function GuestCardItem({
 			/>
 			<div className="flex-1">
 				<div
-					className={`${
+					className={`text-sm sm:text-base ${
 						isCompleted
 							? "line-through text-gray-400 dark:text-gray-500"
 							: "text-gray-900 dark:text-white"
@@ -246,7 +248,7 @@ export default function GuestCardItem({
 					{guest.name}
 				</div>
 				<div
-					className={`text-sm ${
+					className={`text-xs sm:text-sm ${
 						isCompleted
 							? "text-gray-400 dark:text-gray-500 line-through"
 							: "text-gray-600 dark:text-gray-300"
@@ -256,7 +258,7 @@ export default function GuestCardItem({
 					{guest.numberOfGuests === 1 ? "guest" : "guests"}
 				</div>
 				<div
-					className={`text-sm ${
+					className={`text-xs sm:text-sm ${
 						isCompleted
 							? "text-gray-400 dark:text-gray-500 line-through"
 							: getRsvpColor(guest.rsvpStatus)
@@ -343,7 +345,7 @@ export default function GuestCardItem({
 						e.stopPropagation();
 						onEdit(guest);
 					}}
-					className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+					className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm"
 					disabled={loading}
 				>
 					Edit
@@ -353,7 +355,7 @@ export default function GuestCardItem({
 						e.stopPropagation();
 						onDelete(guest.id);
 					}}
-					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
 					disabled={loading}
 				>
 					Delete

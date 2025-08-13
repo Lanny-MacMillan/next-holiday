@@ -147,10 +147,7 @@ export default function ValentinesReservationsPage() {
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
-				<ReservationsTracker
-					totalReservations={tasks.length}
-					confirmedReservations={completedTasks.length}
-				/>
+				<ReservationsTracker tasks={tasks} title="Reservations Tracker" />
 
 				<AddButton
 					title="Reservation"

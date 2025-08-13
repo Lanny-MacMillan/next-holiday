@@ -37,7 +37,9 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 
 	return (
 		<div>
-			<h2 className={`font-semibold mb-2 ${getTitleColor()}`}>
+			<h2
+				className={`font-semibold mb-2 text-base sm:text-lg ${getTitleColor()}`}
+			>
 				{customTitle || title} ({items.length})
 			</h2>
 			<div
@@ -45,7 +47,9 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 				style={borderColor ? { borderLeft: `4px solid ${borderColor}` } : {}}
 			>
 				{items.length === 0 ? (
-					<div className={`px-4 py-3 ${getEmptyMessageColor()} text-center`}>
+					<div
+						className={`px-3 py-3 sm:px-4 sm:py-3 ${getEmptyMessageColor()} text-center text-sm sm:text-base`}
+					>
 						{isCompleted ? completedMessage : emptyMessage}
 					</div>
 				) : (

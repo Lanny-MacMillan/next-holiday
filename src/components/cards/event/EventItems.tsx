@@ -105,7 +105,7 @@ const EventItems = <T extends BaseEventTask>({
 		if (task.isCompleted) {
 			return (
 				<li
-					className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white opacity-60 border-2 border-white`}
+					className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white opacity-60 border-2 border-white`}
 					style={{
 						...getCardStyling({
 							isDarkMode,
@@ -146,22 +146,24 @@ const EventItems = <T extends BaseEventTask>({
 								e.stopPropagation();
 								handleDeleteTask(e);
 							}}
-							className="text-red-700 hover:text-red-900 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+							className="text-red-700 hover:text-red-900 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
 							title="Delete task"
 							style={{
 								pointerEvents: "auto",
 							}}
 							disabled={loading}
 						>
-							<span className="text-3xl font-bold select-none">×</span>
+							<span className="text-2xl sm:text-3xl font-bold select-none">
+								×
+							</span>
 						</button>
 					</div>
 
 					<div className="relative z-10">
 						<div className="flex items-start space-x-3">
 							{/* Task Icon */}
-							<div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-								<div className="text-2xl">✅</div>
+							<div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+								<div className="text-xl sm:text-2xl">✅</div>
 							</div>
 
 							{/* Task Content */}
@@ -169,11 +171,11 @@ const EventItems = <T extends BaseEventTask>({
 								className="flex-1 min-w-0"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
-								<div className="line-through text-white opacity-60">
+								<div className="line-through text-white opacity-60 text-sm sm:text-base">
 									{task.title}
 								</div>
 								{task.description && (
-									<div className="text-sm text-white opacity-60 line-through mt-1">
+									<div className="text-xs sm:text-sm text-white opacity-60 line-through mt-1">
 										{task.description}
 									</div>
 								)}
@@ -193,7 +195,7 @@ const EventItems = <T extends BaseEventTask>({
 		// Render incomplete task item (gamified)
 		return (
 			<li
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white border-2 border-white`}
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-wide text-white border-2 border-white`}
 				style={{
 					...getCardStyling({
 						isDarkMode,
@@ -234,22 +236,24 @@ const EventItems = <T extends BaseEventTask>({
 							e.stopPropagation();
 							handleDeleteTask(e);
 						}}
-						className="text-red-700 hover:text-red-900 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+						className="text-red-700 hover:text-red-900 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
 						title="Delete task"
 						style={{
 							pointerEvents: "auto",
 						}}
 						disabled={loading}
 					>
-						<span className="text-3xl font-bold select-none">×</span>
+						<span className="text-2xl sm:text-3xl font-bold select-none">
+							×
+						</span>
 					</button>
 				</div>
 
 				<div className="relative z-10">
 					<div className="flex items-start space-x-3">
 						{/* Task Icon */}
-						<div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-							<div className="text-2xl">📋</div>
+						<div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+							<div className="text-xl sm:text-2xl">📋</div>
 						</div>
 
 						{/* Task Content */}
@@ -257,15 +261,17 @@ const EventItems = <T extends BaseEventTask>({
 							className="flex-1 min-w-0"
 							style={{ fontFamily: "var(--font-family-fredoka)" }}
 						>
-							<div className="font-semibold text-white">{task.title}</div>
+							<div className="font-semibold text-white text-sm sm:text-base">
+								{task.title}
+							</div>
 							{task.description && (
-								<div className="text-sm text-white opacity-90 mt-1">
+								<div className="text-xs sm:text-sm text-white opacity-90 mt-1">
 									{task.description}
 								</div>
 							)}
-							<div className="flex gap-4 text-xs text-white opacity-80 mt-1">
+							<div className="flex gap-2 sm:gap-4 text-xs text-white opacity-80 mt-1">
 								<span
-									className={`px-2 py-1 rounded ${getGamifiedPriorityStyles(
+									className={`px-2 py-1 rounded text-xs sm:text-sm ${getGamifiedPriorityStyles(
 										task.priority
 									)}`}
 								>
@@ -291,7 +297,7 @@ const EventItems = <T extends BaseEventTask>({
 	if (task.isCompleted) {
 		return (
 			<li
-				className={`flex items-center px-4 py-3 cursor-pointer ${getHoverStyles()} opacity-60`}
+				className={`flex items-center px-3 py-3 sm:px-4 sm:py-3 cursor-pointer ${getHoverStyles()} opacity-60`}
 				onClick={handleToggleTask}
 			>
 				<input
@@ -301,7 +307,7 @@ const EventItems = <T extends BaseEventTask>({
 					className={`mr-3 ${getAccentStyles()}`}
 				/>
 				<div className="flex-1">
-					<div className="line-through text-gray-400 dark:text-gray-500">
+					<div className="line-through text-gray-400 dark:text-gray-500 text-sm sm:text-base">
 						{task.title}
 					</div>
 					{task.description && (
@@ -319,7 +325,7 @@ const EventItems = <T extends BaseEventTask>({
 				</div>
 				<button
 					onClick={handleDeleteTask}
-					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
 					disabled={loading}
 				>
 					Delete
@@ -331,7 +337,7 @@ const EventItems = <T extends BaseEventTask>({
 	// Render incomplete task item
 	return (
 		<li
-			className={`flex items-center px-4 py-3 cursor-pointer ${getHoverStyles()}`}
+			className={`flex items-center px-3 py-3 sm:px-4 sm:py-3 cursor-pointer ${getHoverStyles()}`}
 			onClick={handleToggleTask}
 		>
 			<input
@@ -341,15 +347,19 @@ const EventItems = <T extends BaseEventTask>({
 				className={`mr-3 ${getAccentStyles()}`}
 			/>
 			<div className="flex-1">
-				<div className="text-gray-900 dark:text-white">{task.title}</div>
+				<div className="text-gray-900 dark:text-white text-sm sm:text-base">
+					{task.title}
+				</div>
 				{task.description && (
 					<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 						{task.description}
 					</div>
 				)}
-				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+				<div className="flex gap-2 sm:gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
 					<span
-						className={`px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}
+						className={`px-2 py-1 rounded text-xs sm:text-sm ${getPriorityStyles(
+							task.priority
+						)}`}
 					>
 						{task.priority}
 					</span>
@@ -362,7 +372,7 @@ const EventItems = <T extends BaseEventTask>({
 			</div>
 			<button
 				onClick={handleDeleteTask}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
 				disabled={loading}
 			>
 				Delete

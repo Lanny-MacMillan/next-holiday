@@ -36,7 +36,11 @@ const DateIdeaIcon = ({
 		return "💖";
 	};
 
-	return <div className={`text-2xl ${className}`}>{getIcon(priority)}</div>;
+	return (
+		<div className={`text-xl sm:text-2xl ${className}`}>
+			{getIcon(priority)}
+		</div>
+	);
 };
 
 export default function DateIdeaCard({
@@ -57,7 +61,7 @@ export default function DateIdeaCard({
 		// Gamified mode design
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${
 					holidayColor || "bg-gradient-to-br from-pink-400 to-pink-600"
 				} ${task.isCompleted ? "opacity-75" : ""}`}
 				style={getCardStyling({
@@ -80,7 +84,7 @@ export default function DateIdeaCard({
 							<div className="flex-1">
 								<div className="flex items-center gap-2 mb-1">
 									<h3
-										className={`font-bold text-white ${
+										className={`font-bold text-white text-sm sm:text-base ${
 											task.isCompleted ? "line-through" : ""
 										}`}
 										style={{ fontFamily: "var(--font-family-fredoka)" }}
@@ -110,13 +114,13 @@ export default function DateIdeaCard({
 								</div>
 								{task.description && (
 									<p
-										className="text-white opacity-90 text-sm mb-2"
+										className="text-white opacity-90 text-xs sm:text-sm mb-2"
 										style={{ fontFamily: "var(--font-family-fredoka)" }}
 									>
 										{task.description}
 									</p>
 								)}
-								<div className="grid grid-cols-2 gap-4 text-sm">
+								<div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
 									{task.dueDate && (
 										<div>
 											<span
@@ -151,7 +155,7 @@ export default function DateIdeaCard({
 								{task.notes && (
 									<div className="mt-2 p-2 bg-white bg-opacity-30 rounded">
 										<p
-											className="text-sm text-black opacity-90"
+											className="text-xs sm:text-sm text-black opacity-90"
 											style={{ fontFamily: "var(--font-family-fredoka)" }}
 										>
 											<strong>Notes:</strong> {task.notes}
@@ -162,7 +166,7 @@ export default function DateIdeaCard({
 							<div className="flex flex-col gap-2 ml-4">
 								<button
 									onClick={() => onToggleCompletion(task.id)}
-									className={`px-3 py-1 rounded text-sm font-medium transition-colors border  border-opacity-30 ${
+									className={`px-2 py-1 sm:px-3 sm:py-1 rounded text-xs sm:text-sm font-medium transition-colors border  border-opacity-30 ${
 										task.isCompleted
 											? "border border-green-500 text-green-500 hover:bg-green-300"
 											: "border border-green-500 text-green-500 hover:bg-green-200"
@@ -173,14 +177,14 @@ export default function DateIdeaCard({
 								</button>
 								<button
 									onClick={() => onEdit(task)}
-									className="px-3 py-1 text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white rounded text-sm font-medium transition-colors"
+									className="px-2 py-1 sm:px-3 sm:py-1 text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white rounded text-xs sm:text-sm font-medium transition-colors"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									Edit
 								</button>
 								<button
 									onClick={() => onDelete(task.id)}
-									className="px-3 py-1 bg-red-700 hover:bg-red-800 text-white rounded text-sm font-medium transition-colors border border-red-600"
+									className="px-2 py-1 sm:px-3 sm:py-1 bg-red-700 hover:bg-red-800 text-white rounded text-xs sm:text-sm font-medium transition-colors border border-red-600"
 									style={{ fontFamily: "var(--font-family-fredoka)" }}
 								>
 									Delete
@@ -196,7 +200,7 @@ export default function DateIdeaCard({
 	// Professional mode (existing design)
 	return (
 		<div
-			className={`card card-valentines rounded-2xl p-4 transition-all ${
+			className={`card card-valentines rounded-2xl p-3 sm:p-4 transition-all ${
 				task.isCompleted ? "opacity-75" : ""
 			}`}
 		>
@@ -205,7 +209,7 @@ export default function DateIdeaCard({
 					<div className="flex-1">
 						<div className="flex items-center gap-2 mb-1">
 							<h3
-								className={`font-bold text-gray-800 dark:text-white ${
+								className={`font-bold text-gray-800 dark:text-white text-sm sm:text-base ${
 									task.isCompleted ? "line-through" : ""
 								}`}
 							>
@@ -225,11 +229,11 @@ export default function DateIdeaCard({
 							)}
 						</div>
 						{task.description && (
-							<p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+							<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-2">
 								{task.description}
 							</p>
 						)}
-						<div className="grid grid-cols-2 gap-4 text-sm">
+						<div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
 							{task.dueDate && (
 								<div>
 									<span className="text-gray-500 dark:text-gray-500">Due:</span>
@@ -249,7 +253,7 @@ export default function DateIdeaCard({
 						</div>
 						{task.notes && (
 							<div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-								<p className="text-sm text-gray-600 dark:text-gray-400">
+								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 									<strong>Notes:</strong> {task.notes}
 								</p>
 							</div>
@@ -258,7 +262,7 @@ export default function DateIdeaCard({
 					<div className="flex flex-col gap-2 ml-4">
 						<button
 							onClick={() => onToggleCompletion(task.id)}
-							className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+							className={`px-2 py-1 sm:px-3 sm:py-1 rounded text-xs sm:text-sm font-medium transition-colors ${
 								task.isCompleted
 									? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
 									: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
@@ -268,13 +272,13 @@ export default function DateIdeaCard({
 						</button>
 						<button
 							onClick={() => onEdit(task)}
-							className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded text-sm font-medium transition-colors"
+							className="px-2 py-1 sm:px-3 sm:py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded text-xs sm:text-sm font-medium transition-colors"
 						>
 							Edit
 						</button>
 						<button
 							onClick={() => onDelete(task.id)}
-							className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-sm font-medium transition-colors"
+							className="px-2 py-1 sm:px-3 sm:py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-xs sm:text-sm font-medium transition-colors"
 						>
 							Delete
 						</button>

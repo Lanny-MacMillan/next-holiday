@@ -27,7 +27,7 @@ export default function DateTrackerCard({
 		// Gamified mode design
 		return (
 			<div
-				className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${
 					holidayColor || "bg-gradient-to-br from-pink-400 to-pink-600"
 				}`}
 				style={getCardStyling({
@@ -48,13 +48,13 @@ export default function DateTrackerCard({
 					<div className="grid grid-cols-2 gap-4 text-center">
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Total Ideas
 							</p>
 							<p
-								className="text-2xl font-bold text-white"
+								className="text-xl sm:text-2xl font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{totalIdeas}
@@ -62,13 +62,13 @@ export default function DateTrackerCard({
 						</div>
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Completed
 							</p>
 							<p
-								className="text-2xl font-bold text-white"
+								className="text-xl sm:text-2xl font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{completedIdeas}
@@ -76,13 +76,13 @@ export default function DateTrackerCard({
 						</div>
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								High Priority
 							</p>
 							<p
-								className="text-lg font-bold text-white"
+								className="text-base sm:text-lg font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{highPriorityIdeas}
@@ -90,13 +90,13 @@ export default function DateTrackerCard({
 						</div>
 						<div>
 							<p
-								className="text-sm text-white opacity-90"
+								className="text-xs sm:text-sm text-white opacity-90"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								Due Soon
 							</p>
 							<p
-								className="text-lg font-bold text-white"
+								className="text-base sm:text-lg font-bold text-white"
 								style={{ fontFamily: "var(--font-family-fredoka)" }}
 							>
 								{dueSoonIdeas}
@@ -110,33 +110,37 @@ export default function DateTrackerCard({
 
 	// Professional mode (existing design)
 	return (
-		<div className="card card-valentines rounded-2xl p-4">
+		<div className="card card-valentines rounded-2xl p-3 sm:p-4">
 			<div className="grid grid-cols-2 gap-4 text-center">
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 						Total Ideas
 					</p>
-					<p className="text-2xl font-bold text-gray-800 dark:text-white">
+					<p className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
 						{totalIdeas}
 					</p>
 				</div>
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
-					<p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+						Completed
+					</p>
+					<p className="text-xl sm:text-2xl font-bold text-pink-600 dark:text-pink-400">
 						{completedIdeas}
 					</p>
 				</div>
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 						High Priority
 					</p>
-					<p className="text-lg font-bold text-red-600 dark:text-red-400">
+					<p className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400">
 						{highPriorityIdeas}
 					</p>
 				</div>
 				<div>
-					<p className="text-sm text-gray-600 dark:text-gray-400">Due Soon</p>
-					<p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+						Due Soon
+					</p>
+					<p className="text-base sm:text-lg font-bold text-yellow-600 dark:text-yellow-400">
 						{dueSoonIdeas}
 					</p>
 				</div>

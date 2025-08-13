@@ -190,38 +190,38 @@ export default function GiftListCard({
 				</div>
 
 				{/* Main card content */}
-				<div className="p-3 relative z-10">
+				<div className="p-3 sm:p-4 relative z-10">
 					{/* Budget Section */}
-					<div className="mb-4">
-						<div className="flex justify-between items-start mb-4">
-							<h3 className="font-bold text-white text-lg">
+					<div className="mb-4 sm:mb-6">
+						<div className="flex justify-between items-start mb-3 sm:mb-4">
+							<h3 className="font-bold text-white text-base sm:text-lg">
 								{holiday === "Thanksgiving"
 									? `${displayHolidayName} Shopping Budget`
 									: `${displayHolidayName} Budget`}
 							</h3>
-							<div className="text-sm text-white opacity-90">
+							<div className="text-xs sm:text-sm text-white opacity-90 text-right">
 								{finalBudgetStatus}
 							</div>
 						</div>
 
-						<div className="mb-4">
+						<div className="mb-3 sm:mb-4">
 							<div className="flex justify-between items-center mb-2">
-								<div className="text-sm text-white opacity-90">
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Spent:{" "}
 									<span className="font-bold">
 										${finalBudget.spent.toFixed(2)}
 									</span>
 								</div>
-								<div className="text-sm text-white opacity-90">
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Remaining:{" "}
 									<span className="font-bold">${remaining.toFixed(2)}</span>
 								</div>
 							</div>
 							<div className="flex justify-between items-center mb-2">
-								<div className="text-sm text-white opacity-90">
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Budget: ${finalBudget.total.toFixed(2)}
 								</div>
-								<div className="text-sm text-white opacity-90 text-right">
+								<div className="text-xs sm:text-sm text-white opacity-90 text-right">
 									{budgetPercentage.toFixed(1)}% used
 								</div>
 							</div>
@@ -240,20 +240,20 @@ export default function GiftListCard({
 					</div>
 
 					{/* Gift List Section */}
-					<div className="mt-6">
+					<div className="mt-4 sm:mt-6">
 						<div className="flex items-center justify-between mb-2">
-							<h4 className="font-bold text-white text-lg">
+							<h4 className="font-bold text-white text-base sm:text-lg">
 								{holiday === "Thanksgiving"
 									? "Shopping List"
 									: holiday === "Easter"
 									? "Basket List"
 									: "Gift List"}
 							</h4>
-							<span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white bg-opacity-20 text-white">
+							<span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white">
 								{finalGiftList.totalItems}
 							</span>
 						</div>
-						<p className="text-white opacity-90 text-sm mb-3">
+						<p className="text-white opacity-90 text-xs sm:text-sm mb-3">
 							{holiday === "Thanksgiving"
 								? "Track your Thanksgiving shopping budget"
 								: holiday === "Easter"
@@ -310,36 +310,38 @@ export default function GiftListCard({
 			}}
 		>
 			{/* Main card content */}
-			<div className="p-3">
+			<div className="p-3 sm:p-4">
 				{/* Budget Section */}
-				<div className="mb-4">
-					<div className="flex justify-between items-start mb-4">
-						<h3 className="font-bold text-gray-900 text-lg">
+				<div className="mb-4 sm:mb-6">
+					<div className="flex justify-between items-start mb-3 sm:mb-4">
+						<h3 className="font-bold text-gray-900 text-base sm:text-lg">
 							{holiday === "Thanksgiving"
 								? `${displayHolidayName} Shopping Budget`
 								: `${displayHolidayName} Budget`}
 						</h3>
-						<div className="text-sm text-gray-600">{finalBudgetStatus}</div>
+						<div className="text-xs sm:text-sm text-gray-600 text-right">
+							{finalBudgetStatus}
+						</div>
 					</div>
 
-					<div className="mb-4">
+					<div className="mb-3 sm:mb-4">
 						<div className="flex justify-between items-center mb-2">
-							<div className="text-sm text-gray-600">
+							<div className="text-xs sm:text-sm text-gray-600">
 								Spent:{" "}
 								<span className="font-bold">
 									${finalBudget.spent.toFixed(2)}
 								</span>
 							</div>
-							<div className="text-sm text-gray-600">
+							<div className="text-xs sm:text-sm text-gray-600">
 								Remaining:{" "}
 								<span className="font-bold">${remaining.toFixed(2)}</span>
 							</div>
 						</div>
 						<div className="flex justify-between items-center mb-2">
-							<div className="text-sm text-gray-600">
+							<div className="text-xs sm:text-sm text-gray-600">
 								Budget: ${finalBudget.total.toFixed(2)}
 							</div>
-							<div className="text-sm text-gray-600 text-right">
+							<div className="text-xs sm:text-sm text-gray-600 text-right">
 								{budgetPercentage.toFixed(1)}% used
 							</div>
 						</div>
@@ -358,13 +360,13 @@ export default function GiftListCard({
 				</div>
 
 				{/* Gift List Section */}
-				<div className="mt-6">
+				<div className="mt-4 sm:mt-6">
 					<div className="flex items-center justify-between mb-2">
-						<h4 className="font-bold text-gray-900 text-lg">
+						<h4 className="font-bold text-gray-900 text-base sm:text-lg">
 							{getHolidayGiftListConfig(holiday).displayText}
 						</h4>
 						<span
-							className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+							className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full"
 							style={{
 								backgroundColor: `${primaryColor}20`,
 								color: primaryColor,
@@ -373,7 +375,7 @@ export default function GiftListCard({
 							{finalGiftList.totalItems}
 						</span>
 					</div>
-					<p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+					<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3">
 						{holiday === "Thanksgiving"
 							? "Track your Thanksgiving shopping budget"
 							: `Track your ${displayHolidayName} gift ideas`}

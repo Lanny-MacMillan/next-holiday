@@ -62,57 +62,57 @@ export default function EditRecipeModal({
 	if (!isOpen || !recipe) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="card rounded-lg p-6 max-w-md mx-4 w-full">
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+			<div className="card rounded-lg p-4 sm:p-6 max-w-md mx-auto w-full">
+				<div className="flex justify-between items-center mb-3 sm:mb-4">
+					<h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
 						Edit Recipe
 					</h3>
 					<button
 						onClick={onClose}
-						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-lg sm:text-xl"
 					>
 						×
 					</button>
 				</div>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
+				<form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							Recipe Name*
 						</label>
 						<input
 							type="text"
 							value={formValues.title || ""}
 							onChange={(e) => handleInputChange("title", e.target.value)}
-							className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+							className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							placeholder="Recipe Name"
 							required
 						/>
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							Description
 						</label>
 						<textarea
 							value={formValues.description || ""}
 							onChange={(e) => handleInputChange("description", e.target.value)}
-							className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+							className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							placeholder="Description"
 							rows={3}
 						/>
 					</div>
 
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 								Category
 							</label>
 							<select
 								value={formValues.category || "Main Dish"}
 								onChange={(e) => handleInputChange("category", e.target.value)}
-								className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							>
 								<option value="Main Dish">Main Dish</option>
 								<option value="Side Dish">Side Dish</option>
@@ -124,7 +124,7 @@ export default function EditRecipeModal({
 						</div>
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 								Difficulty
 							</label>
 							<select
@@ -132,7 +132,7 @@ export default function EditRecipeModal({
 								onChange={(e) =>
 									handleInputChange("difficulty", e.target.value)
 								}
-								className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							>
 								<option value="easy">Easy</option>
 								<option value="medium">Medium</option>
@@ -141,43 +141,43 @@ export default function EditRecipeModal({
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-3 sm:gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 								Prep Time
 							</label>
 							<input
 								type="text"
 								value={formValues.prepTime || ""}
 								onChange={(e) => handleInputChange("prepTime", e.target.value)}
-								className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="e.g., 30 minutes"
 							/>
 						</div>
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 								Cook Time
 							</label>
 							<input
 								type="text"
 								value={formValues.cookTime || ""}
 								onChange={(e) => handleInputChange("cookTime", e.target.value)}
-								className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 								placeholder="e.g., 2 hours"
 							/>
 						</div>
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							Servings
 						</label>
 						<input
 							type="number"
 							value={formValues.servings || ""}
 							onChange={(e) => handleInputChange("servings", e.target.value)}
-							className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+							className="w-full border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
 							placeholder="Number of servings"
 							min="1"
 						/>
@@ -187,13 +187,13 @@ export default function EditRecipeModal({
 						<button
 							type="button"
 							onClick={onClose}
-							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+							className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 						>
 							Cancel
 						</button>
 						<button
 							type="submit"
-							className="flex-1 text-white px-4 py-2 rounded hover:opacity-90 transition-colors"
+							className="flex-1 text-white px-3 sm:px-4 py-2 rounded hover:opacity-90 transition-colors text-sm sm:text-base"
 							style={{ backgroundColor: "#d97706" }}
 							disabled={loading}
 						>
