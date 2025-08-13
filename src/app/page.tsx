@@ -9,8 +9,6 @@ import HolidayHeader from "@/components/common/HolidayHeader";
 import { holidayData } from "@/data/holidayData";
 import { getHolidayCountdownTime } from "@/utils/holidayUtils";
 import GamifiedHolidayCardExample from "@/components/examples/GamifiedHolidayCardExample";
-// import ReduxExample from "@/components/ReduxExample";
-// import ReduxTest from "@/components/ReduxTest";
 
 export default function Home() {
 	// Get state from all Redux slices
@@ -371,12 +369,6 @@ export default function Home() {
 					</ul>
 				)}
 			</main>
-			{/* <div className="w-full max-w-4xl mt-8">
-				<ReduxExample />
-				<div className="mt-8">
-					<ReduxTest />
-				</div>
-			</div> */}
 
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday
