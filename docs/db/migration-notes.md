@@ -1,6 +1,47 @@
 # Migration Notes: Redux to Database-Backed Architecture
 
-This document outlines the migration strategy from the current Redux-only state management to a database-backed architecture using PostgreSQL.
+This document outlines the migration strategy from the current Redux-only state management to a database-backed architecture using MySQL with Prisma ORM.
+
+## Database Schema Overview
+
+The application uses a MySQL database with the following key entities:
+
+### Core Entities
+
+- **users**: Auth0 user profiles with authentication data
+- **accounts**: Multi-tenant households/families for collaboration
+- **account_members**: Many-to-many relationship between users and accounts
+- **holidays**: Holiday instances with metadata and configuration
+- **contacts**: Address book entries for gift recipients, card recipients, etc.
+
+### Planning Entities
+
+- **tasks**: Generic and holiday-specific tasks with priorities and assignments
+- **task_assignees**: Many-to-many relationship for task assignments
+- **gifts**: Gift lists with recipients, prices, and purchase tracking
+- **cards**: Greeting cards with recipients and sending status
+- **budgets**: Budget tracking for holidays with spending limits
+- **budget_transactions**: Individual budget line items and expenses
+
+### Collaboration Entities
+
+- **shares**: Holiday sharing for multi-user collaboration
+- **share_members**: Many-to-many relationship for share membership
+- **invites**: Invitation system for holiday sharing
+
+### Specialized Entities
+
+- **kwanzaa_principles**: Special daily principle tracking for Kwanzaa
+- **guest_lists**: Guest lists for events and parties with RSVP tracking
+- **audit_log**: Activity tracking for debugging and compliance
+
+### Enums
+
+- **TaskPriority**: low, medium, high
+- **TaskStatus**: pending, in_progress, completed, cancelled
+- **RSVPStatus**: pending, confirmed, declined, maybe
+- **InviteStatus**: pending, accepted, declined, expired
+- **MemberRole**: owner, admin, member
 
 ## Current State Analysis
 
@@ -25,13 +66,36 @@ The application currently uses Redux Toolkit with the following key slices:
 
 ### Phase 1: Database Setup and API Layer
 
-#### 1.1 Database Deployment
+#### 1.1 Database Setup and Migration
+
+**Prisma Schema Generation**
 
 ```bash
-# Deploy PostgreSQL schema to AWS RDS/Aurora
-psql -h your-rds-endpoint -U your-username -d next_holiday -f db/schema.sql
-psql -h your-rds-endpoint -U your-username -d next_holiday -f db/seed.example.sql
+# Generate Prisma client from schema
+npx prisma generate
+
+# Create and apply initial migration
+npx prisma migrate dev --name init
+
+# For production deployment
+npx prisma migrate deploy
 ```
+
+**Database Connection**
+The application uses MySQL with the following connection string format:
+
+```
+DATABASE_URL="mysql://username:password@host:port/database_name"
+```
+
+**Schema Features**
+
+- All primary keys use UUIDs with `@default(uuid()) @db.Char(36)`
+- Foreign keys include proper cascade delete rules
+- Timestamps use `@default(now())` and `@updatedAt`
+- Money fields use `@db.Decimal(12, 2)` for precision
+- Enums are used for constrained field values
+- Snake_case naming with `@map` directives for database compatibility
 
 #### 1.2 API Route Implementation
 
@@ -39,61 +103,292 @@ Create new API routes in `src/app/api/` to replace Redux async thunks:
 
 **User Management**
 
-- `POST /api/users` - Create/update user
-- `GET /api/users/me` - Get current user
-- `PUT /api/users/profile` - Update profile
+```typescript
+// src/app/api/users/route.ts
+export async function POST(request: Request) {
+	const { auth0Sub, email, name, picture } = await request.json();
+	const user = await prisma.user.upsert({
+		where: { auth0Sub },
+		update: { email, name, picture, isInDb: true },
+		create: { auth0Sub, email, name, picture, isInDb: true },
+	});
+	return Response.json(user);
+}
+
+// src/app/api/users/me/route.ts
+export async function GET(request: Request) {
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({
+		where: { auth0Sub },
+		include: {
+			ownedAccounts: true,
+			accountMembers: { include: { account: true } },
+		},
+	});
+	return Response.json(user);
+}
+```
 
 **Account Management**
 
-- `GET /api/accounts` - List user's accounts
-- `POST /api/accounts` - Create account
-- `GET /api/accounts/:id` - Get account details
-- `POST /api/accounts/:id/members` - Add member
+```typescript
+// src/app/api/accounts/route.ts
+export async function GET(request: Request) {
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({
+		where: { auth0Sub },
+		include: {
+			ownedAccounts: true,
+			accountMembers: { include: { account: true } },
+		},
+	});
+	const accounts = [
+		...user.ownedAccounts,
+		...user.accountMembers.map((m) => m.account),
+	];
+	return Response.json(accounts);
+}
+
+export async function POST(request: Request) {
+	const { name } = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const account = await prisma.account.create({
+		data: {
+			name,
+			ownerUserId: user.id,
+			members: {
+				create: {
+					userId: user.id,
+					role: "owner",
+				},
+			},
+		},
+	});
+	return Response.json(account);
+}
+```
 
 **Holiday Management**
 
-- `GET /api/holidays` - List holidays for account
-- `POST /api/holidays` - Create holiday
-- `GET /api/holidays/:id` - Get holiday details
-- `PUT /api/holidays/:id` - Update holiday
+```typescript
+// src/app/api/holidays/route.ts
+export async function GET(request: Request) {
+	const { searchParams } = new URL(request.url);
+	const accountId = searchParams.get("accountId");
+
+	const holidays = await prisma.holiday.findMany({
+		where: { accountId },
+		include: { creator: true },
+	});
+	return Response.json(holidays);
+}
+
+export async function POST(request: Request) {
+	const holidayData = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const holiday = await prisma.holiday.create({
+		data: {
+			...holidayData,
+			createdBy: user.id,
+		},
+	});
+	return Response.json(holiday);
+}
+```
 
 **Task Management**
 
-- `GET /api/holidays/:id/tasks` - List tasks for holiday
-- `POST /api/holidays/:id/tasks` - Create task
-- `PUT /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task
-- `POST /api/tasks/:id/toggle` - Toggle completion
+```typescript
+// src/app/api/holidays/[id]/tasks/route.ts
+export async function GET(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const tasks = await prisma.task.findMany({
+		where: { holidayId: params.id },
+		include: {
+			assignee: true,
+			creator: true,
+			taskAssignees: { include: { user: true } },
+		},
+	});
+	return Response.json(tasks);
+}
+
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const taskData = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const task = await prisma.task.create({
+		data: {
+			...taskData,
+			holidayId: params.id,
+			createdBy: user.id,
+		},
+	});
+	return Response.json(task);
+}
+```
 
 **Gift Management**
 
-- `GET /api/holidays/:id/gifts` - List gifts for holiday
-- `POST /api/holidays/:id/gifts` - Create gift
-- `PUT /api/gifts/:id` - Update gift
-- `DELETE /api/gifts/:id` - Delete gift
-- `POST /api/gifts/:id/toggle` - Toggle purchase
+```typescript
+// src/app/api/holidays/[id]/gifts/route.ts
+export async function GET(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const gifts = await prisma.gift.findMany({
+		where: { holidayId: params.id },
+		include: { contact: true, creator: true },
+	});
+	return Response.json(gifts);
+}
+
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const giftData = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const gift = await prisma.gift.create({
+		data: {
+			...giftData,
+			holidayId: params.id,
+			createdBy: user.id,
+		},
+	});
+	return Response.json(gift);
+}
+```
 
 **Contact Management**
 
-- `GET /api/accounts/:id/contacts` - List contacts for account
-- `POST /api/accounts/:id/contacts` - Create contact
-- `PUT /api/contacts/:id` - Update contact
-- `DELETE /api/contacts/:id` - Delete contact
+```typescript
+// src/app/api/accounts/[id]/contacts/route.ts
+export async function GET(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const contacts = await prisma.contact.findMany({
+		where: { accountId: params.id },
+		include: { creator: true },
+	});
+	return Response.json(contacts);
+}
+
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const contactData = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const contact = await prisma.contact.create({
+		data: {
+			...contactData,
+			accountId: params.id,
+			createdBy: user.id,
+		},
+	});
+	return Response.json(contact);
+}
+```
 
 **Budget Management**
 
-- `GET /api/holidays/:id/budgets` - List budgets for holiday
-- `POST /api/holidays/:id/budgets` - Create budget
-- `GET /api/budgets/:id/transactions` - List transactions
-- `POST /api/budgets/:id/transactions` - Add transaction
+```typescript
+// src/app/api/holidays/[id]/budgets/route.ts
+export async function GET(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const budgets = await prisma.budget.findMany({
+		where: { holidayId: params.id },
+		include: {
+			creator: true,
+			transactions: true,
+		},
+	});
+	return Response.json(budgets);
+}
+
+// src/app/api/budgets/[id]/transactions/route.ts
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const transactionData = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const transaction = await prisma.budgetTransaction.create({
+		data: {
+			...transactionData,
+			budgetId: params.id,
+			createdBy: user.id,
+		},
+	});
+
+	// Update budget amounts
+	await updateBudgetAmounts(params.id);
+
+	return Response.json(transaction);
+}
+```
 
 **Sharing & Collaboration**
 
-- `POST /api/holidays/:id/share` - Share holiday
-- `GET /api/shares/:id/members` - List share members
-- `POST /api/shares/:id/invites` - Send invite
-- `POST /api/invites/:id/accept` - Accept invite
-- `POST /api/invites/:id/decline` - Decline invite
+```typescript
+// src/app/api/holidays/[id]/share/route.ts
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const share = await prisma.share.create({
+		data: {
+			holidayId: params.id,
+			ownerUserId: user.id,
+		},
+	});
+	return Response.json(share);
+}
+
+// src/app/api/shares/[id]/invites/route.ts
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } }
+) {
+	const { toEmail, message } = await request.json();
+	const auth0Sub = getAuth0Sub(request);
+	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+
+	const invite = await prisma.invite.create({
+		data: {
+			shareId: params.id,
+			fromUserId: user.id,
+			toEmail,
+			message,
+			status: "pending",
+		},
+	});
+	return Response.json(invite);
+}
+```
 
 ### Phase 2: Redux State Migration
 
