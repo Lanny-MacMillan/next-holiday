@@ -65,3 +65,4 @@ next-env.d.ts
 .npmrc
 .pnpmrc
 .yarnrc
+/src/generated/prisma
