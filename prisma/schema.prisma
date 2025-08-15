@@ -21,11 +21,11 @@ enum TaskPriority {
   high
 }
 
-enum TaskStatus {
+enum InviteStatus {
   pending
-  in_progress
-  completed
-  cancelled
+  accepted
+  declined
+  expired
 }
 
 enum RSVPStatus {
@@ -33,13 +33,6 @@ enum RSVPStatus {
   confirmed
   declined
   maybe
-}
-
-enum InviteStatus {
-  pending
-  accepted
-  declined
-  expired
 }
 
 enum MemberRole {
@@ -81,9 +74,50 @@ model User {
   receivedInvites   Invite[]         @relation("InviteReceiver")
   createdGuestLists GuestList[]      @relation("GuestListCreator")
   auditLogs         AuditLog[]
+  preferences       UserPreferences?
 
   @@map("users")
   @@index([email])
+}
+
+// User preferences for theme, display, and notifications
+model UserPreferences {
+  id                    String   @id @default(uuid()) @db.Char(36)
+  userId                String   @unique @map("user_id") @db.Char(36)
+  
+  // Theme preferences
+  theme                 String   @default("system") // "light", "dark", "system"
+  
+  // Display preferences
+  displayMode           String   @default("grid") // "grid", "list", "compact"
+  showCompletedItems    Boolean  @default(true) @map("show_completed_items")
+  showCountdown         Boolean  @default(true) @map("show_countdown")
+  showProgressBars      Boolean  @default(true) @map("show_progress_bars")
+  
+  // Notification preferences
+  emailNotifications    Boolean  @default(true) @map("email_notifications")
+  pushNotifications     Boolean  @default(true) @map("push_notifications")
+  reminderNotifications Boolean  @default(true) @map("reminder_notifications")
+  taskDueReminders      Boolean  @default(true) @map("task_due_reminders")
+  holidayCountdownAlerts Boolean  @default(true) @map("holiday_countdown_alerts")
+  
+  // Timezone and locale
+  timezone              String   @default("UTC")
+  locale                String   @default("en-US")
+  
+  // Accessibility preferences
+  reducedMotion         Boolean  @default(false) @map("reduced_motion")
+  highContrast          Boolean  @default(false) @map("high_contrast")
+  fontSize              String   @default("medium") @map("font_size") // "small", "medium", "large"
+  
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+  @@index([userId])
 }
 
 // Multi-tenant households/families for collaboration
@@ -193,10 +227,10 @@ model Task {
   holidayId     String      @map("holiday_id") @db.Char(36)
   title         String
   description   String?
-  priority      TaskPriority
+  priority      TaskPriority @default(low)
   category      String?
   isCompleted   Boolean     @default(false) @map("is_completed")
-  completedDate DateTime?   @map("completed_date")
+  completedDate DateTime?   @map("completed_date") @db.DateTime(3)
   dueDate       DateTime?   @map("due_date") @db.Date
   assignedTo    String?     @map("assigned_to") @db.Char(36)
   createdBy     String      @map("created_by") @db.Char(36)
@@ -248,7 +282,7 @@ model Gift {
   productLink  String?  @map("product_link")
   notes        String?
   isCompleted  Boolean  @default(false) @map("is_completed")
-  completedDate DateTime? @map("completed_date")
+  completedDate DateTime? @map("completed_date") @db.DateTime(3)
   createdBy    String   @map("created_by") @db.Char(36)
   shareId      String?  @map("share_id") @db.Char(36)
   createdAt    DateTime @default(now()) @map("created_at")
@@ -276,7 +310,7 @@ model Card {
   address      String?
   message      String
   isCompleted  Boolean  @default(false) @map("is_completed")
-  sentDate     DateTime? @map("sent_date")
+  sentDate     DateTime? @map("sent_date") @db.DateTime(3)
   createdBy    String   @map("created_by") @db.Char(36)
   shareId      String?  @map("share_id") @db.Char(36)
   createdAt    DateTime @default(now()) @map("created_at")
@@ -392,7 +426,7 @@ model Invite {
   holidayKey  String      @map("holiday_key")
   status      InviteStatus
   message     String?
-  respondedAt DateTime?   @map("responded_at")
+  respondedAt DateTime?   @map("responded_at") @db.DateTime(3)
   createdAt   DateTime    @default(now()) @map("created_at")
 
   // Relationships
@@ -414,7 +448,7 @@ model KwanzaaPrinciple {
   name        String
   description String?
   isCompleted Boolean  @default(false) @map("is_completed")
-  completedAt DateTime? @map("completed_at")
+  completedAt DateTime? @map("completed_at") @db.DateTime(3)
   notes       String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -433,7 +467,7 @@ model GuestList {
   holidayId  String     @map("holiday_id") @db.Char(36)
   contactId  String     @map("contact_id") @db.Char(36)
   rsvpStatus RSVPStatus? @map("rsvp_status")
-  rsvpDate   DateTime?  @map("rsvp_date")
+  rsvpDate   DateTime?  @map("rsvp_date") @db.DateTime(3)
   notes      String?
   createdBy  String     @map("created_by") @db.Char(36)
   createdAt  DateTime   @default(now()) @map("created_at")

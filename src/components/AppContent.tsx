@@ -8,6 +8,7 @@ import AuthWrapper from "./auth/AuthWrapper";
 import Header from "./common/Header";
 import Login from "./auth/Login";
 import DataInitializer from "./DataInitializer";
+import UserSync from "./auth/UserSync";
 import { ReactNode } from "react";
 
 interface AppContentProps {
@@ -76,6 +77,7 @@ export default function AppContent({ children }: AppContentProps) {
 
 	return (
 		<>
+			<UserSync />
 			<DataInitializer />
 			<Header />
 			<AuthWrapper>{children}</AuthWrapper>

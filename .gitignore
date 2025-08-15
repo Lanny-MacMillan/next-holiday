@@ -57,6 +57,7 @@ firebase-*.json
 service-account*.json
 GoogleService-Info.plist
 google-services.json
+/.cursor/
 
 # typescript
 next-env.d.ts

@@ -16,10 +16,26 @@ async function getAuth0Session(
 	request: NextRequest
 ): Promise<Auth0Session | null> {
 	try {
-		// In Next.js 15, we need to handle the session differently
-		// For now, we'll mock this for the API scaffold
-		// In a real implementation, you'd use the proper Auth0 session handling
-		// Example: return await getSession(request, { sessionCache: new Map() });
+		// For testing purposes, we'll check for a test user header
+		// In production, this would use proper Auth0 session handling
+		const testUser = request.headers.get("x-test-user");
+
+		if (testUser) {
+			// Parse test user data from header
+			const userData = JSON.parse(testUser);
+			return {
+				user: {
+					sub: userData.sub || "test-auth0-sub",
+					email: userData.email || "test@example.com",
+					name: userData.name || "Test User",
+					picture: userData.picture || null,
+				},
+			};
+		}
+
+		// For now, return null (no session)
+		// TODO: Implement proper Auth0 session handling for Next.js 15
+		// This will be handled by the frontend calling the API with user data
 		return null;
 	} catch (error) {
 		console.error("Error getting Auth0 session:", error);
