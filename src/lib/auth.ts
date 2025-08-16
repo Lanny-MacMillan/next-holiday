@@ -53,6 +53,7 @@ export interface AuthUser {
 
 /**
  * Get the current authenticated user from Auth0 session
+ * Note: User creation/update is handled by UserSync component to avoid race conditions
  */
 export async function getCurrentUser(
 	request: NextRequest
@@ -65,24 +66,9 @@ export async function getCurrentUser(
 			return null;
 		}
 
-		// Find or create user in database
-		const user = await prisma.user.upsert({
+		// Find user in database (don't create/update here to avoid race conditions)
+		const user = await prisma.user.findUnique({
 			where: { auth0Sub: session.user.sub },
-			update: {
-				email: session.user.email,
-				name: session.user.name,
-				picture: session.user.picture,
-				isInDb: true,
-				updatedAt: new Date(),
-			},
-			create: {
-				auth0Sub: session.user.sub,
-				email: session.user.email,
-				name: session.user.name,
-				picture: session.user.picture,
-				isInDb: true,
-				isFirstLogin: true,
-			},
 		});
 
 		return user;

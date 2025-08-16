@@ -52,25 +52,40 @@ export async function POST(request: NextRequest) {
 
 		console.log("Creating/updating user with auth0Sub:", auth0Sub);
 
-		// Create or update user in database
-		const user = await prisma.user.upsert({
+		// First, try to find the user to see if they exist
+		const existingUser = await prisma.user.findUnique({
 			where: { auth0Sub },
-			update: {
-				email,
-				name,
-				picture,
-				isInDb: true,
-				updatedAt: new Date(),
-			},
-			create: {
-				auth0Sub,
-				email,
-				name,
-				picture,
-				isInDb: true,
-				isFirstLogin: true,
-			},
 		});
+
+		let user;
+		
+		if (existingUser) {
+			// User exists, update them
+			console.log("User exists, updating...");
+			user = await prisma.user.update({
+				where: { auth0Sub },
+				data: {
+					email,
+					name,
+					picture,
+					isInDb: true,
+					updatedAt: new Date(),
+				},
+			});
+		} else {
+			// User doesn't exist, create them
+			console.log("User doesn't exist, creating...");
+			user = await prisma.user.create({
+				data: {
+					auth0Sub,
+					email,
+					name,
+					picture,
+					isInDb: true,
+					isFirstLogin: true,
+				},
+			});
+		}
 
 		console.log("User created/updated successfully:", user.id);
 
@@ -79,6 +94,24 @@ export async function POST(request: NextRequest) {
 		return Response.json(userResponse);
 	} catch (error) {
 		console.error("Error creating/updating user:", error);
+		
+		// Handle unique constraint violation specifically
+		if (error.code === 'P2002' && error.meta?.target?.includes('auth0_sub')) {
+			console.log("Unique constraint violation on auth0_sub - user likely already exists");
+			// Try to find and return the existing user
+			try {
+				const existingUser = await prisma.user.findUnique({
+					where: { auth0Sub: body.auth0Sub },
+				});
+				if (existingUser) {
+					const { auth0Sub: _, ...userResponse } = existingUser;
+					return Response.json(userResponse);
+				}
+			} catch (findError) {
+				console.error("Error finding existing user:", findError);
+			}
+		}
+		
 		return Response.json(
 			{ error: "Failed to create/update user", details: error.message },
 			{ status: 500 }

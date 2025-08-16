@@ -7,12 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import {
-	checkUserInDb,
-	addUserToDb,
-	loadUserData,
-	setUser,
-} from "@/store/slices/userSlice";
+import { getCurrentUser } from "@/store/slices/userSlice";
 
 export default function DataInitializer() {
 	const { user: auth0User, isAuthenticated } = useAuth0();
@@ -37,46 +32,21 @@ export default function DataInitializer() {
 		(state) => state.addressBook
 	);
 
-	// User initialization logic
+	// User initialization logic - now just fetches current user from API
 	useEffect(() => {
 		if (isAuthenticated && auth0User && !userInitialized) {
-			const userSub = auth0User.sub;
-
-			// Ensure userSub exists before proceeding
-			if (!userSub) {
-				console.error("User sub is undefined");
-				return;
-			}
-
-			// Check if user exists in our system
-			dispatch(checkUserInDb(userSub)).then((result) => {
-				if (result.meta.requestStatus === "fulfilled") {
-					const payload = result.payload as {
-						isInDb: boolean;
-						isFirstLogin: boolean;
-					};
-					const { isInDb, isFirstLogin } = payload;
-
-					if (isInDb && !isFirstLogin) {
-						// User exists, load their data
-						dispatch(loadUserData(userSub));
-					} else if (isFirstLogin) {
-						// First time user, create new user record
-						const newUserData = {
-							sub: userSub,
-							email: auth0User.email || "",
-							name: auth0User.name || "",
-							picture: auth0User.picture || "",
-						};
-						dispatch(addUserToDb(newUserData));
-					}
-				}
-			});
+			console.log("DataInitializer: Fetching current user from API");
+			dispatch(getCurrentUser());
 		}
 	}, [isAuthenticated, auth0User, userInitialized, dispatch]);
 
 	// Initialize other data
 	useEffect(() => {
+		// Only fetch data if user is initialized
+		if (!userInitialized) {
+			return;
+		}
+
 		// Fetch all data if not already initialized
 		if (!cardsInitialized) {
 			dispatch(fetchCards());
@@ -92,6 +62,7 @@ export default function DataInitializer() {
 		}
 	}, [
 		dispatch,
+		userInitialized,
 		cardsInitialized,
 		giftsInitialized,
 		tasksInitialized,
