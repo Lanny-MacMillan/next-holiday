@@ -30,7 +30,14 @@ export const checkUserInDb = createAsyncThunk(
 	"user/checkUserInDb",
 	async (auth0Sub: string) => {
 		try {
-			const response = await fetch("/api/users/me");
+			// Try to get user from the users endpoint
+			const response = await fetch("/api/users/me", {
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ auth0Sub }),
+			});
+
 			if (response.ok) {
 				const userData = await response.json();
 				return { isInDb: true, user: userData };
@@ -93,13 +100,15 @@ export const getCurrentUser = createAsyncThunk(
 // Async thunk to update user information
 export const updateUserInfo = createAsyncThunk(
 	"user/updateUserInfo",
-	async (userData: { name?: string; picture?: string }) => {
+	async (userData: { name?: string; picture?: string; auth0Sub: string }) => {
+		// Only send name and picture as those are the only fields the API accepts
+		const { name, picture, auth0Sub } = userData;
 		const response = await fetch("/api/users/me", {
 			method: "PUT",
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(userData),
+			body: JSON.stringify({ name, picture, auth0Sub }),
 		});
 
 		if (!response.ok) {

@@ -84,12 +84,15 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
 	try {
-		const currentUser = await requireAuth(request);
-		const { name, picture } = await request.json();
+		const { name, picture, auth0Sub } = await request.json();
 
-		// Update user profile
+		if (!auth0Sub) {
+			return Response.json({ error: "Auth0 sub is required" }, { status: 400 });
+		}
+
+		// Update user profile using auth0Sub
 		const updatedUser = await prisma.user.update({
-			where: { id: currentUser.id },
+			where: { auth0Sub },
 			data: {
 				name,
 				picture,
@@ -98,7 +101,7 @@ export async function PUT(request: NextRequest) {
 		});
 
 		// Remove sensitive fields from response
-		const { auth0Sub, ...userResponse } = updatedUser;
+		const { auth0Sub: _, ...userResponse } = updatedUser;
 		return Response.json(userResponse);
 	} catch (error) {
 		console.error("Error updating user profile:", error);

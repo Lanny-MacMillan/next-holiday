@@ -3,11 +3,7 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
-import {
-	updateUserName,
-	updateUserEmail,
-	updateUserPicture,
-} from "@/store/slices/userSlice";
+import { updateUserInfo } from "@/store/slices/userSlice";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
@@ -18,12 +14,16 @@ export default function SettingsPage() {
 	const { user: auth0User } = useAuth0();
 	const dispatch = useAppDispatch();
 	const { settings } = useAppSelector((state: any) => state.theme);
-	const { user: reduxUser, initialized: userInitialized } = useAppSelector(
-		(state: any) => state.user
-	);
+	const {
+		user: reduxUser,
+		initialized: userInitialized,
+		loading: userLoading,
+	} = useAppSelector((state: any) => state.user);
 	const [localSettings, setLocalSettings] = useState(settings);
 	const [imageError, setImageError] = useState(false);
 	const [showToast, setShowToast] = useState(false);
+	const [toastMessage, setToastMessage] = useState("");
+	const [toastType, setToastType] = useState<"success" | "error">("success");
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
 	// Use Redux user data if available, otherwise fall back to Auth0
@@ -31,11 +31,11 @@ export default function SettingsPage() {
 
 	// Editing states
 	const [editingName, setEditingName] = useState(false);
-	const [editingEmail, setEditingEmail] = useState(false);
 	const [editingPicture, setEditingPicture] = useState(false);
 	const [tempName, setTempName] = useState(user?.name || "");
-	const [tempEmail, setTempEmail] = useState(user?.email || "");
 	const [tempPicture, setTempPicture] = useState(user?.picture || "");
+	const [savingName, setSavingName] = useState(false);
+	const [savingPicture, setSavingPicture] = useState(false);
 
 	// File input ref for image upload
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,7 +53,6 @@ export default function SettingsPage() {
 	// Update temp values when user changes
 	useEffect(() => {
 		setTempName(user?.name || "");
-		setTempEmail(user?.email || "");
 		setTempPicture(user?.picture || "");
 	}, [user]);
 
@@ -85,6 +84,8 @@ export default function SettingsPage() {
 
 	const handleSave = () => {
 		dispatch(updateSettings(localSettings));
+		setToastMessage("Settings saved successfully!");
+		setToastType("success");
 		setShowToast(true);
 	};
 
@@ -95,32 +96,56 @@ export default function SettingsPage() {
 	};
 
 	// User editing handlers
-	const handleSaveName = () => {
+	const handleSaveName = async () => {
 		if (tempName.trim() && tempName !== user?.name) {
-			dispatch(updateUserName(tempName.trim()));
-			// Update local state immediately for UI feedback
-			setTempName(tempName.trim());
-			setShowToast(true);
+			setSavingName(true);
+			try {
+				const result = await dispatch(
+					updateUserInfo({ name: tempName.trim(), auth0Sub: user?.sub || "" })
+				).unwrap();
+				// Only update local state and show toast if the API call was successful
+				setTempName(tempName.trim());
+				setToastMessage("Name updated successfully!");
+				setToastType("success");
+				setShowToast(true);
+				console.log("Name updated successfully:", result);
+			} catch (error) {
+				console.error("Failed to update name:", error);
+				// Reset temp name to original value if update failed
+				setTempName(user?.name || "");
+				setToastMessage("Failed to update name. Please try again.");
+				setToastType("error");
+				setShowToast(true);
+			} finally {
+				setSavingName(false);
+			}
 		}
 		setEditingName(false);
 	};
 
-	const handleSaveEmail = () => {
-		if (tempEmail.trim() && tempEmail !== user?.email) {
-			dispatch(updateUserEmail(tempEmail.trim()));
-			// Update local state immediately for UI feedback
-			setTempEmail(tempEmail.trim());
-			setShowToast(true);
-		}
-		setEditingEmail(false);
-	};
-
-	const handleSavePicture = () => {
+	const handleSavePicture = async () => {
 		if (tempPicture && tempPicture !== user?.picture) {
-			dispatch(updateUserPicture(tempPicture));
-			// Update local state immediately for UI feedback
-			setTempPicture(tempPicture);
-			setShowToast(true);
+			setSavingPicture(true);
+			try {
+				const result = await dispatch(
+					updateUserInfo({ picture: tempPicture, auth0Sub: user?.sub || "" })
+				).unwrap();
+				// Only update local state and show toast if the API call was successful
+				setTempPicture(tempPicture);
+				setToastMessage("Profile picture updated successfully!");
+				setToastType("success");
+				setShowToast(true);
+				console.log("Picture updated successfully:", result);
+			} catch (error) {
+				console.error("Failed to update picture:", error);
+				// Reset temp picture to original value if update failed
+				setTempPicture(user?.picture || "");
+				setToastMessage("Failed to update profile picture. Please try again.");
+				setToastType("error");
+				setShowToast(true);
+			} finally {
+				setSavingPicture(false);
+			}
 		}
 		setEditingPicture(false);
 	};
@@ -137,15 +162,11 @@ export default function SettingsPage() {
 		}
 	};
 
-	const handleCancelEdit = (field: "name" | "email" | "picture") => {
+	const handleCancelEdit = (field: "name" | "picture") => {
 		switch (field) {
 			case "name":
 				setTempName(user?.name || "");
 				setEditingName(false);
-				break;
-			case "email":
-				setTempEmail(user?.email || "");
-				setEditingEmail(false);
 				break;
 			case "picture":
 				setTempPicture(user?.picture || "");
@@ -231,42 +252,6 @@ export default function SettingsPage() {
 				</header>
 
 				<main className="w-full max-w-2xl flex flex-col gap-8">
-					{/* First-time user welcome message */}
-					{reduxUser?.isFirstLogin && (
-						<div
-							className={`${getCardClasses()} bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500`}
-							style={getGamifiedCardStyle()}
-						>
-							<div className="flex items-start space-x-3">
-								<div className="flex-shrink-0">
-									<svg
-										className="w-6 h-6 text-blue-500"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-										/>
-									</svg>
-								</div>
-								<div>
-									<h3 className="text-lg font-medium text-blue-800 dark:text-blue-200">
-										Welcome to Next Holiday! 🎉
-									</h3>
-									<p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-										Your profile information has been saved from your OAuth
-										account. You can edit any of these details below if you'd
-										like to customize them.
-									</p>
-								</div>
-							</div>
-						</div>
-					)}
-
 					{/* User Information */}
 					<div className={getCardClasses()} style={getGamifiedCardStyle()}>
 						<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
@@ -336,9 +321,14 @@ export default function SettingsPage() {
 										<div className="flex space-x-2 mt-2">
 											<button
 												onClick={handleSavePicture}
-												className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+												disabled={savingPicture}
+												className={`px-3 py-1 text-xs bg-blue-500 text-white rounded transition-colors ${
+													savingPicture
+														? "opacity-50 cursor-not-allowed"
+														: "hover:bg-blue-600"
+												}`}
 											>
-												Save
+												{savingPicture ? "Saving..." : "Save"}
 											</button>
 											<button
 												onClick={() => handleCancelEdit("picture")}
@@ -386,9 +376,14 @@ export default function SettingsPage() {
 											/>
 											<button
 												onClick={handleSaveName}
-												className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+												disabled={savingName}
+												className={`px-4 py-2 text-sm bg-blue-500 text-white rounded transition-colors ${
+													savingName
+														? "opacity-50 cursor-not-allowed"
+														: "hover:bg-blue-600"
+												}`}
 											>
-												Save
+												{savingName ? "Saving..." : "Save"}
 											</button>
 										</div>
 										<div className="flex justify-end mt-1">
@@ -407,60 +402,15 @@ export default function SettingsPage() {
 								)}
 							</div>
 							<div>
-								<div className="flex items-center justify-between">
-									<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-										Email
-									</label>
-									<button
-										onClick={() => setEditingEmail(!editingEmail)}
-										className="p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-									>
-										<svg
-											className="w-4 h-4"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-											/>
-										</svg>
-									</button>
-								</div>
-								{editingEmail ? (
-									<div className="mt-1">
-										<div className="flex space-x-2">
-											<input
-												type="email"
-												value={tempEmail}
-												onChange={(e) => setTempEmail(e.target.value)}
-												className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-												placeholder="Enter your email"
-											/>
-											<button
-												onClick={handleSaveEmail}
-												className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-											>
-												Save
-											</button>
-										</div>
-										<div className="flex justify-end mt-1">
-											<button
-												onClick={() => handleCancelEdit("email")}
-												className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-											>
-												Cancel
-											</button>
-										</div>
-									</div>
-								) : (
-									<p className="mt-1 text-sm text-gray-800 dark:text-white">
-										{tempEmail || user?.email || "Not provided"}
-									</p>
-								)}
+								<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
+									Email
+								</label>
+								<p className="mt-1 text-sm text-gray-800 dark:text-white">
+									{user?.email || "Not provided"}
+								</p>
+								<p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+									Email changes should be made through your Auth0 profile
+								</p>
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
@@ -798,10 +748,10 @@ export default function SettingsPage() {
 				</main>
 
 				<Toast
-					message="Settings saved successfully!"
+					message={toastMessage}
 					isVisible={showToast}
 					onClose={() => setShowToast(false)}
-					type="success"
+					type={toastType}
 				/>
 
 				<UpgradeModal
