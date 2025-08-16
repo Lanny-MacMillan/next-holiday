@@ -4,7 +4,8 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { updateUserInfo } from "@/store/slices/userSlice";
-import { useState, useEffect, useRef } from "react";
+import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
 import { getCardStyling } from "@/utils/cardShadows";
@@ -19,7 +20,28 @@ export default function SettingsPage() {
 		initialized: userInitialized,
 		loading: userLoading,
 	} = useAppSelector((state: any) => state.user);
-	const [localSettings, setLocalSettings] = useState(settings);
+	const { preferences, initialized: preferencesInitialized } = useAppSelector(
+		(state: any) => state.userPreferences
+	);
+
+	// Use preferences from database if available, otherwise fall back to theme slice
+	const currentSettings = useMemo(() => {
+		return preferences
+			? {
+					theme: preferences.theme,
+					displayMode: preferences.displayMode,
+					notifications: {
+						reminders: preferences.reminderNotifications,
+						shippingAlerts: preferences.pushNotifications,
+						upcomingEvents: preferences.holidayCountdownAlerts,
+					},
+					holidayChoices: settings.holidayChoices, // Keep this from theme slice for now
+					giftBudgetLimit: settings.giftBudgetLimit, // Keep this from theme slice for now
+			  }
+			: settings;
+	}, [preferences, settings]);
+
+	const [localSettings, setLocalSettings] = useState(currentSettings);
 	const [imageError, setImageError] = useState(false);
 	const [showToast, setShowToast] = useState(false);
 	const [toastMessage, setToastMessage] = useState("");
@@ -27,6 +49,7 @@ export default function SettingsPage() {
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
 	// Use Redux user data if available, otherwise fall back to Auth0
+	// Note: We need auth0User for the sub property since reduxUser doesn't include auth0Sub for security
 	const user = reduxUser || auth0User;
 
 	// Editing states
@@ -42,8 +65,8 @@ export default function SettingsPage() {
 
 	// Sync localSettings with Redux store when settings change
 	useEffect(() => {
-		setLocalSettings(settings);
-	}, [settings]);
+		setLocalSettings(currentSettings);
+	}, [currentSettings]);
 
 	// Reset image error when user changes
 	useEffect(() => {
@@ -68,7 +91,7 @@ export default function SettingsPage() {
 		).toUpperCase();
 	}
 
-	const handleSettingChange = (key: string, value: any) => {
+	const handleSettingChange = async (key: string, value: any) => {
 		const newSettings = { ...localSettings };
 
 		if (key.includes(".")) {
@@ -79,13 +102,75 @@ export default function SettingsPage() {
 		}
 
 		setLocalSettings(newSettings);
+
+		// Update both local state and database
 		dispatch(updateSettings(newSettings));
+
+		// Update database preferences (only for fields that exist in the database)
+		if (preferences && key !== "holidayChoices" && key !== "giftBudgetLimit") {
+			const updateData: any = {};
+
+			if (key === "theme") {
+				updateData.theme = value;
+			} else if (key === "displayMode") {
+				updateData.displayMode = value;
+			} else if (key === "notifications.reminders") {
+				updateData.reminderNotifications = value;
+			} else if (key === "notifications.shippingAlerts") {
+				updateData.pushNotifications = value;
+			} else if (key === "notifications.upcomingEvents") {
+				updateData.holidayCountdownAlerts = value;
+			}
+
+			if (Object.keys(updateData).length > 0 && auth0User?.sub) {
+				try {
+					await dispatch(
+						updateUserPreferences({
+							preferencesData: updateData,
+							auth0Sub: auth0User.sub,
+						})
+					).unwrap();
+				} catch (error) {
+					console.error("Failed to update preferences in database:", error);
+					// Revert local state if database update failed
+					setLocalSettings(currentSettings);
+				}
+			}
+		}
 	};
 
-	const handleSave = () => {
+	const handleSave = async () => {
 		dispatch(updateSettings(localSettings));
-		setToastMessage("Settings saved successfully!");
-		setToastType("success");
+
+		// Update database preferences
+		if (preferences && auth0User?.sub) {
+			try {
+				const updateData = {
+					theme: localSettings.theme,
+					displayMode: localSettings.displayMode,
+					reminderNotifications: localSettings.notifications.reminders,
+					pushNotifications: localSettings.notifications.shippingAlerts,
+					holidayCountdownAlerts: localSettings.notifications.upcomingEvents,
+				};
+
+				await dispatch(
+					updateUserPreferences({
+						preferencesData: updateData,
+						auth0Sub: auth0User.sub,
+					})
+				).unwrap();
+				setToastMessage("Settings saved successfully!");
+				setToastType("success");
+			} catch (error) {
+				console.error("Failed to save settings to database:", error);
+				setToastMessage("Failed to save settings. Please try again.");
+				setToastType("error");
+			}
+		} else {
+			setToastMessage("Settings saved successfully!");
+			setToastType("success");
+		}
+
 		setShowToast(true);
 	};
 
@@ -101,7 +186,10 @@ export default function SettingsPage() {
 			setSavingName(true);
 			try {
 				const result = await dispatch(
-					updateUserInfo({ name: tempName.trim(), auth0Sub: user?.sub || "" })
+					updateUserInfo({
+						name: tempName.trim(),
+						auth0Sub: auth0User?.sub || "",
+					})
 				).unwrap();
 				// Only update local state and show toast if the API call was successful
 				setTempName(tempName.trim());
@@ -128,7 +216,10 @@ export default function SettingsPage() {
 			setSavingPicture(true);
 			try {
 				const result = await dispatch(
-					updateUserInfo({ picture: tempPicture, auth0Sub: user?.sub || "" })
+					updateUserInfo({
+						picture: tempPicture,
+						auth0Sub: auth0User?.sub || "",
+					})
 				).unwrap();
 				// Only update local state and show toast if the API call was successful
 				setTempPicture(tempPicture);
@@ -207,13 +298,13 @@ export default function SettingsPage() {
 		}
 	};
 	// Show loading state while user data is being initialized
-	if (!userInitialized) {
+	if (!userInitialized || !preferencesInitialized) {
 		return (
 			<div className="min-h-screen christmas-settings-gradient flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">
-						Loading user data...
+						Loading user data and preferences...
 					</p>
 				</div>
 			</div>
@@ -449,8 +540,8 @@ export default function SettingsPage() {
 									</p>
 								</div>
 								<button
-									onClick={() =>
-										handleSettingChange(
+									onClick={async () =>
+										await handleSettingChange(
 											"theme",
 											localSettings.theme === "light" ? "dark" : "light"
 										)
@@ -480,8 +571,8 @@ export default function SettingsPage() {
 									</p>
 								</div>
 								<button
-									onClick={() =>
-										handleSettingChange(
+									onClick={async () =>
+										await handleSettingChange(
 											"displayMode",
 											localSettings.displayMode === "professional"
 												? "gamified"
@@ -561,7 +652,7 @@ export default function SettingsPage() {
 														<input
 															type="checkbox"
 															checked={isSelected}
-															onChange={(e) => {
+															onChange={async (e) => {
 																const currentChoices =
 																	localSettings.holidayChoices || [];
 																let newChoices;
@@ -578,7 +669,7 @@ export default function SettingsPage() {
 																		}) => choice.holiday !== holiday
 																	);
 																}
-																handleSettingChange(
+																await handleSettingChange(
 																	"holidayChoices",
 																	newChoices
 																);
@@ -597,7 +688,7 @@ export default function SettingsPage() {
 															<input
 																type="number"
 																value={budget}
-																onChange={(e) => {
+																onChange={async (e) => {
 																	const newBudget =
 																		parseInt(e.target.value) || 0;
 																	const currentChoices =
@@ -611,7 +702,7 @@ export default function SettingsPage() {
 																				? { ...choice, budget: newBudget }
 																				: choice
 																	);
-																	handleSettingChange(
+																	await handleSettingChange(
 																		"holidayChoices",
 																		newChoices
 																	);
@@ -650,8 +741,8 @@ export default function SettingsPage() {
 									</p>
 								</div>
 								<button
-									onClick={() =>
-										handleSettingChange(
+									onClick={async () =>
+										await handleSettingChange(
 											"notifications.reminders",
 											!localSettings.notifications.reminders
 										)
@@ -681,8 +772,8 @@ export default function SettingsPage() {
 									</p>
 								</div>
 								<button
-									onClick={() =>
-										handleSettingChange(
+									onClick={async () =>
+										await handleSettingChange(
 											"notifications.shippingAlerts",
 											!localSettings.notifications.shippingAlerts
 										)
@@ -712,8 +803,8 @@ export default function SettingsPage() {
 									</p>
 								</div>
 								<button
-									onClick={() =>
-										handleSettingChange(
+									onClick={async () =>
+										await handleSettingChange(
 											"notifications.upcomingEvents",
 											!localSettings.notifications.upcomingEvents
 										)

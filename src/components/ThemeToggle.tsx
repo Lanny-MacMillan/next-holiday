@@ -1,24 +1,50 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 import { toggleTheme } from "@/store/slices/themeSlice";
+import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
 
 export default function ThemeToggle() {
 	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
 	const { theme } = useAppSelector((state: any) => state.theme.settings);
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
 
-	const handleToggle = () => {
-		console.log("Theme toggle clicked, current theme:", theme);
+	// Use preferences from database if available, otherwise fall back to theme slice
+	const currentTheme = preferences?.theme || theme;
+
+	const handleToggle = async () => {
+		console.log("Theme toggle clicked, current theme:", currentTheme);
+		const newTheme = currentTheme === "light" ? "dark" : "light";
+
+		// Update both local state and database
 		dispatch(toggleTheme());
+
+		// Update database preferences
+		if (preferences && auth0User?.sub) {
+			try {
+				await dispatch(
+					updateUserPreferences({
+						preferencesData: { theme: newTheme },
+						auth0Sub: auth0User.sub,
+					})
+				).unwrap();
+			} catch (error) {
+				console.error("Failed to update theme in database:", error);
+			}
+		}
 	};
 
 	return (
 		<button
 			onClick={handleToggle}
 			className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
-			aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+			aria-label={`Switch to ${
+				currentTheme === "light" ? "dark" : "light"
+			} mode`}
 		>
-			{theme === "light" ? (
+			{currentTheme === "light" ? (
 				// Sun icon for light mode (click to switch to dark)
 				<svg
 					className="h-5 w-5"

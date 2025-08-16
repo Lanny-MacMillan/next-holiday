@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { DEFAULT_USER_PREFERENCES } from "@/lib/constants/userPreferences";
 
 /**
  * GET /api/users
@@ -37,13 +38,13 @@ export async function GET(request: NextRequest) {
  * Create or update a user (called during Auth0 login)
  */
 export async function POST(request: NextRequest) {
+	const body = await request.json();
+	console.log("Request body:", body);
+
+	const { auth0Sub, email, name, picture } = body;
+
 	try {
 		console.log("POST /api/users called");
-
-		const body = await request.json();
-		console.log("Request body:", body);
-
-		const { auth0Sub, email, name, picture } = body;
 
 		if (!auth0Sub) {
 			console.log("Missing auth0Sub");
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		let user;
-		
+
 		if (existingUser) {
 			// User exists, update them
 			console.log("User exists, updating...");
@@ -85,6 +86,16 @@ export async function POST(request: NextRequest) {
 					isFirstLogin: true,
 				},
 			});
+
+			// Create default user preferences for new user
+			console.log("Creating default user preferences for new user:", user.id);
+			await prisma.userPreferences.create({
+				data: {
+					userId: user.id,
+					...DEFAULT_USER_PREFERENCES,
+				},
+			});
+			console.log("Default user preferences created successfully");
 		}
 
 		console.log("User created/updated successfully:", user.id);
@@ -92,12 +103,14 @@ export async function POST(request: NextRequest) {
 		// Return user without sensitive fields
 		const { auth0Sub: _, ...userResponse } = user;
 		return Response.json(userResponse);
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Error creating/updating user:", error);
-		
+
 		// Handle unique constraint violation specifically
-		if (error.code === 'P2002' && error.meta?.target?.includes('auth0_sub')) {
-			console.log("Unique constraint violation on auth0_sub - user likely already exists");
+		if (error.code === "P2002" && error.meta?.target?.includes("auth0_sub")) {
+			console.log(
+				"Unique constraint violation on auth0_sub - user likely already exists"
+			);
 			// Try to find and return the existing user
 			try {
 				const existingUser = await prisma.user.findUnique({
@@ -111,7 +124,7 @@ export async function POST(request: NextRequest) {
 				console.error("Error finding existing user:", findError);
 			}
 		}
-		
+
 		return Response.json(
 			{ error: "Failed to create/update user", details: error.message },
 			{ status: 500 }

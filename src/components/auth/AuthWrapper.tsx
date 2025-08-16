@@ -26,6 +26,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 		if (isAuthenticated && user && !reduxUser) {
 			// User is authenticated but not in Redux yet
 			const userData = {
+				id: "", // Will be set by the database
 				sub: user.sub!,
 				email: user.email,
 				name: user.name,

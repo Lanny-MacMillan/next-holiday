@@ -8,7 +8,23 @@ import { requireAuth } from "@/lib/auth";
  */
 export async function GET(request: NextRequest) {
 	try {
-		const currentUser = await requireAuth(request);
+		// Get auth0Sub from query parameters or headers
+		const url = new URL(request.url);
+		const auth0SubParam =
+			url.searchParams.get("auth0Sub") || request.headers.get("x-auth0-sub");
+
+		if (!auth0SubParam) {
+			return Response.json({ error: "Auth0 sub is required" }, { status: 400 });
+		}
+
+		// Find user by auth0Sub
+		const currentUser = await prisma.user.findUnique({
+			where: { auth0Sub: auth0SubParam },
+		});
+
+		if (!currentUser) {
+			return Response.json({ error: "User not found" }, { status: 404 });
+		}
 
 		// Get user with account relationships and preferences
 		const user = await prisma.user.findUnique({
@@ -67,7 +83,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Remove sensitive fields from response
-		const { auth0Sub, ...userResponse } = user;
+		const { auth0Sub: _, ...userResponse } = user;
 		return Response.json(userResponse);
 	} catch (error) {
 		console.error("Error fetching current user:", error);

@@ -87,8 +87,10 @@ export const addUserToDb = createAsyncThunk(
 // Async thunk to get current user from API
 export const getCurrentUser = createAsyncThunk(
 	"user/getCurrentUser",
-	async () => {
-		const response = await fetch("/api/users/me");
+	async (auth0Sub: string) => {
+		const response = await fetch(
+			`/api/users/me?auth0Sub=${encodeURIComponent(auth0Sub)}`
+		);
 		if (!response.ok) {
 			throw new Error("Failed to fetch current user");
 		}

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { DEFAULT_USER_PREFERENCES } from "@/lib/constants/userPreferences";
 
 /**
  * GET /api/users/me/preferences
@@ -8,7 +9,23 @@ import { requireAuth } from "@/lib/auth";
  */
 export async function GET(request: NextRequest) {
 	try {
-		const currentUser = await requireAuth(request);
+		// Get auth0Sub from query parameters or headers
+		const url = new URL(request.url);
+		const auth0Sub =
+			url.searchParams.get("auth0Sub") || request.headers.get("x-auth0-sub");
+
+		if (!auth0Sub) {
+			return Response.json({ error: "Auth0 sub is required" }, { status: 400 });
+		}
+
+		// Find user by auth0Sub
+		const currentUser = await prisma.user.findUnique({
+			where: { auth0Sub },
+		});
+
+		if (!currentUser) {
+			return Response.json({ error: "User not found" }, { status: 404 });
+		}
 
 		// Get user preferences, create default if they don't exist
 		let preferences = await prisma.userPreferences.findUnique({
@@ -17,12 +34,17 @@ export async function GET(request: NextRequest) {
 
 		// If no preferences exist, create default ones
 		if (!preferences) {
+			console.log(
+				"Creating default user preferences for existing user:",
+				currentUser.id
+			);
 			preferences = await prisma.userPreferences.create({
 				data: {
 					userId: currentUser.id,
-					// All fields will use their default values from the schema
+					...DEFAULT_USER_PREFERENCES,
 				},
 			});
+			console.log("Default user preferences created successfully");
 		}
 
 		return Response.json(preferences);
@@ -41,8 +63,21 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
 	try {
-		const currentUser = await requireAuth(request);
 		const updateData = await request.json();
+		const { auth0Sub, ...preferencesData } = updateData;
+
+		if (!auth0Sub) {
+			return Response.json({ error: "Auth0 sub is required" }, { status: 400 });
+		}
+
+		// Find user by auth0Sub
+		const currentUser = await prisma.user.findUnique({
+			where: { auth0Sub },
+		});
+
+		if (!currentUser) {
+			return Response.json({ error: "User not found" }, { status: 404 });
+		}
 
 		// Validate the update data
 		const allowedFields = [
@@ -64,10 +99,10 @@ export async function PUT(request: NextRequest) {
 		];
 
 		// Filter out any fields that aren't allowed
-		const filteredData = Object.keys(updateData)
+		const filteredData = Object.keys(preferencesData)
 			.filter((key) => allowedFields.includes(key))
 			.reduce((obj, key) => {
-				obj[key] = updateData[key];
+				obj[key] = preferencesData[key];
 				return obj;
 			}, {} as any);
 
@@ -80,6 +115,7 @@ export async function PUT(request: NextRequest) {
 			update: filteredData,
 			create: {
 				userId: currentUser.id,
+				...DEFAULT_USER_PREFERENCES,
 				...filteredData,
 			},
 		});

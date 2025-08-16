@@ -8,6 +8,7 @@ import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { getCurrentUser } from "@/store/slices/userSlice";
+import { getCurrentUserPreferences } from "@/store/slices/userPreferencesSlice";
 
 export default function DataInitializer() {
 	const { user: auth0User, isAuthenticated } = useAuth0();
@@ -16,6 +17,11 @@ export default function DataInitializer() {
 	// User state
 	const { user: reduxUser, initialized: userInitialized } = useAppSelector(
 		(state) => state.user
+	);
+
+	// User preferences state
+	const { initialized: preferencesInitialized } = useAppSelector(
+		(state) => state.userPreferences
 	);
 
 	// Other data states
@@ -36,9 +42,17 @@ export default function DataInitializer() {
 	useEffect(() => {
 		if (isAuthenticated && auth0User && !userInitialized) {
 			console.log("DataInitializer: Fetching current user from API");
-			dispatch(getCurrentUser());
+			dispatch(getCurrentUser(auth0User.sub!));
 		}
 	}, [isAuthenticated, auth0User, userInitialized, dispatch]);
+
+	// User preferences initialization logic
+	useEffect(() => {
+		if (isAuthenticated && auth0User && !preferencesInitialized) {
+			console.log("DataInitializer: Fetching user preferences from API");
+			dispatch(getCurrentUserPreferences(auth0User.sub!));
+		}
+	}, [isAuthenticated, auth0User, preferencesInitialized, dispatch]);
 
 	// Initialize other data
 	useEffect(() => {
