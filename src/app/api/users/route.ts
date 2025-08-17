@@ -63,15 +63,24 @@ export async function POST(request: NextRequest) {
 		if (existingUser) {
 			// User exists, update them
 			console.log("User exists, updating...");
+
+			// Only update name if user hasn't set a custom name (preserve custom names)
+			const updateData: any = {
+				email,
+				picture,
+				isInDb: true,
+				updatedAt: new Date(),
+			};
+
+			// Only update name if the existing name is null/empty or matches the Auth0 name
+			// This preserves custom names that users have set
+			if (!existingUser.name || existingUser.name === name) {
+				updateData.name = name;
+			}
+
 			user = await prisma.user.update({
 				where: { auth0Sub },
-				data: {
-					email,
-					name,
-					picture,
-					isInDb: true,
-					updatedAt: new Date(),
-				},
+				data: updateData,
 			});
 		} else {
 			// User doesn't exist, create them
