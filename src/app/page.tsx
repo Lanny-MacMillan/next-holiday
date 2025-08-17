@@ -22,7 +22,14 @@ export default function Home() {
 	const {
 		preferences: holidayPreferences,
 		loading: holidayPreferencesLoading,
+		initialized: holidayPreferencesInitialized,
 	} = useAppSelector((state: any) => state.holidayPreferences);
+
+	console.log("Main page holiday preferences state:", {
+		holidayPreferences,
+		holidayPreferencesLoading,
+		holidayPreferencesInitialized,
+	});
 
 	// Get loading states
 	const cardsLoading = useAppSelector((state) => state.cards?.loading || false);
@@ -156,8 +163,15 @@ export default function Home() {
 
 	// Filter holidays based on user preferences
 	const getSelectedHolidays = () => {
+		console.log("getSelectedHolidays called:", {
+			holidayPreferencesLoading,
+			holidayPreferences,
+			holidayDataLength: holidayData.length,
+		});
+
 		// Wait for holiday preferences to load from database
 		if (holidayPreferencesLoading) {
+			console.log("Holiday preferences still loading, returning empty array");
 			return []; // Return empty array while loading
 		}
 
@@ -168,8 +182,11 @@ export default function Home() {
 		// In either case, we should show a message to guide the user
 		const holidayChoices = holidayPreferences || [];
 
+		console.log("Holiday choices:", holidayChoices);
+
 		// If no holiday choices are set, return empty array (no holidays to show)
 		if (!holidayChoices || holidayChoices.length === 0) {
+			console.log("No holiday choices found, returning empty array");
 			return [];
 		}
 
@@ -178,8 +195,10 @@ export default function Home() {
 			(choice: { holiday: string; budget?: number }) => choice.holiday
 		);
 
+		console.log("Selected holiday names:", selectedHolidayNames);
+
 		// Filter holidayData to only include selected holidays
-		return holidayData.filter((holiday) => {
+		const filteredHolidays = holidayData.filter((holiday) => {
 			// Map holiday IDs to display names for comparison
 			const holidayNameMap: { [key: string]: string } = {
 				christmas: "Christmas",
@@ -200,8 +219,17 @@ export default function Home() {
 			};
 
 			const holidayDisplayName = holidayNameMap[holiday.id];
-			return selectedHolidayNames.includes(holidayDisplayName);
+			const isSelected = selectedHolidayNames.includes(holidayDisplayName);
+			console.log(
+				`Holiday ${holiday.id} (${holidayDisplayName}): ${
+					isSelected ? "selected" : "not selected"
+				}`
+			);
+			return isSelected;
 		});
+
+		console.log("Filtered holidays:", filteredHolidays);
+		return filteredHolidays;
 	};
 
 	// Show loading state while data is being fetched
@@ -305,6 +333,35 @@ export default function Home() {
 				) : (
 					<ul className="flex flex-col gap-4">
 						{sortedHolidays.map((holiday) => {
+							// Find the holiday preference data for this holiday
+							const holidayPreference = holidayPreferences?.find(
+								(pref: any) => {
+									// Map holiday names to holiday types for comparison
+									const holidayNameMap: { [key: string]: string } = {
+										Christmas: "Christmas",
+										Hanukkah: "Hanukkah",
+										Kwanzaa: "Kwanzaa",
+										"New Year": "New Year",
+										"Valentine's Day": "Valentine's Day",
+										Easter: "Easter",
+										Halloween: "Halloween",
+										Thanksgiving: "Thanksgiving",
+										"Mother's Day": "Mother's Day",
+										"Father's Day": "Father's Day",
+										"Fourth of July": "Fourth of July",
+										Birthday: "Birthday",
+										Anniversary: "Anniversary",
+										Graduation: "Graduation",
+										"Baby Shower": "Baby Shower",
+									};
+									return pref.holiday === holidayNameMap[holiday.name];
+								}
+							);
+
+							// Get holiday ID and countdown timer from preferences
+							const holidayId = holidayPreference?.holidayId;
+							const countdownTimer = holidayPreference?.countdownTimer;
+
 							const state = {
 								cards: { cards },
 								giftList: { gifts },
@@ -387,6 +444,8 @@ export default function Home() {
 									gamifiedBackgroundColor={getGamifiedBackgroundColor(
 										holiday.id
 									)}
+									holidayId={holidayId}
+									countdownTimer={countdownTimer}
 								/>
 							);
 						})}

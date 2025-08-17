@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	updateCountdownTimer,
+	clearCountdownTimer,
+} from "@/store/slices/countdownTimerSlice";
 import {
 	setCountdown,
 	clearCountdown,
@@ -83,13 +88,30 @@ import InviteButton from "./InviteButton";
 interface CountdownTimerProps {
 	className?: string;
 	holiday?: string;
+	holidayId?: string; // New prop for API-based countdown
+	initialCountdownTimer?: string | null; // New prop for initial countdown timer
 }
 
 export default function CountdownTimer({
 	className = "",
 	holiday,
+	holidayId,
+	initialCountdownTimer = null,
 }: CountdownTimerProps) {
 	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+
+	// Always call hooks in the same order
+	const [timeLeft, setTimeLeft] = useState<{
+		days: number;
+		hours: number;
+		minutes: number;
+		seconds: number;
+	} | null>(null);
+	const [showDatePicker, setShowDatePicker] = useState(false);
+	const [apiCountdownTimer, setApiCountdownTimer] = useState<string | null>(
+		initialCountdownTimer
+	);
 
 	// Determine which countdown slice to use based on holiday
 	const countdownState = useAppSelector((state) => {
@@ -129,24 +151,31 @@ export default function CountdownTimer({
 
 	const { targetDate, isActive } = countdownState;
 
-	const [timeLeft, setTimeLeft] = useState<{
-		days: number;
-		hours: number;
-		minutes: number;
-		seconds: number;
-	} | null>(null);
-	const [showDatePicker, setShowDatePicker] = useState(false);
+	// API-based countdown state
+	const { loading, error, updatingHolidayId } = useAppSelector(
+		(state) => state.countdownTimer
+	);
+	const isUpdating = updatingHolidayId === holidayId;
+
+	// Get display mode from Redux settings - always call this hook first
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamifiedMode = settings.displayMode === "gamified";
+
+	// Use API-based countdown if holidayId is provided, otherwise use Redux state
+	const useApiCountdown = !!holidayId;
+	const currentTargetDate = useApiCountdown ? apiCountdownTimer : targetDate;
+	const currentIsActive = useApiCountdown ? !!apiCountdownTimer : isActive;
 
 	// Calculate time remaining
 	useEffect(() => {
-		if (!targetDate || !isActive) {
+		if (!currentTargetDate || !currentIsActive) {
 			setTimeLeft(null);
 			return;
 		}
 
 		const timer = setInterval(() => {
 			const now = new Date().getTime();
-			const target = new Date(targetDate).getTime();
+			const target = new Date(currentTargetDate).getTime();
 			const difference = target - now;
 
 			if (difference <= 0) {
@@ -166,7 +195,19 @@ export default function CountdownTimer({
 		}, 1000);
 
 		return () => clearInterval(timer);
-	}, [targetDate, isActive]);
+	}, [currentTargetDate, currentIsActive]);
+
+	// Helper function to format datetime properly for API
+	const formatDateTimeForAPI = (dateString: string): string => {
+		// Handle datetime-local input format (YYYY-MM-DDTHH:MM) by adding seconds
+		if (dateString && dateString.length === 16) {
+			// Add seconds to make it a proper ISO datetime
+			dateString = dateString + ":00";
+		}
+		const date = new Date(dateString);
+		// Ensure we have a proper ISO datetime string with seconds and timezone
+		return date.toISOString();
+	};
 
 	// Determine color based on time remaining
 	const getCountdownColor = () => {
@@ -222,9 +263,26 @@ export default function CountdownTimer({
 		}
 	};
 
-	const handleSetCountdown = (date: string) => {
-		dispatch(dispatchSetCountdown(holiday, date));
-		setShowDatePicker(false);
+	const handleSetCountdown = async (date: string) => {
+		if (useApiCountdown && holidayId) {
+			try {
+				const formattedDate = formatDateTimeForAPI(date);
+				await dispatch(
+					updateCountdownTimer({
+						holidayId,
+						countdownTimer: formattedDate,
+						auth0User,
+					})
+				).unwrap();
+				setApiCountdownTimer(formattedDate);
+				setShowDatePicker(false);
+			} catch (error) {
+				console.error("Failed to set countdown:", error);
+			}
+		} else {
+			dispatch(dispatchSetCountdown(holiday, date));
+			setShowDatePicker(false);
+		}
 	};
 
 	// Helper function to dispatch update countdown action based on holiday
@@ -266,9 +324,26 @@ export default function CountdownTimer({
 		}
 	};
 
-	const handleUpdateCountdown = (date: string) => {
-		dispatch(dispatchUpdateCountdown(holiday, date));
-		setShowDatePicker(false);
+	const handleUpdateCountdown = async (date: string) => {
+		if (useApiCountdown && holidayId) {
+			try {
+				const formattedDate = formatDateTimeForAPI(date);
+				await dispatch(
+					updateCountdownTimer({
+						holidayId,
+						countdownTimer: formattedDate,
+						auth0User,
+					})
+				).unwrap();
+				setApiCountdownTimer(formattedDate);
+				setShowDatePicker(false);
+			} catch (error) {
+				console.error("Failed to update countdown:", error);
+			}
+		} else {
+			dispatch(dispatchUpdateCountdown(holiday, date));
+			setShowDatePicker(false);
+		}
 	};
 
 	// Helper function to dispatch clear countdown action based on holiday
@@ -307,14 +382,29 @@ export default function CountdownTimer({
 		}
 	};
 
-	const handleClearCountdown = () => {
-		dispatch(dispatchClearCountdown(holiday));
-		setShowDatePicker(false);
+	const handleClearCountdown = async () => {
+		if (useApiCountdown && holidayId) {
+			try {
+				await dispatch(
+					clearCountdownTimer({
+						holidayId,
+						auth0User,
+					})
+				).unwrap();
+				setApiCountdownTimer(null);
+				setShowDatePicker(false);
+			} catch (error) {
+				console.error("Failed to clear countdown:", error);
+			}
+		} else {
+			dispatch(dispatchClearCountdown(holiday));
+			setShowDatePicker(false);
+		}
 	};
 
 	const handleCountdownClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		if (isActive) {
+		if (currentIsActive) {
 			setShowDatePicker(true);
 		}
 	};
@@ -365,55 +455,79 @@ export default function CountdownTimer({
 		}
 	};
 
-	if (!isActive) {
-		// Get holiday color for professional mode
-		const getHolidayColor = () => {
-			const colorMap: { [key: string]: { light: string; dark: string } } = {
-				christmas: { light: "#22c55e", dark: "#16a34a" },
-				hanukkah: { light: "#3b82f6", dark: "#2563eb" },
-				kwanzaa: { light: "#dc2626", dark: "#b91c1c" },
-				"new-year": { light: "#f59e0b", dark: "#d97706" },
-				valentines: { light: "#ec4899", dark: "#db2777" },
-				easter: { light: "#a855f7", dark: "#9333ea" },
-				halloween: { light: "#f97316", dark: "#ea580c" },
-				thanksgiving: { light: "#f59e0b", dark: "#d97706" },
-				"mothers-day": { light: "#ec4899", dark: "#db2777" },
-				"fathers-day": { light: "#3b82f6", dark: "#2563eb" },
-				"fourth-of-july": { light: "#dc2626", dark: "#b91c1c" },
-				birthday: { light: "#f59e0b", dark: "#d97706" },
-				anniversary: { light: "#ec4899", dark: "#db2777" },
-				graduation: { light: "#a855f7", dark: "#9333ea" },
-				"baby-shower": { light: "#06b6d4", dark: "#0891b2" },
-			};
-
-			// Map holiday names to IDs
-			const holidayIdMap: { [key: string]: string } = {
-				Christmas: "christmas",
-				Hanukkah: "hanukkah",
-				Kwanzaa: "kwanzaa",
-				"New Year": "new-year",
-				"Valentine's Day": "valentines",
-				Easter: "easter",
-				Halloween: "halloween",
-				Thanksgiving: "thanksgiving",
-				"Mother's Day": "mothers-day",
-				"Father's Day": "fathers-day",
-				"Fourth of July": "fourth-of-july",
-				Birthday: "birthday",
-				Anniversary: "anniversary",
-				Graduation: "graduation",
-				"Baby Shower": "baby-shower",
-			};
-
-			const holidayId = holidayIdMap[holiday || ""];
-			return colorMap[holidayId] || { light: "#6b7280", dark: "#4b5563" };
+	// Get holiday color for professional mode
+	const getHolidayColor = () => {
+		const colorMap: { [key: string]: { light: string; dark: string } } = {
+			christmas: { light: "#22c55e", dark: "#16a34a" },
+			hanukkah: { light: "#3b82f6", dark: "#2563eb" },
+			kwanzaa: { light: "#dc2626", dark: "#b91c1c" },
+			"new-year": { light: "#f59e0b", dark: "#d97706" },
+			valentines: { light: "#ec4899", dark: "#db2777" },
+			easter: { light: "#a855f7", dark: "#9333ea" },
+			halloween: { light: "#f97316", dark: "#ea580c" },
+			thanksgiving: { light: "#f59e0b", dark: "#d97706" },
+			"mothers-day": { light: "#ec4899", dark: "#db2777" },
+			"fathers-day": { light: "#3b82f6", dark: "#2563eb" },
+			"fourth-of-july": { light: "#dc2626", dark: "#b91c1c" },
+			birthday: { light: "#f59e0b", dark: "#d97706" },
+			anniversary: { light: "#ec4899", dark: "#db2777" },
+			graduation: { light: "#a855f7", dark: "#9333ea" },
+			"baby-shower": { light: "#06b6d4", dark: "#0891b2" },
 		};
 
-		// Get display mode from Redux settings
-		const { settings } = useAppSelector((state: any) => state.theme);
-		const isGamifiedMode = settings.displayMode === "gamified";
-		const holidayColor = getHolidayColor();
+		// Map holiday names to IDs
+		const holidayIdMap: { [key: string]: string } = {
+			Christmas: "christmas",
+			Hanukkah: "hanukkah",
+			Kwanzaa: "kwanzaa",
+			"New Year": "new-year",
+			"Valentine's Day": "valentines",
+			Easter: "easter",
+			Halloween: "halloween",
+			Thanksgiving: "thanksgiving",
+			"Mother's Day": "mothers-day",
+			"Father's Day": "fathers-day",
+			"Fourth of July": "fourth-of-july",
+			Birthday: "birthday",
+			Anniversary: "anniversary",
+			Graduation: "graduation",
+			"Baby Shower": "baby-shower",
+		};
 
+		const holidayId = holidayIdMap[holiday || ""];
+		return colorMap[holidayId] || { light: "#6b7280", dark: "#4b5563" };
+	};
+
+	const holidayColor = getHolidayColor();
+	const completionMessage = getCompletionMessage();
+	const isExpired =
+		timeLeft &&
+		timeLeft.days === 0 &&
+		timeLeft.hours === 0 &&
+		timeLeft.minutes === 0 &&
+		timeLeft.seconds === 0;
+
+	// Show loading state for API-based countdown
+	if (useApiCountdown && isUpdating) {
+		return (
+			<div className={`${className} relative z-20`}>
+				<div className="text-xs text-gray-500 dark:text-gray-400">
+					Updating countdown...
+				</div>
+			</div>
+		);
+	}
+
+	// Show error state for API-based countdown
+	if (useApiCountdown && error && updatingHolidayId === holidayId) {
+		return (
+			<div className={`${className} relative z-20`}>
+				<div className="text-xs text-red-500">Error: {error}</div>
+			</div>
+		);
+	}
+
+	if (!currentIsActive) {
 		return (
 			<div className={`${className} relative z-20`}>
 				<button
@@ -449,10 +563,6 @@ export default function CountdownTimer({
 	}
 
 	if (!timeLeft) {
-		// Get display mode from Redux settings
-		const { settings } = useAppSelector((state: any) => state.theme);
-		const isGamifiedMode = settings.displayMode === "gamified";
-
 		return (
 			<div
 				className={`${className} text-xs relative z-20 ${
@@ -466,19 +576,8 @@ export default function CountdownTimer({
 		);
 	}
 
-	const completionMessage = getCompletionMessage();
-	const isExpired =
-		timeLeft.days === 0 &&
-		timeLeft.hours === 0 &&
-		timeLeft.minutes === 0 &&
-		timeLeft.seconds === 0;
-
 	// Show completion message but still allow editing
 	if (completionMessage) {
-		// Get display mode from Redux settings
-		const { settings } = useAppSelector((state: any) => state.theme);
-		const isGamifiedMode = settings.displayMode === "gamified";
-
 		return (
 			<div className={`${className} relative z-20`}>
 				<button
@@ -497,16 +596,12 @@ export default function CountdownTimer({
 					onClose={() => setShowDatePicker(false)}
 					onDateSelect={handleUpdateCountdown}
 					title="Update Countdown Date"
-					currentDate={targetDate || ""}
+					currentDate={currentTargetDate || ""}
 					onDelete={handleClearCountdown}
 				/>
 			</div>
 		);
 	}
-
-	// Get display mode from Redux settings
-	const { settings } = useAppSelector((state: any) => state.theme);
-	const isGamifiedMode = settings.displayMode === "gamified";
 
 	return (
 		<div className={`${className} relative z-20`}>
@@ -529,7 +624,7 @@ export default function CountdownTimer({
 				onClose={() => setShowDatePicker(false)}
 				onDateSelect={handleUpdateCountdown}
 				title="Update Countdown Date"
-				currentDate={targetDate || ""}
+				currentDate={currentTargetDate || ""}
 				onDelete={handleClearCountdown}
 			/>
 		</div>

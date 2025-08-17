@@ -72,6 +72,7 @@ import fathersDayCountdownReducer from "./slices/fathers-day/fathersDayCountdown
 import mothersDayCountdownReducer from "./slices/mothers-day/mothersDayCountdownSlice";
 import christmasCountdownReducer from "./slices/christmas/christmasCountdownSlice";
 import userPreferencesReducer from "./slices/userPreferencesSlice";
+import countdownTimerReducer from "./slices/countdownTimerSlice";
 
 // Check if we should disable serializable checks in development
 const shouldDisableSerializableCheck =
@@ -153,6 +154,7 @@ export const store = configureStore({
 		christmasCountdown: christmasCountdownReducer,
 		userPreferences: userPreferencesReducer,
 		holidayPreferences: holidayPreferencesReducer,
+		countdownTimer: countdownTimerReducer,
 	},
 	middleware: (getDefaultMiddleware) => {
 		const middleware = getDefaultMiddleware({

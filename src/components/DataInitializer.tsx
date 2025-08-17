@@ -29,6 +29,7 @@ export default function DataInitializer() {
 	const {
 		preferences: holidayPreferences,
 		loading: holidayPreferencesLoading,
+		initialized: holidayPreferencesInitialized,
 	} = useAppSelector((state) => state.holidayPreferences);
 
 	// Other data states
@@ -63,12 +64,20 @@ export default function DataInitializer() {
 
 	// Holiday preferences initialization logic
 	useEffect(() => {
+		console.log("DataInitializer: Holiday preferences effect triggered", {
+			isAuthenticated,
+			auth0User: !!auth0User,
+			userInitialized,
+			reduxUser: !!reduxUser,
+			holidayPreferencesInitialized,
+		});
+
 		if (
 			isAuthenticated &&
 			auth0User &&
 			userInitialized &&
 			reduxUser &&
-			!holidayPreferences
+			!holidayPreferencesInitialized
 		) {
 			console.log("DataInitializer: Fetching holiday preferences from API");
 
@@ -127,7 +136,7 @@ export default function DataInitializer() {
 		auth0User,
 		userInitialized,
 		reduxUser,
-		holidayPreferences,
+		holidayPreferencesInitialized,
 		dispatch,
 	]);
 

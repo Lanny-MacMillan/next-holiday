@@ -41,6 +41,8 @@ interface HolidayCardProps {
 	customBlobSvg?: string; // Optional custom SVG for the blob/germ
 	gamified?: boolean; // New prop to control display mode
 	gamifiedBackgroundColor?: string; // New prop for background color
+	holidayId?: string; // New prop for API-based countdown
+	countdownTimer?: string | null; // New prop for countdown timer
 }
 
 // Default blob SVG component
@@ -154,6 +156,8 @@ export default function HolidayCard({
 	customBlobSvg,
 	gamified = false,
 	gamifiedBackgroundColor,
+	holidayId,
+	countdownTimer,
 }: HolidayCardProps) {
 	// Get display mode from Redux settings (fallback to prop)
 	const { settings } = useAppSelector((state: any) => state.theme);
@@ -283,6 +287,8 @@ export default function HolidayCard({
 							className="text-white"
 							holiday={name}
 							holidayKey={id}
+							holidayId={holidayId}
+							countdownTimer={countdownTimer}
 						/>
 					</div>
 				</div>
@@ -378,6 +384,8 @@ export default function HolidayCard({
 								className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
 								holiday={name}
 								holidayKey={id}
+								holidayId={holidayId}
+								countdownTimer={countdownTimer}
 							/>
 							<span className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
 								→

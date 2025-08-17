@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
 export interface HolidayPreference {
 	holiday: string;
+	holidayId: string; // Holiday ID from database
 	budget?: number;
 	countdownTimer?: string; // ISO datetime string
 }
@@ -53,6 +54,7 @@ interface HolidayPreferencesState {
 	error: string | null;
 	lastSaved: HolidayPreferencesResponse[] | null;
 	preferences: HolidayPreference[] | null;
+	initialized: boolean;
 }
 
 const initialState: HolidayPreferencesState = {
@@ -60,6 +62,7 @@ const initialState: HolidayPreferencesState = {
 	error: null,
 	lastSaved: null,
 	preferences: null,
+	initialized: false,
 };
 
 // Async thunk to fetch holiday preferences
@@ -153,10 +156,13 @@ const holidayPreferencesSlice = createSlice({
 			})
 			.addCase(fetchHolidayPreferences.fulfilled, (state, action) => {
 				state.loading = false;
+				state.initialized = true;
+				// The API returns the preferences directly, no transformation needed
 				state.preferences = action.payload;
 			})
 			.addCase(fetchHolidayPreferences.rejected, (state, action) => {
 				state.loading = false;
+				state.initialized = true; // Mark as initialized even on error to prevent infinite retries
 				state.error =
 					action.error.message || "Failed to fetch holiday preferences";
 			})
@@ -171,6 +177,7 @@ const holidayPreferencesSlice = createSlice({
 				// Update preferences with the saved data
 				state.preferences = action.payload.map((item: any) => ({
 					holiday: item.holiday.holidayType,
+					holidayId: item.holiday.id,
 					budget: item.budget?.totalBudget
 						? parseFloat(item.budget.totalBudget.toString())
 						: undefined,
