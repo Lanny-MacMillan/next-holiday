@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { updateUserInfo } from "@/store/slices/userSlice";
 import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
+import { saveHolidayPreferences } from "@/store/slices/holidayPreferencesSlice";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
@@ -23,6 +24,8 @@ export default function SettingsPage() {
 	const { preferences, initialized: preferencesInitialized } = useAppSelector(
 		(state: any) => state.userPreferences
 	);
+	const { loading: holidayPreferencesLoading, error: holidayPreferencesError } =
+		useAppSelector((state: any) => state.holidayPreferences);
 
 	// Use preferences from database if available, otherwise fall back to theme slice
 	const currentSettings = useMemo(() => {
@@ -83,6 +86,13 @@ export default function SettingsPage() {
 	const [savingTheme, setSavingTheme] = useState(false);
 	const [savingDisplayMode, setSavingDisplayMode] = useState(false);
 
+	// Account state for holiday preferences
+	const [userAccount, setUserAccount] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
+	const [loadingAccount, setLoadingAccount] = useState(false);
+
 	// File input ref for image upload
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +115,48 @@ export default function SettingsPage() {
 			setTempPicture(user?.picture || "");
 		}
 	}, [user, editingName, editingPicture]);
+
+	// Fetch user's account for holiday preferences
+	const fetchUserAccount = async () => {
+		if (!auth0User?.sub) return;
+
+		setLoadingAccount(true);
+		try {
+			const response = await fetch("/api/users/me/account", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const accountData = await response.json();
+				console.log("Fetched account:", accountData.data);
+				setUserAccount(accountData.data);
+			} else {
+				console.error(
+					"Failed to fetch account:",
+					response.status,
+					response.statusText
+				);
+			}
+		} catch (error) {
+			console.error("Failed to fetch user account:", error);
+		} finally {
+			setLoadingAccount(false);
+		}
+	};
+
+	// Fetch account when user is available
+	useEffect(() => {
+		if (auth0User?.sub && !userAccount) {
+			fetchUserAccount();
+		}
+	}, [auth0User?.sub, userAccount]);
 
 	function getInitials(name: string): string {
 		const words = name
@@ -242,6 +294,65 @@ export default function SettingsPage() {
 		} else {
 			setToastMessage("Settings saved successfully!");
 			setToastType("success");
+		}
+
+		setShowToast(true);
+	};
+
+	const handleSaveHolidayPreferences = async () => {
+		if (!auth0User?.sub) {
+			setToastMessage("User not authenticated. Please try again.");
+			setToastType("error");
+			setShowToast(true);
+			return;
+		}
+
+		if (!userAccount) {
+			setToastMessage("Account not loaded. Please try again.");
+			setToastType("error");
+			setShowToast(true);
+			return;
+		}
+
+		// Get selected holidays with budgets
+		const selectedHolidays = localSettings.holidayChoices || [];
+
+		if (selectedHolidays.length === 0) {
+			setToastMessage("Please select at least one holiday.");
+			setToastType("error");
+			setShowToast(true);
+			return;
+		}
+
+		try {
+			console.log(
+				"Saving holiday preferences with account ID:",
+				userAccount.id
+			);
+			console.log("Selected holidays:", selectedHolidays);
+
+			const preferences = selectedHolidays.map(
+				(choice: { holiday: string; budget: number }) => ({
+					holiday: choice.holiday,
+					budget: choice.budget,
+					// countdownTimer: undefined, // Optional: Add countdown timer functionality later
+				})
+			);
+
+			await dispatch(
+				saveHolidayPreferences({
+					accountId: userAccount.id,
+					preferences,
+					auth0User,
+				})
+			).unwrap();
+
+			setToastMessage("Holiday preferences saved successfully!");
+			setToastType("success");
+		} catch (error) {
+			console.error("Failed to save holiday preferences:", error);
+			setToastMessage("Failed to save holiday preferences. Please try again.");
+			setToastType("error");
 		}
 
 		setShowToast(true);
@@ -811,6 +922,25 @@ export default function SettingsPage() {
 									})}
 								</div>
 							</div>
+							<div className="flex justify-center pt-4">
+								<button
+									onClick={handleSaveHolidayPreferences}
+									disabled={
+										holidayPreferencesLoading || loadingAccount || !userAccount
+									}
+									className={`bg-blue-500 text-white px-6 py-2 rounded-lg transition-colors ${
+										holidayPreferencesLoading || loadingAccount || !userAccount
+											? "opacity-50 cursor-not-allowed"
+											: "hover:bg-blue-600"
+									}`}
+								>
+									{loadingAccount
+										? "Loading..."
+										: holidayPreferencesLoading
+										? "Saving..."
+										: "Save Holiday Preferences"}
+								</button>
+							</div>
 						</div>
 					</div>
 
@@ -989,16 +1119,6 @@ export default function SettingsPage() {
 								</button>
 							</div>
 						</div>
-					</div>
-
-					{/* Save Button */}
-					<div className="flex justify-center">
-						<button
-							onClick={handleSave}
-							className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-						>
-							Save Settings
-						</button>
 					</div>
 				</main>
 

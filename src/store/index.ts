@@ -8,6 +8,7 @@ import themeReducer from "./slices/themeSlice";
 import countdownReducer from "./slices/countdownSlice";
 import sharesReducer from "./slices/sharesSlice";
 import invitesReducer from "./slices/invitesSlice";
+import holidayPreferencesReducer from "./slices/holidayPreferencesSlice";
 import hanukkahGiftListReducer from "./slices/hanukkah/hanukkahGiftListSlice";
 import hanukkahTasksReducer from "./slices/hanukkah/hanukkahTasksSlice";
 import hanukkahCountdownReducer from "./slices/hanukkah/hanukkahCountdownSlice";
@@ -151,6 +152,7 @@ export const store = configureStore({
 		mothersDayCountdown: mothersDayCountdownReducer,
 		christmasCountdown: christmasCountdownReducer,
 		userPreferences: userPreferencesReducer,
+		holidayPreferences: holidayPreferencesReducer,
 	},
 	middleware: (getDefaultMiddleware) => {
 		const middleware = getDefaultMiddleware({

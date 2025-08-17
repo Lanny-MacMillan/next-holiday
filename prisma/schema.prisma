@@ -167,6 +167,7 @@ model Holiday {
   description String?
   startDate   DateTime @map("start_date") @db.Date
   endDate     DateTime? @map("end_date") @db.Date
+  countdownTimer DateTime? @map("countdown_timer")
   colorLight  String   @map("color_light")
   colorDark   String   @map("color_dark")
   isCustom    Boolean  @default(false) @map("is_custom")
