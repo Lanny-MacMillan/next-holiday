@@ -17,8 +17,49 @@ const HolidayPreferenceSchema = z.object({
 
 const SaveHolidayPreferencesSchema = z.object({
 	accountId: z.string().min(1),
-	preferences: z.array(HolidayPreferenceSchema).min(1),
+	preferences: z.array(HolidayPreferenceSchema),
 });
+
+// GET /api/holidays/preferences - Get holiday preferences for an account
+export async function GET(request: NextRequest) {
+	try {
+		const user = await requireAuth(request);
+		const { searchParams } = new URL(request.url);
+		const accountId = searchParams.get("accountId");
+
+		if (!accountId) {
+			return badRequest("accountId is required");
+		}
+
+		// Check account access
+		await requireAccountAccess(accountId, user.id);
+
+		// Get current holidays with budgets for this account
+		const holidays = await prisma.holiday.findMany({
+			where: { accountId },
+			include: {
+				budgets: true,
+			},
+			orderBy: {
+				holidayType: "asc",
+			},
+		});
+
+		// Transform to preferences format
+		const preferences = holidays.map((holiday) => ({
+			holiday: holiday.holidayType,
+			budget: holiday.budgets[0]?.totalBudget
+				? parseFloat(holiday.budgets[0].totalBudget.toString())
+				: undefined,
+			countdownTimer: holiday.countdownTimer?.toISOString(),
+		}));
+
+		return ok(toPlain(preferences));
+	} catch (error) {
+		console.error("Error fetching holiday preferences:", error);
+		return serverError("Failed to fetch holiday preferences");
+	}
+}
 
 // POST /api/holidays/preferences - Save holiday preferences
 export async function POST(request: NextRequest) {
@@ -26,9 +67,11 @@ export async function POST(request: NextRequest) {
 		const user = await requireAuth(request);
 		// Parse and validate request body
 		const body = await request.json();
+		console.log("Received body:", JSON.stringify(body, null, 2));
 		const validation = SaveHolidayPreferencesSchema.safeParse(body);
 
 		if (!validation.success) {
+			console.log("Validation failed:", validation.error.issues);
 			return badRequest(validation.error.issues);
 		}
 
@@ -45,6 +88,32 @@ export async function POST(request: NextRequest) {
 
 		// Process preferences in a single transaction
 		const results = await prisma.$transaction(async (tx) => {
+			// Get current holidays for this account
+			const currentHolidays = await tx.holiday.findMany({
+				where: { accountId },
+				include: {
+					budgets: true,
+				},
+			});
+
+			// Create sets of current and new holiday types for comparison
+			const currentHolidayTypes = new Set(
+				currentHolidays.map((h) => h.holidayType)
+			);
+			const newHolidayTypes = new Set(validPreferences.map((p) => p.holiday));
+
+			// Find holidays to remove (in current but not in new preferences)
+			const holidaysToRemove = currentHolidays.filter(
+				(h) => !newHolidayTypes.has(h.holidayType)
+			);
+
+			// Remove holidays that are no longer selected (this will cascade delete budgets, tasks, etc.)
+			for (const holiday of holidaysToRemove) {
+				await tx.holiday.delete({
+					where: { id: holiday.id },
+				});
+			}
+
 			const holidayResults = [];
 
 			for (const preference of validPreferences) {
@@ -87,7 +156,7 @@ export async function POST(request: NextRequest) {
 
 				let budgetResult = null;
 
-				// Find existing budget or create new one if budget is provided
+				// Handle budget - if budget is provided, create/update; if not provided, remove existing
 				if (budget !== undefined) {
 					let existingBudget = await tx.budget.findFirst({
 						where: {
@@ -122,6 +191,19 @@ export async function POST(request: NextRequest) {
 							},
 						});
 					}
+				} else {
+					// If no budget is provided, remove any existing budget for this holiday
+					const existingBudget = await tx.budget.findFirst({
+						where: {
+							holidayId: holiday.id,
+						},
+					});
+
+					if (existingBudget) {
+						await tx.budget.delete({
+							where: { id: existingBudget.id },
+						});
+					}
 				}
 
 				holidayResults.push({
@@ -147,6 +229,9 @@ export async function POST(request: NextRequest) {
 		return ok(toPlain(results));
 	} catch (error) {
 		console.error("Error saving holiday preferences:", error);
+		if (error instanceof Error) {
+			return serverError(error.message);
+		}
 		return serverError("Failed to save holiday preferences");
 	}
 }

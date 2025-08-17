@@ -19,6 +19,10 @@ export default function Home() {
 
 	// Get settings to check holiday preferences
 	const { settings } = useAppSelector((state: any) => state.theme);
+	const {
+		preferences: holidayPreferences,
+		loading: holidayPreferencesLoading,
+	} = useAppSelector((state: any) => state.holidayPreferences);
 
 	// Get loading states
 	const cardsLoading = useAppSelector((state) => state.cards?.loading || false);
@@ -32,7 +36,11 @@ export default function Home() {
 
 	// Check if any data is still loading
 	const isLoading =
-		cardsLoading || giftsLoading || tasksLoading || contactsLoading;
+		cardsLoading ||
+		giftsLoading ||
+		tasksLoading ||
+		contactsLoading ||
+		holidayPreferencesLoading;
 
 	// Get all holiday data from Redux state
 	const hanukkahGifts = useAppSelector(
@@ -148,14 +156,22 @@ export default function Home() {
 
 	// Filter holidays based on user preferences
 	const getSelectedHolidays = () => {
-		// If no holiday choices are set, show all holidays (default behavior)
-		if (!settings.holidayChoices || settings.holidayChoices.length === 0) {
-			return holidayData;
+		// Wait for holiday preferences to load from database
+		if (holidayPreferencesLoading) {
+			return []; // Return empty array while loading
 		}
 
-		// Get the list of selected holiday names from settings
-		const selectedHolidayNames = settings.holidayChoices.map(
-			(choice: { holiday: string; budget: number }) => choice.holiday
+		// Use holiday preferences from database (null means empty database)
+		const holidayChoices = holidayPreferences || [];
+
+		// If no holiday choices are set, return empty array (no holidays to show)
+		if (!holidayChoices || holidayChoices.length === 0) {
+			return [];
+		}
+
+		// Get the list of selected holiday names from preferences
+		const selectedHolidayNames = holidayChoices.map(
+			(choice: { holiday: string; budget?: number }) => choice.holiday
 		);
 
 		// Filter holidayData to only include selected holidays
@@ -191,7 +207,9 @@ export default function Home() {
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">
-						Loading your holiday data...
+						{holidayPreferencesLoading
+							? "Loading your holiday preferences..."
+							: "Loading your holiday data..."}
 					</p>
 				</div>
 			</div>

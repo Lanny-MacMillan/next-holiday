@@ -5,7 +5,10 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { updateUserInfo } from "@/store/slices/userSlice";
 import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
-import { saveHolidayPreferences } from "@/store/slices/holidayPreferencesSlice";
+import {
+	saveHolidayPreferences,
+	fetchHolidayPreferences,
+} from "@/store/slices/holidayPreferencesSlice";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
@@ -24,17 +27,26 @@ export default function SettingsPage() {
 	const { preferences, initialized: preferencesInitialized } = useAppSelector(
 		(state: any) => state.userPreferences
 	);
-	const { loading: holidayPreferencesLoading, error: holidayPreferencesError } =
-		useAppSelector((state: any) => state.holidayPreferences);
+	const {
+		loading: holidayPreferencesLoading,
+		error: holidayPreferencesError,
+		preferences: holidayPreferences,
+	} = useAppSelector((state: any) => state.holidayPreferences);
 
 	// Use preferences from database if available, otherwise fall back to theme slice
 	const currentSettings = useMemo(() => {
-		// Filter out any wedding-related holidays from existing settings
-		const filteredHolidayChoices =
-			settings.holidayChoices?.filter(
-				(choice: { holiday: string; budget: number }) =>
-					!choice.holiday.toLowerCase().includes("wedding")
-			) || [];
+		// Use fetched holiday preferences if available, otherwise fall back to theme slice
+		const holidayChoices = holidayPreferences
+			? holidayPreferences.map(
+					(pref: { holiday: string; budget?: number }) => ({
+						holiday: pref.holiday,
+						budget: pref.budget || 0,
+					})
+			  )
+			: settings.holidayChoices?.filter(
+					(choice: { holiday: string; budget: number }) =>
+						!choice.holiday.toLowerCase().includes("wedding")
+			  ) || [];
 
 		return preferences
 			? {
@@ -46,16 +58,29 @@ export default function SettingsPage() {
 						taskDueReminders: preferences.taskDueReminders,
 						holidayCountdownAlerts: preferences.holidayCountdownAlerts,
 					},
-					holidayChoices: filteredHolidayChoices, // Use filtered holiday choices
+					holidayChoices: holidayChoices,
 					giftBudgetLimit: settings.giftBudgetLimit, // Keep this from theme slice for now
 			  }
 			: {
 					...settings,
-					holidayChoices: filteredHolidayChoices, // Use filtered holiday choices
+					holidayChoices: holidayChoices,
 			  };
-	}, [preferences, settings]);
+	}, [preferences, settings, holidayPreferences]);
 
 	const [localSettings, setLocalSettings] = useState(currentSettings);
+	// Add a separate state for pending holiday changes that haven't been saved yet
+	const [pendingHolidayChoices, setPendingHolidayChoices] = useState<
+		Array<{ holiday: string; budget: number }>
+	>([]);
+
+	// Check if there are unsaved changes
+	const hasUnsavedChanges = useMemo(() => {
+		if (!localSettings.holidayChoices || !pendingHolidayChoices) return false;
+		return (
+			JSON.stringify(localSettings.holidayChoices) !==
+			JSON.stringify(pendingHolidayChoices)
+		);
+	}, [localSettings.holidayChoices, pendingHolidayChoices]);
 	const [imageError, setImageError] = useState(false);
 	const [showToast, setShowToast] = useState(false);
 	const [toastMessage, setToastMessage] = useState("");
@@ -106,10 +131,25 @@ export default function SettingsPage() {
 	// File input ref for image upload
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	// Sync localSettings with Redux store when settings change
+	// Initialize localSettings with currentSettings only once
 	useEffect(() => {
-		setLocalSettings(currentSettings);
+		if (
+			!localSettings.holidayChoices ||
+			localSettings.holidayChoices.length === 0
+		) {
+			setLocalSettings(currentSettings);
+		}
 	}, [currentSettings]);
+
+	// Initialize pending holiday choices when current settings change
+	useEffect(() => {
+		if (
+			currentSettings.holidayChoices &&
+			currentSettings.holidayChoices.length > 0
+		) {
+			setPendingHolidayChoices([...currentSettings.holidayChoices]);
+		}
+	}, [currentSettings.holidayChoices]);
 
 	// Reset image error when user changes
 	useEffect(() => {
@@ -168,6 +208,18 @@ export default function SettingsPage() {
 		}
 	}, [auth0User?.sub, userAccount]);
 
+	// Fetch holiday preferences when account is loaded
+	useEffect(() => {
+		if (userAccount?.id && auth0User) {
+			dispatch(
+				fetchHolidayPreferences({
+					accountId: userAccount.id,
+					auth0User,
+				})
+			);
+		}
+	}, [userAccount?.id, auth0User, dispatch]);
+
 	function getInitials(name: string): string {
 		const words = name
 			.trim()
@@ -192,8 +244,10 @@ export default function SettingsPage() {
 
 		setLocalSettings(newSettings);
 
-		// Update both local state and database
-		dispatch(updateSettings(newSettings));
+		// Update Redux store for all settings except holiday choices (which are handled separately)
+		if (key !== "holidayChoices") {
+			dispatch(updateSettings(newSettings));
+		}
 
 		// Update database preferences (only for fields that exist in the database)
 		if (preferences && key !== "holidayChoices" && key !== "giftBudgetLimit") {
@@ -324,18 +378,8 @@ export default function SettingsPage() {
 			return;
 		}
 
-		// Get selected holidays with budgets, filtering out wedding options
-		const selectedHolidays = (localSettings.holidayChoices || []).filter(
-			(choice: { holiday: string; budget: number }) =>
-				!choice.holiday.toLowerCase().includes("wedding")
-		);
-
-		if (selectedHolidays.length === 0) {
-			setToastMessage("Please select at least one holiday.");
-			setToastType("error");
-			setShowToast(true);
-			return;
-		}
+		// Get selected holidays with budgets from pending choices
+		const selectedHolidays = pendingHolidayChoices || [];
 
 		try {
 			console.log(
@@ -360,11 +404,25 @@ export default function SettingsPage() {
 				})
 			).unwrap();
 
+			// Update localSettings with the saved preferences
+			setLocalSettings((prev: any) => ({
+				...prev,
+				holidayChoices: selectedHolidays,
+			}));
+
 			setToastMessage("Holiday preferences saved successfully!");
 			setToastType("success");
 		} catch (error) {
 			console.error("Failed to save holiday preferences:", error);
-			setToastMessage("Failed to save holiday preferences. Please try again.");
+			// Handle different types of errors
+			let errorMessage =
+				"Failed to save holiday preferences. Please try again.";
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (typeof error === "object" && error !== null) {
+				errorMessage = JSON.stringify(error);
+			}
+			setToastMessage(errorMessage);
 			setToastType("error");
 		}
 
@@ -841,11 +899,11 @@ export default function SettingsPage() {
 										"Graduation",
 										"Baby Shower",
 									].map((holiday) => {
-										const isSelected = localSettings.holidayChoices?.some(
+										const isSelected = pendingHolidayChoices.some(
 											(choice: { holiday: string; budget: number }) =>
 												choice.holiday === holiday
 										);
-										const selectedChoice = localSettings.holidayChoices?.find(
+										const selectedChoice = pendingHolidayChoices.find(
 											(choice: { holiday: string; budget: number }) =>
 												choice.holiday === holiday
 										);
@@ -865,9 +923,10 @@ export default function SettingsPage() {
 														<input
 															type="checkbox"
 															checked={isSelected}
-															onChange={async (e) => {
-																const currentChoices =
-																	localSettings.holidayChoices || [];
+															onChange={(e) => {
+																const currentChoices = [
+																	...pendingHolidayChoices,
+																];
 																let newChoices;
 																if (e.target.checked) {
 																	newChoices = [
@@ -882,10 +941,7 @@ export default function SettingsPage() {
 																		}) => choice.holiday !== holiday
 																	);
 																}
-																await handleSettingChange(
-																	"holidayChoices",
-																	newChoices
-																);
+																setPendingHolidayChoices(newChoices);
 															}}
 															className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 														/>
@@ -901,11 +957,12 @@ export default function SettingsPage() {
 															<input
 																type="number"
 																value={budget}
-																onChange={async (e) => {
+																onChange={(e) => {
 																	const newBudget =
 																		parseInt(e.target.value) || 0;
-																	const currentChoices =
-																		localSettings.holidayChoices || [];
+																	const currentChoices = [
+																		...pendingHolidayChoices,
+																	];
 																	const newChoices = currentChoices.map(
 																		(choice: {
 																			holiday: string;
@@ -915,10 +972,7 @@ export default function SettingsPage() {
 																				? { ...choice, budget: newBudget }
 																				: choice
 																	);
-																	await handleSettingChange(
-																		"holidayChoices",
-																		newChoices
-																	);
+																	setPendingHolidayChoices(newChoices);
 																}}
 																className="w-20 text-xs rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-2 py-1"
 																min="0"
@@ -935,23 +989,37 @@ export default function SettingsPage() {
 									})}
 								</div>
 							</div>
+							{hasUnsavedChanges && (
+								<div className="text-center text-sm text-amber-600 dark:text-amber-400 mb-2">
+									* You have unsaved changes. Click "Save Holiday Preferences"
+									to persist your changes.
+								</div>
+							)}
 							<div className="flex justify-center pt-4">
 								<button
 									onClick={handleSaveHolidayPreferences}
 									disabled={
-										holidayPreferencesLoading || loadingAccount || !userAccount
+										holidayPreferencesLoading ||
+										loadingAccount ||
+										!userAccount ||
+										!hasUnsavedChanges
 									}
-									className={`bg-blue-500 text-white px-6 py-2 rounded-lg transition-colors ${
-										holidayPreferencesLoading || loadingAccount || !userAccount
-											? "opacity-50 cursor-not-allowed"
-											: "hover:bg-blue-600"
+									className={`px-6 py-2 rounded-lg transition-colors ${
+										holidayPreferencesLoading ||
+										loadingAccount ||
+										!userAccount ||
+										!hasUnsavedChanges
+											? "opacity-50 cursor-not-allowed bg-gray-400"
+											: "bg-blue-500 hover:bg-blue-600 text-white"
 									}`}
 								>
 									{loadingAccount
 										? "Loading..."
 										: holidayPreferencesLoading
 										? "Saving..."
-										: "Save Holiday Preferences"}
+										: hasUnsavedChanges
+										? "Save Holiday Preferences*"
+										: "No Changes to Save"}
 								</button>
 							</div>
 						</div>
