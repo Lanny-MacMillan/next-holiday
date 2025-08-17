@@ -13,6 +13,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
@@ -99,9 +100,12 @@ export default function FathersDayEventsPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskId: string, taskTitle?: string) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -125,12 +129,14 @@ export default function FathersDayEventsPage() {
 			<HolidayPageHeader
 				title="Father's Day Events"
 				backHref="/fathers-day"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Events"
+				description="Keep track of your Father's Day events!"
+				holidayColor="blue-500"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
@@ -144,12 +150,14 @@ export default function FathersDayEventsPage() {
 					emptyMessage="All events completed! 🎉"
 					completedMessage=""
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="blue"
+							holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
 					)}
 				/>
@@ -161,13 +169,14 @@ export default function FathersDayEventsPage() {
 					emptyMessage="No completed events yet."
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
-							className="opacity-60"
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="blue"
+							holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
 					)}
 				/>

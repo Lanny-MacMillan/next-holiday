@@ -210,13 +210,15 @@ export default function HalloweenTrickOrTreatPrepPage() {
 	return (
 		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="🕯️ Trick-or-Treat Prep"
+				title="Trick-or-Treat Prep"
 				backHref="/halloween"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of trick-or-treat prep tasks!"
+				holidayColor="orange-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Modal */}
 				{showDefaultTasks && (
 					<div className="card rounded-lg p-6 mb-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700">
@@ -229,14 +231,14 @@ export default function HalloweenTrickOrTreatPrepPage() {
 						</p>
 						<button
 							onClick={addDefaultTrickOrTreatTasks}
-							className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
+							className="bg-orange-500 hover:bg-orange-600 border border-orange-700 text-orange-700 px-4 py-2 rounded-lg transition-colors"
 						>
 							Add Default Tasks
 						</button>
 					</div>
 				)}
 
-				<AddButton title="Task" onClick={openForm} color="orange" />
+				<AddButton title="Task" onClick={openForm} holidayColor="orange" />
 
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (

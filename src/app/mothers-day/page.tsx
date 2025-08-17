@@ -7,13 +7,16 @@ import { fetchMothersDayTasks } from "@/store/slices/mothers-day/mothersDayTasks
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const mothersDaySubsections = [
 	{
 		name: "Gift Ideas",
 		description: "Track gift ideas for Mother's Day",
 		href: "/mothers-day/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "mothersDayGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Card List",
@@ -48,6 +51,7 @@ export default function MothersDayPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "mothersDayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -84,7 +88,10 @@ export default function MothersDayPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "mothersDayGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -94,6 +101,7 @@ export default function MothersDayPage() {
 											primaryColor: "#ec4899", // Pink for Mother's Day
 											accentColor: "#f472b6",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);
@@ -114,6 +122,7 @@ export default function MothersDayPage() {
 										accentColor: "#f472b6",
 										progressColor: "#ec4899",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 								/>
 							</li>
 						);

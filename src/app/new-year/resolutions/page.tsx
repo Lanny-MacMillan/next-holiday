@@ -237,14 +237,16 @@ export default function NewYearResolutionsPage() {
 				backHref="/new-year"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort resolutions"
+				description="Keep track of all your Resolutions!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton
 					title="Resolution"
 					onClick={() => setShowForm(true)}
-					color="orange"
+					color="yellow"
 				/>
 
 				<div className="flex items-center justify-center">

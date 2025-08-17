@@ -22,11 +22,12 @@ import TaskSection from "@/components/common/TaskSection";
 
 export default function ValentinesCardsPage() {
 	const dispatch = useAppDispatch();
-	const [editingCard, setEditingCard] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [showFormModal, setShowFormModal] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
 	const [cardToDelete, setCardToDelete] = useState<any>(null);
+	const [cardToEdit, setCardToEdit] = useState<any>(null);
 	const [sortBy, setSortBy] = useState("recipient");
 
 	const cards = useAppSelector((state) => state.cards.cards);
@@ -37,18 +38,15 @@ export default function ValentinesCardsPage() {
 		dispatch(fetchCards());
 	}, [dispatch]);
 
-	const handleUpdateCard = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!editingCard.recipient.trim()) return;
-
-		await dispatch(updateCard(editingCard));
-		setEditingCard(null);
-	};
-
 	const handleDeleteCard = async (cardId: string) => {
 		const card = cards.find((c) => c.id === cardId);
 		setCardToDelete(card);
 		setShowDeleteModal(true);
+	};
+
+	const handleEditCard = async (card: any) => {
+		setCardToEdit(card);
+		setShowEditModal(true);
 	};
 
 	const confirmDelete = async () => {
@@ -56,6 +54,22 @@ export default function ValentinesCardsPage() {
 			await dispatch(deleteCard(cardToDelete.id));
 			setShowDeleteModal(false);
 			setCardToDelete(null);
+		}
+	};
+
+	const handleEditSubmit = async (values: Record<string, any>) => {
+		if (cardToEdit) {
+			await dispatch(
+				updateCard({
+					...cardToEdit,
+					recipient: values.recipient || "",
+					message: values.message || "",
+					address: values.address || "",
+					notes: values.notes || "",
+				})
+			);
+			setShowEditModal(false);
+			setCardToEdit(null);
 		}
 	};
 
@@ -129,21 +143,25 @@ export default function ValentinesCardsPage() {
 				title="Valentine's Cards"
 				backHref="/valentines"
 				onSortClick={() => setShowSortModal(true)}
+				description="Keep track of your cards!"
+				holidayColor="pink-500"
 				sortTitle="Sort Cards"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
 				<MailCardStatus
 					totalCards={cards.length}
 					completedCards={completedCards.length}
 					incompleteCards={incompleteCards.length}
+					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 				/>
 
 				<AddButton
 					title="Card"
 					onClick={() => setShowFormModal(true)}
-					color="purple"
+					color="pink"
+					disabled={loading}
 				/>
 
 				{/* Card List */}
@@ -178,11 +196,10 @@ export default function ValentinesCardsPage() {
 								<MailCard
 									key={card.id}
 									card={card}
-									editingCard={editingCard}
-									setEditingCard={setEditingCard}
-									onUpdateCard={handleUpdateCard}
 									onToggleCompletion={handleToggleCompletion}
+									onEditCard={handleEditCard}
 									onDeleteCard={handleDeleteCard}
+									holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 								/>
 							)}
 						/>
@@ -197,11 +214,10 @@ export default function ValentinesCardsPage() {
 								<MailCard
 									key={card.id}
 									card={card}
-									editingCard={editingCard}
-									setEditingCard={setEditingCard}
-									onUpdateCard={handleUpdateCard}
 									onToggleCompletion={handleToggleCompletion}
+									onEditCard={handleEditCard}
 									onDeleteCard={handleDeleteCard}
+									holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 								/>
 							)}
 						/>
@@ -217,6 +233,23 @@ export default function ValentinesCardsPage() {
 				onSubmit={handleFormSubmit}
 				onClose={() => setShowFormModal(false)}
 				submitText="Add Card"
+				cancelText="Cancel"
+				cardClassName="card card-valentines"
+				submitButtonColor="#ec4899"
+			/>
+
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Card"
+				fields={formFields}
+				initialValues={cardToEdit}
+				onSubmit={handleEditSubmit}
+				onClose={() => {
+					setShowEditModal(false);
+					setCardToEdit(null);
+				}}
+				submitText="Update Card"
 				cancelText="Cancel"
 				cardClassName="card card-valentines"
 				submitButtonColor="#ec4899"

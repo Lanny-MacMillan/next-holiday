@@ -78,6 +78,7 @@ import {
 	updateChristmasCountdown,
 } from "@/store/slices/christmas/christmasCountdownSlice";
 import DatePickerModal from "../modals/DatePickerModal";
+import InviteButton from "./InviteButton";
 
 interface CountdownTimerProps {
 	className?: string;
@@ -185,108 +186,129 @@ export default function CountdownTimer({
 		}
 	};
 
-	const handleSetCountdown = (date: string) => {
-		if (holiday === "Hanukkah") {
-			dispatch(setHanukkahCountdown(date));
-		} else if (holiday === "Kwanzaa") {
-			dispatch(setKwanzaaCountdown(date));
-		} else if (holiday === "New Year") {
-			dispatch(setNewYearCountdown(date));
-		} else if (holiday === "Valentine's Day") {
-			dispatch(setValentinesCountdown(date));
-		} else if (holiday === "Easter") {
-			dispatch(setEasterCountdown(date));
-		} else if (holiday === "Halloween") {
-			dispatch(setHalloweenCountdown(date));
-		} else if (holiday === "Thanksgiving") {
-			dispatch(setThanksgivingCountdown(date));
-		} else if (holiday === "Graduation") {
-			dispatch(setGraduationCountdown(date));
-		} else if (holiday === "Anniversary") {
-			dispatch(setAnniversaryCountdown(date));
-		} else if (holiday === "Birthday") {
-			dispatch(setBirthdayCountdown(date));
-		} else if (holiday === "Fourth of July") {
-			dispatch(setFourthOfJulyCountdown(date));
-		} else if (holiday === "Father's Day") {
-			dispatch(setFathersDayCountdown(date));
-		} else if (holiday === "Mother's Day") {
-			dispatch(setMothersDayCountdown(date));
-		} else if (holiday === "Christmas") {
-			dispatch(setChristmasCountdown(date));
-		} else {
-			dispatch(setCountdown(date));
+	// Helper function to dispatch set countdown action based on holiday
+	const dispatchSetCountdown = (holiday: string | undefined, date: string) => {
+		switch (holiday) {
+			case "Hanukkah":
+				return setHanukkahCountdown(date);
+			case "Kwanzaa":
+				return setKwanzaaCountdown(date);
+			case "New Year":
+				return setNewYearCountdown(date);
+			case "Valentine's Day":
+				return setValentinesCountdown(date);
+			case "Easter":
+				return setEasterCountdown(date);
+			case "Halloween":
+				return setHalloweenCountdown(date);
+			case "Thanksgiving":
+				return setThanksgivingCountdown(date);
+			case "Graduation":
+				return setGraduationCountdown(date);
+			case "Anniversary":
+				return setAnniversaryCountdown(date);
+			case "Birthday":
+				return setBirthdayCountdown(date);
+			case "Fourth of July":
+				return setFourthOfJulyCountdown(date);
+			case "Father's Day":
+				return setFathersDayCountdown(date);
+			case "Mother's Day":
+				return setMothersDayCountdown(date);
+			case "Christmas":
+				return setChristmasCountdown(date);
+			default:
+				return setCountdown(date);
 		}
+	};
+
+	const handleSetCountdown = (date: string) => {
+		dispatch(dispatchSetCountdown(holiday, date));
 		setShowDatePicker(false);
+	};
+
+	// Helper function to dispatch update countdown action based on holiday
+	const dispatchUpdateCountdown = (
+		holiday: string | undefined,
+		date: string
+	) => {
+		switch (holiday) {
+			case "Hanukkah":
+				return updateHanukkahCountdown(date);
+			case "Kwanzaa":
+				return updateKwanzaaCountdown(date);
+			case "New Year":
+				return updateNewYearCountdown(date);
+			case "Valentine's Day":
+				return updateValentinesCountdown(date);
+			case "Easter":
+				return updateEasterCountdown(date);
+			case "Halloween":
+				return updateHalloweenCountdown(date);
+			case "Thanksgiving":
+				return updateThanksgivingCountdown(date);
+			case "Graduation":
+				return updateGraduationCountdown(date);
+			case "Anniversary":
+				return updateAnniversaryCountdown(date);
+			case "Birthday":
+				return updateBirthdayCountdown(date);
+			case "Fourth of July":
+				return updateFourthOfJulyCountdown(date);
+			case "Father's Day":
+				return updateFathersDayCountdown(date);
+			case "Mother's Day":
+				return updateMothersDayCountdown(date);
+			case "Christmas":
+				return updateChristmasCountdown(date);
+			default:
+				return updateCountdown(date);
+		}
 	};
 
 	const handleUpdateCountdown = (date: string) => {
-		if (holiday === "Hanukkah") {
-			dispatch(updateHanukkahCountdown(date));
-		} else if (holiday === "Kwanzaa") {
-			dispatch(updateKwanzaaCountdown(date));
-		} else if (holiday === "New Year") {
-			dispatch(updateNewYearCountdown(date));
-		} else if (holiday === "Valentine's Day") {
-			dispatch(updateValentinesCountdown(date));
-		} else if (holiday === "Easter") {
-			dispatch(updateEasterCountdown(date));
-		} else if (holiday === "Halloween") {
-			dispatch(updateHalloweenCountdown(date));
-		} else if (holiday === "Thanksgiving") {
-			dispatch(updateThanksgivingCountdown(date));
-		} else if (holiday === "Graduation") {
-			dispatch(updateGraduationCountdown(date));
-		} else if (holiday === "Anniversary") {
-			dispatch(updateAnniversaryCountdown(date));
-		} else if (holiday === "Birthday") {
-			dispatch(updateBirthdayCountdown(date));
-		} else if (holiday === "Fourth of July") {
-			dispatch(updateFourthOfJulyCountdown(date));
-		} else if (holiday === "Father's Day") {
-			dispatch(updateFathersDayCountdown(date));
-		} else if (holiday === "Mother's Day") {
-			dispatch(updateMothersDayCountdown(date));
-		} else if (holiday === "Christmas") {
-			dispatch(updateChristmasCountdown(date));
-		} else {
-			dispatch(updateCountdown(date));
-		}
+		dispatch(dispatchUpdateCountdown(holiday, date));
 		setShowDatePicker(false);
 	};
 
-	const handleClearCountdown = () => {
-		if (holiday === "Hanukkah") {
-			dispatch(clearHanukkahCountdown());
-		} else if (holiday === "Kwanzaa") {
-			dispatch(clearKwanzaaCountdown());
-		} else if (holiday === "New Year") {
-			dispatch(clearNewYearCountdown());
-		} else if (holiday === "Valentine's Day") {
-			dispatch(clearValentinesCountdown());
-		} else if (holiday === "Easter") {
-			dispatch(clearEasterCountdown());
-		} else if (holiday === "Halloween") {
-			dispatch(clearHalloweenCountdown());
-		} else if (holiday === "Thanksgiving") {
-			dispatch(clearThanksgivingCountdown());
-		} else if (holiday === "Graduation") {
-			dispatch(clearGraduationCountdown());
-		} else if (holiday === "Anniversary") {
-			dispatch(clearAnniversaryCountdown());
-		} else if (holiday === "Birthday") {
-			dispatch(clearBirthdayCountdown());
-		} else if (holiday === "Fourth of July") {
-			dispatch(clearFourthOfJulyCountdown());
-		} else if (holiday === "Father's Day") {
-			dispatch(clearFathersDayCountdown());
-		} else if (holiday === "Mother's Day") {
-			dispatch(clearMothersDayCountdown());
-		} else if (holiday === "Christmas") {
-			dispatch(clearChristmasCountdown());
-		} else {
-			dispatch(clearCountdown());
+	// Helper function to dispatch clear countdown action based on holiday
+	const dispatchClearCountdown = (holiday: string | undefined) => {
+		switch (holiday) {
+			case "Hanukkah":
+				return clearHanukkahCountdown();
+			case "Kwanzaa":
+				return clearKwanzaaCountdown();
+			case "New Year":
+				return clearNewYearCountdown();
+			case "Valentine's Day":
+				return clearValentinesCountdown();
+			case "Easter":
+				return clearEasterCountdown();
+			case "Halloween":
+				return clearHalloweenCountdown();
+			case "Thanksgiving":
+				return clearThanksgivingCountdown();
+			case "Graduation":
+				return clearGraduationCountdown();
+			case "Anniversary":
+				return clearAnniversaryCountdown();
+			case "Birthday":
+				return clearBirthdayCountdown();
+			case "Fourth of July":
+				return clearFourthOfJulyCountdown();
+			case "Father's Day":
+				return clearFathersDayCountdown();
+			case "Mother's Day":
+				return clearMothersDayCountdown();
+			case "Christmas":
+				return clearChristmasCountdown();
+			default:
+				return clearCountdown();
 		}
+	};
+
+	const handleClearCountdown = () => {
+		dispatch(dispatchClearCountdown(holiday));
 		setShowDatePicker(false);
 	};
 
@@ -344,6 +366,54 @@ export default function CountdownTimer({
 	};
 
 	if (!isActive) {
+		// Get holiday color for professional mode
+		const getHolidayColor = () => {
+			const colorMap: { [key: string]: { light: string; dark: string } } = {
+				christmas: { light: "#22c55e", dark: "#16a34a" },
+				hanukkah: { light: "#3b82f6", dark: "#2563eb" },
+				kwanzaa: { light: "#dc2626", dark: "#b91c1c" },
+				"new-year": { light: "#f59e0b", dark: "#d97706" },
+				valentines: { light: "#ec4899", dark: "#db2777" },
+				easter: { light: "#a855f7", dark: "#9333ea" },
+				halloween: { light: "#f97316", dark: "#ea580c" },
+				thanksgiving: { light: "#f59e0b", dark: "#d97706" },
+				"mothers-day": { light: "#ec4899", dark: "#db2777" },
+				"fathers-day": { light: "#3b82f6", dark: "#2563eb" },
+				"fourth-of-july": { light: "#dc2626", dark: "#b91c1c" },
+				birthday: { light: "#f59e0b", dark: "#d97706" },
+				anniversary: { light: "#ec4899", dark: "#db2777" },
+				graduation: { light: "#a855f7", dark: "#9333ea" },
+				"baby-shower": { light: "#06b6d4", dark: "#0891b2" },
+			};
+
+			// Map holiday names to IDs
+			const holidayIdMap: { [key: string]: string } = {
+				Christmas: "christmas",
+				Hanukkah: "hanukkah",
+				Kwanzaa: "kwanzaa",
+				"New Year": "new-year",
+				"Valentine's Day": "valentines",
+				Easter: "easter",
+				Halloween: "halloween",
+				Thanksgiving: "thanksgiving",
+				"Mother's Day": "mothers-day",
+				"Father's Day": "fathers-day",
+				"Fourth of July": "fourth-of-july",
+				Birthday: "birthday",
+				Anniversary: "anniversary",
+				Graduation: "graduation",
+				"Baby Shower": "baby-shower",
+			};
+
+			const holidayId = holidayIdMap[holiday || ""];
+			return colorMap[holidayId] || { light: "#6b7280", dark: "#4b5563" };
+		};
+
+		// Get display mode from Redux settings
+		const { settings } = useAppSelector((state: any) => state.theme);
+		const isGamifiedMode = settings.displayMode === "gamified";
+		const holidayColor = getHolidayColor();
+
 		return (
 			<div className={`${className} relative z-20`}>
 				<button
@@ -351,7 +421,20 @@ export default function CountdownTimer({
 						e.stopPropagation();
 						setShowDatePicker(true);
 					}}
-					className="text-xs text-white font-medium hover:text-gray-200 transition-colors"
+					className={`text-xs font-medium transition-all duration-200 ${
+						isGamifiedMode
+							? "text-white hover:text-gray-200 hover:scale-110"
+							: `countdown-timer-professional hover:scale-105`
+					}`}
+					style={
+						!isGamifiedMode
+							? ({
+									color: holidayColor.light,
+									"--holiday-color": holidayColor.light,
+									"--holiday-color-dark": holidayColor.dark,
+							  } as React.CSSProperties)
+							: {}
+					}
 				>
 					Set Countdown
 				</button>
@@ -366,9 +449,17 @@ export default function CountdownTimer({
 	}
 
 	if (!timeLeft) {
+		// Get display mode from Redux settings
+		const { settings } = useAppSelector((state: any) => state.theme);
+		const isGamifiedMode = settings.displayMode === "gamified";
+
 		return (
 			<div
-				className={`${className} text-xs text-gray-500 dark:text-gray-400 relative z-20`}
+				className={`${className} text-xs relative z-20 ${
+					isGamifiedMode
+						? "text-gray-500 dark:text-gray-400"
+						: "countdown-timer-professional"
+				}`}
 			>
 				Calculating...
 			</div>
@@ -384,11 +475,19 @@ export default function CountdownTimer({
 
 	// Show completion message but still allow editing
 	if (completionMessage) {
+		// Get display mode from Redux settings
+		const { settings } = useAppSelector((state: any) => state.theme);
+		const isGamifiedMode = settings.displayMode === "gamified";
+
 		return (
 			<div className={`${className} relative z-20`}>
 				<button
 					onClick={handleCountdownClick}
-					className="text-xs text-red-500 cursor-pointer transition-colors font-medium"
+					className={`text-xs cursor-pointer transition-all duration-200 font-medium ${
+						isGamifiedMode
+							? "text-red-500 hover:scale-110"
+							: "countdown-timer-professional hover:scale-105"
+					}`}
 					title="Click to edit or delete countdown"
 				>
 					{completionMessage}
@@ -405,11 +504,19 @@ export default function CountdownTimer({
 		);
 	}
 
+	// Get display mode from Redux settings
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamifiedMode = settings.displayMode === "gamified";
+
 	return (
 		<div className={`${className} relative z-20`}>
 			<button
 				onClick={handleCountdownClick}
-				className={`text-xs ${getCountdownColor()} cursor-pointer transition-colors font-medium`}
+				className={`text-xs cursor-pointer transition-all duration-200 font-medium ${
+					isGamifiedMode
+						? `${getCountdownColor()} hover:scale-110`
+						: "countdown-timer-professional hover:scale-105"
+				}`}
 				title="Click to edit or delete countdown"
 			>
 				{timeLeft.days > 0 && `${timeLeft.days}d `}

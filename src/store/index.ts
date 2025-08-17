@@ -6,6 +6,9 @@ import tasksReducer from "./slices/tasksSlice";
 import userReducer from "./slices/userSlice";
 import themeReducer from "./slices/themeSlice";
 import countdownReducer from "./slices/countdownSlice";
+import sharesReducer from "./slices/sharesSlice";
+import invitesReducer from "./slices/invitesSlice";
+import holidayPreferencesReducer from "./slices/holidayPreferencesSlice";
 import hanukkahGiftListReducer from "./slices/hanukkah/hanukkahGiftListSlice";
 import hanukkahTasksReducer from "./slices/hanukkah/hanukkahTasksSlice";
 import hanukkahCountdownReducer from "./slices/hanukkah/hanukkahCountdownSlice";
@@ -24,11 +27,14 @@ import easterCountdownReducer from "./slices/easter/easterCountdownSlice";
 import halloweenGiftListReducer from "./slices/halloween/halloweenGiftListSlice";
 import halloweenTasksReducer from "./slices/halloween/halloweenTasksSlice";
 import halloweenCountdownReducer from "./slices/halloween/halloweenCountdownSlice";
+import halloweenBudgetReducer from "./slices/halloween/halloweenBudgetSlice";
+import halloweenGuestListReducer from "./slices/halloween/halloweenGuestListSlice";
 import thanksgivingGiftListReducer from "./slices/thanksgiving/thanksgivingGiftListSlice";
 import thanksgivingTasksReducer from "./slices/thanksgiving/thanksgivingTasksSlice";
 import thanksgivingCountdownReducer from "./slices/thanksgiving/thanksgivingCountdownSlice";
 import thanksgivingGuestListReducer from "./slices/thanksgiving/thanksgivingGuestListSlice";
 import thanksgivingMealPlanningReducer from "./slices/thanksgiving/thanksgivingMealPlanningSlice";
+import thanksgivingBudgetReducer from "./slices/thanksgiving/thanksgivingBudgetSlice";
 import mothersDayGiftListReducer from "./slices/mothers-day/mothersDayGiftListSlice";
 import mothersDayTasksReducer from "./slices/mothers-day/mothersDayTasksSlice";
 import fathersDayGiftListReducer from "./slices/fathers-day/fathersDayGiftListSlice";
@@ -47,10 +53,17 @@ import graduationGiftListReducer from "./slices/graduation/graduationGiftListSli
 import graduationTasksReducer from "./slices/graduation/graduationTasksSlice";
 import graduationCardsReducer from "./slices/graduation/graduationCardsSlice";
 import graduationAddressBookReducer from "./slices/graduation/graduationAddressBookSlice";
+import graduationGuestListReducer from "./slices/graduation/graduationGuestListSlice";
 import babyShowerGiftListReducer from "./slices/baby-shower/babyShowerGiftListSlice";
 import babyShowerTasksReducer from "./slices/baby-shower/babyShowerTasksSlice";
 import babyShowerAddressBookReducer from "./slices/baby-shower/babyShowerAddressBookSlice";
 import babyShowerGuestListReducer from "./slices/baby-shower/babyShowerGuestListSlice";
+import christmasGuestListReducer from "./slices/christmas/christmasGuestListSlice";
+import easterGuestListReducer from "./slices/easter/easterGuestListSlice";
+import hanukkahGuestListReducer from "./slices/hanukkah/hanukkahGuestListSlice";
+import kwanzaaGuestListReducer from "./slices/kwanzaa/kwanzaaGuestListSlice";
+import newYearGuestListReducer from "./slices/new-year/newYearGuestListSlice";
+import valentinesGuestListReducer from "./slices/valentines/valentinesGuestListSlice";
 import graduationCountdownReducer from "./slices/graduation/graduationCountdownSlice";
 import anniversaryCountdownReducer from "./slices/anniversary/anniversaryCountdownSlice";
 import birthdayCountdownReducer from "./slices/birthday/birthdayCountdownSlice";
@@ -58,6 +71,7 @@ import fourthOfJulyCountdownReducer from "./slices/fourth-of-july/fourthOfJulyCo
 import fathersDayCountdownReducer from "./slices/fathers-day/fathersDayCountdownSlice";
 import mothersDayCountdownReducer from "./slices/mothers-day/mothersDayCountdownSlice";
 import christmasCountdownReducer from "./slices/christmas/christmasCountdownSlice";
+import userPreferencesReducer from "./slices/userPreferencesSlice";
 
 // Check if we should disable serializable checks in development
 const shouldDisableSerializableCheck =
@@ -73,6 +87,8 @@ export const store = configureStore({
 		user: userReducer,
 		theme: themeReducer,
 		countdown: countdownReducer,
+		shares: sharesReducer,
+		invites: invitesReducer,
 		hanukkahGiftList: hanukkahGiftListReducer,
 		hanukkahTasks: hanukkahTasksReducer,
 		hanukkahCountdown: hanukkahCountdownReducer,
@@ -91,11 +107,14 @@ export const store = configureStore({
 		halloweenGiftList: halloweenGiftListReducer,
 		halloweenTasks: halloweenTasksReducer,
 		halloweenCountdown: halloweenCountdownReducer,
+		halloweenBudget: halloweenBudgetReducer,
+		halloweenGuestList: halloweenGuestListReducer,
 		thanksgivingGiftList: thanksgivingGiftListReducer,
 		thanksgivingTasks: thanksgivingTasksReducer,
 		thanksgivingCountdown: thanksgivingCountdownReducer,
 		thanksgivingGuestList: thanksgivingGuestListReducer,
 		thanksgivingMealPlanning: thanksgivingMealPlanningReducer,
+		thanksgivingBudget: thanksgivingBudgetReducer,
 		mothersDayGiftList: mothersDayGiftListReducer,
 		mothersDayTasks: mothersDayTasksReducer,
 		fathersDayGiftList: fathersDayGiftListReducer,
@@ -114,10 +133,17 @@ export const store = configureStore({
 		graduationTasks: graduationTasksReducer,
 		graduationCards: graduationCardsReducer,
 		graduationAddressBook: graduationAddressBookReducer,
+		graduationGuestList: graduationGuestListReducer,
 		babyShowerGiftList: babyShowerGiftListReducer,
 		babyShowerTasks: babyShowerTasksReducer,
 		babyShowerAddressBook: babyShowerAddressBookReducer,
 		babyShowerGuestList: babyShowerGuestListReducer,
+		christmasGuestList: christmasGuestListReducer,
+		easterGuestList: easterGuestListReducer,
+		hanukkahGuestList: hanukkahGuestListReducer,
+		kwanzaaGuestList: kwanzaaGuestListReducer,
+		newYearGuestList: newYearGuestListReducer,
+		valentinesGuestList: valentinesGuestListReducer,
 		graduationCountdown: graduationCountdownReducer,
 		anniversaryCountdown: anniversaryCountdownReducer,
 		birthdayCountdown: birthdayCountdownReducer,
@@ -125,6 +151,8 @@ export const store = configureStore({
 		fathersDayCountdown: fathersDayCountdownReducer,
 		mothersDayCountdown: mothersDayCountdownReducer,
 		christmasCountdown: christmasCountdownReducer,
+		userPreferences: userPreferencesReducer,
+		holidayPreferences: holidayPreferencesReducer,
 	},
 	middleware: (getDefaultMiddleware) => {
 		const middleware = getDefaultMiddleware({

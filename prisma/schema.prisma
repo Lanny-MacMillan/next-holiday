@@ -1,0 +1,509 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums for constrained field values
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  declined
+  expired
+}
+
+enum RSVPStatus {
+  pending
+  confirmed
+  declined
+  maybe
+}
+
+enum MemberRole {
+  owner
+  admin
+  member
+}
+
+// Store Auth0 user information and profile data
+model User {
+  id            String   @id @default(uuid()) @db.Char(36)
+  auth0Sub      String   @unique @map("auth0_sub")
+  email         String?
+  name          String?
+  picture       String?
+  isInDb        Boolean  @default(false) @map("is_in_db")
+  isFirstLogin  Boolean  @default(true) @map("is_first_login")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  ownedAccounts     Account[]        @relation("AccountOwner")
+  accountMembers    AccountMember[]  @relation("AccountMemberUser")
+  invitedAccountMembers AccountMember[] @relation("AccountMemberInviter")
+  createdHolidays   Holiday[]        @relation("HolidayCreator")
+  createdContacts   Contact[]        @relation("ContactCreator")
+  createdTasks      Task[]           @relation("TaskCreator")
+  assignedTasks     Task[]           @relation("TaskAssignee")
+  taskAssignments   TaskAssignee[]   @relation("TaskAssignmentUser")
+  assignedByTasks   TaskAssignee[]   @relation("TaskAssignmentBy")
+  createdGifts      Gift[]           @relation("GiftCreator")
+  createdCards      Card[]           @relation("CardCreator")
+  createdBudgets    Budget[]         @relation("BudgetCreator")
+  createdBudgetTxns BudgetTransaction[] @relation("BudgetTransactionCreator")
+  ownedShares       Share[]          @relation("ShareOwner")
+  shareMemberships  ShareMember[]    @relation("ShareMemberUser")
+  invitedByShares   ShareMember[]    @relation("ShareMemberInvitedBy")
+  sentInvites       Invite[]         @relation("InviteSender")
+  receivedInvites   Invite[]         @relation("InviteReceiver")
+  createdGuestLists GuestList[]      @relation("GuestListCreator")
+  auditLogs         AuditLog[]
+  preferences       UserPreferences?
+
+  @@map("users")
+  @@index([email])
+}
+
+// User preferences for theme, display, and notifications
+model UserPreferences {
+  id                    String   @id @default(uuid()) @db.Char(36)
+  userId                String   @unique @map("user_id") @db.Char(36)
+  
+  // Theme preferences
+  theme                 String   @default("system") // "light", "dark", "system"
+  
+  // Display preferences
+  displayMode           String   @default("professional") // "professional", "gamified"
+  showCompletedItems    Boolean  @default(true) @map("show_completed_items")
+  showCountdown         Boolean  @default(true) @map("show_countdown")
+  showProgressBars      Boolean  @default(true) @map("show_progress_bars")
+  
+  // Notification preferences
+  emailNotifications    Boolean  @default(true) @map("email_notifications")
+  pushNotifications     Boolean  @default(true) @map("push_notifications")
+  reminderNotifications Boolean  @default(true) @map("reminder_notifications")
+  taskDueReminders      Boolean  @default(true) @map("task_due_reminders")
+  holidayCountdownAlerts Boolean  @default(true) @map("holiday_countdown_alerts")
+  
+  // Timezone and locale
+  timezone              String   @default("UTC")
+  locale                String   @default("en-US")
+  
+  // Accessibility preferences
+  reducedMotion         Boolean  @default(false) @map("reduced_motion")
+  highContrast          Boolean  @default(false) @map("high_contrast")
+  fontSize              String   @default("medium") @map("font_size") // "small", "medium", "large"
+  
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+  @@index([userId])
+}
+
+// Multi-tenant households/families for collaboration
+model Account {
+  id           String   @id @default(uuid()) @db.Char(36)
+  name         String
+  ownerUserId  String   @map("owner_user_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  owner        User            @relation("AccountOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members      AccountMember[]
+  holidays     Holiday[]
+  contacts     Contact[]
+  auditLogs    AuditLog[]
+
+  @@map("accounts")
+  @@index([ownerUserId])
+}
+
+// Many-to-many relationship between users and accounts
+model AccountMember {
+  accountId  String     @map("account_id") @db.Char(36)
+  userId     String     @map("user_id") @db.Char(36)
+  role       MemberRole
+  invitedBy  String?    @map("invited_by") @db.Char(36)
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  // Relationships
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user      User    @relation("AccountMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  inviter   User?   @relation("AccountMemberInviter", fields: [invitedBy], references: [id], onDelete: SetNull)
+
+  @@id([accountId, userId])
+  @@map("account_members")
+  @@index([userId])
+  @@index([accountId])
+}
+
+// Holiday instances with metadata and configuration
+model Holiday {
+  id          String   @id @default(uuid()) @db.Char(36)
+  accountId   String   @map("account_id") @db.Char(36)
+  holidayType String   @map("holiday_type")
+  name        String
+  description String?
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  countdownTimer DateTime? @map("countdown_timer")
+  colorLight  String   @map("color_light")
+  colorDark   String   @map("color_dark")
+  isCustom    Boolean  @default(false) @map("is_custom")
+  createdBy   String   @map("created_by") @db.Char(36)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  account           Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creator           User              @relation("HolidayCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  tasks             Task[]
+  gifts             Gift[]
+  cards             Card[]
+  budgets           Budget[]
+  shares            Share[]
+  kwanzaaPrinciples KwanzaaPrinciple[]
+  guestLists        GuestList[]
+
+  @@map("holidays")
+  @@index([accountId, holidayType])
+  @@index([startDate])
+  @@index([isCustom])
+}
+
+// Address book entries for gift recipients, card recipients, etc.
+model Contact {
+  id            String   @id @default(uuid()) @db.Char(36)
+  accountId     String   @map("account_id") @db.Char(36)
+  name          String
+  email         String?
+  phone         String?
+  streetAddress String?  @map("street_address")
+  city          String?
+  state         String?
+  postalCode    String?  @map("postal_code")
+  relationship  String?
+  notes         String?
+  createdBy     String   @map("created_by") @db.Char(36)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  account   Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creator   User         @relation("ContactCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  gifts     Gift[]
+  cards     Card[]
+  guestLists GuestList[]
+
+  @@map("contacts")
+  @@index([accountId])
+  @@index([name])
+  @@index([email])
+}
+
+// Generic and holiday-specific tasks with priorities and assignments
+model Task {
+  id            String      @id @default(uuid()) @db.Char(36)
+  holidayId     String      @map("holiday_id") @db.Char(36)
+  title         String
+  description   String?
+  priority      TaskPriority @default(low)
+  category      String?
+  isCompleted   Boolean     @default(false) @map("is_completed")
+  completedDate DateTime?   @map("completed_date") @db.DateTime(3)
+  dueDate       DateTime?   @map("due_date") @db.Date
+  assignedTo    String?     @map("assigned_to") @db.Char(36)
+  createdBy     String      @map("created_by") @db.Char(36)
+  shareId       String?     @map("share_id") @db.Char(36)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday       Holiday         @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  assignee      User?           @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  creator       User            @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  share         Share?          @relation(fields: [shareId], references: [id], onDelete: SetNull)
+  taskAssignees TaskAssignee[]
+
+  @@map("tasks")
+  @@index([holidayId])
+  @@index([assignedTo])
+  @@index([isCompleted])
+  @@index([dueDate])
+}
+
+// Many-to-many relationship for task assignments
+model TaskAssignee {
+  taskId      String   @map("task_id") @db.Char(36)
+  userId      String   @map("user_id") @db.Char(36)
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+  assignedBy  String   @map("assigned_by") @db.Char(36)
+
+  // Relationships
+  task        Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User @relation("TaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  assigner    User @relation("TaskAssignmentBy", fields: [assignedBy], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_assignees")
+  @@index([userId])
+}
+
+// Gift lists with recipients, prices, and purchase tracking
+model Gift {
+  id           String   @id @default(uuid()) @db.Char(36)
+  holidayId    String   @map("holiday_id") @db.Char(36)
+  contactId    String?  @map("contact_id") @db.Char(36)
+  name         String
+  description  String?
+  price        Decimal  @db.Decimal(12, 2)
+  actualPrice  Decimal? @map("actual_price") @db.Decimal(12, 2)
+  store        String?
+  productLink  String?  @map("product_link")
+  notes        String?
+  isCompleted  Boolean  @default(false) @map("is_completed")
+  completedDate DateTime? @map("completed_date") @db.DateTime(3)
+  createdBy    String   @map("created_by") @db.Char(36)
+  shareId      String?  @map("share_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday   Holiday   @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  creator   User      @relation("GiftCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  share     Share?    @relation(fields: [shareId], references: [id], onDelete: SetNull)
+
+  @@map("gifts")
+  @@index([holidayId])
+  @@index([contactId])
+  @@index([isCompleted])
+  @@index([price])
+}
+
+// Greeting cards with recipients and sending status
+model Card {
+  id           String   @id @default(uuid()) @db.Char(36)
+  holidayId    String   @map("holiday_id") @db.Char(36)
+  contactId    String?  @map("contact_id") @db.Char(36)
+  recipient    String
+  address      String?
+  message      String
+  isCompleted  Boolean  @default(false) @map("is_completed")
+  sentDate     DateTime? @map("sent_date") @db.DateTime(3)
+  createdBy    String   @map("created_by") @db.Char(36)
+  shareId      String?  @map("share_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday   Holiday   @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  creator   User      @relation("CardCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  share     Share?    @relation(fields: [shareId], references: [id], onDelete: SetNull)
+
+  @@map("cards")
+  @@index([holidayId])
+  @@index([contactId])
+  @@index([isCompleted])
+}
+
+// Budget tracking for holidays (Thanksgiving, Halloween)
+model Budget {
+  id              String   @id @default(uuid()) @db.Char(36)
+  holidayId       String   @map("holiday_id") @db.Char(36)
+  name            String
+  totalBudget     Decimal  @map("total_budget") @db.Decimal(12, 2)
+  spentAmount     Decimal  @default(0) @map("spent_amount") @db.Decimal(12, 2)
+  remainingAmount Decimal  @default(0) @map("remaining_amount") @db.Decimal(12, 2)
+  currency        String
+  startDate       DateTime @map("start_date") @db.Date
+  endDate         DateTime @map("end_date") @db.Date
+  createdBy       String   @map("created_by") @db.Char(36)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday         Holiday           @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  creator         User              @relation("BudgetCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  transactions    BudgetTransaction[]
+
+  @@map("budgets")
+  @@index([holidayId])
+  @@index([startDate, endDate])
+}
+
+// Individual budget line items and expenses
+model BudgetTransaction {
+  id              String   @id @default(uuid()) @db.Char(36)
+  budgetId        String   @map("budget_id") @db.Char(36)
+  name            String
+  description     String?
+  amount          Decimal  @db.Decimal(12, 2)
+  category        String
+  transactionDate DateTime @map("transaction_date") @db.Date
+  isExpense       Boolean  @default(true) @map("is_expense")
+  createdBy       String   @map("created_by") @db.Char(36)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  budget   Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  creator  User   @relation("BudgetTransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("budget_transactions")
+  @@index([budgetId])
+  @@index([category])
+  @@index([transactionDate])
+}
+
+// Holiday sharing for multi-user collaboration
+model Share {
+  id           String   @id @default(uuid()) @db.Char(36)
+  holidayId    String   @unique @map("holiday_id") @db.Char(36)
+  ownerUserId  String   @map("owner_user_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday       Holiday       @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  owner         User          @relation("ShareOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members       ShareMember[]
+  invites       Invite[]
+  tasks         Task[]
+  gifts         Gift[]
+  cards         Card[]
+
+  @@map("shares")
+  @@index([ownerUserId])
+}
+
+// Many-to-many relationship for share membership
+model ShareMember {
+  shareId    String   @map("share_id") @db.Char(36)
+  userId     String   @map("user_id") @db.Char(36)
+  joinedAt   DateTime @default(now()) @map("joined_at")
+  invitedBy  String?  @map("invited_by") @db.Char(36)
+
+  // Relationships
+  share      Share @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  user       User  @relation("ShareMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  inviter    User? @relation("ShareMemberInvitedBy", fields: [invitedBy], references: [id], onDelete: SetNull)
+
+  @@id([shareId, userId])
+  @@map("share_members")
+  @@index([userId])
+  @@index([shareId])
+}
+
+// Invitation system for holiday sharing
+model Invite {
+  id          String      @id @default(uuid()) @db.Char(36)
+  shareId     String      @map("share_id") @db.Char(36)
+  fromUserId  String      @map("from_user_id") @db.Char(36)
+  toUserId    String?     @map("to_user_id") @db.Char(36)
+  toEmail     String?
+  holidayKey  String      @map("holiday_key")
+  status      InviteStatus
+  message     String?
+  respondedAt DateTime?   @map("responded_at") @db.DateTime(3)
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  // Relationships
+  share       Share @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  fromUser    User  @relation("InviteSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser      User? @relation("InviteReceiver", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  @@map("invites")
+  @@index([toEmail])
+  @@index([status])
+  @@index([shareId])
+}
+
+// Special daily principle tracking for Kwanzaa
+model KwanzaaPrinciple {
+  id          String   @id @default(uuid()) @db.Char(36)
+  holidayId   String   @map("holiday_id") @db.Char(36)
+  dayNumber   Int      @map("day_number")
+  name        String
+  description String?
+  isCompleted Boolean  @default(false) @map("is_completed")
+  completedAt DateTime? @map("completed_at") @db.DateTime(3)
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday Holiday @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+
+  @@unique([holidayId, dayNumber])
+  @@map("kwanzaa_principles")
+  @@index([isCompleted])
+}
+
+// Guest lists for events and parties
+model GuestList {
+  id         String     @id @default(uuid()) @db.Char(36)
+  holidayId  String     @map("holiday_id") @db.Char(36)
+  contactId  String     @map("contact_id") @db.Char(36)
+  rsvpStatus RSVPStatus? @map("rsvp_status")
+  rsvpDate   DateTime?  @map("rsvp_date") @db.DateTime(3)
+  notes      String?
+  createdBy  String     @map("created_by") @db.Char(36)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  // Relationships
+  holiday Holiday @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  creator User    @relation("GuestListCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([holidayId, contactId])
+  @@map("guest_lists")
+  @@index([rsvpStatus])
+}
+
+// Activity tracking for debugging and compliance
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Char(36)
+  accountId  String   @map("account_id") @db.Char(36)
+  userId     String?  @map("user_id") @db.Char(36)
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Char(36)
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_log")
+  @@index([accountId, createdAt])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

@@ -23,7 +23,7 @@ export const tasksDeleteConfig: DeleteModalConfig = {
 	title: "Delete Task?",
 	message:
 		"Are you sure you want to delete this task? This action cannot be undone.",
-	cardClassName: "bg-white dark:bg-gray-800",
+	cardClassName: "bg-white dark:bg-gray-800 rounded-lg shadow-lg",
 	confirmText: "Delete",
 	cancelText: "Cancel",
 	confirmButtonColor: "#ef4444", // Red
@@ -62,9 +62,20 @@ export const recipesDeleteConfig: DeleteModalConfig = {
 	confirmButtonColor: "#ef4444", // Red
 };
 
+// Address book delete configuration
+export const addressBookDeleteConfig: DeleteModalConfig = {
+	title: "Confirm Delete",
+	message:
+		"Are you sure you want to delete this contact? This action cannot be undone.",
+	cardClassName: "card card-address",
+	confirmText: "Delete",
+	cancelText: "Cancel",
+	confirmButtonColor: "#ef4444", // Red
+};
+
 // Helper function to get delete config based on type
 export function getDeleteConfig(
-	type: "cards" | "tasks" | "gifts" | "guests" | "recipes"
+	type: "cards" | "tasks" | "gifts" | "guests" | "recipes" | "addressBook"
 ): DeleteModalConfig {
 	const configs = {
 		cards: cardsDeleteConfig,
@@ -72,6 +83,7 @@ export function getDeleteConfig(
 		gifts: giftsDeleteConfig,
 		guests: guestsDeleteConfig,
 		recipes: recipesDeleteConfig,
+		addressBook: addressBookDeleteConfig,
 	};
 
 	return configs[type];

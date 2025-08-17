@@ -247,6 +247,7 @@ export default function NewYearDecorationsPage() {
 					hoverColor: "hover:bg-amber-50 dark:hover:bg-amber-900/20",
 				}}
 				borderColor="#f59e0b"
+				gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
 			/>
 		);
 	};
@@ -254,18 +255,20 @@ export default function NewYearDecorationsPage() {
 	return (
 		<div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Decorations Checklist"
+				title="Decorations"
 				backHref="/new-year"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort decorations"
+				description="Keep track of all your Decorations!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
 
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton
 					title="Decoration"
 					onClick={() => setShowFormModal(true)}
-					color="orange"
+					color="yellow"
 				/>
 
 				<TaskSection

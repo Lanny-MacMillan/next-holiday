@@ -89,12 +89,12 @@ export default function HolidayHeader({
 	};
 
 	return (
-		<header className="w-full max-w-4xl py-6">
+		<header className="w-full max-w-4xl py-4 sm:py-6 px-4 sm:px-6">
 			<div className="flex items-center justify-center relative">
 				{showBackButton && (
 					<Link
 						href={backHref}
-						className="absolute left-0 text-blue-600 dark:text-blue-400 text-5xl transition-colors duration-200"
+						className="absolute left-0 text-blue-600 dark:text-blue-400 text-3xl sm:text-4xl md:text-5xl transition-colors duration-200 hover:scale-110"
 						onMouseEnter={(e) => {
 							e.currentTarget.style.color = getOutlineColor();
 						}}
@@ -105,7 +105,7 @@ export default function HolidayHeader({
 						←
 					</Link>
 				)}
-				<div className="text-center">
+				<div className="text-center px-8 sm:px-12 min-w-0">
 					<div className={isGamified ? "relative inline-block" : ""}>
 						{isGamified && (
 							<div
@@ -120,8 +120,8 @@ export default function HolidayHeader({
 						<h1
 							className={`${
 								isGamified ? "font-display" : "font-sans"
-							} text-3xl font-bold mb-2 text-gray-800 dark:text-white ${
-								isGamified ? "text-7xl tracking-wide relative z-10" : ""
+							} text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-2 text-gray-800 dark:text-white break-words ${
+								isGamified ? "tracking-wide relative z-10" : ""
 							}`}
 							style={
 								isGamified
@@ -130,13 +130,21 @@ export default function HolidayHeader({
 											color: "white",
 											filter: "drop-shadow(3px 5px 9px rgba(0, 0, 0, 0.5))",
 									  }
-									: {}
+									: {
+											color: "white",
+											filter: "drop-shadow(3px 5px 9px rgba(0, 0, 0, 0.5))",
+									  }
 							}
 						>
 							{getHolidayEmoji()} {getCleanHolidayName()}
 						</h1>
 					</div>
-					<p className="text-center text-gray-600 dark:text-white">
+					<p
+						className="text-center text-gray-600 dark:text-white text-sm sm:text-base break-words px-2"
+						style={{
+							fontFamily: "var(--font-family-fredoka)",
+						}}
+					>
 						{description}
 					</p>
 				</div>

@@ -194,94 +194,95 @@ export default function HalloweenGiftListPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-orange-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
-			<div className="container mx-auto px-4 py-8 max-w-md">
-				<HolidayPageHeader
-					title="Halloween Gift List"
-					backHref="/halloween"
-					onSortClick={() => setIsSortModalOpen(true)}
-					sortTitle="Sort Gifts"
-					error={error}
+		<div className="min-h-screen bg-gradient-to-br from-orange-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 flex flex-col items-center p-4 sm:p-8 font-sans">
+			<HolidayPageHeader
+				title="Halloween Gifts"
+				backHref="/halloween"
+				onSortClick={() => setIsSortModalOpen(true)}
+				sortTitle="Sort Gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="orange-500"
+				error={error}
+			/>
+
+			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<AddButton
+					title="Gift"
+					onClick={handleAddGift}
+					color="holiday"
+					disabled={loading}
 				/>
 
-				<main className="w-full max-w-md flex flex-col gap-6">
-					<AddButton
-						title="Gift"
-						onClick={handleAddGift}
-						color="holiday"
-						disabled={loading}
-					/>
+				<TaskSection
+					title="Active Gifts"
+					items={activeGifts}
+					isCompleted={false}
+					emptyMessage="No gifts added yet."
+					completedMessage=""
+					renderItem={renderGiftItem}
+					borderColor={accentColor}
+				/>
 
+				{completedGifts.length > 0 && (
 					<TaskSection
-						title="Active Gifts"
-						items={activeGifts}
-						isCompleted={false}
-						emptyMessage="No gifts added yet."
-						completedMessage=""
+						title="Completed Gifts"
+						items={completedGifts}
+						isCompleted={true}
+						emptyMessage=""
+						completedMessage="No completed gifts yet"
 						renderItem={renderGiftItem}
 						borderColor={accentColor}
 					/>
+				)}
+			</main>
 
-					{completedGifts.length > 0 && (
-						<TaskSection
-							title="Completed Gifts"
-							items={completedGifts}
-							isCompleted={true}
-							emptyMessage=""
-							completedMessage="No completed gifts yet"
-							renderItem={renderGiftItem}
-							borderColor={accentColor}
-						/>
-					)}
-				</main>
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={isSortModalOpen}
+				onClose={() => setIsSortModalOpen(false)}
+				sortBy={sortBy}
+				onSortChange={handleSortChange}
+				sortOptions={sortOptions}
+				title="Sort Gifts"
+			/>
 
-				{/* Sort Modal */}
-				<SortModal
-					isOpen={isSortModalOpen}
-					onClose={() => setIsSortModalOpen(false)}
-					sortBy={sortBy}
-					onSortChange={handleSortChange}
-					sortOptions={sortOptions}
-					title="Sort Gifts"
-				/>
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={isDeleteModalOpen}
+				onConfirm={handleConfirmDelete}
+				onCancel={() => {
+					setIsDeleteModalOpen(false);
+					setGiftToDelete(null);
+				}}
+				title="Delete Gift"
+				itemName={giftToDelete?.name}
+				loading={loading}
+				confirmButtonColor={accentColor}
+			/>
 
-				{/* Delete Modal */}
-				<DeleteModal
-					isOpen={isDeleteModalOpen}
-					onConfirm={handleConfirmDelete}
-					onCancel={() => {
-						setIsDeleteModalOpen(false);
-						setGiftToDelete(null);
-					}}
-					title="Delete Gift"
-					itemName={giftToDelete?.name}
-					loading={loading}
-					confirmButtonColor={accentColor}
-				/>
-
-				{/* Form Modal */}
-				<FormModal
-					isOpen={isFormModalOpen}
-					onClose={() => setIsFormModalOpen(false)}
-					title={selectedGift ? "Edit Gift" : "Add New Gift"}
-					fields={formFields}
-					initialValues={
-						selectedGift
-							? {
-									name: selectedGift.name,
-									recipient: selectedGift.recipient,
-									description: selectedGift.description,
-									price: selectedGift.price,
-									category: selectedGift.category,
-							  }
-							: {}
-					}
-					onSubmit={handleFormSubmit}
-					loading={loading}
-					submitText={selectedGift ? "Update Gift" : "Add Gift"}
-					submitButtonColor={accentColor}
-				/>
-			</div>
+			{/* Form Modal */}
+			<FormModal
+				isOpen={isFormModalOpen}
+				onClose={() => setIsFormModalOpen(false)}
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
+				fields={formFields}
+				initialValues={
+					selectedGift
+						? {
+								name: selectedGift.name,
+								recipient: selectedGift.recipient,
+								description: selectedGift.description,
+								price: selectedGift.price,
+								category: selectedGift.category,
+						  }
+						: {}
+				}
+				onSubmit={handleFormSubmit}
+				loading={loading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
+				submitButtonColor={accentColor}
+			/>
+			{/* </div> */}
 		</div>
 	);
 }

@@ -4,10 +4,12 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { initializeTheme } from "@/store/slices/themeSlice";
+import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
 import AuthWrapper from "./auth/AuthWrapper";
 import Header from "./common/Header";
 import Login from "./auth/Login";
 import DataInitializer from "./DataInitializer";
+import UserSync from "./auth/UserSync";
 import { ReactNode } from "react";
 
 interface AppContentProps {
@@ -18,6 +20,9 @@ export default function AppContent({ children }: AppContentProps) {
 	const { isAuthenticated, isLoading } = useAuth0();
 	const dispatch = useAppDispatch();
 	const { settings, initialized } = useAppSelector((state: any) => state.theme);
+	const { preferences, initialized: preferencesInitialized } = useAppSelector(
+		(state: any) => state.userPreferences
+	);
 
 	// Initialize theme on mount
 	useEffect(() => {
@@ -28,19 +33,27 @@ export default function AppContent({ children }: AppContentProps) {
 
 	// Apply theme to document
 	useEffect(() => {
-		if (initialized) {
+		if (initialized && preferencesInitialized) {
 			const html = document.documentElement;
+
+			// Use preferences from database if available, otherwise fall back to theme slice
+			const currentTheme = preferences?.theme || settings.theme;
+			const currentDisplayMode =
+				preferences?.displayMode || settings.displayMode;
+
 			console.log(
 				"Theme state:",
-				settings.theme,
+				currentTheme,
 				"Display mode:",
-				settings.displayMode,
+				currentDisplayMode,
 				"Initialized:",
-				initialized
+				initialized,
+				"Preferences initialized:",
+				preferencesInitialized
 			);
 
 			// Apply dark/light theme
-			if (settings.theme === "dark") {
+			if (currentTheme === "dark") {
 				html.classList.add("dark");
 				console.log("Added dark class to html");
 			} else {
@@ -49,7 +62,7 @@ export default function AppContent({ children }: AppContentProps) {
 			}
 
 			// Apply gamified/professional mode
-			if (settings.displayMode === "gamified") {
+			if (currentDisplayMode === "gamified") {
 				html.classList.add("gamified-mode");
 				console.log("Added gamified-mode class to html");
 			} else {
@@ -57,7 +70,14 @@ export default function AppContent({ children }: AppContentProps) {
 				console.log("Removed gamified-mode class from html");
 			}
 		}
-	}, [settings.theme, settings.displayMode, initialized]);
+	}, [
+		settings.theme,
+		settings.displayMode,
+		initialized,
+		preferences?.theme,
+		preferences?.displayMode,
+		preferencesInitialized,
+	]);
 
 	if (isLoading) {
 		return (
@@ -76,6 +96,7 @@ export default function AppContent({ children }: AppContentProps) {
 
 	return (
 		<>
+			<UserSync />
 			<DataInitializer />
 			<Header />
 			<AuthWrapper>{children}</AuthWrapper>

@@ -78,11 +78,18 @@ export default function EasterBasketListPage() {
 	}, [dispatch]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
+		// Ensure price is a number
+		const price =
+			typeof values.price === "string"
+				? parseFloat(values.price) || 0
+				: values.price || 0;
+
 		if (editingGift) {
 			await dispatch(
 				updateEasterGift({
 					...editingGift,
 					...values,
+					price: price,
 				})
 			);
 			setEditingGift(null);
@@ -93,7 +100,7 @@ export default function EasterBasketListPage() {
 					isCompleted: false,
 					name: values.name || "",
 					recipient: values.recipient || "",
-					price: values.price || 0,
+					price: price,
 				})
 			);
 		}
@@ -105,7 +112,8 @@ export default function EasterBasketListPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (gift: any) => {
+	const handleDelete = (giftId: string) => {
+		const gift = gifts.find((g) => g.id === giftId);
 		setGiftToDelete(gift);
 		setShowDeleteModal(true);
 	};
@@ -128,10 +136,13 @@ export default function EasterBasketListPage() {
 
 	const totalSpent = sortedBasketItems
 		.filter((gift) => gift.isCompleted)
-		.reduce((sum, gift) => sum + gift.price, 0);
+		.reduce(
+			(sum, gift) => sum + (typeof gift.price === "number" ? gift.price : 0),
+			0
+		);
 
 	const totalBudget = sortedBasketItems.reduce(
-		(sum, gift) => sum + gift.price,
+		(sum, gift) => sum + (typeof gift.price === "number" ? gift.price : 0),
 		0
 	);
 
@@ -177,22 +188,28 @@ export default function EasterBasketListPage() {
 				hoverColor: "hover:bg-purple-50 dark:hover:bg-purple-900/20",
 			}}
 			borderColor="rgb(var(--color-purple-500))" // Purple border for Easter
+			gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 		/>
 	);
 
 	return (
 		<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Easter Basket List"
+				title="Easter Basket"
 				backHref="/easter"
 				error={error}
 				onSortClick={() => setShowSortModal(true)}
+				holidayColor="purple-500"
+				description="Keep track of Easter basket items and purchases!"
 				sortTitle="Sort Basket Items"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Easter" />
+				<BudgetDisplay
+					holiday="Easter"
+					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+				/>
 
 				{/* Add Basket Item Button */}
 				<AddButton

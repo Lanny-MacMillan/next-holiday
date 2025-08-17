@@ -17,6 +17,8 @@ export interface HolidayTaskCardProps {
 		progressColor?: string;
 	};
 	className?: string;
+	gamified?: boolean;
+	gamifiedBackgroundColor?: string; // New prop for background color
 }
 
 export default function HolidayTaskCard({
@@ -28,11 +30,13 @@ export default function HolidayTaskCard({
 	completedItems,
 	theme = {},
 	className = "",
+	gamified = false,
+	gamifiedBackgroundColor,
 }: HolidayTaskCardProps) {
 	const {
 		primaryColor = "#22c55e", // Default green
 		accentColor = "#eab308", // Default yellow
-		backgroundColor = "white",
+		backgroundColor: themeBackgroundColor = "white",
 		progressColor = "#22c55e", // Default green for progress bar
 	} = theme;
 
@@ -44,46 +48,19 @@ export default function HolidayTaskCard({
 	const progress = totalItems > 0 ? completedItems / totalItems : 0;
 	const progressPercentage = progress * 100;
 
-	// Get gamified background gradient based on holiday
-	const getGamifiedBackgroundColor = () => {
-		const gradientMap: { [key: string]: string } = {
-			christmas: "bg-gradient-to-br from-red-400 to-red-600",
-			hanukkah: "bg-gradient-to-br from-blue-400 to-blue-600",
-			kwanzaa: "bg-gradient-to-br from-red-400 to-red-600",
-			"new-year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
-			"new year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
-			valentines: "bg-gradient-to-br from-pink-300 to-pink-500",
-			"valentine's day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			easter: "bg-gradient-to-br from-purple-300 to-purple-500",
-			halloween: "bg-gradient-to-br from-orange-400 to-orange-600",
-			thanksgiving: "bg-gradient-to-br from-amber-400 to-amber-600",
-			"mothers-day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			"mother's day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			"fathers-day": "bg-gradient-to-br from-blue-300 to-blue-500",
-			"father's day": "bg-gradient-to-br from-blue-300 to-blue-500",
-			"fourth-of-july": "bg-gradient-to-br from-red-400 to-red-600",
-			"fourth of july": "bg-gradient-to-br from-red-400 to-red-600",
-			birthday: "bg-gradient-to-br from-yellow-300 to-yellow-500",
-			anniversary: "bg-gradient-to-br from-pink-300 to-pink-500",
-			graduation: "bg-gradient-to-br from-purple-300 to-purple-500",
-			"baby-shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
-			"baby shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
-		};
-		return (
-			gradientMap[holidayName.toLowerCase()] ||
-			"bg-gradient-to-br from-gray-400 to-gray-600"
-		);
-	};
+	// Use provided background color or fallback to default
+	const backgroundColor =
+		gamifiedBackgroundColor || "bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design - NO green border
 		return (
 			<Link
 				href={href}
-				className={`block card card-cards rounded-2xl p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${getGamifiedBackgroundColor()} text-white ${className}`}
+				className={`block card card-cards rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${backgroundColor} text-white ${className}`}
 				style={{
-					// Explicitly ensure no border conflicts in gamified mode
-					borderLeft: "none",
+					border: isDarkMode ? "3px solid rgba(255, 255, 255, 1)" : "none",
+					borderLeft: isDarkMode ? "3px solid rgba(255, 255, 255, 1)" : "none",
 					...getCardStyling({
 						isDarkMode,
 						isGamified: true,
@@ -101,12 +78,16 @@ export default function HolidayTaskCard({
 
 				<div className="relative z-10">
 					<div className="flex items-center justify-between mb-1">
-						<h3 className="text-lg font-bold text-white">{sectionName}</h3>
-						<span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white bg-opacity-20 text-white">
+						<h3 className="text-base sm:text-lg font-bold text-white truncate flex-1 min-w-0 mr-2">
+							{sectionName}
+						</h3>
+						<span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white flex-shrink-0">
 							{totalItems}
 						</span>
 					</div>
-					<p className="text-white opacity-90 text-sm">{description}</p>
+					<p className="text-white opacity-90 text-xs sm:text-sm line-clamp-2">
+						{description}
+					</p>
 					{/* Progress bar */}
 					<div className="mt-3 w-full bg-white bg-opacity-20 rounded-full h-2">
 						<div
@@ -135,7 +116,7 @@ export default function HolidayTaskCard({
 	return (
 		<Link
 			href={href}
-			className={`block card card-cards rounded-2xl p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
+			className={`block card card-cards rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
 			style={{
 				backgroundColor,
 				borderLeft: `4px solid ${primaryColor}`, // Colored line on left edge
@@ -147,11 +128,11 @@ export default function HolidayTaskCard({
 			}}
 		>
 			<div className="flex items-center justify-between mb-1">
-				<h3 className="text-lg font-bold text-gray-800 dark:text-white">
+				<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate flex-1 min-w-0 mr-2">
 					{sectionName}
 				</h3>
 				<span
-					className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+					className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full flex-shrink-0"
 					style={{
 						backgroundColor: `${primaryColor}20`,
 						color: primaryColor,
@@ -160,7 +141,9 @@ export default function HolidayTaskCard({
 					{totalItems}
 				</span>
 			</div>
-			<p className="text-gray-600 dark:text-gray-400 text-sm">{description}</p>
+			<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
+				{description}
+			</p>
 			{/* Progress bar */}
 			<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
 				<div

@@ -9,6 +9,7 @@ import {
 	deleteGraduationCard,
 	GraduationCard,
 } from "@/store/slices/graduation/graduationCardsSlice";
+import { Card } from "@/store/slices/cardsSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import HolidayCard from "@/components/cards/card/HolidayCard";
@@ -19,6 +20,22 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+
+type SortOption = "recipient" | "address" | "message" | "date-created" | "none";
+
+// Helper function to convert GraduationCard to Card
+const convertToCard = (graduationCard: GraduationCard): Card => {
+	return {
+		id: graduationCard.id,
+		recipient: graduationCard.recipient,
+		address: graduationCard.address,
+		message: graduationCard.message,
+		isCompleted: graduationCard.isCompleted,
+		completedDate: graduationCard.completedDate,
+		createdAt: graduationCard.createdAt,
+		updatedAt: graduationCard.updatedAt,
+	};
+};
 
 export default function GraduationCardsPage() {
 	const dispatch = useAppDispatch();
@@ -36,7 +53,7 @@ export default function GraduationCardsPage() {
 	});
 	const [showForm, setShowForm] = useState(false);
 	const [editingCard, setEditingCard] = useState<GraduationCard | null>(null);
-	const [sortBy, setSortBy] = useState<string>("none");
+	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
@@ -64,6 +81,7 @@ export default function GraduationCardsPage() {
 				address: formValues.address || "",
 				message: formValues.message,
 				isCompleted: false,
+				priority: "medium",
 			};
 			dispatch(addGraduationCard(newCard));
 		}
@@ -80,7 +98,7 @@ export default function GraduationCardsPage() {
 	}
 
 	function handleToggleCard(cardId: string) {
-		const card = cards.find((c) => c.id === cardId);
+		const card = cards.find((c: GraduationCard) => c.id === cardId);
 		if (card) {
 			const updatedCard = {
 				...card,
@@ -160,9 +178,11 @@ export default function GraduationCardsPage() {
 				backHref="/graduation"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Plan your graduation cards with style!"
+				holidayColor="purple-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Card" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -184,10 +204,10 @@ export default function GraduationCardsPage() {
 					renderItem={(card: GraduationCard) => (
 						<HolidayCard
 							key={card.id}
-							card={card}
+							card={convertToCard(card)}
 							onToggle={handleToggleCard}
 							onEdit={(card) => {
-								handleEditCard(card);
+								handleEditCard(card as any);
 								setShowForm(true);
 							}}
 							onDelete={handleDeleteCard}
@@ -196,6 +216,7 @@ export default function GraduationCardsPage() {
 								accentColor: "#8b5cf6",
 							}}
 							borderColor="rgb(var(--color-purple-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -209,10 +230,10 @@ export default function GraduationCardsPage() {
 					renderItem={(card: GraduationCard) => (
 						<HolidayCard
 							key={card.id}
-							card={card}
+							card={convertToCard(card)}
 							onToggle={handleToggleCard}
 							onEdit={(card) => {
-								handleEditCard(card);
+								handleEditCard(card as any);
 								setShowForm(true);
 							}}
 							onDelete={handleDeleteCard}
@@ -221,6 +242,7 @@ export default function GraduationCardsPage() {
 								accentColor: "#8b5cf6",
 							}}
 							borderColor="rgb(var(--color-purple-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -270,7 +292,9 @@ export default function GraduationCardsPage() {
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
 				sortBy={sortBy}
-				onSortChange={setSortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
 				sortOptions={[
 					{ value: "none", label: "None" },
 					{ value: "recipient", label: "Recipient" },

@@ -174,6 +174,7 @@ export default function KwanzaaGiftListPage() {
 				accentColor: "#dc2626", // Red for Kwanzaa
 			}}
 			borderColor="rgb(var(--color-red-500))" // Red border for Kwanzaa
+			gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 		/>
 	);
 
@@ -190,6 +191,7 @@ export default function KwanzaaGiftListPage() {
 				accentColor: "#dc2626", // Red for Kwanzaa
 			}}
 			borderColor="rgb(var(--color-red-500))" // Red border for Kwanzaa
+			gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 		/>
 	);
 
@@ -259,11 +261,16 @@ export default function KwanzaaGiftListPage() {
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="red-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Kwanzaa" />
+				<BudgetDisplay
+					holiday="Kwanzaa"
+					holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+				/>
 
 				<AddButton title="Gift" onClick={openForm} color="red" />
 				<div className="flex items-center justify-center">

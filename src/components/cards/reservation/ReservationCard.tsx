@@ -26,19 +26,19 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
 			case "high":
-				return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+				return "bg-red-500 text-white";
 			case "medium":
-				return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+				return "bg-yellow-500 text-white";
 			case "low":
-				return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+				return "bg-green-500 text-white";
 			default:
-				return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+				return "bg-gray-500 text-white";
 		}
 	};
 
 	return (
 		<div
-			className={`card card-valentines rounded-2xl p-4 transition-all ${
+			className={`card card-valentines rounded-2xl p-3 sm:p-4 transition-all ${
 				isCompleted ? "opacity-75" : ""
 			}`}
 		>
@@ -46,7 +46,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 			<div className="mb-3">
 				<div className="flex items-center gap-2 mb-2">
 					<h3
-						className={`font-bold text-gray-800 dark:text-white text-lg ${
+						className={`font-bold text-gray-800 dark:text-white text-sm sm:text-lg ${
 							isCompleted ? "line-through" : ""
 						}`}
 					>
@@ -60,7 +60,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 						{priority.charAt(0).toUpperCase() + priority.slice(1)}
 					</span>
 					{isCompleted && (
-						<span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full">
+						<span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
 							Confirmed
 						</span>
 					)}
@@ -70,17 +70,17 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 			{/* Details section */}
 			<div className="mb-4 space-y-2">
 				{description && (
-					<p className="text-gray-600 dark:text-gray-400 text-sm">
+					<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
 						{description}
 					</p>
 				)}
 				{notes && (
-					<p className="text-gray-500 dark:text-gray-500 text-sm italic">
+					<p className="text-gray-500 dark:text-gray-500 text-xs sm:text-sm italic">
 						{notes}
 					</p>
 				)}
 				{dueDate && (
-					<p className="text-sm text-gray-500 dark:text-gray-500">
+					<p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
 						Due: {new Date(dueDate).toLocaleDateString()}
 					</p>
 				)}
@@ -90,17 +90,13 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 			<div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
 				<button
 					onClick={() => onToggleCompletion(id)}
-					className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
-						isCompleted
-							? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-							: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
-					}`}
+					className="flex-1 px-2 py-2 sm:px-3 sm:py-2 rounded text-xs sm:text-sm font-medium transition-all duration-200 border border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
 				>
 					{isCompleted ? "Confirmed" : "Mark Confirmed"}
 				</button>
 				<button
 					onClick={() => onDelete(id)}
-					className="flex-1 px-3 py-2 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded text-sm font-medium transition-colors"
+					className="flex-1 px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white rounded text-xs sm:text-sm font-medium transition-colors hover:bg-red-600"
 				>
 					Delete
 				</button>

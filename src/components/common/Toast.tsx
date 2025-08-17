@@ -36,15 +36,15 @@ export default function Toast({
 	const icon = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
 
 	return (
-		<div className="fixed top-4 left-0 right-0 z-50 animate-in slide-in-from-top-2 duration-300 px-4">
+		<div className="fixed top-4 left-0 right-0 z-50 animate-in slide-in-from-top-2 duration-300 px-3 sm:px-4">
 			<div
-				className={`${bgColor} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 mx-auto max-w-2xl`}
+				className={`${bgColor} text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 mx-auto max-w-2xl`}
 			>
-				<span className="text-lg font-bold">{icon}</span>
-				<span className="flex-1">{message}</span>
+				<span className="text-base sm:text-lg font-bold">{icon}</span>
+				<span className="flex-1 text-sm sm:text-base">{message}</span>
 				<button
 					onClick={onClose}
-					className="text-white hover:text-gray-200 transition-colors"
+					className="text-white hover:text-gray-200 transition-colors text-sm sm:text-base"
 				>
 					✕
 				</button>

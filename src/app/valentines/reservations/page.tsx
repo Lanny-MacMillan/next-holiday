@@ -137,23 +137,23 @@ export default function ValentinesReservationsPage() {
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Reservations Tracker"
+				title="Reservations"
 				backHref="/valentines"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Cards"
+				description="Keep track of your reservations!"
+				holidayColor="pink-500"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
-				<ReservationsTracker
-					totalReservations={tasks.length}
-					confirmedReservations={completedTasks.length}
-				/>
+				<ReservationsTracker tasks={tasks} title="Reservations Tracker" />
 
 				<AddButton
 					title="Reservation"
 					onClick={() => setIsAddingTask(true)}
-					color="holiday"
+					color="pink"
+					disabled={loading}
 				/>
 
 				{/* Add Task Form Modal */}

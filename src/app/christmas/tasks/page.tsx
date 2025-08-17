@@ -153,15 +153,17 @@ export default function TasksPage() {
 	const completedTasks = sortedTasks.filter((task: Task) => task.isCompleted);
 
 	return (
-		<div className="min-h-screen christmas-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen christmas-tasks-gradient  flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="To-Do List"
 				backHref="/christmas"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Add tasks to your holiday to-do list"
+				holidayColor="red-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Task" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -230,7 +232,7 @@ export default function TasksPage() {
 				loading={loading}
 				submitText={loading ? "Adding..." : "Add Task"}
 				cancelText="Cancel"
-				cardClassName="card card-tasks"
+				cardClassName="card"
 				submitButtonColor="#22c55e"
 			/>
 

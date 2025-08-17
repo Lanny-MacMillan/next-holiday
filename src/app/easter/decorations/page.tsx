@@ -19,6 +19,7 @@ import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
+import { DecorationsListItem } from "@/components/cards/decorations";
 
 export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();
@@ -92,13 +93,12 @@ export default function EasterDecorationsPage() {
 		await dispatch(toggleEasterTaskCompletion(taskId));
 	};
 
-	const handleDeleteTask = async (taskId: string) => {
-		await dispatch(deleteEasterTask(taskId));
-	};
-
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskId: string) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -135,10 +135,12 @@ export default function EasterDecorationsPage() {
 				backHref="/easter"
 				error={error}
 				onSortClick={() => setShowSortModal(true)}
+				holidayColor="purple-500"
+				description="Keep track of Easter decorations!"
 				sortTitle="Sort Decorations"
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Decoration Item"
 					onClick={() => setShowAddForm(true)}
@@ -152,12 +154,14 @@ export default function EasterDecorationsPage() {
 					emptyMessage="All decoration items completed! 🎉"
 					completedMessage=""
 					renderItem={(task) => (
-						<ToDoCard
+						<DecorationsListItem
 							key={task.id}
 							task={convertEasterTaskToTask(task)}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEditTask}
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							onEditTask={handleEditTask}
+							loading={loading}
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500" // Easter purple color
 						/>
 					)}
 				/>
@@ -169,13 +173,14 @@ export default function EasterDecorationsPage() {
 					emptyMessage="No completed decoration items yet."
 					completedMessage="No completed decoration items yet."
 					renderItem={(task) => (
-						<ToDoCard
+						<DecorationsListItem
 							key={task.id}
 							task={convertEasterTaskToTask(task)}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEditTask}
-							className="opacity-60"
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							onEditTask={handleEditTask}
+							loading={loading}
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500" // Easter purple color
 						/>
 					)}
 				/>
@@ -251,7 +256,6 @@ export default function EasterDecorationsPage() {
 				onClose={() => setShowAddForm(false)}
 				loading={loading}
 				submitText="Add Item"
-				cardClassName="card-tasks"
 				submitButtonColor="#a855f7"
 			/>
 
@@ -266,7 +270,6 @@ export default function EasterDecorationsPage() {
 					setTaskToDelete(null);
 				}}
 				loading={loading}
-				cardClassName="card-tasks"
 				confirmButtonColor="#a855f7"
 			/>
 		</div>

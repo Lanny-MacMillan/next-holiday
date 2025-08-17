@@ -156,9 +156,11 @@ export default function CardsPage() {
 				backHref="/christmas"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Card" onClick={openForm} color="green" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -192,6 +194,7 @@ export default function CardsPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 				/>
@@ -217,6 +220,7 @@ export default function CardsPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 				/>

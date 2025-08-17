@@ -7,13 +7,16 @@ import { fetchAnniversaryTasks } from "@/store/slices/anniversary/anniversaryTas
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const subsections = [
 	{
 		name: "Gift Ideas",
 		description: "Track anniversary gift ideas",
 		href: "/anniversary/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "anniversaryGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
@@ -48,6 +51,7 @@ export default function AnniversaryPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "anniversaryGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -89,6 +93,7 @@ export default function AnniversaryPage() {
 											primaryColor: "#ec4899", // Pink for Anniversary
 											accentColor: "#ec4899", // Pink accent
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);
@@ -108,6 +113,7 @@ export default function AnniversaryPage() {
 											accentColor: "#ec4899", // Pink accent
 											progressColor: "#ec4899", // Pink for progress bar
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);

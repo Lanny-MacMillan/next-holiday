@@ -3,106 +3,88 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-	fetchThanksgivingTasks,
-	addThanksgivingTask,
-	updateThanksgivingTask,
-	deleteThanksgivingTask,
-	toggleThanksgivingTaskCompletion,
-} from "@/store/slices/thanksgiving/thanksgivingTasksSlice";
+	fetchThanksgivingBudgetItems,
+	addThanksgivingBudgetItem,
+	updateThanksgivingBudgetItem,
+	deleteThanksgivingBudgetItem,
+} from "@/store/slices/thanksgiving/thanksgivingBudgetSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import EditTaskModal from "@/components/modals/EditTaskModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { Task } from "@/store/slices/tasksSlice";
+import { ThanksgivingBudgetItem } from "@/store/slices/thanksgiving/thanksgivingBudgetSlice";
+import { ShoppingListItems } from "@/components/cards/shopping";
 
-type SortOption =
-	| "priority"
-	| "dateDue"
-	| "assignedTo"
-	| "category"
-	| "cost"
-	| "none";
+type SortOption = "amount" | "date" | "category" | "name" | "none";
 
 export default function ThanksgivingShoppingListPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.thanksgivingTasks
+	const { budgetItems, loading, error, initialized } = useAppSelector(
+		(state: any) => state.thanksgivingBudget
 	);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<Task | null>(null);
+	const [editingItem, setEditingItem] = useState<ThanksgivingBudgetItem | null>(
+		null
+	);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
-		taskId: string | null;
+		itemId: string | null;
 	}>({
 		show: false,
-		taskId: null,
+		itemId: null,
 	});
 
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
+		// Fetch budget items when component mounts if not already initialized
 		if (!initialized) {
-			dispatch(fetchThanksgivingTasks());
+			dispatch(fetchThanksgivingBudgetItems());
 		}
 	}, [dispatch, initialized]);
 
-	// Filter tasks to show only shopping items (food and supplies)
-	const shoppingItems = tasks.filter(
-		(task: Task) =>
-			task.category === "Food" ||
-			task.category === "Beverages" ||
-			task.category === "Supplies" ||
-			task.category === "Ingredients" ||
-			task.category === "Shopping List"
+	const totalSpent = budgetItems.reduce(
+		(sum: number, item: ThanksgivingBudgetItem) => {
+			return sum + item.amount;
+		},
+		0
 	);
 
-	const totalSpent = shoppingItems.reduce((sum: number, item: Task) => {
-		if (!item.description) return sum;
-		const costMatch = item.description.match(/Cost: \$(\d+\.?\d*)/);
-		return sum + (costMatch ? parseFloat(costMatch[1]) : 0);
-	}, 0);
+	const totalItems = budgetItems.length;
 
-	const completedItems = shoppingItems.filter(
-		(item: Task) => item.isCompleted
-	).length;
-	const totalItems = shoppingItems.length;
-
-	function handleAddTask(formValues: Record<string, any>) {
+	function handleAddItem(formValues: Record<string, any>) {
 		console.log("Form values received:", formValues);
 
-		if (!formValues.title?.trim()) {
-			console.log("No title provided");
+		if (!formValues.name?.trim()) {
+			console.log("No name provided");
 			return;
 		}
 
-		// Combine description and cost into a single description field
-		let description = formValues.description || "";
-		if (formValues.cost) {
-			const costText = `Cost: $${parseFloat(formValues.cost).toFixed(2)}`;
-			description = description ? `${description}\n${costText}` : costText;
-		}
-
-		const newTask: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
-			title: formValues.title,
-			description: description || undefined,
-			priority: (formValues.priority as "low" | "medium" | "high") || "medium",
-			assignedTo: formValues.assignedTo || undefined,
-			category: formValues.category || "Shopping List",
-			dueDate: formValues.dueDate || undefined,
-			isCompleted: false,
+		const newItem: Omit<
+			ThanksgivingBudgetItem,
+			"id" | "createdAt" | "updatedAt"
+		> = {
+			name: formValues.name,
+			description: formValues.description || undefined,
+			amount: parseFloat(formValues.amount) || 0,
+			category:
+				(formValues.category as
+					| "Food & Ingredients"
+					| "Decorations"
+					| "Tableware"
+					| "Kitchen Supplies"
+					| "Other") || "Food & Ingredients",
+			date: formValues.date || new Date().toISOString(),
+			isExpense: true,
 		};
 
-		console.log("Dispatching new task:", newTask);
-		dispatch(addThanksgivingTask(newTask));
+		console.log("Dispatching new budget item:", newItem);
+		dispatch(addThanksgivingBudgetItem(newItem));
 		setShowForm(false);
 	}
 
@@ -114,75 +96,73 @@ export default function ThanksgivingShoppingListPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleThanksgivingTaskCompletion(taskId));
+	function handleDeleteItem(itemId: string) {
+		setDeleteConfirm({ show: true, itemId });
 	}
 
-	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+	function handleEditItem(item: ThanksgivingBudgetItem) {
+		setEditingItem(item);
 	}
 
-	function handleEditTask(task: Task) {
-		setEditingTask(task);
-	}
-
-	function handleSaveEdit(
-		updatedTask: Omit<Task, "id" | "createdAt" | "updatedAt">
-	) {
-		if (editingTask) {
-			dispatch(updateThanksgivingTask({ ...editingTask, ...updatedTask }));
-			setEditingTask(null);
+	function handleSaveEdit(formValues: Record<string, any>) {
+		if (editingItem) {
+			const updatedItem: Omit<
+				ThanksgivingBudgetItem,
+				"id" | "createdAt" | "updatedAt"
+			> = {
+				name: formValues.name,
+				description: formValues.description || undefined,
+				amount: parseFloat(formValues.amount) || 0,
+				category:
+					(formValues.category as
+						| "Food & Ingredients"
+						| "Decorations"
+						| "Tableware"
+						| "Kitchen Supplies"
+						| "Other") || "Food & Ingredients",
+				date: formValues.date || new Date().toISOString(),
+				isExpense: true,
+			};
+			dispatch(
+				updateThanksgivingBudgetItem({ ...editingItem, ...updatedItem })
+			);
+			setEditingItem(null);
 		}
 	}
 
 	function handleCloseEdit() {
-		setEditingTask(null);
+		setEditingItem(null);
 	}
 
 	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteThanksgivingTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+		if (deleteConfirm.itemId) {
+			dispatch(deleteThanksgivingBudgetItem(deleteConfirm.itemId));
+			setDeleteConfirm({ show: false, itemId: null });
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
+		setDeleteConfirm({ show: false, itemId: null });
 	}
 
-	function sortTasks(tasksToSort: Task[]): Task[] {
+	function sortItems(
+		itemsToSort: ThanksgivingBudgetItem[]
+	): ThanksgivingBudgetItem[] {
 		switch (sortBy) {
-			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
-				return [...tasksToSort].sort(
-					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
-				);
-			case "dateDue":
-				return [...tasksToSort].sort((a, b) => {
-					if (!a.dueDate && !b.dueDate) return 0;
-					if (!a.dueDate) return 1;
-					if (!b.dueDate) return -1;
-					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+			case "amount":
+				return [...itemsToSort].sort((a, b) => b.amount - a.amount); // High to low
+			case "date":
+				return [...itemsToSort].sort((a, b) => {
+					return new Date(a.date).getTime() - new Date(b.date).getTime();
 				});
-			case "assignedTo":
-				return [...tasksToSort].sort((a, b) =>
-					(a.assignedTo || "").localeCompare(b.assignedTo || "")
-				);
 			case "category":
-				return [...tasksToSort].sort((a, b) =>
-					(a.category || "").localeCompare(b.category || "")
+				return [...itemsToSort].sort((a, b) =>
+					a.category.localeCompare(b.category)
 				);
-			case "cost":
-				return [...tasksToSort].sort((a, b) => {
-					const getCost = (task: Task) => {
-						if (!task.description) return 0;
-						const costMatch = task.description.match(/Cost: \$(\d+\.?\d*)/);
-						return costMatch ? parseFloat(costMatch[1]) : 0;
-					};
-					return getCost(b) - getCost(a); // High to low
-				});
+			case "name":
+				return [...itemsToSort].sort((a, b) => a.name.localeCompare(b.name));
 			default:
-				return tasksToSort;
+				return itemsToSort;
 		}
 	}
 
@@ -199,9 +179,7 @@ export default function ThanksgivingShoppingListPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(shoppingItems);
-	const incompleteTasks = sortedTasks.filter((task: Task) => !task.isCompleted);
-	const completedTasks = sortedTasks.filter((task: Task) => task.isCompleted);
+	const sortedItems = sortItems(budgetItems);
 
 	return (
 		<div className="min-h-screen thanksgiving-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -212,103 +190,48 @@ export default function ThanksgivingShoppingListPage() {
 				sortTitle="Sort shopping items"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Thanksgiving" />
+				<BudgetDisplay
+					holiday="Thanksgiving"
+					holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
+				/>
 
-				<AddButton title="Shopping Item" onClick={openForm} color="orange" />
+				<AddButton title="Shopping Item" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "priority" && "Sorted by Priority"}
-							{sortBy === "dateDue" && "Sorted by Date Due"}
-							{sortBy === "assignedTo" && "Sorted by Assigned To"}
+							{sortBy === "amount" && "Sorted by Amount (High to Low)"}
+							{sortBy === "date" && "Sorted by Date"}
 							{sortBy === "category" && "Sorted by Category"}
-							{sortBy === "cost" && "Sorted by Cost (High to Low)"}
+							{sortBy === "name" && "Sorted by Name"}
 						</div>
 					)}
 				</div>
 
-				{/* Shopping List Summary */}
-				<div className="bg-white rounded-lg shadow-lg p-6">
-					<h2 className="text-xl font-bold mb-4 text-gray-800">
-						Shopping Progress
-					</h2>
-					<div className="grid grid-cols-2 gap-4 mb-4">
-						<div className="text-center">
-							<div className="text-2xl font-bold text-amber-600">
-								{totalItems}
-							</div>
-							<div className="text-sm text-gray-600">Total Items</div>
-						</div>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-green-600">
-								{completedItems}
-							</div>
-							<div className="text-sm text-gray-600">Completed</div>
-						</div>
-					</div>
-					<div className="text-center">
-						<div className="text-2xl font-bold text-amber-600">
-							${totalSpent.toFixed(2)}
-						</div>
-						<div className="text-sm text-gray-600">Total Spent</div>
-					</div>
-				</div>
-
-				<TaskSection
-					title="Incomplete"
-					items={incompleteTasks}
-					isCompleted={false}
-					emptyMessage="All shopping items completed! 🎉"
-					completedMessage="All shopping items completed! 🎉"
-					renderItem={(task: Task) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleTask}
-							onDelete={handleDeleteTask}
-							onEdit={handleEditTask}
-							theme={{
-								accentColor: "#d97706", // Amber for Thanksgiving
-							}}
-							borderColor="rgb(var(--color-amber-500))" // Amber border for Thanksgiving
-						/>
-					)}
-				/>
-
-				<TaskSection
-					title="Completed"
-					items={completedTasks}
-					isCompleted={true}
-					emptyMessage="No completed shopping items yet."
-					completedMessage="No completed shopping items yet."
-					renderItem={(task: Task) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleTask}
-							onDelete={handleDeleteTask}
-							onEdit={handleEditTask}
-							className="opacity-60"
-							theme={{
-								accentColor: "#d97706", // Amber for Thanksgiving
-							}}
-							borderColor="rgb(var(--color-amber-500))" // Amber border for Thanksgiving
-						/>
-					)}
+				{/* Shopping Items List */}
+				<ShoppingListItems
+					items={sortedItems}
+					title="Shopping Items"
+					emptyMessage="No shopping items yet. Add your first item!"
+					onEditItem={handleEditItem}
+					onDeleteItem={handleDeleteItem}
+					accentColor="amber"
+					accentColorLight="amber-100"
+					accentColorDark="amber-800"
+					holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
 				/>
 			</main>
 
 			{/* Form Modal */}
 			<FormModal
 				isOpen={showForm}
-				title="Add New List Item"
+				title="Add New Shopping Item"
 				fields={[
 					{
-						id: "title",
+						id: "name",
 						type: "text",
-						placeholder: "List Item*",
+						placeholder: "Item Name*",
 						required: true,
 					},
 					{
@@ -318,39 +241,98 @@ export default function ThanksgivingShoppingListPage() {
 						rows: 2,
 					},
 					{
-						id: "priority",
+						id: "amount",
+						type: "number",
+						placeholder: "Amount*",
+						step: "0.01",
+						required: true,
+					},
+					{
+						id: "category",
 						type: "select",
-						placeholder: "Priority",
+						placeholder: "Category",
 						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
+							{ value: "Food & Ingredients", label: "Food & Ingredients" },
+							{ value: "Decorations", label: "Decorations" },
+							{ value: "Tableware", label: "Tableware" },
+							{ value: "Kitchen Supplies", label: "Kitchen Supplies" },
+							{ value: "Other", label: "Other" },
 						],
 					},
 					{
-						id: "cost",
-						type: "number",
-						placeholder: "Cost",
-						step: "0.01",
+						id: "date",
+						type: "date",
+						placeholder: "Date",
 					},
 				]}
-				initialValues={{ priority: "medium", category: "Shopping List" }}
-				onSubmit={handleAddTask}
+				initialValues={{ category: "Food & Ingredients" }}
+				onSubmit={handleAddItem}
 				onClose={closeForm}
 				loading={loading}
 				submitText={loading ? "Adding..." : "Add Item"}
 				cancelText="Cancel"
-				cardClassName="card card-tasks"
 				submitButtonColor="#d97706"
 			/>
 
-			{/* Edit Task Modal */}
-			<EditTaskModal
-				isOpen={editingTask !== null}
-				task={editingTask}
+			{/* Edit Item Modal */}
+			<FormModal
+				isOpen={editingItem !== null}
+				title="Edit Shopping Item"
+				fields={[
+					{
+						id: "name",
+						type: "text",
+						placeholder: "Item Name*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "amount",
+						type: "number",
+						placeholder: "Amount*",
+						step: "0.01",
+						required: true,
+					},
+					{
+						id: "category",
+						type: "select",
+						placeholder: "Category",
+						options: [
+							{ value: "Food & Ingredients", label: "Food & Ingredients" },
+							{ value: "Decorations", label: "Decorations" },
+							{ value: "Tableware", label: "Tableware" },
+							{ value: "Kitchen Supplies", label: "Kitchen Supplies" },
+							{ value: "Other", label: "Other" },
+						],
+					},
+					{
+						id: "date",
+						type: "date",
+						placeholder: "Date",
+					},
+				]}
+				initialValues={
+					editingItem
+						? {
+								name: editingItem.name,
+								description: editingItem.description || "",
+								amount: editingItem.amount,
+								category: editingItem.category,
+								date: editingItem.date.split("T")[0],
+						  }
+						: {}
+				}
+				onSubmit={handleSaveEdit}
 				onClose={handleCloseEdit}
-				onSave={handleSaveEdit}
 				loading={loading}
+				submitText={loading ? "Saving..." : "Save Changes"}
+				cancelText="Cancel"
+				submitButtonColor="#d97706"
 			/>
 
 			{/* Delete Confirmation Modal */}
@@ -360,6 +342,7 @@ export default function ThanksgivingShoppingListPage() {
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
 				loading={loading}
+				cardClassName="card"
 			/>
 
 			{/* Sort Modal */}
@@ -372,11 +355,10 @@ export default function ThanksgivingShoppingListPage() {
 				}
 				sortOptions={[
 					{ value: "none", label: "None" },
-					{ value: "priority", label: "Priority" },
-					{ value: "dateDue", label: "Date Due" },
-					{ value: "assignedTo", label: "Assigned To" },
+					{ value: "amount", label: "Amount (High to Low)" },
+					{ value: "date", label: "Date" },
 					{ value: "category", label: "Category" },
-					{ value: "cost", label: "Cost (High to Low)" },
+					{ value: "name", label: "Name" },
 				]}
 				title="Sort Shopping Items"
 			/>

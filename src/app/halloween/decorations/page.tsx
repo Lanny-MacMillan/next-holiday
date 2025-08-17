@@ -19,6 +19,7 @@ import TaskSection from "@/components/common/TaskSection";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { DecorationsListItem } from "@/components/cards/decorations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -64,6 +65,13 @@ export default function HalloweenDecorationsPage() {
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 	const [editingTask, setEditingTask] = useState<HalloweenTask | null>(null);
+	const [deleteConfirm, setDeleteConfirm] = useState<{
+		show: boolean;
+		taskId: string | null;
+	}>({
+		show: false,
+		taskId: null,
+	});
 
 	useEffect(() => {
 		if (!initialized) {
@@ -122,11 +130,22 @@ export default function HalloweenDecorationsPage() {
 	}
 
 	function handleDeleteTask(taskId: string) {
-		dispatch(deleteHalloweenTask(taskId));
+		setDeleteConfirm({ show: true, taskId });
 	}
 
 	function handleEdit(task: HalloweenTask) {
 		setEditingTask(task);
+	}
+
+	function confirmDelete() {
+		if (deleteConfirm.taskId) {
+			dispatch(deleteHalloweenTask(deleteConfirm.taskId));
+			setDeleteConfirm({ show: false, taskId: null });
+		}
+	}
+
+	function cancelDelete() {
+		setDeleteConfirm({ show: false, taskId: null });
 	}
 
 	function handleSortChange(sortOption: string) {
@@ -173,32 +192,37 @@ export default function HalloweenDecorationsPage() {
 	const incompleteTasks = sortedTasks.filter((task) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task) => task.isCompleted);
 
+	// Placeholder edit function - can be implemented later
+	const handleEditTaskDecoration = (task: any) => {
+		console.log("Edit task functionality not yet implemented for:", task);
+		// TODO: Implement edit modal/functionality
+	};
+
 	const renderTaskCard = (task: HalloweenTask) => (
-		<ToDoCard
+		<DecorationsListItem
 			key={task.id}
 			task={task}
-			onToggleComplete={handleToggleTask}
-			onDelete={handleDeleteTask}
-			onEdit={handleEdit}
-			theme={{
-				accentColor: "#f97316",
-				hoverColor: "hover:bg-orange-50 dark:hover:bg-orange-900/20",
-			}}
-			borderColor="#f97316"
+			onToggleTask={handleToggleTask}
+			onDeleteTask={handleDeleteTask}
+			onEditTask={handleEditTaskDecoration}
+			loading={loading}
+			holidayColor="bg-gradient-to-br from-orange-400 to-orange-600" // Halloween orange color
 		/>
 	);
 
 	return (
 		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="🎃 Decorations Checklist"
+				title="🎃 Decorations"
 				backHref="/halloween"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Tasks"
+				description="Keep track of your Halloween decorations!"
+				holidayColor="orange-500"
 				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				{/* Default Tasks Modal */}
 				{showDefaultTasks && (
 					<div className="card rounded-lg p-6 mb-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700">
@@ -221,7 +245,7 @@ export default function HalloweenDecorationsPage() {
 				<AddButton
 					title="Task"
 					onClick={() => setShowForm(true)}
-					color="orange"
+					holidayColor="orange"
 				/>
 
 				{/* Task Sections */}
@@ -283,6 +307,16 @@ export default function HalloweenDecorationsPage() {
 				loading={loading}
 				submitText="Update Task"
 				submitButtonColor="#f97316"
+			/>
+
+			{/* Delete Confirmation Modal */}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				{...getDeleteConfig("tasks")}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={loading}
+				cardClassName="card"
 			/>
 		</div>
 	);

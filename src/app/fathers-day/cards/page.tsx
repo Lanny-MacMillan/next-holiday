@@ -136,8 +136,12 @@ export default function FathersDayCardsPage() {
 	}
 
 	const sortedCards = sortCards(cards);
-	const incompleteCards = sortedCards.filter((card: FathersDayCard) => !card.isCompleted);
-	const completedCards = sortedCards.filter((card: FathersDayCard) => card.isCompleted);
+	const incompleteCards = sortedCards.filter(
+		(card: FathersDayCard) => !card.isCompleted
+	);
+	const completedCards = sortedCards.filter(
+		(card: FathersDayCard) => card.isCompleted
+	);
 
 	return (
 		<div className="min-h-screen fathers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -146,11 +150,17 @@ export default function FathersDayCardsPage() {
 				backHref="/fathers-day"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Keep track of holiday cards!"
+				holidayColor="blue-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
-				<AddButton title="Card" onClick={() => setShowForm(true)} color="blue" />
-				
+			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<AddButton
+					title="Card"
+					onClick={() => setShowForm(true)}
+					color="blue"
+				/>
+
 				<TaskSection
 					title="Not Sent"
 					items={incompleteCards}
@@ -169,6 +179,7 @@ export default function FathersDayCardsPage() {
 								accentColor: "#3b82f6",
 							}}
 							borderColor="rgb(var(--color-blue-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
 					)}
 				/>
@@ -191,6 +202,7 @@ export default function FathersDayCardsPage() {
 								accentColor: "#3b82f6",
 							}}
 							borderColor="rgb(var(--color-blue-500))"
+							gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
 					)}
 				/>
@@ -254,4 +266,4 @@ export default function FathersDayCardsPage() {
 			/>
 		</div>
 	);
-} 
+}

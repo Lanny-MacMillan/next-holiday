@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchHanukkahGifts } from "@/store/slices/hanukkah/hanukkahGiftListSlice";
@@ -9,14 +10,16 @@ import { fetchContacts } from "@/store/slices/addressBookSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track your Hanukkah gift ideas",
 		href: "/hanukkah/gift-list",
-		sliceKey: "giftList",
-		category: undefined,
+		sliceKey: "hanukkahGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Candle Lighting Tracker",
@@ -75,6 +78,7 @@ export default function HanukkahPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
+			case "hanukkahGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -117,7 +121,10 @@ export default function HanukkahPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "hanukkahGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -127,6 +134,7 @@ export default function HanukkahPage() {
 											primaryColor: "#3b82f6", // Blue for Hanukkah
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
 									/>
 								</li>
 							);
@@ -148,6 +156,7 @@ export default function HanukkahPage() {
 											accentColor: "#eab308",
 											progressColor: "#3b82f6", // Blue for Hanukkah
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
 									/>
 								</li>
 							);

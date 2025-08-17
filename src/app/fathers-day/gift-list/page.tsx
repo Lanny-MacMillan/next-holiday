@@ -175,6 +175,7 @@ export default function FathersDayGiftListPage() {
 				accentColor: "#3b82f6", // Blue for Father's Day
 			}}
 			borderColor="rgb(var(--color-blue-500))" // Blue border for Father's Day
+			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 		/>
 	);
 
@@ -191,6 +192,7 @@ export default function FathersDayGiftListPage() {
 				accentColor: "#3b82f6", // Blue for Father's Day
 			}}
 			borderColor="rgb(var(--color-blue-500))" // Blue border for Father's Day
+			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 		/>
 	);
 
@@ -260,11 +262,16 @@ export default function FathersDayGiftListPage() {
 				backHref="/fathers-day"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="blue-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Father's Day" />
+				<BudgetDisplay
+					holiday="Father's Day"
+					holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+				/>
 
 				<AddButton title="Gift" onClick={openForm} color="blue" />
 				<div className="flex items-center justify-center">

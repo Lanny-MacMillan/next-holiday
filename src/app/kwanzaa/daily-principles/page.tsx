@@ -14,8 +14,92 @@ import {
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import TaskSection from "@/components/common/TaskSection";
+import EventItems from "@/components/cards/event/EventItems";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
+
+// Helper function to get day number from principle ID
+const getDayNumber = (taskId: string): number => {
+	const match = taskId.match(/principle_(\d+)/);
+	return match ? parseInt(match[1]) : 0;
+};
+
+// Helper function to get alternating color for each day
+const getDayColor = (
+	dayNumber: number
+): { themeColor: string; holidayColor: string; backgroundColor: string } => {
+	switch (dayNumber) {
+		case 1:
+			return {
+				themeColor: "black",
+				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
+			};
+		case 2:
+			return {
+				themeColor: "red",
+				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
+			};
+		case 3:
+			return {
+				themeColor: "green",
+				holidayColor: "bg-gradient-to-br from-green-400 to-green-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(34, 197, 94), rgb(21, 128, 61))",
+			};
+		case 4:
+			return {
+				themeColor: "black",
+				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
+			};
+		case 5:
+			return {
+				themeColor: "red",
+				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
+			};
+		case 6:
+			return {
+				themeColor: "green",
+				holidayColor: "bg-gradient-to-br from-green-400 to-green-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(34, 197, 94), rgb(21, 128, 61))",
+			};
+		case 7:
+			return {
+				themeColor: "black",
+				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
+			};
+		default:
+			return {
+				themeColor: "red",
+				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
+				backgroundColor:
+					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
+			};
+	}
+};
+
+// Helper function to add day prefix to title
+const addDayPrefix = (task: KwanzaaTask): KwanzaaTask => {
+	const dayNumber = getDayNumber(task.id);
+	if (dayNumber > 0) {
+		return {
+			...task,
+			title: `Day ${dayNumber} — ${task.title}`,
+		};
+	}
+	return task;
+};
 
 export default function DailyPrinciplesPage() {
 	const dispatch = useAppDispatch();
@@ -104,7 +188,11 @@ export default function DailyPrinciplesPage() {
 	const principleTasks = tasks.filter(
 		(task: KwanzaaTask) => task.category === "Daily Principles"
 	);
-	const sortedTasks = sortTasks(principleTasks);
+
+	// Add day prefixes to principle tasks
+	const principleTasksWithPrefixes = principleTasks.map(addDayPrefix);
+
+	const sortedTasks = sortTasks(principleTasksWithPrefixes);
 	const incompleteTasks = sortedTasks.filter(
 		(task: KwanzaaTask) => !task.isCompleted
 	);
@@ -112,104 +200,38 @@ export default function DailyPrinciplesPage() {
 		(task: KwanzaaTask) => task.isCompleted
 	);
 
-	const renderTaskItem = (task: KwanzaaTask) => (
-		<li
-			key={task.id}
-			className="flex items-center px-4 py-3 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20"
-			onClick={() => handleToggleTask(task.id)}
-		>
-			<input
-				type="checkbox"
-				checked={task.isCompleted}
-				readOnly
-				className="mr-3 accent-red-500"
+	const renderTaskItem = (task: KwanzaaTask) => {
+		const dayNumber = getDayNumber(task.id);
+		const { themeColor, holidayColor, backgroundColor } =
+			getDayColor(dayNumber);
+
+		return (
+			<EventItems
+				key={task.id}
+				task={task}
+				onToggleTask={handleToggleTask}
+				onDeleteTask={handleDeleteTask}
+				loading={loading}
+				themeColor={themeColor}
+				holidayColor={holidayColor}
+				backgroundColor={backgroundColor}
+				gamified={true}
 			/>
-			<div className="flex-1">
-				<div
-					className={`text-gray-900 dark:text-white ${
-						task.isCompleted ? "line-through" : ""
-					}`}
-				>
-					{task.title}
-				</div>
-				{task.description && (
-					<div
-						className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${
-							task.isCompleted ? "line-through" : ""
-						}`}
-					>
-						{task.description}
-					</div>
-				)}
-				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-					<span
-						className={`px-2 py-1 rounded ${
-							task.priority === "high"
-								? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-								: task.priority === "medium"
-								? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-								: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-						}`}
-					>
-						{task.priority}
-					</span>
-					{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}
-					{task.category && <span>{task.category}</span>}
-					{task.dueDate && (
-						<span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-					)}
-				</div>
-				{task.isCompleted && task.completedDate && (
-					<div className="text-xs text-red-600 dark:text-red-400 mt-1">
-						Completed: {new Date(task.completedDate).toLocaleDateString()}
-					</div>
-				)}
-			</div>
-			<button
-				onClick={(e) => {
-					e.stopPropagation();
-					handleDeleteTask(task.id, task.title);
-				}}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-				disabled={loading}
-			>
-				Delete
-			</button>
-		</li>
-	);
+		);
+	};
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/kwanzaa"
-						className="absolute left-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Daily Principle Tracker
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-						title="Sort tasks"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<HolidayPageHeader
+				title="Seven Principles of Kwanzaa"
+				backHref="/kwanzaa"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort gifts"
+				description="Track each day's candle and reflection"
+				holidayColor="red-500"
+				error={error}
+			/>
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -225,7 +247,7 @@ export default function DailyPrinciplesPage() {
 					title="Incomplete"
 					items={incompleteTasks}
 					isCompleted={false}
-					emptyMessage="All candles lit! 🕯️✨"
+					emptyMessage="All principles practiced! 🕯️✨"
 					completedMessage=""
 					renderItem={renderTaskItem}
 					cardClassName="card-tasks"
@@ -236,8 +258,8 @@ export default function DailyPrinciplesPage() {
 					title="Completed"
 					items={completedTasks}
 					isCompleted={true}
-					emptyMessage=""
-					completedMessage="No completed tasks yet."
+					emptyMessage="No completed principles yet."
+					completedMessage="No completed principles yet."
 					renderItem={renderTaskItem}
 					cardClassName="card-tasks"
 					borderColor="rgb(var(--color-red-500))"

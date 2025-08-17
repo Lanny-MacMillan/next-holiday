@@ -127,16 +127,18 @@ export default function AnniversaryDateIdeasPage() {
 			<HolidayPageHeader
 				title="Date Ideas"
 				backHref="/anniversary"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Date Ideas"
+				description="Plan your anniversary date ideas with style!"
+				holidayColor="pink-500"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Date Idea"
 					onClick={() => setShowAddForm(true)}
-					color="purple"
+					color="pink"
 				/>
 
 				<TaskSection
@@ -152,6 +154,8 @@ export default function AnniversaryDateIdeasPage() {
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
 							onEdit={handleEdit}
+							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -170,6 +174,8 @@ export default function AnniversaryDateIdeasPage() {
 							onDelete={handleDelete}
 							onEdit={handleEdit}
 							className="opacity-60"
+							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -240,7 +246,6 @@ export default function AnniversaryDateIdeasPage() {
 				}}
 				loading={loading}
 				submitText={editingTask ? "Update Date Idea" : "Add Date Idea"}
-				cardClassName="card-events-easter"
 				submitButtonColor="#ec4899"
 			/>
 
@@ -255,7 +260,6 @@ export default function AnniversaryDateIdeasPage() {
 					setTaskToDelete(null);
 				}}
 				loading={loading}
-				cardClassName="card-events-easter"
 				confirmButtonColor="#ec4899"
 			/>
 		</div>

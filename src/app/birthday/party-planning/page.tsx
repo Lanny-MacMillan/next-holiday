@@ -103,9 +103,17 @@ export default function BirthdayPartyPlanningPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskOrId: any) => {
+		// Handle both task object and task ID
+		const task =
+			typeof taskOrId === "string"
+				? partyPlanningTasks.find((t) => t.id === taskOrId)
+				: taskOrId;
+
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -129,12 +137,14 @@ export default function BirthdayPartyPlanningPage() {
 			<HolidayPageHeader
 				title="Party Planning"
 				backHref="/birthday"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Party Planning"
+				description="Plan your birthday party with style!"
+				holidayColor="yellow-500"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Task"
 					onClick={() => setShowAddForm(true)}
@@ -154,6 +164,12 @@ export default function BirthdayPartyPlanningPage() {
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
 							onEdit={handleEdit}
+							theme={{
+								accentColor: "#f59e0b", // Amber for Birthday
+							}}
+							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -172,6 +188,12 @@ export default function BirthdayPartyPlanningPage() {
 							onDelete={handleDelete}
 							onEdit={handleEdit}
 							className="opacity-60"
+							theme={{
+								accentColor: "#f59e0b", // Amber for Birthday
+							}}
+							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+							disableInternalModal={true}
 						/>
 					)}
 				/>

@@ -51,7 +51,7 @@ export default function BirthdayCardsPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddCard(formValues: Record<string, any>) {
-		if (!formValues.recipient?.trim() || !formValues.message?.trim()) return;
+		if (!formValues.recipient || (typeof formValues.recipient === "string" && !formValues.recipient.trim()) || !formValues.message || (typeof formValues.message === "string" && !formValues.message.trim())) return;
 
 		if (editingCard) {
 			// Update existing card
@@ -150,8 +150,12 @@ export default function BirthdayCardsPage() {
 	}
 
 	const sortedCards = sortCards(cards);
-	const incompleteCards = sortedCards.filter((card: BirthdayCard) => !card.isCompleted);
-	const completedCards = sortedCards.filter((card: BirthdayCard) => card.isCompleted);
+	const incompleteCards = sortedCards.filter(
+		(card: BirthdayCard) => !card.isCompleted
+	);
+	const completedCards = sortedCards.filter(
+		(card: BirthdayCard) => card.isCompleted
+	);
 
 	return (
 		<div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -160,9 +164,11 @@ export default function BirthdayCardsPage() {
 				backHref="/birthday"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort cards"
+				description="Plan your birthday celebrations with style!"
+				holidayColor="yellow-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Card" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -196,6 +202,7 @@ export default function BirthdayCardsPage() {
 								accentColor: "#f59e0b", // Amber for Birthday
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 						/>
 					)}
 				/>
@@ -221,6 +228,7 @@ export default function BirthdayCardsPage() {
 								accentColor: "#f59e0b", // Amber for Birthday
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
+							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 						/>
 					)}
 				/>
@@ -289,4 +297,4 @@ export default function BirthdayCardsPage() {
 			/>
 		</div>
 	);
-} 
+}

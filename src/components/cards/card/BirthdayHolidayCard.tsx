@@ -24,12 +24,15 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 	borderColor,
 }) => {
 	const accentColor = theme.accentColor;
-	const hoverColor = theme.hoverColor || "hover:bg-amber-50 dark:hover:bg-amber-900/20";
-	const borderStyle = borderColor ? { borderLeft: `4px solid ${borderColor}` } : {};
+	const hoverColor =
+		theme.hoverColor || "hover:bg-amber-50 dark:hover:bg-amber-900/20";
+	const borderStyle = borderColor
+		? { borderLeft: `4px solid ${borderColor}` }
+		: {};
 
 	return (
 		<li
-			className={`flex items-center px-4 py-3 cursor-pointer ${hoverColor} ${
+			className={`flex items-center px-3 sm:px-4 py-3 sm:py-4 cursor-pointer ${hoverColor} ${
 				card.isCompleted ? "opacity-60" : ""
 			}`}
 			style={borderStyle}
@@ -44,8 +47,10 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 			/>
 			<div className="flex-1">
 				<div
-					className={`text-gray-800 dark:text-white ${
-						card.isCompleted ? "line-through text-gray-400 dark:text-gray-500" : ""
+					className={`text-sm sm:text-base text-gray-800 dark:text-white ${
+						card.isCompleted
+							? "line-through text-gray-400 dark:text-gray-500"
+							: ""
 					}`}
 				>
 					To: {card.recipient}
@@ -84,7 +89,7 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 						e.stopPropagation();
 						onEdit(card);
 					}}
-					className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+					className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm"
 					disabled={loading}
 				>
 					Edit
@@ -94,7 +99,7 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 						e.stopPropagation();
 						onDelete(card.id);
 					}}
-					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
 					disabled={loading}
 				>
 					Delete
@@ -104,4 +109,4 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 	);
 };
 
-export default BirthdayHolidayCard; 
+export default BirthdayHolidayCard;

@@ -6,6 +6,8 @@ import { fetchFourthOfJulyTasks } from "@/store/slices/fourth-of-july/fourthOfJu
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const fourthOfJulySubsections = [
 	{
@@ -87,6 +89,7 @@ export default function FourthOfJulyPage() {
 											primaryColor: "#dc2626", // Red for Fourth of July
 											accentColor: "#f87171",
 										}}
+										holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 									/>
 								</li>
 							);
@@ -107,6 +110,7 @@ export default function FourthOfJulyPage() {
 										accentColor: "#f87171",
 										progressColor: "#dc2626",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 								/>
 							</li>
 						);

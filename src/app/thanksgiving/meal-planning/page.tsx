@@ -11,7 +11,11 @@ import {
 } from "@/store/slices/thanksgiving/thanksgivingMealPlanningSlice";
 
 import SortModal from "@/components/modals/SortModal";
-import RecipeCard, { Recipe } from "@/components/cards/recipe/RecipeCard";
+import {
+	RecipeCard,
+	MealPlanningSummaryCard,
+	Recipe,
+} from "@/components/cards/recipe";
 import EditRecipeModal from "@/components/modals/EditRecipeModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
@@ -34,6 +38,7 @@ export default function ThanksgivingMealPlanningPage() {
 	const { recipes, loading, error, initialized } = useAppSelector(
 		(state: any) => state.thanksgivingMealPlanning
 	);
+	const { settings } = useAppSelector((state: any) => state.theme);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
@@ -53,11 +58,6 @@ export default function ThanksgivingMealPlanningPage() {
 			dispatch(fetchThanksgivingRecipes());
 		}
 	}, [dispatch, initialized]);
-
-	const totalRecipes = recipes.length;
-	const completedRecipesCount = recipes.filter(
-		(recipe: Recipe) => recipe.isCompleted
-	).length;
 
 	function handleAddRecipe(formValues: Record<string, any>) {
 		console.log("Form values received:", formValues);
@@ -206,40 +206,20 @@ export default function ThanksgivingMealPlanningPage() {
 				backHref="/thanksgiving"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort recipes"
+				description="Keep track of your Thanksgiving meal planning!"
+				holidayColor="amber-600"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Meal Planning Summary */}
-				<div className="bg-white rounded-lg shadow-lg p-6">
-					<h2 className="text-xl font-bold mb-4 text-gray-800">
-						Meal Planning Progress
-					</h2>
-					<div className="grid grid-cols-2 gap-4 mb-4">
-						<div className="text-center">
-							<div className="text-2xl font-bold text-amber-600">
-								{totalRecipes}
-							</div>
-							<div className="text-sm text-gray-600">Total Recipes</div>
-						</div>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-green-600">
-								{completedRecipesCount}
-							</div>
-							<div className="text-sm text-gray-600">Completed</div>
-						</div>
-					</div>
-					<div className="text-center">
-						<div className="text-2xl font-bold text-amber-600">
-							{totalRecipes > 0
-								? Math.round((completedRecipesCount / totalRecipes) * 100)
-								: 0}
-							%
-						</div>
-						<div className="text-sm text-gray-600">Completion Rate</div>
-					</div>
-				</div>
+				<MealPlanningSummaryCard
+					recipes={recipes}
+					title="Meal Planning Progress"
+					accentColor="amber-600"
+					holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
+				/>
 
-				<AddButton title="Recipe" onClick={openForm} color="orange" />
+				<AddButton title="Recipe" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -269,6 +249,8 @@ export default function ThanksgivingMealPlanningPage() {
 								accentColor: "#d97706", // Amber for Thanksgiving
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Thanksgiving
+							gamified={settings.displayMode === "gamified"}
+							holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
 						/>
 					)}
 				/>
@@ -290,6 +272,8 @@ export default function ThanksgivingMealPlanningPage() {
 								accentColor: "#d97706", // Amber for Thanksgiving
 							}}
 							borderColor="rgb(var(--color-amber-500))" // Amber border for Thanksgiving
+							gamified={settings.displayMode === "gamified"}
+							holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
 						/>
 					)}
 				/>
@@ -361,7 +345,6 @@ export default function ThanksgivingMealPlanningPage() {
 				loading={loading}
 				submitText={loading ? "Adding..." : "Add Recipe"}
 				cancelText="Cancel"
-				cardClassName="card card-tasks"
 				submitButtonColor="#d97706"
 			/>
 

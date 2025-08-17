@@ -26,35 +26,34 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 		if (isAuthenticated && user && !reduxUser) {
 			// User is authenticated but not in Redux yet
 			const userData = {
+				id: "", // Will be set by the database
 				sub: user.sub!,
 				email: user.email,
 				name: user.name,
 				picture: user.picture,
 				isInDb: false, // Will be updated after DB check
+				isFirstLogin: false, // Will be updated after DB check
+				lastUpdated: new Date().toISOString(),
 			};
 
 			// Add user to Redux
 			dispatch(setUser(userData));
 
-			// Check if user exists in DB
-			dispatch(checkUserInDb(user.sub!)).then((result) => {
-				if (result.meta.requestStatus === "fulfilled") {
-					const { isInDb } = result.payload as { isInDb: boolean };
-
-					if (!isInDb) {
-						// First login - add user to DB
-						console.log("First login detected, adding user to DB:", userData);
-						dispatch(
-							addUserToDb({
-								sub: userData.sub,
-								email: userData.email,
-								name: userData.name,
-								picture: userData.picture,
-							})
-						);
-					}
-				}
+			// Always try to add/update user in DB (the backend will handle if user exists or not)
+			console.log("Syncing user with database:", {
+				sub: userData.sub,
+				email: userData.email,
+				name: userData.name,
+				picture: userData.picture,
 			});
+			dispatch(
+				addUserToDb({
+					sub: userData.sub,
+					email: userData.email,
+					name: userData.name,
+					picture: userData.picture,
+				})
+			);
 		} else if (!isAuthenticated && reduxUser) {
 			// User logged out - clear from Redux
 			dispatch(clearUser());

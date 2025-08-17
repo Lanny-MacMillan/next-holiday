@@ -8,13 +8,16 @@ import { fetchFathersDayCards } from "@/store/slices/fathers-day/fathersDayCards
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const fathersDaySubsections = [
 	{
 		name: "Gift Ideas",
 		description: "Track gift ideas for Father's Day",
 		href: "/fathers-day/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "fathersDayGiftList",
+		category: "Gifts",
 	},
 	{
 		name: "Card List",
@@ -50,6 +53,7 @@ export default function FathersDayPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "fathersDayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -90,7 +94,10 @@ export default function FathersDayPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "fathersDayGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -100,6 +107,7 @@ export default function FathersDayPage() {
 											primaryColor: "#3b82f6", // Blue for Father's Day
 											accentColor: "#60a5fa",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 									/>
 								</li>
 							);
@@ -120,6 +128,7 @@ export default function FathersDayPage() {
 										accentColor: "#60a5fa",
 										progressColor: "#3b82f6",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
 								/>
 							</li>
 						);

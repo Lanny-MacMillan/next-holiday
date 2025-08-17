@@ -54,7 +54,7 @@ export default function BabyShowerGiftListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGift(values: Record<string, any>) {
-		if (!values.description?.trim() || !values.recipient?.trim()) return;
+		if (!values.description || (typeof values.description === "string" && !values.description.trim()) || !values.recipient || (typeof values.recipient === "string" && !values.recipient.trim())) return;
 
 		if (editingGift) {
 			// Update existing gift
@@ -175,6 +175,7 @@ export default function BabyShowerGiftListPage() {
 				accentColor: "#06b6d4", // Cyan for Baby Shower
 			}}
 			borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
+			gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 		/>
 	);
 
@@ -191,6 +192,7 @@ export default function BabyShowerGiftListPage() {
 				accentColor: "#06b6d4", // Cyan for Baby Shower
 			}}
 			borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
+			gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 		/>
 	);
 
@@ -252,13 +254,18 @@ export default function BabyShowerGiftListPage() {
 				backHref="/baby-shower"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Plan your baby shower gift list with style!"
+				holidayColor="cyan-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="Baby Shower" />
+				<BudgetDisplay
+					holiday="Baby Shower"
+					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
+				/>
 
-				<AddButton title="Gift" onClick={openForm} color="blue" />
+				<AddButton title="Gift" onClick={openForm} color="cyan" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

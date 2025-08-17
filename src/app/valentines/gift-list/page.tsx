@@ -196,6 +196,7 @@ export default function ValentinesGiftListPage() {
 				hoverColor: "hover:bg-pink-50 dark:hover:bg-pink-900/20",
 			}}
 			borderColor="#ec4899"
+			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 		/>
 	);
 
@@ -206,17 +207,22 @@ export default function ValentinesGiftListPage() {
 				backHref="/valentines"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
+				description="Keep track of gift ideas and purchases!"
+				holidayColor="pink-500"
 				error={error}
 			/>
 
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay />
+				<BudgetDisplay
+					holiday="Valentine's Day"
+					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+				/>
 
 				<AddButton
 					title="Gift"
 					onClick={() => setShowFormModal(true)}
-					color="purple"
+					color="pink"
 					disabled={loading}
 				/>
 

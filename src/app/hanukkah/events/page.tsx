@@ -16,6 +16,7 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { EventItems } from "@/components/cards/event";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -237,95 +238,16 @@ export default function HanukkahEventsPage() {
 		(task: HanukkahTask) => task.isCompleted
 	);
 
-	const renderTaskItem = (task: HanukkahTask) => (
-		<li
+	const renderEventItem = (task: HanukkahTask) => (
+		<EventItems
 			key={task.id}
-			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
-			onClick={() => handleToggleTask(task.id)}
-		>
-			<input
-				type="checkbox"
-				checked={task.isCompleted}
-				readOnly
-				className="mr-3 accent-blue-500"
-			/>
-			<div className="flex-1">
-				<div className="text-gray-900 dark:text-white">{task.title}</div>
-				{task.description && (
-					<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-						{task.description}
-					</div>
-				)}
-				<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-					<span
-						className={`px-2 py-1 rounded ${
-							task.priority === "high"
-								? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-								: task.priority === "medium"
-								? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-								: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-						}`}
-					>
-						{task.priority}
-					</span>
-					{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}
-					{task.category && <span>{task.category}</span>}
-					{task.dueDate && (
-						<span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-					)}
-				</div>
-			</div>
-			<button
-				onClick={(e) => {
-					e.stopPropagation();
-					handleDeleteTask(task.id, task.title);
-				}}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-				disabled={loading}
-			>
-				Delete
-			</button>
-		</li>
-	);
-
-	const renderCompletedTaskItem = (task: HanukkahTask) => (
-		<li
-			key={task.id}
-			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
-			onClick={() => handleToggleTask(task.id)}
-		>
-			<input
-				type="checkbox"
-				checked={task.isCompleted}
-				readOnly
-				className="mr-3 accent-blue-500"
-			/>
-			<div className="flex-1">
-				<div className="line-through text-gray-400 dark:text-gray-500">
-					{task.title}
-				</div>
-				{task.description && (
-					<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-						{task.description}
-					</div>
-				)}
-				{task.completedDate && (
-					<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-						Completed: {new Date(task.completedDate).toLocaleDateString()}
-					</div>
-				)}
-			</div>
-			<button
-				onClick={(e) => {
-					e.stopPropagation();
-					handleDeleteTask(task.id, task.title);
-				}}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-				disabled={loading}
-			>
-				Delete
-			</button>
-		</li>
+			task={task}
+			onToggleTask={handleToggleTask}
+			onDeleteTask={handleDeleteTask}
+			loading={loading}
+			themeColor="blue"
+			holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
+		/>
 	);
 
 	return (
@@ -335,9 +257,11 @@ export default function HanukkahEventsPage() {
 				backHref="/hanukkah"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of Hanukkah events or plans!"
+				holidayColor="blue-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}
 				{showDefaultTasks && (
 					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
@@ -382,7 +306,7 @@ export default function HanukkahEventsPage() {
 					isCompleted={false}
 					emptyMessage="All events planned! 🎉"
 					completedMessage=""
-					renderItem={renderTaskItem}
+					renderItem={renderEventItem}
 					cardClassName="card-events-hanukkah"
 				/>
 
@@ -392,7 +316,7 @@ export default function HanukkahEventsPage() {
 					isCompleted={true}
 					emptyMessage=""
 					completedMessage="No completed events yet. Complete some tasks to see them here! 🎉"
-					renderItem={renderCompletedTaskItem}
+					renderItem={renderEventItem}
 					cardClassName="card-events-hanukkah"
 				/>
 			</main>

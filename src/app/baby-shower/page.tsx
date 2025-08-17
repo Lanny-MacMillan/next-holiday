@@ -8,22 +8,26 @@ import { fetchBabyShowerContacts } from "@/store/slices/baby-shower/babyShowerAd
 import { fetchBabyShowerGuests } from "@/store/slices/baby-shower/babyShowerGuestListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const subsections = [
 	{
 		name: "Gift Registry Tracker",
 		description: "Track baby shower gifts and registry items",
 		href: "/baby-shower/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "babyShowerGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
 		name: "Guest List",
 		description: "Manage your baby shower guest list",
 		href: "/baby-shower/guest-list",
-		sliceKey: "guestList",
-		type: "task",
+		sliceKey: "babyShowerGuestList",
+		type: "guest-list",
 	},
 	{
 		name: "Games & Activities",
@@ -65,6 +69,7 @@ export default function BabyShowerPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "babyShowerGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -73,6 +78,7 @@ export default function BabyShowerPage() {
 				completed = tasks.filter((task: any) => task.isCompleted).length;
 				break;
 			case "guestList":
+			case "babyShowerGuestList":
 				total = guests.length;
 				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
@@ -114,6 +120,21 @@ export default function BabyShowerPage() {
 											primaryColor: "#06b6d4", // Cyan for Baby Shower
 											accentColor: "#06b6d4", // Cyan accent
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
+									/>
+								</li>
+							);
+						} else if (section.type === "guest-list") {
+							return (
+								<li key={section.name}>
+									<GuestListCard
+										holiday="Baby Shower"
+										href={section.href}
+										theme={{
+											primaryColor: "#06b6d4", // Cyan for Baby Shower
+											accentColor: "#06b6d4", // Cyan accent
+										}}
+										holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 									/>
 								</li>
 							);
@@ -133,6 +154,7 @@ export default function BabyShowerPage() {
 											accentColor: "#06b6d4", // Cyan accent
 											progressColor: "#06b6d4", // Cyan for progress bar
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 									/>
 								</li>
 							);

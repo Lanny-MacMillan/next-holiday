@@ -261,13 +261,15 @@ export default function KwanzaaDecorationsPage() {
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Decorations Checklist"
+				title="Decorations"
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
+				description="Keep track of Decorations!"
+				holidayColor="red-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}
 				{showDefaultTasks && (
 					<div className="card card-tasks rounded-lg p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700">

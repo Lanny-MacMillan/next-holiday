@@ -7,17 +7,19 @@ import { fetchKwanzaaTasks } from "@/store/slices/kwanzaa/kwanzaaTasksSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track your Kwanzaa gift ideas",
 		href: "/kwanzaa/gift-list",
-		sliceKey: "giftList",
-		category: undefined,
+		sliceKey: "kwanzaaGiftList",
+		category: "Gifts",
 	},
 	{
-		name: "Daily Principle Tracker",
+		name: "Daily Principles",
 		description: "Track the seven principles of Kwanzaa",
 		href: "/kwanzaa/daily-principles",
 		sliceKey: "tasks",
@@ -31,7 +33,7 @@ const subsections = [
 		category: "Events",
 	},
 	{
-		name: "Decorations Checklist",
+		name: "Decorations",
 		description: "Stay on top of your Kwanzaa decorations",
 		href: "/kwanzaa/decorations",
 		sliceKey: "tasks",
@@ -65,6 +67,7 @@ export default function KwanzaaPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "kwanzaaGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -103,7 +106,10 @@ export default function KwanzaaPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "kwanzaaGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -113,6 +119,7 @@ export default function KwanzaaPage() {
 											primaryColor: "#dc2626", // Red for Kwanzaa
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 									/>
 								</li>
 							);
@@ -133,6 +140,7 @@ export default function KwanzaaPage() {
 										accentColor: "#eab308",
 										progressColor: "#dc2626",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
 								/>
 							</li>
 						);

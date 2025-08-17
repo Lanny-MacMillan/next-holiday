@@ -14,6 +14,7 @@ import {
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
@@ -177,38 +178,21 @@ export default function NewYearSuppliesListPage() {
 
 	return (
 		<div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/new-year"
-						className="absolute left-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Supplies List
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-xl"
-						title="Sort supplies"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<HolidayPageHeader
+				title="Supplies"
+				backHref="/new-year"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Suppliess"
+				description="Keep track of all your Supplies!"
+				holidayColor="yellow-500"
+				error={error}
+			/>{" "}
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay holiday="New Year" />
+				<BudgetDisplay
+					holiday="New Year"
+					holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
+				/>
 
 				<button
 					onClick={openForm}
@@ -263,7 +247,7 @@ export default function NewYearSuppliesListPage() {
 												</div>
 											)}
 											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												{gift.price > 0 && (
+												{typeof gift.price === "number" && gift.price > 0 && (
 													<span>${gift.price.toFixed(2)}</span>
 												)}
 												{gift.store && <span>Store: {gift.store}</span>}
@@ -318,7 +302,7 @@ export default function NewYearSuppliesListPage() {
 												</div>
 											)}
 											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												{gift.price > 0 && (
+												{typeof gift.price === "number" && gift.price > 0 && (
 													<span>${gift.price.toFixed(2)}</span>
 												)}
 												{gift.store && <span>Store: {gift.store}</span>}
@@ -520,7 +504,6 @@ export default function NewYearSuppliesListPage() {
 					</div>
 				)}
 			</main>
-
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday
 			</footer>

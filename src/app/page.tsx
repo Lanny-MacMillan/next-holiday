@@ -3,14 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
-import CountdownTimer from "@/components/common/CountdownTimer";
+
 import HolidayCard from "@/components/cards/HolidayCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
 import { holidayData } from "@/data/holidayData";
 import { getHolidayCountdownTime } from "@/utils/holidayUtils";
 import GamifiedHolidayCardExample from "@/components/examples/GamifiedHolidayCardExample";
-// import ReduxExample from "@/components/ReduxExample";
-// import ReduxTest from "@/components/ReduxTest";
 
 export default function Home() {
 	// Get state from all Redux slices
@@ -21,6 +19,10 @@ export default function Home() {
 
 	// Get settings to check holiday preferences
 	const { settings } = useAppSelector((state: any) => state.theme);
+	const {
+		preferences: holidayPreferences,
+		loading: holidayPreferencesLoading,
+	} = useAppSelector((state: any) => state.holidayPreferences);
 
 	// Get loading states
 	const cardsLoading = useAppSelector((state) => state.cards?.loading || false);
@@ -34,7 +36,11 @@ export default function Home() {
 
 	// Check if any data is still loading
 	const isLoading =
-		cardsLoading || giftsLoading || tasksLoading || contactsLoading;
+		cardsLoading ||
+		giftsLoading ||
+		tasksLoading ||
+		contactsLoading ||
+		holidayPreferencesLoading;
 
 	// Get all holiday data from Redux state
 	const hanukkahGifts = useAppSelector(
@@ -150,14 +156,22 @@ export default function Home() {
 
 	// Filter holidays based on user preferences
 	const getSelectedHolidays = () => {
-		// If no holiday choices are set, show all holidays (default behavior)
-		if (!settings.holidayChoices || settings.holidayChoices.length === 0) {
-			return holidayData;
+		// Wait for holiday preferences to load from database
+		if (holidayPreferencesLoading) {
+			return []; // Return empty array while loading
 		}
 
-		// Get the list of selected holiday names from settings
-		const selectedHolidayNames = settings.holidayChoices.map(
-			(choice: { holiday: string; budget: number }) => choice.holiday
+		// Use holiday preferences from database (null means empty database)
+		const holidayChoices = holidayPreferences || [];
+
+		// If no holiday choices are set, return empty array (no holidays to show)
+		if (!holidayChoices || holidayChoices.length === 0) {
+			return [];
+		}
+
+		// Get the list of selected holiday names from preferences
+		const selectedHolidayNames = holidayChoices.map(
+			(choice: { holiday: string; budget?: number }) => choice.holiday
 		);
 
 		// Filter holidayData to only include selected holidays
@@ -193,7 +207,9 @@ export default function Home() {
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">
-						Loading your holiday data...
+						{holidayPreferencesLoading
+							? "Loading your holiday preferences..."
+							: "Loading your holiday data..."}
 					</p>
 				</div>
 			</div>
@@ -326,6 +342,31 @@ export default function Home() {
 							const completedItems = holiday.getCompletedItems(state);
 							const totalItems = holiday.getTotalItems(state);
 
+							// Get gamified background color for each holiday
+							const getGamifiedBackgroundColor = (holidayId: string) => {
+								const colorMap: { [key: string]: string } = {
+									christmas: "bg-gradient-to-br from-red-400 to-red-600",
+									hanukkah: "bg-gradient-to-br from-blue-400 to-blue-600",
+									kwanzaa: "bg-gradient-to-br from-red-400 to-red-600",
+									"new-year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
+									valentines: "bg-gradient-to-br from-pink-300 to-pink-500",
+									easter: "bg-gradient-to-br from-purple-300 to-purple-500",
+									halloween: "bg-gradient-to-br from-orange-400 to-orange-600",
+									thanksgiving: "bg-gradient-to-br from-amber-400 to-amber-600",
+									"mothers-day": "bg-gradient-to-br from-pink-300 to-pink-500",
+									"fathers-day": "bg-gradient-to-br from-blue-300 to-blue-500",
+									"fourth-of-july": "bg-gradient-to-br from-red-400 to-red-600",
+									birthday: "bg-gradient-to-br from-yellow-300 to-yellow-500",
+									anniversary: "bg-gradient-to-br from-pink-300 to-pink-500",
+									graduation: "bg-gradient-to-br from-purple-300 to-purple-500",
+									"baby-shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
+								};
+								return (
+									colorMap[holidayId] ||
+									"bg-gradient-to-br from-gray-400 to-gray-600"
+								);
+							};
+
 							return (
 								<HolidayCard
 									key={holiday.id}
@@ -337,18 +378,15 @@ export default function Home() {
 									progress={progress}
 									completedItems={completedItems}
 									totalItems={totalItems}
+									gamifiedBackgroundColor={getGamifiedBackgroundColor(
+										holiday.id
+									)}
 								/>
 							);
 						})}
 					</ul>
 				)}
 			</main>
-			{/* <div className="w-full max-w-4xl mt-8">
-				<ReduxExample />
-				<div className="mt-8">
-					<ReduxTest />
-				</div>
-			</div> */}
 
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
 				&copy; {new Date().getFullYear()} Next Holiday

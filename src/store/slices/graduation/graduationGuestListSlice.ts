@@ -106,13 +106,13 @@ export const addGraduationGuest = createAsyncThunk(
 	}
 );
 
-export const updateThanksgivingGuest = createAsyncThunk(
-	"thanksgivingGuestList/updateThanksgivingGuest",
-	async (guest: Guest) => {
+export const updateGraduationGuest = createAsyncThunk(
+	"graduationGuestList/updateGraduationGuest",
+	async (guest: GraduationGuest) => {
 		// Simulate API call
-		const response = await new Promise<Guest>((resolve) => {
+		const response = await new Promise<GraduationGuest>((resolve) => {
 			setTimeout(() => {
-				const updatedGuest: Guest = {
+				const updatedGuest: GraduationGuest = {
 					...guest,
 					updatedAt: new Date().toISOString(),
 				};
@@ -123,8 +123,8 @@ export const updateThanksgivingGuest = createAsyncThunk(
 	}
 );
 
-export const deleteThanksgivingGuest = createAsyncThunk(
-	"thanksgivingGuestList/deleteThanksgivingGuest",
+export const deleteGraduationGuest = createAsyncThunk(
+	"graduationGuestList/deleteGraduationGuest",
 	async (guestId: string) => {
 		// Simulate API call
 		await new Promise<void>((resolve) => {
@@ -136,12 +136,12 @@ export const deleteThanksgivingGuest = createAsyncThunk(
 	}
 );
 
-export const toggleThanksgivingGuestCompletion = createAsyncThunk(
-	"thanksgivingGuestList/toggleThanksgivingGuestCompletion",
+export const toggleGraduationGuestCompletion = createAsyncThunk(
+	"graduationGuestList/toggleGraduationGuestCompletion",
 	async (guestId: string, { getState }) => {
 		const state = getState() as any;
-		const guest = state.thanksgivingGuestList.guests.find(
-			(g: Guest) => g.id === guestId
+		const guest = state.graduationGuestList.guests.find(
+			(g: GraduationGuest) => g.id === guestId
 		);
 
 		if (!guest) {
@@ -149,9 +149,9 @@ export const toggleThanksgivingGuestCompletion = createAsyncThunk(
 		}
 
 		// Simulate API call
-		const response = await new Promise<Guest>((resolve) => {
+		const response = await new Promise<GraduationGuest>((resolve) => {
 			setTimeout(() => {
-				const updatedGuest: Guest = {
+				const updatedGuest: GraduationGuest = {
 					...guest,
 					isCompleted: !guest.isCompleted,
 					completedDate: !guest.isCompleted
@@ -166,11 +166,14 @@ export const toggleThanksgivingGuestCompletion = createAsyncThunk(
 	}
 );
 
-const thanksgivingGuestListSlice = createSlice({
-	name: "thanksgivingGuestList",
+const graduationGuestListSlice = createSlice({
+	name: "graduationGuestList",
 	initialState,
 	reducers: {
-		setSelectedGuest: (state, action: PayloadAction<Guest | null>) => {
+		setSelectedGuest: (
+			state,
+			action: PayloadAction<GraduationGuest | null>
+		) => {
 			state.selectedGuest = action.payload;
 		},
 		clearError: (state) => {
@@ -180,38 +183,38 @@ const thanksgivingGuestListSlice = createSlice({
 	extraReducers: (builder) => {
 		builder
 			// Fetch guests
-			.addCase(fetchThanksgivingGuests.pending, (state) => {
+			.addCase(fetchGraduationGuests.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(fetchThanksgivingGuests.fulfilled, (state, action) => {
+			.addCase(fetchGraduationGuests.fulfilled, (state, action) => {
 				state.loading = false;
 				state.guests = action.payload;
 				state.initialized = true;
 			})
-			.addCase(fetchThanksgivingGuests.rejected, (state, action) => {
+			.addCase(fetchGraduationGuests.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to fetch guests";
 			})
 			// Add guest
-			.addCase(addThanksgivingGuest.pending, (state) => {
+			.addCase(addGraduationGuest.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(addThanksgivingGuest.fulfilled, (state, action) => {
+			.addCase(addGraduationGuest.fulfilled, (state, action) => {
 				state.loading = false;
 				state.guests.push(action.payload);
 			})
-			.addCase(addThanksgivingGuest.rejected, (state, action) => {
+			.addCase(addGraduationGuest.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to add guest";
 			})
 			// Update guest
-			.addCase(updateThanksgivingGuest.pending, (state) => {
+			.addCase(updateGraduationGuest.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(updateThanksgivingGuest.fulfilled, (state, action) => {
+			.addCase(updateGraduationGuest.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.guests.findIndex(
 					(guest) => guest.id === action.payload.id
@@ -220,31 +223,31 @@ const thanksgivingGuestListSlice = createSlice({
 					state.guests[index] = action.payload;
 				}
 			})
-			.addCase(updateThanksgivingGuest.rejected, (state, action) => {
+			.addCase(updateGraduationGuest.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to update guest";
 			})
 			// Delete guest
-			.addCase(deleteThanksgivingGuest.pending, (state) => {
+			.addCase(deleteGraduationGuest.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(deleteThanksgivingGuest.fulfilled, (state, action) => {
+			.addCase(deleteGraduationGuest.fulfilled, (state, action) => {
 				state.loading = false;
 				state.guests = state.guests.filter(
 					(guest) => guest.id !== action.payload
 				);
 			})
-			.addCase(deleteThanksgivingGuest.rejected, (state, action) => {
+			.addCase(deleteGraduationGuest.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to delete guest";
 			})
 			// Toggle guest completion
-			.addCase(toggleThanksgivingGuestCompletion.pending, (state) => {
+			.addCase(toggleGraduationGuestCompletion.pending, (state) => {
 				state.loading = true;
 				state.error = null;
 			})
-			.addCase(toggleThanksgivingGuestCompletion.fulfilled, (state, action) => {
+			.addCase(toggleGraduationGuestCompletion.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.guests.findIndex(
 					(guest) => guest.id === action.payload.id
@@ -253,7 +256,7 @@ const thanksgivingGuestListSlice = createSlice({
 					state.guests[index] = action.payload;
 				}
 			})
-			.addCase(toggleThanksgivingGuestCompletion.rejected, (state, action) => {
+			.addCase(toggleGraduationGuestCompletion.rejected, (state, action) => {
 				state.loading = false;
 				state.error =
 					action.error.message || "Failed to toggle guest completion";
@@ -262,5 +265,5 @@ const thanksgivingGuestListSlice = createSlice({
 });
 
 export const { setSelectedGuest, clearError } =
-	thanksgivingGuestListSlice.actions;
-export default thanksgivingGuestListSlice.reducer;
+	graduationGuestListSlice.actions;
+export default graduationGuestListSlice.reducer;

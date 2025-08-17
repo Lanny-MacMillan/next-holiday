@@ -10,16 +10,10 @@ import HolidayHeader from "@/components/common/HolidayHeader";
 
 const subsections = [
 	{
-		name: "Gift List",
-		description: "Track your Easter gift ideas",
-		href: "/easter/gift-list",
-		sliceKey: "giftList",
-	},
-	{
 		name: "Basket List",
 		description: "Track your Easter basket items",
 		href: "/easter/basket-list",
-		sliceKey: "tasks",
+		sliceKey: "easterGiftList",
 		category: "Basket List",
 	},
 	{
@@ -64,6 +58,7 @@ export default function EasterPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "easterGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -102,7 +97,10 @@ export default function EasterPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "giftList") {
+						if (
+							section.sliceKey === "giftList" ||
+							section.sliceKey === "easterGiftList"
+						) {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -112,6 +110,7 @@ export default function EasterPage() {
 											primaryColor: "#a855f7", // Purple for Easter
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 									/>
 								</li>
 							);
@@ -132,6 +131,7 @@ export default function EasterPage() {
 										accentColor: "#eab308",
 										progressColor: "#a855f7",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 								/>
 							</li>
 						);

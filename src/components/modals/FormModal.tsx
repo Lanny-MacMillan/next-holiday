@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { isEmptyString, isEmptyNumber } from "@/utils/formValidation";
 
 export interface FormField {
 	id: string;
@@ -90,6 +92,28 @@ export default function FormModal({
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Check if all required fields are filled
+		const requiredFields = fields.filter((field) => field.required);
+		const missingFields = requiredFields.filter((field) => {
+			const value = formValues[field.id];
+			// Handle different field types for validation
+			if (field.type === "number") {
+				return isEmptyNumber(value);
+			}
+			// For text-based fields, check if string is empty after trimming
+			return isEmptyString(value);
+		});
+
+		if (missingFields.length > 0) {
+			alert(
+				`Please fill in all required fields: ${missingFields
+					.map((f) => f.placeholder || f.id)
+					.join(", ")}`
+			);
+			return;
+		}
+
 		onSubmit(formValues);
 	};
 
@@ -100,9 +124,18 @@ export default function FormModal({
 	};
 
 	const handleInputChange = (fieldId: string, value: any) => {
+		// Find the field to determine its type
+		const field = fields.find((f) => f.id === fieldId);
+
+		// Convert value based on field type
+		let processedValue = value;
+		if (field?.type === "number") {
+			processedValue = value === "" ? 0 : parseFloat(value) || 0;
+		}
+
 		setFormValues((prev) => ({
 			...prev,
-			[fieldId]: value,
+			[fieldId]: processedValue,
 		}));
 	};
 
@@ -172,28 +205,29 @@ export default function FormModal({
 
 	if (!isOpen) return null;
 
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div
-				className={`${cardClassName} rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto`}
-			>
-				<div className="flex justify-between items-center mb-4">
-					<h3
-						className="text-lg font-semibold text-gray-900 dark:text-white"
-						style={{ color: "#111827" }}
-					>
+	const modalContent = (
+		<div
+			className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4"
+			onClick={(e) => {
+				if (e.target === e.currentTarget) {
+					handleClose();
+				}
+			}}
+		>
+			<div className="card rounded-lg p-4 sm:p-6 max-w-md mx-auto w-full max-h-[90vh] overflow-y-auto">
+				<div className="flex justify-between items-center mb-3 sm:mb-4">
+					<h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
 						{title}
 					</h3>
 					<button
 						onClick={handleClose}
-						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-						style={{ color: "#4b5563" }}
+						className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-lg sm:text-xl"
 					>
 						×
 					</button>
 				</div>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
+				<form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
 					{fields.map((field) => (
 						<div key={field.id}>
 							{/* Special handling for address book integration */}
@@ -206,8 +240,7 @@ export default function FormModal({
 											onClick={() =>
 												setShowAddressBookInternal(!showAddressBookInternal)
 											}
-											className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
-											style={{ backgroundColor: "#3b82f6", color: "white" }}
+											className="bg-blue-500 text-white px-2 sm:px-3 py-2 rounded text-xs sm:text-sm hover:bg-blue-600"
 										>
 											📖
 										</button>
@@ -224,10 +257,7 @@ export default function FormModal({
 								showAddressBookInternal &&
 								showAddressBook && (
 									<div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto mt-2">
-										<h4
-											className="text-sm font-medium mb-1 text-gray-900 dark:text-white"
-											style={{ color: "#111827" }}
-										>
+										<h4 className="text-xs sm:text-sm font-medium mb-1 text-gray-900 dark:text-white">
 											From Address Book:
 										</h4>
 										{contacts.map((contact: any) => (
@@ -237,8 +267,7 @@ export default function FormModal({
 												onClick={() => {
 													handleAddressBookSelect(contact);
 												}}
-												className="block w-full text-left text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
-												style={{ color: "#111827" }}
+												className="block w-full text-left text-xs sm:text-sm p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-gray-900 dark:text-white"
 											>
 												<div className="font-medium">{contact.name}</div>
 												{contact.streetAddress && (
@@ -258,16 +287,14 @@ export default function FormModal({
 						<button
 							type="button"
 							onClick={handleClose}
-							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							style={{ color: "#374151", borderColor: "#d1d5db" }}
+							className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 						>
 							{cancelText}
 						</button>
 						<button
 							type="submit"
-							className="flex-1 text-white px-4 py-2 rounded hover:opacity-90 transition-colors"
+							className="flex-1 bg-green-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-600 transition-colors text-sm sm:text-base"
 							disabled={loading}
-							style={{ backgroundColor: submitButtonColor, color: "white" }}
 						>
 							{loading ? "Processing..." : submitText}
 						</button>
@@ -276,4 +303,6 @@ export default function FormModal({
 			</div>
 		</div>
 	);
+
+	return createPortal(modalContent, document.body);
 }

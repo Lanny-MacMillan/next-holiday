@@ -14,6 +14,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
@@ -100,9 +101,12 @@ export default function FourthOfJulyEventsPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskId: string, taskTitle?: string) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -126,12 +130,14 @@ export default function FourthOfJulyEventsPage() {
 			<HolidayPageHeader
 				title="Fourth of July Events"
 				backHref="/fourth-of-july"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Events"
+				description="Keep track of your Fourth of July events!"
+				holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
@@ -145,12 +151,14 @@ export default function FourthOfJulyEventsPage() {
 					emptyMessage="All events completed! 🎉"
 					completedMessage=""
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="red"
+							holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 				/>
@@ -162,13 +170,14 @@ export default function FourthOfJulyEventsPage() {
 					emptyMessage="No completed events yet."
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
-							className="opacity-60"
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="red"
+							holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
 					)}
 				/>

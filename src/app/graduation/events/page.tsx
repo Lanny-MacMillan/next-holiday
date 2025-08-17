@@ -13,6 +13,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
@@ -99,9 +100,16 @@ export default function GraduationEventsPage() {
 		setShowAddForm(true);
 	};
 
-	const handleDelete = (task: GraduationTask) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
+	const handleDelete = (taskOrId: GraduationTask | string) => {
+		// Handle both task object and task ID for compatibility
+		const task =
+			typeof taskOrId === "string"
+				? tasks.find((t) => t.id === taskOrId)
+				: taskOrId;
+		if (task) {
+			setTaskToDelete(task);
+			setShowDeleteModal(true);
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -133,12 +141,14 @@ export default function GraduationEventsPage() {
 			<HolidayPageHeader
 				title="Graduation Events"
 				backHref="/graduation"
-				error={error}
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Events"
+				description="Plan your graduation events with style!"
+				holidayColor="purple-500"
+				error={error}
 			/>
 
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<main className="w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
 					onClick={() => setShowAddForm(true)}
@@ -152,12 +162,14 @@ export default function GraduationEventsPage() {
 					emptyMessage="All events completed! 🎉"
 					completedMessage=""
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="purple"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>
@@ -169,13 +181,14 @@ export default function GraduationEventsPage() {
 					emptyMessage="No completed events yet."
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
-						<ToDoCard
+						<EventItems
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
-							className="opacity-60"
+							onToggleTask={handleToggleCompletion}
+							onDeleteTask={handleDelete}
+							loading={loading}
+							themeColor="purple"
+							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
 					)}
 				/>

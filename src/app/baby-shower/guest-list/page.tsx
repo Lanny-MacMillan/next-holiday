@@ -17,10 +17,12 @@ import GuestCardItem from "@/components/cards/guest/GuestCardItem";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import RSVPSection from "@/components/common/RSVPSection";
+import ReservationsTracker from "@/components/cards/reservation/ReservationsTracker";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { isEmptyString } from "@/utils/formValidation";
 
 export default function BabyShowerGuestListPage() {
 	const dispatch = useAppDispatch();
@@ -53,7 +55,7 @@ export default function BabyShowerGuestListPage() {
 	}, [dispatch, initialized]);
 
 	function handleAddGuest(formValues: Record<string, any>) {
-		if (!formValues.name?.trim() || !formValues.numberOfGuests) return;
+		if (isEmptyString(formValues.name) || !formValues.numberOfGuests) return;
 
 		if (editingGuest) {
 			// Update existing guest
@@ -192,10 +194,17 @@ export default function BabyShowerGuestListPage() {
 				backHref="/baby-shower"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
+				description="Plan your baby shower guest list with style!"
+				holidayColor="cyan-500"
 				error={error}
 			/>
-			<main className="w-full max-w-md flex flex-col gap-6">
-				<AddButton title="Guest" onClick={openForm} color="blue" />
+			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<ReservationsTracker
+					guests={guests}
+					title="Baby Shower Guest Tracker"
+					accentColor="#06b6d4"
+				/>
+				<AddButton title="Guest" onClick={openForm} color="cyan" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -212,6 +221,7 @@ export default function BabyShowerGuestListPage() {
 					items={pendingGuests}
 					rsvpStatus="pending"
 					emptyMessage="No pending RSVPs yet."
+					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 					renderItem={(guest: BabyShowerGuest) => (
 						<GuestCardItem
 							key={guest.id}
@@ -239,6 +249,7 @@ export default function BabyShowerGuestListPage() {
 					items={confirmedGuests}
 					rsvpStatus="confirmed"
 					emptyMessage="No confirmed RSVPs yet."
+					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 					renderItem={(guest: BabyShowerGuest) => (
 						<GuestCardItem
 							key={guest.id}
@@ -266,6 +277,7 @@ export default function BabyShowerGuestListPage() {
 					items={declinedGuests}
 					rsvpStatus="declined"
 					emptyMessage="No declined RSVPs yet."
+					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
 					renderItem={(guest: BabyShowerGuest) => (
 						<GuestCardItem
 							key={guest.id}

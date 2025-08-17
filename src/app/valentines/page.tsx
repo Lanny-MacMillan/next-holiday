@@ -117,6 +117,7 @@ export default function ValentinesPage() {
 											primaryColor: "#ec4899", // Pink for Valentine's Day
 											accentColor: "#eab308",
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 									/>
 								</li>
 							);
@@ -137,6 +138,7 @@ export default function ValentinesPage() {
 										accentColor: "#eab308",
 										progressColor: "#ec4899",
 									}}
+									gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 								/>
 							</li>
 						);

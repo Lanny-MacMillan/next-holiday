@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { Task } from "@/store/slices/tasksSlice";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
+import { getTaskGamifiedBackgroundColor } from "@/utils/gamifiedUtils";
 
 export interface ToDoCardProps {
 	task: Task;
@@ -14,7 +17,31 @@ export interface ToDoCardProps {
 		hoverColor?: string;
 	};
 	borderColor?: string; // Border color for the left border
+	gamified?: boolean; // New prop to control display mode
+	gamifiedBackgroundColor?: string; // Optional override for background color
+	disableInternalModal?: boolean; // Disable the card's internal delete modal
 }
+
+// Task-themed icons for gamified mode
+const TaskIcon = ({
+	priority,
+	className = "",
+}: {
+	priority: string;
+	className?: string;
+}) => {
+	const iconMap: { [key: string]: string } = {
+		high: "🔥",
+		medium: "⚡",
+		low: "🌱",
+	};
+
+	return (
+		<div className={`text-xl sm:text-2xl ${className}`}>
+			{iconMap[priority] || "📝"}
+		</div>
+	);
+};
 
 export default function ToDoCard({
 	task,
@@ -24,8 +51,16 @@ export default function ToDoCard({
 	className = "",
 	theme = {},
 	borderColor,
+	gamified = false,
+	gamifiedBackgroundColor: propGamifiedBackgroundColor,
+	disableInternalModal = false,
 }: ToDoCardProps) {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+	// Get display mode from Redux settings (fallback to prop)
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamifiedMode = gamified || settings.displayMode === "gamified";
+	const isDarkMode = settings.theme === "dark";
 
 	const accentColor = theme.accentColor;
 	const hoverColor = theme.hoverColor || "hover:shadow-md";
@@ -41,7 +76,13 @@ export default function ToDoCard({
 
 	const handleDelete = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		setShowDeleteConfirm(true);
+		if (disableInternalModal) {
+			// Call the external delete handler directly
+			onDelete(task.id);
+		} else {
+			// Show the internal modal
+			setShowDeleteConfirm(true);
+		}
 	};
 
 	const confirmDelete = () => {
@@ -61,23 +102,209 @@ export default function ToDoCard({
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
 			case "high":
-				return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+				return "#ef4444"; // red-500
 			case "medium":
-				return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+				return "#f97316"; // orange-500
 			case "low":
-				return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+				return "#10b981"; // green-500
 			default:
-				return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300";
+				return "#6b7280"; // gray-500
 		}
 	};
+
+	const getPriorityStyles = (priority: string) => {
+		switch (priority) {
+			case "high":
+				return "bg-white text-red-600 border border-red-200";
+			case "medium":
+				return "bg-white text-orange-600 border border-orange-200";
+			case "low":
+				return "bg-white text-green-600 border border-green-200";
+			default:
+				return "bg-white text-gray-600 border border-gray-200";
+		}
+	};
+	const gamifiedBackgroundColor =
+		propGamifiedBackgroundColor ||
+		getTaskGamifiedBackgroundColor(task.priority);
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString();
 	};
 
+	if (isGamifiedMode) {
+		// Gamified mode design
+		return (
+			<div
+				className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${gamifiedBackgroundColor} text-white ${className}`}
+				style={getCardStyling({
+					isDarkMode,
+					isGamified: true,
+					intensity: "heavy",
+				})}
+				onClick={handleToggle}
+			>
+				{/* Priority indicator - 10px wide strip on left side */}
+				<div
+					className="absolute left-0 top-0 bottom-0"
+					style={{
+						backgroundColor: getPriorityColor(task.priority),
+						width: "10px",
+					}}
+				></div>
+
+				{/* Background texture overlay */}
+				<div className="absolute inset-0 opacity-10 pointer-events-none">
+					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>
+					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15 pointer-events-none"></div>
+					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10 pointer-events-none"></div>
+					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20 pointer-events-none"></div>
+				</div>
+
+				{/* Delete Button - Top Right Corner */}
+				<div
+					className="absolute top-2 right-2 z-50"
+					onClick={(e) => {
+						e.stopPropagation();
+					}}
+				>
+					<button
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handleDelete(e);
+						}}
+						className="text-red-700 hover:text-red-900 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer"
+						title="Delete task"
+						style={{
+							pointerEvents: "auto",
+						}}
+					>
+						<span className="text-2xl sm:text-3xl font-bold select-none">
+							×
+						</span>
+					</button>
+				</div>
+
+				{/* Delete Confirmation Modal */}
+				{!disableInternalModal && (
+					<DeleteModal
+						isOpen={showDeleteConfirm}
+						{...getDeleteConfig("tasks")}
+						itemName={task.title}
+						onConfirm={confirmDelete}
+						onCancel={cancelDelete}
+					/>
+				)}
+
+				<div className="relative z-10">
+					{/* Main Card Content */}
+					<div className="flex items-start space-x-3">
+						{/* Task Icon */}
+						<div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+							<TaskIcon priority={task.priority} />
+						</div>
+
+						{/* Task Content */}
+						<div className="flex-1 min-w-0">
+							{/* Task Title */}
+							<div
+								className={`font-semibold text-white text-sm sm:text-base ${
+									task.isCompleted ? "line-through opacity-60" : ""
+								}`}
+							>
+								{task.title}
+							</div>
+
+							{/* Task Description */}
+							{task.description && (
+								<>
+									{/* Extract and display description without cost */}
+									{(() => {
+										const costMatch =
+											task.description.match(/Cost: \$(\d+\.?\d*)/);
+										const descriptionWithoutCost = task.description.replace(
+											/\nCost: \$(\d+\.?\d*)/,
+											""
+										);
+
+										return (
+											<>
+												{descriptionWithoutCost && (
+													<div
+														className={`text-xs sm:text-sm mt-1 text-white opacity-90 ${
+															task.isCompleted ? "line-through opacity-60" : ""
+														}`}
+													>
+														{descriptionWithoutCost}
+													</div>
+												)}
+
+												{/* Display cost separately below description */}
+												{costMatch && (
+													<div
+														className={`text-xs sm:text-sm mt-1 font-medium text-white opacity-90 ${
+															task.isCompleted ? "line-through opacity-60" : ""
+														}`}
+													>
+														Cost: ${costMatch[1]}
+													</div>
+												)}
+											</>
+										);
+									})()}
+								</>
+							)}
+
+							{/* Task Metadata */}
+							<div className="flex flex-wrap gap-2 mt-2">
+								{/* Priority Tag */}
+								<span
+									className="px-2 py-1 rounded-full text-xs sm:text-sm font-medium"
+									style={{
+										color: getPriorityColor(task.priority),
+										backgroundColor: "white",
+									}}
+								>
+									{task.priority} priority
+								</span>
+
+								{/* Due Date */}
+								{task.dueDate && !task.isCompleted && (
+									<span className="text-xs text-white opacity-80">
+										Due: {formatDate(task.dueDate)}
+									</span>
+								)}
+
+								{/* Completion Date */}
+								{task.completedDate && task.isCompleted && (
+									<span className="text-xs text-white opacity-60">
+										Completed: {formatDate(task.completedDate)}
+									</span>
+								)}
+							</div>
+						</div>
+					</div>
+
+					{/* Edit Button - Full Bottom Area */}
+					<div className="flex flex-col gap-1 mt-3">
+						<button
+							onClick={handleEdit}
+							className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors"
+							title="Edit task"
+						>
+							Edit
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Professional mode (existing design)
 	return (
 		<div
-			className={`relative card card-tasks p-4 cursor-pointer ${hoverColor} transition-shadow ${className}`}
+			className={`relative card card-tasks p-3 sm:p-4 cursor-pointer ${hoverColor} transition-shadow ${className}`}
 			style={borderStyle}
 			onClick={handleToggle}
 		>
@@ -93,13 +320,15 @@ export default function ToDoCard({
 				×
 			</button>
 			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={showDeleteConfirm}
-				{...getDeleteConfig("tasks")}
-				itemName={task.title}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-			/>
+			{!disableInternalModal && (
+				<DeleteModal
+					isOpen={showDeleteConfirm}
+					{...getDeleteConfig("tasks")}
+					itemName={task.title}
+					onConfirm={confirmDelete}
+					onCancel={cancelDelete}
+				/>
+			)}
 
 			{/* Main Card Content */}
 			<div className="flex items-start space-x-3">
@@ -116,7 +345,7 @@ export default function ToDoCard({
 				<div className="flex-1 min-w-0">
 					{/* Task Title */}
 					<div
-						className={`font-semibold ${
+						className={`font-semibold text-sm sm:text-base ${
 							task.isCompleted
 								? "line-through text-gray-400 dark:text-gray-500"
 								: "text-gray-900 dark:text-white"
@@ -140,7 +369,7 @@ export default function ToDoCard({
 									<>
 										{descriptionWithoutCost && (
 											<div
-												className={`text-sm mt-1 ${
+												className={`text-xs sm:text-sm mt-1 ${
 													task.isCompleted
 														? "line-through text-gray-400 dark:text-gray-500"
 														: "text-gray-500 dark:text-gray-400"
@@ -153,7 +382,7 @@ export default function ToDoCard({
 										{/* Display cost separately below description */}
 										{costMatch && (
 											<div
-												className={`text-sm mt-1 font-medium ${
+												className={`text-xs sm:text-sm mt-1 font-medium ${
 													task.isCompleted
 														? "line-through text-gray-400 dark:text-gray-500"
 														: "text-green-600 dark:text-green-400"
@@ -172,7 +401,7 @@ export default function ToDoCard({
 					<div className="flex flex-wrap gap-2 mt-2">
 						{/* Priority Tag */}
 						<span
-							className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+							className={`px-2 py-1 rounded text-xs sm:text-sm ${getPriorityStyles(
 								task.priority
 							)}`}
 						>

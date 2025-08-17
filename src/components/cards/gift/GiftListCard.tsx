@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
+import { getHolidayGiftListConfig } from "@/utils/holidayGiftListConfig";
 
 export interface GiftListCardProps {
 	holiday?: string;
@@ -22,26 +23,26 @@ export interface GiftListCardProps {
 	};
 	className?: string;
 	href?: string; // Add href prop for navigation
+	gamified?: boolean;
+	gamifiedBackgroundColor?: string; // New prop for background color
 }
 
 export function useGiftListCardData(holiday?: string) {
-	// Determine which gift list to use based on holiday
-	let gifts: any[] = [];
-	if (holiday === "Hanukkah") {
-		gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
-	} else if (holiday === "Valentine's Day") {
-		gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
-	} else if (holiday === "Halloween") {
-		gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
-	} else if (holiday === "Thanksgiving") {
-		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
-	} else if (holiday === "Easter") {
-		gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
-	} else if (holiday === "Kwanzaa") {
-		gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
-	} else {
-		gifts = useAppSelector((state: any) => state.giftList.gifts);
-	}
+	// Get holiday configuration
+	const config = getHolidayGiftListConfig(holiday);
+
+	// Determine data source based on holiday
+	const isThanksgiving = holiday === "Thanksgiving";
+
+	// Gifts for most holidays
+	const gifts = useAppSelector(
+		(state: any) => (state[config.sliceName]?.gifts as any[]) || []
+	);
+
+	// Thanksgiving budget items
+	const thanksgivingBudgetItems = useAppSelector(
+		(state: any) => state.thanksgivingBudget?.budgetItems || []
+	);
 
 	// Get budget limit based on holiday
 	const { settings } = useAppSelector((state: any) => state.theme);
@@ -56,19 +57,35 @@ export function useGiftListCardData(holiday?: string) {
 		budgetLimit = settings.giftBudgetLimit || 0;
 	}
 
-	// Calculate total spent from all gifts (both completed and incomplete)
-	const totalSpent = gifts.reduce((sum: number, gift: any) => {
-		return sum + (gift.price || 0);
-	}, 0);
+	// Calculate totals
+	let totalSpent = 0;
+	let totalItems = 0;
+	let completedItems = 0;
+
+	if (isThanksgiving) {
+		// Use dedicated Thanksgiving budget slice
+		totalSpent = thanksgivingBudgetItems.reduce(
+			(sum: number, item: any) =>
+				sum + (typeof item.amount === "number" ? item.amount : 0),
+			0
+		);
+		totalItems = thanksgivingBudgetItems.length;
+		completedItems = 0; // No completion state for budget items
+	} else {
+		// Default gift-based calculation
+		totalSpent = gifts.reduce(
+			(sum: number, gift: any) => sum + (gift.price || 0),
+			0
+		);
+		totalItems = gifts.length;
+		completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
+	}
 
 	const remaining = budgetLimit - totalSpent;
 	const budgetPercentage =
 		budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
 	const giftListPercentage =
-		gifts.length > 0
-			? (gifts.filter((gift: any) => gift.isCompleted).length / gifts.length) *
-			  100
-			: 0;
+		totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
 	const getBudgetStatus = () => {
 		if (budgetPercentage >= 80) return "Budget nearly exhausted";
@@ -84,8 +101,8 @@ export function useGiftListCardData(holiday?: string) {
 			percentage: budgetPercentage,
 		},
 		giftList: {
-			totalItems: gifts.length,
-			completedItems: gifts.filter((gift: any) => gift.isCompleted).length,
+			totalItems,
+			completedItems,
 			percentage: giftListPercentage,
 		},
 		budgetStatus: getBudgetStatus(),
@@ -100,11 +117,13 @@ export default function GiftListCard({
 	theme = {},
 	className = "",
 	href,
+	gamified = false,
+	gamifiedBackgroundColor,
 }: GiftListCardProps) {
 	const {
 		primaryColor = "#22c55e", // Default green
 		accentColor = "#eab308", // Default yellow
-		backgroundColor = "white",
+		backgroundColor: themeBackgroundColor = "white",
 	} = theme;
 
 	// Get display mode from Redux settings
@@ -137,47 +156,25 @@ export default function GiftListCard({
 		(finalGiftList.totalItems > 0
 			? (finalGiftList.completedItems / finalGiftList.totalItems) * 100
 			: 0);
+	console.log("holiday", holiday);
 
 	// Generate href if not provided
 	const finalHref =
-		href || `/${holiday?.toLowerCase()}/gift-list` || "/gift-list";
+		href ||
+		(holiday?.toLowerCase() === "easter"
+			? "/easter/basket-list"
+			: `/${holiday?.toLowerCase()}/gift-list`) ||
+		"/gift-list";
 
 	// Get gamified background gradient based on holiday
-	const getGamifiedBackgroundColor = () => {
-		const gradientMap: { [key: string]: string } = {
-			christmas: "bg-gradient-to-br from-red-400 to-red-600",
-			hanukkah: "bg-gradient-to-br from-blue-400 to-blue-600",
-			kwanzaa: "bg-gradient-to-br from-red-400 to-red-600",
-			"new-year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
-			"new year": "bg-gradient-to-br from-yellow-400 to-yellow-600",
-			valentines: "bg-gradient-to-br from-pink-300 to-pink-500",
-			"valentine's day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			easter: "bg-gradient-to-br from-purple-300 to-purple-500",
-			halloween: "bg-gradient-to-br from-orange-400 to-orange-600",
-			thanksgiving: "bg-gradient-to-br from-amber-400 to-amber-600",
-			"mothers-day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			"mother's day": "bg-gradient-to-br from-pink-300 to-pink-500",
-			"fathers-day": "bg-gradient-to-br from-blue-300 to-blue-500",
-			"father's day": "bg-gradient-to-br from-blue-300 to-blue-500",
-			"fourth-of-july": "bg-gradient-to-br from-red-400 to-red-600",
-			"fourth of july": "bg-gradient-to-br from-red-400 to-red-600",
-			birthday: "bg-gradient-to-br from-yellow-300 to-yellow-500",
-			anniversary: "bg-gradient-to-br from-pink-300 to-pink-500",
-			graduation: "bg-gradient-to-br from-purple-300 to-purple-500",
-			"baby-shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
-			"baby shower": "bg-gradient-to-br from-cyan-300 to-cyan-500",
-		};
-		return (
-			gradientMap[holiday?.toLowerCase() || ""] ||
-			"bg-gradient-to-br from-gray-400 to-gray-600"
-		);
-	};
+	const backgroundColor =
+		gamifiedBackgroundColor || "bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design
 		const cardContent = (
 			<div
-				className={`max-w-4xl mx-auto rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${getGamifiedBackgroundColor()} text-white ${className}`}
+				className={`max-w-4xl mx-auto rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${backgroundColor} text-white ${className}`}
 				style={getCardStyling({
 					isDarkMode,
 					isGamified: true,
@@ -193,38 +190,38 @@ export default function GiftListCard({
 				</div>
 
 				{/* Main card content */}
-				<div className="p-3 relative z-10">
+				<div className="p-3 sm:p-4 relative z-10">
 					{/* Budget Section */}
-					<div className="mb-4">
-						<div className="flex justify-between items-start mb-4">
-							<h3 className="font-bold text-white text-lg">
+					<div className="mb-4 sm:mb-6">
+						<div className="flex justify-between items-start mb-3 sm:mb-4">
+							<h3 className="font-bold text-white text-base sm:text-lg">
 								{holiday === "Thanksgiving"
 									? `${displayHolidayName} Shopping Budget`
 									: `${displayHolidayName} Budget`}
 							</h3>
-							<div className="text-sm text-white opacity-90">
+							<div className="text-xs sm:text-sm text-white opacity-90 text-right">
 								{finalBudgetStatus}
 							</div>
 						</div>
 
-						<div className="mb-4">
+						<div className="mb-3 sm:mb-4">
 							<div className="flex justify-between items-center mb-2">
-								<div className="text-sm text-white opacity-90">
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Spent:{" "}
 									<span className="font-bold">
 										${finalBudget.spent.toFixed(2)}
 									</span>
 								</div>
-								<div className="text-sm text-white opacity-90">
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Remaining:{" "}
 									<span className="font-bold">${remaining.toFixed(2)}</span>
 								</div>
 							</div>
 							<div className="flex justify-between items-center mb-2">
-								<div className="text-sm text-white opacity-90">
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Budget: ${finalBudget.total.toFixed(2)}
 								</div>
-								<div className="text-sm text-white opacity-90 text-right">
+								<div className="text-xs sm:text-sm text-white opacity-90 text-right">
 									{budgetPercentage.toFixed(1)}% used
 								</div>
 							</div>
@@ -243,18 +240,24 @@ export default function GiftListCard({
 					</div>
 
 					{/* Gift List Section */}
-					<div className="mt-6">
+					<div className="mt-4 sm:mt-6">
 						<div className="flex items-center justify-between mb-2">
-							<h4 className="font-bold text-white text-lg">
-								{holiday === "Thanksgiving" ? "Shopping List" : "Gift List"}
+							<h4 className="font-bold text-white text-base sm:text-lg">
+								{holiday === "Thanksgiving"
+									? "Shopping List"
+									: holiday === "Easter"
+									? "Basket List"
+									: "Gift List"}
 							</h4>
-							<span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white bg-opacity-20 text-white">
+							<span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white">
 								{finalGiftList.totalItems}
 							</span>
 						</div>
-						<p className="text-white opacity-90 text-sm mb-3">
+						<p className="text-white opacity-90 text-xs sm:text-sm mb-3">
 							{holiday === "Thanksgiving"
 								? "Track your Thanksgiving shopping budget"
+								: holiday === "Easter"
+								? "Track your Easter basket items"
 								: `Track your ${displayHolidayName} gift ideas`}
 						</p>
 
@@ -292,7 +295,6 @@ export default function GiftListCard({
 			cardContent
 		);
 	}
-
 	// Professional mode (existing design)
 	const cardContent = (
 		<div
@@ -308,36 +310,38 @@ export default function GiftListCard({
 			}}
 		>
 			{/* Main card content */}
-			<div className="p-3">
+			<div className="p-3 sm:p-4">
 				{/* Budget Section */}
-				<div className="mb-4">
-					<div className="flex justify-between items-start mb-4">
-						<h3 className="font-bold text-gray-900 text-lg">
+				<div className="mb-4 sm:mb-6">
+					<div className="flex justify-between items-start mb-3 sm:mb-4">
+						<h3 className="font-bold text-gray-900 text-base sm:text-lg">
 							{holiday === "Thanksgiving"
 								? `${displayHolidayName} Shopping Budget`
 								: `${displayHolidayName} Budget`}
 						</h3>
-						<div className="text-sm text-gray-600">{finalBudgetStatus}</div>
+						<div className="text-xs sm:text-sm text-gray-600 text-right">
+							{finalBudgetStatus}
+						</div>
 					</div>
 
-					<div className="mb-4">
+					<div className="mb-3 sm:mb-4">
 						<div className="flex justify-between items-center mb-2">
-							<div className="text-sm text-gray-600">
+							<div className="text-xs sm:text-sm text-gray-600">
 								Spent:{" "}
 								<span className="font-bold">
 									${finalBudget.spent.toFixed(2)}
 								</span>
 							</div>
-							<div className="text-sm text-gray-600">
+							<div className="text-xs sm:text-sm text-gray-600">
 								Remaining:{" "}
 								<span className="font-bold">${remaining.toFixed(2)}</span>
 							</div>
 						</div>
 						<div className="flex justify-between items-center mb-2">
-							<div className="text-sm text-gray-600">
+							<div className="text-xs sm:text-sm text-gray-600">
 								Budget: ${finalBudget.total.toFixed(2)}
 							</div>
-							<div className="text-sm text-gray-600 text-right">
+							<div className="text-xs sm:text-sm text-gray-600 text-right">
 								{budgetPercentage.toFixed(1)}% used
 							</div>
 						</div>
@@ -356,13 +360,13 @@ export default function GiftListCard({
 				</div>
 
 				{/* Gift List Section */}
-				<div className="mt-6">
+				<div className="mt-4 sm:mt-6">
 					<div className="flex items-center justify-between mb-2">
-						<h4 className="font-bold text-gray-900 text-lg">
-							{holiday === "Thanksgiving" ? "Shopping List" : "Gift List"}
+						<h4 className="font-bold text-gray-900 text-base sm:text-lg">
+							{getHolidayGiftListConfig(holiday).displayText}
 						</h4>
 						<span
-							className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+							className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full"
 							style={{
 								backgroundColor: `${primaryColor}20`,
 								color: primaryColor,
@@ -371,7 +375,7 @@ export default function GiftListCard({
 							{finalGiftList.totalItems}
 						</span>
 					</div>
-					<p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+					<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3">
 						{holiday === "Thanksgiving"
 							? "Track your Thanksgiving shopping budget"
 							: `Track your ${displayHolidayName} gift ideas`}

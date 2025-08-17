@@ -6,24 +6,29 @@ import { fetchGraduationCards } from "@/store/slices/graduation/graduationCardsS
 import { fetchGraduationGifts } from "@/store/slices/graduation/graduationGiftListSlice";
 import { fetchGraduationTasks } from "@/store/slices/graduation/graduationTasksSlice";
 import { fetchGraduationContacts } from "@/store/slices/graduation/graduationAddressBookSlice";
+import { fetchGraduationGuests } from "@/store/slices/graduation/graduationGuestListSlice";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import CountdownWithInvite from "@/components/common/CountdownWithInvite";
+import SharedIndicator from "@/components/common/SharedIndicator";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track graduation gift ideas",
 		href: "/graduation/gift-list",
-		sliceKey: "giftList",
+		sliceKey: "graduationGiftList",
+		category: "Gifts",
 		type: "gift-list",
 	},
 	{
 		name: "Guest List",
 		description: "Manage guests for graduation parties",
 		href: "/graduation/guest-list",
-		sliceKey: "addressBook",
-		type: "task",
+		sliceKey: "guestList",
+		type: "guest-list",
 	},
 	{
 		name: "Event Planning",
@@ -51,6 +56,9 @@ export default function GraduationPage() {
 	const contacts = useAppSelector(
 		(state: any) => state.graduationAddressBook.contacts
 	);
+	const guests = useAppSelector(
+		(state: any) => state.graduationGuestList.guests
+	);
 
 	useEffect(() => {
 		// Fetch all data when component mounts if not already initialized
@@ -58,6 +66,7 @@ export default function GraduationPage() {
 		dispatch(fetchGraduationGifts());
 		dispatch(fetchGraduationTasks());
 		dispatch(fetchGraduationContacts());
+		dispatch(fetchGraduationGuests());
 	}, [dispatch]);
 
 	function getProgressData(sliceKey: string): {
@@ -74,8 +83,13 @@ export default function GraduationPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
+			case "graduationGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
+			case "guestList":
+				total = guests.length;
+				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
 			case "tasks":
 				total = tasks.length;
@@ -119,6 +133,22 @@ export default function GraduationPage() {
 											primaryColor: "#8b5cf6", // Purple for Graduation
 											accentColor: "#8b5cf6", // Purple accent
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
+									/>
+								</li>
+							);
+						} else if (section.type === "guest-list") {
+							return (
+								<li key={section.name}>
+									<GuestListCard
+										holiday="Graduation"
+										href={section.href}
+										theme={{
+											primaryColor: "#8b5cf6", // Purple for Graduation
+											accentColor: "#8b5cf6", // Purple accent
+										}}
+										gamified={true}
+										holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 									/>
 								</li>
 							);
@@ -138,6 +168,7 @@ export default function GraduationPage() {
 											accentColor: "#8b5cf6", // Purple accent
 											progressColor: "#8b5cf6", // Purple for progress bar
 										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 									/>
 								</li>
 							);

@@ -1,4 +1,7 @@
 import { useAppSelector } from "@/store/hooks";
+import { getCardStyling } from "@/utils/cardShadows";
+import { getHolidayAccentColor } from "@/utils/holidayUtils";
+import { usePathname } from "next/navigation";
 
 interface BudgetInfo {
 	budgetLimit: number;
@@ -12,6 +15,7 @@ interface BudgetInfo {
 
 interface BudgetDisplayProps {
 	holiday?: string;
+	holidayColor?: string;
 }
 
 export function useBudgetInfo(holiday?: string): BudgetInfo {
@@ -19,16 +23,52 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 
 	// Determine which gift list to use based on holiday
 	let gifts: any[] = [];
-	if (holiday === "Hanukkah") {
-		gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
-	} else if (holiday === "Valentine's Day") {
-		gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
-	} else if (holiday === "Halloween") {
-		gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
-	} else if (holiday === "Thanksgiving") {
-		gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
-	} else {
-		gifts = useAppSelector((state: any) => state.giftList.gifts);
+	switch (holiday) {
+		case "Hanukkah":
+			gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
+			break;
+		case "Valentine's Day":
+			gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
+			break;
+		case "Halloween":
+			gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
+			break;
+		case "Thanksgiving":
+			gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
+			break;
+		case "New Year":
+			gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
+			break;
+		case "Kwanzaa":
+			gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
+			break;
+		case "Easter":
+			gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
+			break;
+		case "Mother's Day":
+			gifts = useAppSelector((state: any) => state.mothersDayGiftList.gifts);
+			break;
+		case "Father's Day":
+			gifts = useAppSelector((state: any) => state.fathersDayGiftList.gifts);
+			break;
+		case "Fourth of July":
+			gifts = useAppSelector((state: any) => state.fourthOfJulyGiftList.gifts);
+			break;
+		case "Birthday":
+			gifts = useAppSelector((state: any) => state.birthdayGiftList.gifts);
+			break;
+		case "Anniversary":
+			gifts = useAppSelector((state: any) => state.anniversaryGiftList.gifts);
+			break;
+		case "Graduation":
+			gifts = useAppSelector((state: any) => state.graduationGiftList.gifts);
+			break;
+		case "Baby Shower":
+			gifts = useAppSelector((state: any) => state.babyShowerGiftList.gifts);
+			break;
+		default:
+			gifts = useAppSelector((state: any) => state.giftList.gifts);
+			break;
 	}
 
 	// Get budget limit based on holiday
@@ -45,20 +85,20 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 
 	// Calculate total spent from all gifts (both completed and incomplete)
 	let totalSpent = gifts.reduce((sum: number, gift: any) => {
-		return sum + (gift.price || 0);
+		const price = typeof gift.price === "number" ? gift.price : 0;
+		return sum + price;
 	}, 0);
 
-	// For Thanksgiving, also include shopping list costs
+	// For Thanksgiving, use the dedicated budget slice
 	if (holiday === "Thanksgiving") {
-		const shoppingTasks = useAppSelector(
-			(state: any) => state.thanksgivingTasks.tasks
+		const budgetItems = useAppSelector(
+			(state: any) => state.thanksgivingBudget.budgetItems
 		);
-		const shoppingCosts = shoppingTasks.reduce((sum: number, task: any) => {
-			if (!task.description) return sum;
-			const costMatch = task.description.match(/Cost: \$(\d+\.?\d*)/);
-			return sum + (costMatch ? parseFloat(costMatch[1]) : 0);
+		const budgetCosts = budgetItems.reduce((sum: number, item: any) => {
+			const amount = typeof item.amount === "number" ? item.amount : 0;
+			return sum + amount;
 		}, 0);
-		totalSpent += shoppingCosts;
+		totalSpent = budgetCosts; // Replace gift costs with budget costs for Thanksgiving
 	}
 
 	const remaining = budgetLimit - totalSpent;
@@ -99,8 +139,11 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 	};
 }
 
-export function BudgetDisplay({ holiday }: BudgetDisplayProps) {
+export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
 	const budgetInfo = useBudgetInfo(holiday);
+	const pathname = usePathname();
+	const { settings } = useAppSelector((state: any) => state.theme);
+	const isGamified = settings.displayMode === "gamified";
 
 	if (budgetInfo.budgetLimit === 0) {
 		return null; // Don't show if no budget is set
@@ -108,13 +151,117 @@ export function BudgetDisplay({ holiday }: BudgetDisplayProps) {
 
 	const displayTitle = holiday ? `${holiday} Budget` : "Gift Budget";
 
-	return (
-		<div className={`card rounded-lg p-4 mb-4 ${budgetInfo.colorClass}`}>
-			<div className="flex justify-between items-center mb-2">
-				<h3 className="font-semibold">{displayTitle}</h3>
-				<span className="text-sm font-medium">{budgetInfo.statusText}</span>
+	// If gamified is true, render the playful design
+	if (isGamified) {
+		const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
+
+		return (
+			<div
+				className={`relative card rounded-2xl p-3 sm:p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${holidayColor}`}
+				style={{
+					...getCardStyling({
+						isDarkMode: false,
+						isGamified: true,
+						intensity: "heavy",
+					}),
+				}}
+			>
+				{/* Background texture overlay */}
+				<div className="absolute inset-0 opacity-10 pointer-events-none">
+					<div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>
+					<div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15 pointer-events-none"></div>
+					<div className="absolute bottom-6 left-8 w-5 h-5 rounded-full bg-white opacity-10 pointer-events-none"></div>
+					<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20 pointer-events-none"></div>
+				</div>
+
+				<div className="relative z-10">
+					<div className="flex justify-between items-center mb-3">
+						<h3
+							className="font-semibold text-white text-sm sm:text-base"
+							style={{ fontFamily: "var(--font-family-fredoka)" }}
+						>
+							{displayTitle}
+						</h3>
+						<span
+							className="text-xs sm:text-sm font-medium text-white opacity-90"
+							style={{ fontFamily: "var(--font-family-fredoka)" }}
+						>
+							{budgetInfo.statusText}
+						</span>
+					</div>
+
+					<div className="flex justify-between items-center text-xs sm:text-sm mb-3">
+						<div>
+							<span
+								className="font-medium text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								Spent:{" "}
+							</span>
+							<span
+								className="font-bold text-white"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								${budgetInfo.totalSpent.toFixed(2)}
+							</span>
+						</div>
+						<div>
+							<span
+								className="font-medium text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								Remaining:{" "}
+							</span>
+							<span
+								className={`font-bold ${
+									budgetInfo.remaining < 0 ? "text-red-200" : "text-white"
+								}`}
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								${budgetInfo.remaining.toFixed(2)}
+							</span>
+						</div>
+					</div>
+
+					<div className="mt-3">
+						<div className="flex justify-between text-xs mb-2">
+							<span
+								className="text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								Budget: ${budgetInfo.budgetLimit.toFixed(2)}
+							</span>
+							<span
+								className="text-white opacity-90"
+								style={{ fontFamily: "var(--font-family-fredoka)" }}
+							>
+								{budgetInfo.percentageUsed.toFixed(1)}% used
+							</span>
+						</div>
+						<div className="w-full bg-white bg-opacity-20 rounded-full h-2 sm:h-3 border border-white border-opacity-30">
+							<div
+								className={`h-2 sm:h-3 rounded-full transition-all ${budgetInfo.progressBarColor}`}
+								style={{
+									width: `${Math.min(budgetInfo.percentageUsed, 100)}%`,
+								}}
+							/>
+						</div>
+					</div>
+				</div>
 			</div>
-			<div className="flex justify-between items-center text-sm">
+		);
+	}
+
+	// Original clean, professional design
+	return (
+		<div className={`card rounded-lg p-3 sm:p-4 mb-4 ${budgetInfo.colorClass}`}>
+			<div className="flex justify-between items-center mb-2">
+				<h3 className="font-semibold text-sm sm:text-base">{displayTitle}</h3>
+				<span className="text-xs sm:text-sm font-medium">
+					{budgetInfo.statusText}
+				</span>
+			</div>
+			<div className="flex justify-between items-center text-xs sm:text-sm">
 				<div>
 					<span className="font-medium">Spent: </span>
 					<span className="font-bold">${budgetInfo.totalSpent.toFixed(2)}</span>
