@@ -89,7 +89,7 @@ model UserPreferences {
   theme                 String   @default("system") // "light", "dark", "system"
   
   // Display preferences
-  displayMode           String   @default("grid") // "grid", "list", "compact"
+  displayMode           String   @default("professional") // "professional", "gamified"
   showCompletedItems    Boolean  @default(true) @map("show_completed_items")
   showCountdown         Boolean  @default(true) @map("show_countdown")
   showProgressBars      Boolean  @default(true) @map("show_progress_bars")

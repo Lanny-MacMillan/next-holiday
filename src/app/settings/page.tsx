@@ -31,9 +31,10 @@ export default function SettingsPage() {
 					theme: preferences.theme,
 					displayMode: preferences.displayMode,
 					notifications: {
-						reminders: preferences.reminderNotifications,
-						shippingAlerts: preferences.pushNotifications,
-						upcomingEvents: preferences.holidayCountdownAlerts,
+						pushNotifications: preferences.pushNotifications,
+						reminderNotifications: preferences.reminderNotifications,
+						taskDueReminders: preferences.taskDueReminders,
+						holidayCountdownAlerts: preferences.holidayCountdownAlerts,
 					},
 					holidayChoices: settings.holidayChoices, // Keep this from theme slice for now
 					giftBudgetLimit: settings.giftBudgetLimit, // Keep this from theme slice for now
@@ -50,7 +51,17 @@ export default function SettingsPage() {
 
 	// Use Redux user data if available, otherwise fall back to Auth0
 	// Note: We need auth0User for the sub property since reduxUser doesn't include auth0Sub for security
-	const user = reduxUser || auth0User;
+	// Prioritize database name over Auth0 name
+	const user = useMemo(() => {
+		return reduxUser
+			? {
+					...auth0User,
+					name: reduxUser.name || auth0User?.name,
+					email: reduxUser.email || auth0User?.email,
+					picture: reduxUser.picture || auth0User?.picture,
+			  }
+			: auth0User;
+	}, [reduxUser, auth0User]);
 
 	// Editing states
 	const [editingName, setEditingName] = useState(false);
@@ -59,6 +70,18 @@ export default function SettingsPage() {
 	const [tempPicture, setTempPicture] = useState(user?.picture || "");
 	const [savingName, setSavingName] = useState(false);
 	const [savingPicture, setSavingPicture] = useState(false);
+
+	// Loading states for notification preferences
+	const [savingPushNotifications, setSavingPushNotifications] = useState(false);
+	const [savingReminderNotifications, setSavingReminderNotifications] =
+		useState(false);
+	const [savingTaskDueReminders, setSavingTaskDueReminders] = useState(false);
+	const [savingHolidayCountdownAlerts, setSavingHolidayCountdownAlerts] =
+		useState(false);
+
+	// Loading states for theme settings
+	const [savingTheme, setSavingTheme] = useState(false);
+	const [savingDisplayMode, setSavingDisplayMode] = useState(false);
 
 	// File input ref for image upload
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,11 +96,15 @@ export default function SettingsPage() {
 		setImageError(false);
 	}, [user?.picture]);
 
-	// Update temp values when user changes
+	// Update temp values when user changes (but not when actively editing)
 	useEffect(() => {
-		setTempName(user?.name || "");
-		setTempPicture(user?.picture || "");
-	}, [user]);
+		if (!editingName) {
+			setTempName(user?.name || "");
+		}
+		if (!editingPicture) {
+			setTempPicture(user?.picture || "");
+		}
+	}, [user, editingName, editingPicture]);
 
 	function getInitials(name: string): string {
 		const words = name
@@ -109,20 +136,42 @@ export default function SettingsPage() {
 		// Update database preferences (only for fields that exist in the database)
 		if (preferences && key !== "holidayChoices" && key !== "giftBudgetLimit") {
 			const updateData: any = {};
+			let loadingSetter: React.Dispatch<React.SetStateAction<boolean>> | null =
+				null;
+			let settingName = "";
 
 			if (key === "theme") {
 				updateData.theme = value;
+				loadingSetter = setSavingTheme;
+				settingName = "Theme";
 			} else if (key === "displayMode") {
 				updateData.displayMode = value;
-			} else if (key === "notifications.reminders") {
-				updateData.reminderNotifications = value;
-			} else if (key === "notifications.shippingAlerts") {
+				loadingSetter = setSavingDisplayMode;
+				settingName = "Display Mode";
+			} else if (key === "notifications.pushNotifications") {
 				updateData.pushNotifications = value;
-			} else if (key === "notifications.upcomingEvents") {
+				loadingSetter = setSavingPushNotifications;
+				settingName = "Push Notifications";
+			} else if (key === "notifications.reminderNotifications") {
+				updateData.reminderNotifications = value;
+				loadingSetter = setSavingReminderNotifications;
+				settingName = "Reminder Notifications";
+			} else if (key === "notifications.taskDueReminders") {
+				updateData.taskDueReminders = value;
+				loadingSetter = setSavingTaskDueReminders;
+				settingName = "Task Due Reminders";
+			} else if (key === "notifications.holidayCountdownAlerts") {
 				updateData.holidayCountdownAlerts = value;
+				loadingSetter = setSavingHolidayCountdownAlerts;
+				settingName = "Holiday Countdown Alerts";
 			}
 
 			if (Object.keys(updateData).length > 0 && auth0User?.sub) {
+				// Set loading state if applicable
+				if (loadingSetter) {
+					loadingSetter(true);
+				}
+
 				try {
 					await dispatch(
 						updateUserPreferences({
@@ -130,10 +179,31 @@ export default function SettingsPage() {
 							auth0Sub: auth0User.sub,
 						})
 					).unwrap();
+
+					// Show success toast for notification preferences
+					if (loadingSetter) {
+						setToastMessage(`${settingName} updated successfully!`);
+						setToastType("success");
+						setShowToast(true);
+					}
 				} catch (error) {
 					console.error("Failed to update preferences in database:", error);
 					// Revert local state if database update failed
 					setLocalSettings(currentSettings);
+
+					// Show error toast for notification preferences
+					if (loadingSetter) {
+						setToastMessage(
+							`Failed to update ${settingName}. Please try again.`
+						);
+						setToastType("error");
+						setShowToast(true);
+					}
+				} finally {
+					// Clear loading state if applicable
+					if (loadingSetter) {
+						loadingSetter(false);
+					}
 				}
 			}
 		}
@@ -148,9 +218,12 @@ export default function SettingsPage() {
 				const updateData = {
 					theme: localSettings.theme,
 					displayMode: localSettings.displayMode,
-					reminderNotifications: localSettings.notifications.reminders,
-					pushNotifications: localSettings.notifications.shippingAlerts,
-					holidayCountdownAlerts: localSettings.notifications.upcomingEvents,
+					pushNotifications: localSettings.notifications.pushNotifications,
+					reminderNotifications:
+						localSettings.notifications.reminderNotifications,
+					taskDueReminders: localSettings.notifications.taskDueReminders,
+					holidayCountdownAlerts:
+						localSettings.notifications.holidayCountdownAlerts,
 				};
 
 				await dispatch(
@@ -546,19 +619,26 @@ export default function SettingsPage() {
 											localSettings.theme === "light" ? "dark" : "light"
 										)
 									}
+									disabled={savingTheme}
 									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 										localSettings.theme === "dark"
 											? "bg-blue-600"
 											: "bg-gray-400"
-									}`}
+									} ${savingTheme ? "opacity-50 cursor-not-allowed" : ""}`}
 								>
-									<span
-										className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											localSettings.theme === "dark"
-												? "translate-x-6"
-												: "translate-x-1"
-										}`}
-									/>
+									{savingTheme ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+												localSettings.theme === "dark"
+													? "translate-x-6"
+													: "translate-x-1"
+											}`}
+										/>
+									)}
 								</button>
 							</div>
 							<div className="flex items-center justify-between">
@@ -579,19 +659,28 @@ export default function SettingsPage() {
 												: "professional"
 										)
 									}
+									disabled={savingDisplayMode}
 									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
 										localSettings.displayMode === "gamified"
 											? "bg-blue-600"
 											: "bg-gray-400"
+									} ${
+										savingDisplayMode ? "opacity-50 cursor-not-allowed" : ""
 									}`}
 								>
-									<span
-										className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											localSettings.displayMode === "gamified"
-												? "translate-x-6"
-												: "translate-x-1"
-										}`}
-									/>
+									{savingDisplayMode ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+												localSettings.displayMode === "gamified"
+													? "translate-x-6"
+													: "translate-x-1"
+											}`}
+										/>
+									)}
 								</button>
 							</div>
 						</div>
@@ -734,7 +823,49 @@ export default function SettingsPage() {
 							<div className="flex items-center justify-between">
 								<div>
 									<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-										Reminders
+										Push Notifications
+									</label>
+									<p className="text-xs text-gray-800 dark:text-gray-400">
+										Receive push notifications for important updates
+									</p>
+								</div>
+								<button
+									onClick={async () =>
+										await handleSettingChange(
+											"notifications.pushNotifications",
+											!localSettings.notifications.pushNotifications
+										)
+									}
+									disabled={savingPushNotifications}
+									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+										localSettings.notifications.pushNotifications
+											? "bg-blue-600"
+											: "bg-gray-400"
+									} ${
+										savingPushNotifications
+											? "opacity-50 cursor-not-allowed"
+											: ""
+									}`}
+								>
+									{savingPushNotifications ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+												localSettings.notifications.pushNotifications
+													? "translate-x-6"
+													: "translate-x-1"
+											}`}
+										/>
+									)}
+								</button>
+							</div>
+							<div className="flex items-center justify-between">
+								<div>
+									<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+										Reminder Notifications
 									</label>
 									<p className="text-xs text-gray-800 dark:text-gray-400">
 										Get reminded about upcoming tasks and events
@@ -743,60 +874,82 @@ export default function SettingsPage() {
 								<button
 									onClick={async () =>
 										await handleSettingChange(
-											"notifications.reminders",
-											!localSettings.notifications.reminders
+											"notifications.reminderNotifications",
+											!localSettings.notifications.reminderNotifications
 										)
 									}
+									disabled={savingReminderNotifications}
 									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-										localSettings.notifications.reminders
+										localSettings.notifications.reminderNotifications
 											? "bg-blue-600"
 											: "bg-gray-400"
+									} ${
+										savingReminderNotifications
+											? "opacity-50 cursor-not-allowed"
+											: ""
 									}`}
 								>
-									<span
-										className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											localSettings.notifications.reminders
-												? "translate-x-6"
-												: "translate-x-1"
-										}`}
-									/>
+									{savingReminderNotifications ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+												localSettings.notifications.reminderNotifications
+													? "translate-x-6"
+													: "translate-x-1"
+											}`}
+										/>
+									)}
 								</button>
 							</div>
 							<div className="flex items-center justify-between">
 								<div>
 									<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-										Shipping Alerts
+										Task Due Reminders
 									</label>
 									<p className="text-xs text-gray-800 dark:text-gray-400">
-										Get notified about gift shipping status
+										Get notified when tasks are due
 									</p>
 								</div>
 								<button
 									onClick={async () =>
 										await handleSettingChange(
-											"notifications.shippingAlerts",
-											!localSettings.notifications.shippingAlerts
+											"notifications.taskDueReminders",
+											!localSettings.notifications.taskDueReminders
 										)
 									}
+									disabled={savingTaskDueReminders}
 									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-										localSettings.notifications.shippingAlerts
+										localSettings.notifications.taskDueReminders
 											? "bg-blue-600"
 											: "bg-gray-400"
+									} ${
+										savingTaskDueReminders
+											? "opacity-50 cursor-not-allowed"
+											: ""
 									}`}
 								>
-									<span
-										className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											localSettings.notifications.shippingAlerts
-												? "translate-x-6"
-												: "translate-x-1"
-										}`}
-									/>
+									{savingTaskDueReminders ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+												localSettings.notifications.taskDueReminders
+													? "translate-x-6"
+													: "translate-x-1"
+											}`}
+										/>
+									)}
 								</button>
 							</div>
 							<div className="flex items-center justify-between">
 								<div>
 									<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-										Upcoming Events
+										Holiday Countdown Alerts
 									</label>
 									<p className="text-xs text-gray-800 dark:text-gray-400">
 										Get notified about upcoming holiday events
@@ -805,23 +958,34 @@ export default function SettingsPage() {
 								<button
 									onClick={async () =>
 										await handleSettingChange(
-											"notifications.upcomingEvents",
-											!localSettings.notifications.upcomingEvents
+											"notifications.holidayCountdownAlerts",
+											!localSettings.notifications.holidayCountdownAlerts
 										)
 									}
+									disabled={savingHolidayCountdownAlerts}
 									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-										localSettings.notifications.upcomingEvents
+										localSettings.notifications.holidayCountdownAlerts
 											? "bg-blue-600"
 											: "bg-gray-400"
+									} ${
+										savingHolidayCountdownAlerts
+											? "opacity-50 cursor-not-allowed"
+											: ""
 									}`}
 								>
-									<span
-										className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											localSettings.notifications.upcomingEvents
-												? "translate-x-6"
-												: "translate-x-1"
-										}`}
-									/>
+									{savingHolidayCountdownAlerts ? (
+										<div className="absolute inset-0 flex items-center justify-center">
+											<div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+										</div>
+									) : (
+										<span
+											className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+												localSettings.notifications.holidayCountdownAlerts
+													? "translate-x-6"
+													: "translate-x-1"
+											}`}
+										/>
+									)}
 								</button>
 							</div>
 						</div>

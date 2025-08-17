@@ -6,9 +6,10 @@ export interface UserSettings {
 	holidayChoices: Array<{ holiday: string; budget: number }>;
 	giftBudgetLimit: number;
 	notifications: {
-		reminders: boolean;
-		shippingAlerts: boolean;
-		upcomingEvents: boolean;
+		pushNotifications: boolean;
+		reminderNotifications: boolean;
+		taskDueReminders: boolean;
+		holidayCountdownAlerts: boolean;
 	};
 }
 
@@ -24,9 +25,10 @@ const initialState: ThemeState = {
 		holidayChoices: [{ holiday: "Christmas", budget: 500 }],
 		giftBudgetLimit: 500,
 		notifications: {
-			reminders: true,
-			shippingAlerts: true,
-			upcomingEvents: true,
+			pushNotifications: true,
+			reminderNotifications: true,
+			taskDueReminders: true,
+			holidayCountdownAlerts: true,
 		},
 	},
 	initialized: false,
