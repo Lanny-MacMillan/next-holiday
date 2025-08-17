@@ -29,6 +29,13 @@ export default function SettingsPage() {
 
 	// Use preferences from database if available, otherwise fall back to theme slice
 	const currentSettings = useMemo(() => {
+		// Filter out any wedding-related holidays from existing settings
+		const filteredHolidayChoices =
+			settings.holidayChoices?.filter(
+				(choice: { holiday: string; budget: number }) =>
+					!choice.holiday.toLowerCase().includes("wedding")
+			) || [];
+
 		return preferences
 			? {
 					theme: preferences.theme,
@@ -39,10 +46,13 @@ export default function SettingsPage() {
 						taskDueReminders: preferences.taskDueReminders,
 						holidayCountdownAlerts: preferences.holidayCountdownAlerts,
 					},
-					holidayChoices: settings.holidayChoices, // Keep this from theme slice for now
+					holidayChoices: filteredHolidayChoices, // Use filtered holiday choices
 					giftBudgetLimit: settings.giftBudgetLimit, // Keep this from theme slice for now
 			  }
-			: settings;
+			: {
+					...settings,
+					holidayChoices: filteredHolidayChoices, // Use filtered holiday choices
+			  };
 	}, [preferences, settings]);
 
 	const [localSettings, setLocalSettings] = useState(currentSettings);
@@ -314,8 +324,11 @@ export default function SettingsPage() {
 			return;
 		}
 
-		// Get selected holidays with budgets
-		const selectedHolidays = localSettings.holidayChoices || [];
+		// Get selected holidays with budgets, filtering out wedding options
+		const selectedHolidays = (localSettings.holidayChoices || []).filter(
+			(choice: { holiday: string; budget: number }) =>
+				!choice.holiday.toLowerCase().includes("wedding")
+		);
 
 		if (selectedHolidays.length === 0) {
 			setToastMessage("Please select at least one holiday.");
@@ -836,7 +849,7 @@ export default function SettingsPage() {
 											(choice: { holiday: string; budget: number }) =>
 												choice.holiday === holiday
 										);
-										const budget = selectedChoice?.budget || 500;
+										const budget = selectedChoice?.budget || 0;
 
 										return (
 											<div
@@ -859,7 +872,7 @@ export default function SettingsPage() {
 																if (e.target.checked) {
 																	newChoices = [
 																		...currentChoices,
-																		{ holiday, budget: 500 },
+																		{ holiday, budget: 0 },
 																	];
 																} else {
 																	newChoices = currentChoices.filter(

@@ -22,8 +22,8 @@ const initialState: ThemeState = {
 	settings: {
 		theme: "light",
 		displayMode: "professional",
-		holidayChoices: [{ holiday: "Christmas", budget: 500 }],
-		giftBudgetLimit: 500,
+		holidayChoices: [],
+		giftBudgetLimit: 0,
 		notifications: {
 			pushNotifications: true,
 			reminderNotifications: true,

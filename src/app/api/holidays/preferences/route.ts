@@ -37,11 +37,17 @@ export async function POST(request: NextRequest) {
 		// Check account access
 		await requireAccountAccess(accountId, user.id);
 
+		// Filter out wedding-related holidays to prevent them from being saved
+		const validPreferences = preferences.filter((preference) => {
+			const holidayType = preference.holiday.toLowerCase();
+			return !holidayType.includes("wedding");
+		});
+
 		// Process preferences in a single transaction
 		const results = await prisma.$transaction(async (tx) => {
 			const holidayResults = [];
 
-			for (const preference of preferences) {
+			for (const preference of validPreferences) {
 				const { holiday: holidayType, budget, countdownTimer } = preference;
 
 				// Find existing holiday or create new one
