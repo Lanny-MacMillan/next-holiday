@@ -161,7 +161,11 @@ export default function Home() {
 			return []; // Return empty array while loading
 		}
 
-		// Use holiday preferences from database (null means empty database)
+		// Use holiday preferences from database
+		// If holidayPreferences is null, it means either:
+		// 1. No preferences have been set yet (user hasn't visited settings)
+		// 2. The API call failed or returned no data
+		// In either case, we should show a message to guide the user
 		const holidayChoices = holidayPreferences || [];
 
 		// If no holiday choices are set, return empty array (no holidays to show)
@@ -287,7 +291,9 @@ export default function Home() {
 				{sortedHolidays.length === 0 ? (
 					<div className="text-center py-8">
 						<p className="text-gray-600 dark:text-gray-400 mb-4">
-							No holidays selected in your preferences.
+							{holidayPreferences === null
+								? "Welcome! To get started, select which holidays you'd like to plan for."
+								: "No holidays selected in your preferences."}
 						</p>
 						<Link
 							href="/settings"
