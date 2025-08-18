@@ -14,6 +14,7 @@ import Link from "next/link";
 import Toast from "@/components/common/Toast";
 import { getCardStyling } from "@/utils/cardShadows";
 import UpgradeModal from "@/components/modals/UpgradeModal";
+import { logCacheState, clearAllAppCache } from "@/utils/cacheUtils";
 
 export default function SettingsPage() {
 	const { user: auth0User } = useAuth0();
@@ -1201,6 +1202,57 @@ export default function SettingsPage() {
 							</div>
 						</div>
 					</div>
+
+					{/* Debug Section - Only show in development */}
+					{process.env.NODE_ENV === "development" && (
+						<div className={getCardClasses()} style={getGamifiedCardStyle()}>
+							<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+								🐛 Debug Tools
+							</h2>
+							<div className="space-y-4">
+								<div className="flex flex-wrap gap-2">
+									<button
+										onClick={() => {
+											logCacheState();
+											setToastMessage("Cache state logged to console");
+											setToastType("success");
+											setShowToast(true);
+										}}
+										className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+									>
+										Log Cache State
+									</button>
+									<button
+										onClick={() => {
+											clearAllAppCache();
+											setToastMessage("All cache cleared");
+											setToastType("success");
+											setShowToast(true);
+										}}
+										className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+									>
+										Clear All Cache
+									</button>
+									<button
+										onClick={() => {
+											window.location.reload();
+										}}
+										className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+									>
+										Reload Page
+									</button>
+								</div>
+								<div className="text-xs text-gray-600 dark:text-gray-400">
+									<p>Current user: {user?.email}</p>
+									<p>Account ID: {userAccount?.id || "Not loaded"}</p>
+									<p>
+										Holiday preferences loaded:{" "}
+										{holidayPreferences ? holidayPreferences.length : 0}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
 				</main>
 
 				<Toast

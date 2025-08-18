@@ -54,9 +54,12 @@ const themeSlice = createSlice({
 		},
 		updateSettings: (state, action: PayloadAction<Partial<UserSettings>>) => {
 			state.settings = { ...state.settings, ...action.payload };
-			// Save to localStorage
+			// Save to localStorage, but exclude holidayChoices since they should be fetched from DB
 			if (typeof window !== "undefined") {
-				localStorage.setItem("userSettings", JSON.stringify(state.settings));
+				const settingsToSave = { ...state.settings };
+				// Remove holidayChoices from localStorage persistence
+				delete settingsToSave.holidayChoices;
+				localStorage.setItem("userSettings", JSON.stringify(settingsToSave));
 			}
 		},
 		initializeTheme: (state) => {
@@ -71,7 +74,9 @@ const themeSlice = createSlice({
 				if (savedSettings) {
 					try {
 						const parsedSettings = JSON.parse(savedSettings);
-						state.settings = { ...state.settings, ...parsedSettings };
+						// Don't load holidayChoices from localStorage - they should come from DB
+						const { holidayChoices, ...settingsToLoad } = parsedSettings;
+						state.settings = { ...state.settings, ...settingsToLoad };
 					} catch (error) {
 						console.error("Error parsing saved settings:", error);
 					}
@@ -79,9 +84,35 @@ const themeSlice = createSlice({
 			}
 			state.initialized = true;
 		},
+		// Add a new action to clear cached data when user logs out or changes
+		clearCachedData: (state) => {
+			if (typeof window !== "undefined") {
+				// Clear holidayChoices from localStorage
+				const savedSettings = localStorage.getItem("userSettings");
+				if (savedSettings) {
+					try {
+						const parsedSettings = JSON.parse(savedSettings);
+						const { holidayChoices, ...settingsToKeep } = parsedSettings;
+						localStorage.setItem(
+							"userSettings",
+							JSON.stringify(settingsToKeep)
+						);
+					} catch (error) {
+						console.error("Error clearing cached holiday data:", error);
+					}
+				}
+			}
+			// Reset holidayChoices in state
+			state.settings.holidayChoices = [];
+		},
 	},
 });
 
-export const { toggleTheme, setTheme, updateSettings, initializeTheme } =
-	themeSlice.actions;
+export const {
+	toggleTheme,
+	setTheme,
+	updateSettings,
+	initializeTheme,
+	clearCachedData,
+} = themeSlice.actions;
 export default themeSlice.reducer;
