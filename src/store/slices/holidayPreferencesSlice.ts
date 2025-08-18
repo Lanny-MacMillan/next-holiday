@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
 export interface HolidayPreference {
 	holiday: string;
-	holidayId: string; // Holiday ID from database
+	holidayId?: string; // Holiday ID from database (optional when saving new preferences)
 	budget?: number;
 	countdownTimer?: string; // ISO datetime string
 }

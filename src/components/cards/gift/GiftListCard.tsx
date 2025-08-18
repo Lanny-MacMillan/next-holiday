@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
+import { getGamifiedBackgroundColor } from "@/utils/gamifiedUtils";
 import { getHolidayGiftListConfig } from "@/utils/holidayGiftListConfig";
 
 export interface GiftListCardProps {
@@ -168,7 +169,9 @@ export default function GiftListCard({
 
 	// Get gamified background gradient based on holiday
 	const backgroundColor =
-		gamifiedBackgroundColor || "bg-gradient-to-br from-gray-400 to-gray-600";
+		gamifiedBackgroundColor ||
+		getGamifiedBackgroundColor(holiday) ||
+		"bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design

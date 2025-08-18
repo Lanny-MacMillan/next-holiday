@@ -6,6 +6,7 @@ import CountdownWithInviteCompact from "@/components/common/CountdownWithInviteC
 import SharedIndicatorCompact from "@/components/common/SharedIndicatorCompact";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
+import { getGamifiedBackgroundColor } from "@/utils/gamifiedUtils";
 import {
 	IconChristmas,
 	IconHanukkah,
@@ -182,9 +183,9 @@ export default function HolidayCard({
 
 	const blobPositions = generateBlobPositions(incompleteItems);
 
-	// Use provided background color or fallback to default
+	// Use provided background color, holiday-specific gradient, or fallback to default
 	const backgroundColor =
-		gamifiedBackgroundColor || "bg-gradient-to-br from-gray-400 to-gray-600";
+		gamifiedBackgroundColor || getGamifiedBackgroundColor(id) || "bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design
