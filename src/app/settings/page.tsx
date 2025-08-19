@@ -5,10 +5,11 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { updateUserInfo } from "@/store/slices/userSlice";
 import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
+import { saveHolidayPreferences } from "@/store/slices/holidayPreferencesSlice";
 import {
-	saveHolidayPreferences,
-	fetchHolidayPreferences,
-} from "@/store/slices/holidayPreferencesSlice";
+	selectHomeData,
+	selectHolidayPreferences,
+} from "@/store/slices/homeSlice";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Toast from "@/components/common/Toast";
@@ -28,11 +29,15 @@ export default function SettingsPage() {
 	const { preferences, initialized: preferencesInitialized } = useAppSelector(
 		(state: any) => state.userPreferences
 	);
-	const {
-		loading: holidayPreferencesLoading,
-		error: holidayPreferencesError,
-		preferences: holidayPreferences,
-	} = useAppSelector((state: any) => state.holidayPreferences);
+
+	// Get data from home slice instead of separate API calls
+	const homeData = useAppSelector(selectHomeData);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const userAccount = homeData?.account;
+
+	// Loading state for holiday preferences saving
+	const [holidayPreferencesLoading, setHolidayPreferencesLoading] =
+		useState(false);
 
 	// Use preferences from database if available, otherwise fall back to theme slice
 	const currentSettings = useMemo(() => {
@@ -122,13 +127,6 @@ export default function SettingsPage() {
 	const [savingTheme, setSavingTheme] = useState(false);
 	const [savingDisplayMode, setSavingDisplayMode] = useState(false);
 
-	// Account state for holiday preferences
-	const [userAccount, setUserAccount] = useState<{
-		id: string;
-		name: string;
-	} | null>(null);
-	const [loadingAccount, setLoadingAccount] = useState(false);
-
 	// File input ref for image upload
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -166,60 +164,6 @@ export default function SettingsPage() {
 			setTempPicture(user?.picture || "");
 		}
 	}, [user, editingName, editingPicture]);
-
-	// Fetch user's account for holiday preferences
-	const fetchUserAccount = async () => {
-		if (!auth0User?.sub) return;
-
-		setLoadingAccount(true);
-		try {
-			const response = await fetch("/api/users/me/account", {
-				headers: {
-					"Content-Type": "application/json",
-					"x-test-user": JSON.stringify({
-						sub: auth0User.sub,
-						email: auth0User.email,
-						name: auth0User.name,
-					}),
-				},
-			});
-
-			if (response.ok) {
-				const accountData = await response.json();
-				console.log("Fetched account:", accountData.data);
-				setUserAccount(accountData.data);
-			} else {
-				console.error(
-					"Failed to fetch account:",
-					response.status,
-					response.statusText
-				);
-			}
-		} catch (error) {
-			console.error("Failed to fetch user account:", error);
-		} finally {
-			setLoadingAccount(false);
-		}
-	};
-
-	// Fetch account when user is available
-	useEffect(() => {
-		if (auth0User?.sub && !userAccount) {
-			fetchUserAccount();
-		}
-	}, [auth0User?.sub, userAccount]);
-
-	// Fetch holiday preferences when account is loaded
-	useEffect(() => {
-		if (userAccount?.id && auth0User) {
-			dispatch(
-				fetchHolidayPreferences({
-					accountId: userAccount.id,
-					auth0User,
-				})
-			);
-		}
-	}, [userAccount?.id, auth0User, dispatch]);
 
 	function getInitials(name: string): string {
 		const words = name
@@ -382,6 +326,7 @@ export default function SettingsPage() {
 		// Get selected holidays with budgets from pending choices
 		const selectedHolidays = pendingHolidayChoices || [];
 
+		setHolidayPreferencesLoading(true);
 		try {
 			console.log(
 				"Saving holiday preferences with account ID:",
@@ -425,6 +370,8 @@ export default function SettingsPage() {
 			}
 			setToastMessage(errorMessage);
 			setToastType("error");
+		} finally {
+			setHolidayPreferencesLoading(false);
 		}
 
 		setShowToast(true);
@@ -553,19 +500,6 @@ export default function SettingsPage() {
 			return `${baseClasses} card-settings`;
 		}
 	};
-	// Show loading state while user data is being initialized
-	if (!userInitialized || !preferencesInitialized) {
-		return (
-			<div className="min-h-screen christmas-settings-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">
-						Loading user data and preferences...
-					</p>
-				</div>
-			</div>
-		);
-	}
 
 	return (
 		<div className="min-h-screen christmas-settings-gradient flex flex-col font-sans">
@@ -874,156 +808,164 @@ export default function SettingsPage() {
 						<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
 							🎄 Holiday Preferences
 						</h2>
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-									Holiday Choices & Budgets
-								</label>
-								<p className="text-xs text-gray-800 dark:text-gray-400 mb-2">
-									Select holidays and set individual budget limits
+						{!userAccount ? (
+							<div className="text-center py-4">
+								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Loading account data...
 								</p>
-								<div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
-									{[
-										"Christmas",
-										"Hanukkah",
-										"Kwanzaa",
-										"New Year",
-										"Valentine's Day",
-										"Easter",
-										"Thanksgiving",
-										"Halloween",
-										"Mother's Day",
-										"Father's Day",
-										"Birthday",
-										"Anniversary",
-										"Fourth of July",
-										"Graduation",
-										"Baby Shower",
-									].map((holiday) => {
-										const isSelected = pendingHolidayChoices.some(
-											(choice: { holiday: string; budget: number }) =>
-												choice.holiday === holiday
-										);
-										const selectedChoice = pendingHolidayChoices.find(
-											(choice: { holiday: string; budget: number }) =>
-												choice.holiday === holiday
-										);
-										const budget = selectedChoice?.budget || 0;
+							</div>
+						) : (
+							<div className="space-y-4">
+								<div>
+									<label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
+										Holiday Choices & Budgets
+									</label>
+									<p className="text-xs text-gray-800 dark:text-gray-400 mb-2">
+										Select holidays and set individual budget limits
+									</p>
+									<div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+										{[
+											"Christmas",
+											"Hanukkah",
+											"Kwanzaa",
+											"New Year",
+											"Valentine's Day",
+											"Easter",
+											"Thanksgiving",
+											"Halloween",
+											"Mother's Day",
+											"Father's Day",
+											"Birthday",
+											"Anniversary",
+											"Fourth of July",
+											"Graduation",
+											"Baby Shower",
+										].map((holiday) => {
+											const isSelected = pendingHolidayChoices.some(
+												(choice: { holiday: string; budget: number }) =>
+													choice.holiday === holiday
+											);
+											const selectedChoice = pendingHolidayChoices.find(
+												(choice: { holiday: string; budget: number }) =>
+													choice.holiday === holiday
+											);
+											const budget = selectedChoice?.budget || 0;
 
-										return (
-											<div
-												key={holiday}
-												className={`p-3 rounded border transition-colors ${
-													isSelected
-														? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-														: "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-												}`}
-											>
-												<div className="flex items-center justify-between">
-													<div className="flex items-center space-x-3">
-														<input
-															type="checkbox"
-															checked={isSelected}
-															onChange={(e) => {
-																const currentChoices = [
-																	...pendingHolidayChoices,
-																];
-																let newChoices;
-																if (e.target.checked) {
-																	newChoices = [
-																		...currentChoices,
-																		{ holiday, budget: 0 },
-																	];
-																} else {
-																	newChoices = currentChoices.filter(
-																		(choice: {
-																			holiday: string;
-																			budget: number;
-																		}) => choice.holiday !== holiday
-																	);
-																}
-																setPendingHolidayChoices(newChoices);
-															}}
-															className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-														/>
-														<span className="text-sm font-medium text-gray-800 dark:text-white">
-															{holiday}
-														</span>
-													</div>
-													{isSelected && (
-														<div className="flex items-center space-x-2">
-															<span className="text-xs text-gray-600 dark:text-gray-400">
-																Budget:
-															</span>
+											return (
+												<div
+													key={holiday}
+													className={`p-3 rounded border transition-colors ${
+														isSelected
+															? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+															: "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+													}`}
+												>
+													<div className="flex items-center justify-between">
+														<div className="flex items-center space-x-3">
 															<input
-																type="number"
-																value={budget}
+																type="checkbox"
+																checked={isSelected}
 																onChange={(e) => {
-																	const newBudget =
-																		parseInt(e.target.value) || 0;
 																	const currentChoices = [
 																		...pendingHolidayChoices,
 																	];
-																	const newChoices = currentChoices.map(
-																		(choice: {
-																			holiday: string;
-																			budget: number;
-																		}) =>
-																			choice.holiday === holiday
-																				? { ...choice, budget: newBudget }
-																				: choice
-																	);
+																	let newChoices;
+																	if (e.target.checked) {
+																		newChoices = [
+																			...currentChoices,
+																			{ holiday, budget: 0 },
+																		];
+																	} else {
+																		newChoices = currentChoices.filter(
+																			(choice: {
+																				holiday: string;
+																				budget: number;
+																			}) => choice.holiday !== holiday
+																		);
+																	}
 																	setPendingHolidayChoices(newChoices);
 																}}
-																className="w-20 text-xs rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-2 py-1"
-																min="0"
-																step="50"
+																className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 															/>
-															<span className="text-xs text-gray-600 dark:text-gray-400">
-																$
+															<span className="text-sm font-medium text-gray-800 dark:text-white">
+																{holiday}
 															</span>
 														</div>
-													)}
+														{isSelected && (
+															<div className="flex items-center space-x-2">
+																<span className="text-xs text-gray-600 dark:text-gray-400">
+																	Budget:
+																</span>
+																<input
+																	type="number"
+																	value={budget}
+																	onChange={(e) => {
+																		const newBudget =
+																			parseInt(e.target.value) || 0;
+																		const currentChoices = [
+																			...pendingHolidayChoices,
+																		];
+																		const newChoices = currentChoices.map(
+																			(choice: {
+																				holiday: string;
+																				budget: number;
+																			}) =>
+																				choice.holiday === holiday
+																					? { ...choice, budget: newBudget }
+																					: choice
+																		);
+																		setPendingHolidayChoices(newChoices);
+																	}}
+																	className="w-20 text-xs rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-2 py-1"
+																	min="0"
+																	step="50"
+																/>
+																<span className="text-xs text-gray-600 dark:text-gray-400">
+																	$
+																</span>
+															</div>
+														)}
+													</div>
 												</div>
-											</div>
-										);
-									})}
+											);
+										})}
+									</div>
+								</div>
+								{hasUnsavedChanges && (
+									<div className="text-center text-sm text-amber-600 dark:text-amber-400 mb-2">
+										* You have unsaved changes. Click "Save Holiday Preferences"
+										to persist your changes.
+									</div>
+								)}
+								<div className="flex justify-center pt-4">
+									{!userAccount ? (
+										<div className="text-center">
+											<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
+											<p className="text-xs text-gray-600 dark:text-gray-400">
+												Loading account data...
+											</p>
+										</div>
+									) : (
+										<button
+											onClick={handleSaveHolidayPreferences}
+											disabled={holidayPreferencesLoading || !hasUnsavedChanges}
+											className={`px-6 py-2 rounded-lg transition-colors ${
+												holidayPreferencesLoading || !hasUnsavedChanges
+													? "opacity-50 cursor-not-allowed bg-gray-400"
+													: "bg-blue-500 hover:bg-blue-600 text-white"
+											}`}
+										>
+											{holidayPreferencesLoading
+												? "Saving..."
+												: hasUnsavedChanges
+												? "Save Holiday Preferences*"
+												: "No Changes to Save"}
+										</button>
+									)}
 								</div>
 							</div>
-							{hasUnsavedChanges && (
-								<div className="text-center text-sm text-amber-600 dark:text-amber-400 mb-2">
-									* You have unsaved changes. Click "Save Holiday Preferences"
-									to persist your changes.
-								</div>
-							)}
-							<div className="flex justify-center pt-4">
-								<button
-									onClick={handleSaveHolidayPreferences}
-									disabled={
-										holidayPreferencesLoading ||
-										loadingAccount ||
-										!userAccount ||
-										!hasUnsavedChanges
-									}
-									className={`px-6 py-2 rounded-lg transition-colors ${
-										holidayPreferencesLoading ||
-										loadingAccount ||
-										!userAccount ||
-										!hasUnsavedChanges
-											? "opacity-50 cursor-not-allowed bg-gray-400"
-											: "bg-blue-500 hover:bg-blue-600 text-white"
-									}`}
-								>
-									{loadingAccount
-										? "Loading..."
-										: holidayPreferencesLoading
-										? "Saving..."
-										: hasUnsavedChanges
-										? "Save Holiday Preferences*"
-										: "No Changes to Save"}
-								</button>
-							</div>
-						</div>
+						)}
 					</div>
 
 					{/* Notification Settings */}
