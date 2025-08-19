@@ -53,7 +53,7 @@ export const fetchBirthdayGuests = createAsyncThunk(
 				resolve([
 					{
 						id: "1",
-						name: "John Doe",
+						name: "Test Guest",
 						email: "john@example.com",
 						phone: "555-1234",
 						rsvpStatus: "confirmed",

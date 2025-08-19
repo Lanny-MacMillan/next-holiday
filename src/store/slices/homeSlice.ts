@@ -45,6 +45,8 @@ const homeSlice = createSlice({
 export const selectHomeData = (state: { home: HomeState }) => state.home.data;
 export const selectHolidayPreferences = (state: { home: HomeState }) =>
 	state.home.data?.holidayPreferences || [];
+export const selectContacts = (state: { home: HomeState }) =>
+	state.home.data?.contacts || [];
 export const selectHomeLoading = (state: { home: HomeState }) =>
 	state.home.loading;
 export const selectHomeError = (state: { home: HomeState }) => state.home.error;

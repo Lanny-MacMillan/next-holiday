@@ -3,7 +3,7 @@
 
 -- Sample users (Auth0 integration)
 INSERT INTO users (id, auth0_sub, email, name, is_in_db, is_first_login) VALUES
-('550e8400-e29b-41d4-a716-446655440001', 'auth0|user1', 'john.doe@example.com', 'John Doe', true, false),
+('550e8400-e29b-41d4-a716-446655440001', 'auth0|user1', 'user@example.com', 'Test User', true, false),
 ('550e8400-e29b-41d4-a716-446655440002', 'auth0|user2', 'jane.smith@example.com', 'Jane Smith', true, false);
 
 -- Sample accounts

@@ -24,6 +24,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				user: null,
 				account: null,
 				holidayPreferences: null,
+				contacts: null,
 				needsUserSetup: true,
 				needsHolidaySelection: false,
 			};
@@ -60,6 +61,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				},
 				account: null,
 				holidayPreferences: null,
+				contacts: null,
 				needsUserSetup: true,
 				needsHolidaySelection: false,
 			};
@@ -85,6 +87,14 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			countdownTimer: holiday.countdownTimer?.toISOString(),
 		}));
 
+		// Get contacts for this account
+		const contacts = await prisma.contact.findMany({
+			where: { accountId: account.id },
+			orderBy: {
+				name: "asc",
+			},
+		});
+
 		return {
 			user: {
 				id: user.id,
@@ -94,6 +104,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			},
 			account: toPlain(account),
 			holidayPreferences,
+			contacts: toPlain(contacts),
 			needsUserSetup: false,
 			needsHolidaySelection: holidayPreferences.length === 0,
 		};

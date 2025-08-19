@@ -10,7 +10,7 @@ import {
 	deleteContact,
 	Contact,
 } from "@/store/slices/addressBookSlice";
-import SortModal from "@/components/modals/SortModal";
+import SortModal from "@/components/SortModal";
 
 type SortOption = "a-z" | "z-a" | "relationship" | "location" | "none";
 
@@ -321,7 +321,7 @@ export default function AddressBookPage() {
 					</div>
 				)}
 			</header>
-			<main className="w-full max-w-4xl flex flex-col gap-6">
+			<main className="w-full max-w-md flex flex-col gap-6">
 				<button
 					onClick={openForm}
 					className="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600 transition-colors"

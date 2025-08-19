@@ -20,6 +20,20 @@ export interface HomeData {
 		budget?: number;
 		countdownTimer?: string;
 	}> | null;
+	contacts: Array<{
+		id: string;
+		name: string;
+		email?: string | null;
+		phone?: string | null;
+		streetAddress?: string | null;
+		city?: string | null;
+		state?: string | null;
+		postalCode?: string | null;
+		relationship?: string | null;
+		notes?: string | null;
+		createdAt: Date;
+		updatedAt: Date;
+	}> | null;
 	needsUserSetup: boolean;
 	needsHolidaySelection: boolean;
 }
