@@ -29,6 +29,15 @@ export default function ValentinesGiftListPage() {
 		(state: any) => state.valentinesGiftList
 	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+
+	// Get Valentine's Day holiday ID from preferences
+	const valentinesPreference = holidayPreferences.find(
+		(pref) => pref.holiday === "Valentine's Day"
+	);
+	const valentinesHolidayId = valentinesPreference?.holidayId;
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -217,6 +226,7 @@ export default function ValentinesGiftListPage() {
 				<BudgetDisplay
 					holiday="Valentine's Day"
 					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+					holidayId={valentinesHolidayId}
 				/>
 
 				<AddButton

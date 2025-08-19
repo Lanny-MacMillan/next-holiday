@@ -45,17 +45,41 @@ export function useGiftListCardData(holiday?: string) {
 		(state: any) => state.thanksgivingBudget?.budgetItems || []
 	);
 
-	// Get budget limit based on holiday
+	// Map holiday name -> holidayId via home data, then pull budget entity from Redux (DB-backed)
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+	const budgetEntity = useAppSelector((state: any) => {
+		if (!holiday) return null;
+		const pref = holidayPreferences.find(
+			(p: { holiday: string; holidayId: string }) => p.holiday === holiday
+		);
+		if (!pref?.holidayId) return null;
+		return state.budgets?.entities?.[pref.holidayId] || null;
+	});
+
+	// Get budget limit, preferring DB/Redux budgets; fallback to theme settings
 	const { settings } = useAppSelector((state: any) => state.theme);
 	let budgetLimit = 0;
-	if (holiday) {
-		const holidayChoice = settings.holidayChoices?.find(
-			(choice: { holiday: string; budget: number }) =>
-				choice.holiday === holiday
-		);
-		budgetLimit = holidayChoice?.budget || 0;
+	let overrideSpent: number | undefined = undefined;
+	if (budgetEntity) {
+		budgetLimit =
+			typeof budgetEntity.targetAmount === "number"
+				? budgetEntity.targetAmount
+				: 0;
+		if (typeof budgetEntity.spentAmount === "number") {
+			overrideSpent = budgetEntity.spentAmount;
+		}
 	} else {
-		budgetLimit = settings.giftBudgetLimit || 0;
+		if (holiday) {
+			const holidayChoice = settings.holidayChoices?.find(
+				(choice: { holiday: string; budget: number }) =>
+					choice.holiday === holiday
+			);
+			budgetLimit = holidayChoice?.budget || 0;
+		} else {
+			budgetLimit = settings.giftBudgetLimit || 0;
+		}
 	}
 
 	// Calculate totals
@@ -80,6 +104,11 @@ export function useGiftListCardData(holiday?: string) {
 		);
 		totalItems = gifts.length;
 		completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
+	}
+
+	// If DB/Redux budget has a computed spent amount, prefer it over local sums
+	if (typeof overrideSpent === "number") {
+		totalSpent = overrideSpent;
 	}
 
 	const remaining = budgetLimit - totalSpent;

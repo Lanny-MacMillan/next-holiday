@@ -2,12 +2,15 @@
 
 import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect, useState } from "react";
+import { useAppDispatch } from "@/store/hooks";
+import { setHomeData as setHomeDataAction } from "@/store/slices/homeSlice";
 import HomeContent from "@/components/HomeContent";
 import UserSetupHandler from "@/components/UserSetupHandler";
 import { HomeData } from "@/types/home";
 
 export default function HomePageWrapper() {
 	const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
+	const dispatch = useAppDispatch();
 	const [homeData, setHomeData] = useState<HomeData | null>(null);
 	const [isLoadingData, setIsLoadingData] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -41,7 +44,10 @@ export default function HomePageWrapper() {
 				}
 
 				const result = await response.json();
-				setHomeData(result.data);
+				const data = result.data;
+				setHomeData(data);
+				// Also dispatch to Redux store for access throughout the app
+				dispatch(setHomeDataAction(data));
 			} catch (err) {
 				console.error("Error fetching home data:", err);
 				setError("Failed to load page data");

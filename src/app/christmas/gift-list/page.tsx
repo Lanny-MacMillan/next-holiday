@@ -31,6 +31,15 @@ export default function GiftListPage() {
 		(state: any) => state.giftList
 	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+
+	// Get Christmas holiday ID from preferences
+	const christmasPreference = holidayPreferences.find(
+		(pref) => pref.holiday === "Christmas"
+	);
+	const christmasHolidayId = christmasPreference?.holidayId;
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -259,6 +268,7 @@ export default function GiftListPage() {
 				<BudgetDisplay
 					holiday="Christmas"
 					holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+					holidayId={christmasHolidayId}
 				/>
 
 				<AddButton title="Gift" onClick={openForm} color="green" />

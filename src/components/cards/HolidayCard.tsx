@@ -185,7 +185,9 @@ export default function HolidayCard({
 
 	// Use provided background color, holiday-specific gradient, or fallback to default
 	const backgroundColor =
-		gamifiedBackgroundColor || getGamifiedBackgroundColor(id) || "bg-gradient-to-br from-gray-400 to-gray-600";
+		gamifiedBackgroundColor ||
+		getGamifiedBackgroundColor(id) ||
+		"bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design

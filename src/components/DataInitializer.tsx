@@ -7,8 +7,8 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { fetchBudgets } from "@/store/slices/budgetsSlice";
 import { getCurrentUser } from "@/store/slices/userSlice";
-import { getCurrentUserPreferences } from "@/store/slices/userPreferencesSlice";
 
 export default function DataInitializer() {
 	const { user: auth0User, isAuthenticated } = useAuth0();
@@ -19,9 +19,12 @@ export default function DataInitializer() {
 		(state) => state.user
 	);
 
-	// User preferences state
-	const { initialized: preferencesInitialized } = useAppSelector(
-		(state) => state.userPreferences
+	// Home data state (includes holiday preferences)
+	const { initialized: homeInitialized } = useAppSelector(
+		(state) => state.home
+	);
+	const holidayPreferences = useAppSelector(
+		(state) => state.home.data?.holidayPreferences || []
 	);
 
 	// Other data states
@@ -37,6 +40,9 @@ export default function DataInitializer() {
 	const { initialized: contactsInitialized } = useAppSelector(
 		(state) => state.addressBook
 	);
+	const { initialized: budgetsInitialized } = useAppSelector(
+		(state) => state.budgets
+	);
 
 	// User initialization logic - now just fetches current user from API
 	useEffect(() => {
@@ -46,13 +52,7 @@ export default function DataInitializer() {
 		}
 	}, [isAuthenticated, auth0User, userInitialized, dispatch]);
 
-	// User preferences initialization logic
-	useEffect(() => {
-		if (isAuthenticated && auth0User && !preferencesInitialized) {
-			console.log("DataInitializer: Fetching user preferences from API");
-			dispatch(getCurrentUserPreferences(auth0User.sub!));
-		}
-	}, [isAuthenticated, auth0User, preferencesInitialized, dispatch]);
+	// Home data is loaded by HomePageWrapper, so we don't need to fetch it here
 
 	// Initialize other data
 	useEffect(() => {
@@ -74,6 +74,29 @@ export default function DataInitializer() {
 		if (!contactsInitialized) {
 			dispatch(fetchContacts());
 		}
+		if (
+			!budgetsInitialized &&
+			holidayPreferences &&
+			holidayPreferences.length > 0
+		) {
+			// Extract holiday IDs from preferences and fetch budgets
+			const holidayIds = holidayPreferences
+				.filter((pref) => pref.holidayId)
+				.map((pref) => pref.holidayId!);
+
+			if (holidayIds.length > 0) {
+				console.log(
+					"DataInitializer: Fetching budgets for holidays:",
+					holidayIds
+				);
+				dispatch(
+					fetchBudgets({
+						holidayIds,
+						auth0User,
+					})
+				);
+			}
+		}
 	}, [
 		dispatch,
 		userInitialized,
@@ -81,6 +104,9 @@ export default function DataInitializer() {
 		giftsInitialized,
 		tasksInitialized,
 		contactsInitialized,
+		budgetsInitialized,
+		holidayPreferences,
+		auth0User,
 	]);
 
 	// This component doesn't render anything

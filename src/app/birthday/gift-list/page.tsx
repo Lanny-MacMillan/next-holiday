@@ -29,6 +29,15 @@ export default function BirthdayGiftListPage() {
 		(state: any) => state.birthdayGiftList
 	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+
+	// Get Birthday holiday ID from preferences
+	const birthdayPreference = holidayPreferences.find(
+		(pref) => pref.holiday === "Birthday"
+	);
+	const birthdayHolidayId = birthdayPreference?.holidayId;
 
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -174,6 +183,7 @@ export default function BirthdayGiftListPage() {
 				<BudgetDisplay
 					holiday="Birthday"
 					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+					holidayId={birthdayHolidayId}
 				/>
 				<AddButton title="Gift" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">

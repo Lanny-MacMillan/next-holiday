@@ -54,11 +54,12 @@ const themeSlice = createSlice({
 		},
 		updateSettings: (state, action: PayloadAction<Partial<UserSettings>>) => {
 			state.settings = { ...state.settings, ...action.payload };
-			// Save to localStorage, but exclude holidayChoices since they should be fetched from DB
+			// Save to localStorage, but exclude budget-related data since they should be fetched from DB
 			if (typeof window !== "undefined") {
 				const settingsToSave = { ...state.settings };
-				// Remove holidayChoices from localStorage persistence
-				delete settingsToSave.holidayChoices;
+				// Remove budget-related data from localStorage persistence
+				delete (settingsToSave as any).holidayChoices;
+				delete (settingsToSave as any).giftBudgetLimit;
 				localStorage.setItem("userSettings", JSON.stringify(settingsToSave));
 			}
 		},
@@ -74,8 +75,9 @@ const themeSlice = createSlice({
 				if (savedSettings) {
 					try {
 						const parsedSettings = JSON.parse(savedSettings);
-						// Don't load holidayChoices from localStorage - they should come from DB
-						const { holidayChoices, ...settingsToLoad } = parsedSettings;
+						// Don't load budget-related data from localStorage - they should come from DB
+						const { holidayChoices, giftBudgetLimit, ...settingsToLoad } =
+							parsedSettings;
 						state.settings = { ...state.settings, ...settingsToLoad };
 					} catch (error) {
 						console.error("Error parsing saved settings:", error);
@@ -87,23 +89,25 @@ const themeSlice = createSlice({
 		// Add a new action to clear cached data when user logs out or changes
 		clearCachedData: (state) => {
 			if (typeof window !== "undefined") {
-				// Clear holidayChoices from localStorage
+				// Clear budget-related data from localStorage
 				const savedSettings = localStorage.getItem("userSettings");
 				if (savedSettings) {
 					try {
 						const parsedSettings = JSON.parse(savedSettings);
-						const { holidayChoices, ...settingsToKeep } = parsedSettings;
+						const { holidayChoices, giftBudgetLimit, ...settingsToKeep } =
+							parsedSettings;
 						localStorage.setItem(
 							"userSettings",
 							JSON.stringify(settingsToKeep)
 						);
 					} catch (error) {
-						console.error("Error clearing cached holiday data:", error);
+						console.error("Error clearing cached budget data:", error);
 					}
 				}
 			}
-			// Reset holidayChoices in state
+			// Reset budget-related data in state
 			state.settings.holidayChoices = [];
+			state.settings.giftBudgetLimit = 0;
 		},
 	},
 });

@@ -1,7 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
 import addressBookReducer from "./slices/addressBookSlice";
+import budgetsReducer from "./slices/budgetsSlice";
 import cardsReducer from "./slices/cardsSlice";
 import giftListReducer from "./slices/giftListSlice";
+import homeReducer from "./slices/homeSlice";
 import tasksReducer from "./slices/tasksSlice";
 import userReducer from "./slices/userSlice";
 import themeReducer from "./slices/themeSlice";
@@ -82,8 +84,10 @@ const shouldDisableSerializableCheck =
 export const store = configureStore({
 	reducer: {
 		addressBook: addressBookReducer,
+		budgets: budgetsReducer,
 		cards: cardsReducer,
 		giftList: giftListReducer,
+		home: homeReducer,
 		tasks: tasksReducer,
 		user: userReducer,
 		theme: themeReducer,

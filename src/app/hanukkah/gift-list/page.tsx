@@ -28,6 +28,15 @@ export default function HanukkahGiftListPage() {
 		(state: any) => state.hanukkahGiftList
 	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+
+	// Get Hanukkah holiday ID from preferences
+	const hanukkahPreference = holidayPreferences.find(
+		(pref) => pref.holiday === "Hanukkah"
+	);
+	const hanukkahHolidayId = hanukkahPreference?.holidayId;
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -250,6 +259,7 @@ export default function HanukkahGiftListPage() {
 				<BudgetDisplay
 					holiday="Hanukkah"
 					holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
+					holidayId={hanukkahHolidayId}
 				/>
 
 				<AddButton title="Gift" onClick={openForm} color="blue" />

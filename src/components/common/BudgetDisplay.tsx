@@ -1,4 +1,5 @@
 import { useAppSelector } from "@/store/hooks";
+import { useHolidayBudget } from "@/hooks/useHolidayBudget";
 import { getCardStyling } from "@/utils/cardShadows";
 import { getHolidayAccentColor } from "@/utils/holidayUtils";
 import { usePathname } from "next/navigation";
@@ -16,9 +17,17 @@ interface BudgetInfo {
 interface BudgetDisplayProps {
 	holiday?: string;
 	holidayColor?: string;
+	holidayId?: string; // New prop for DB-backed budgets
 }
 
-export function useBudgetInfo(holiday?: string): BudgetInfo {
+export function useBudgetInfo(
+	holiday?: string,
+	holidayId?: string
+): BudgetInfo {
+	// Use the new centralized budget hook if holidayId is provided
+	const { budget, loading, error } = useHolidayBudget({ holidayId });
+
+	// Fallback to old logic for backward compatibility
 	const { settings } = useAppSelector((state: any) => state.theme);
 
 	// Determine which gift list to use based on holiday
@@ -71,34 +80,43 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 			break;
 	}
 
-	// Get budget limit based on holiday
+	// Use DB-backed budget if available, otherwise fallback to localStorage
 	let budgetLimit = 0;
-	if (holiday) {
-		const holidayChoice = settings.holidayChoices?.find(
-			(choice: { holiday: string; budget: number }) =>
-				choice.holiday === holiday
-		);
-		budgetLimit = holidayChoice?.budget || 0;
+	let totalSpent = 0;
+
+	if (budget && holidayId) {
+		// Use DB-backed budget data
+		budgetLimit = budget.targetAmount || 0;
+		totalSpent = budget.spentAmount || 0;
 	} else {
-		budgetLimit = settings.giftBudgetLimit || 0;
-	}
+		// Fallback to old localStorage logic
+		if (holiday) {
+			const holidayChoice = settings.holidayChoices?.find(
+				(choice: { holiday: string; budget: number }) =>
+					choice.holiday === holiday
+			);
+			budgetLimit = holidayChoice?.budget || 0;
+		} else {
+			budgetLimit = settings.giftBudgetLimit || 0;
+		}
 
-	// Calculate total spent from all gifts (both completed and incomplete)
-	let totalSpent = gifts.reduce((sum: number, gift: any) => {
-		const price = typeof gift.price === "number" ? gift.price : 0;
-		return sum + price;
-	}, 0);
-
-	// For Thanksgiving, use the dedicated budget slice
-	if (holiday === "Thanksgiving") {
-		const budgetItems = useAppSelector(
-			(state: any) => state.thanksgivingBudget.budgetItems
-		);
-		const budgetCosts = budgetItems.reduce((sum: number, item: any) => {
-			const amount = typeof item.amount === "number" ? item.amount : 0;
-			return sum + amount;
+		// Calculate total spent from all gifts (both completed and incomplete)
+		totalSpent = gifts.reduce((sum: number, gift: any) => {
+			const price = typeof gift.price === "number" ? gift.price : 0;
+			return sum + price;
 		}, 0);
-		totalSpent = budgetCosts; // Replace gift costs with budget costs for Thanksgiving
+
+		// For Thanksgiving, use the dedicated budget slice
+		if (holiday === "Thanksgiving") {
+			const budgetItems = useAppSelector(
+				(state: any) => state.thanksgivingBudget.budgetItems
+			);
+			const budgetCosts = budgetItems.reduce((sum: number, item: any) => {
+				const amount = typeof item.amount === "number" ? item.amount : 0;
+				return sum + amount;
+			}, 0);
+			totalSpent = budgetCosts; // Replace gift costs with budget costs for Thanksgiving
+		}
 	}
 
 	const remaining = budgetLimit - totalSpent;
@@ -139,8 +157,12 @@ export function useBudgetInfo(holiday?: string): BudgetInfo {
 	};
 }
 
-export function BudgetDisplay({ holiday, holidayColor }: BudgetDisplayProps) {
-	const budgetInfo = useBudgetInfo(holiday);
+export function BudgetDisplay({
+	holiday,
+	holidayColor,
+	holidayId,
+}: BudgetDisplayProps) {
+	const budgetInfo = useBudgetInfo(holiday, holidayId);
 	const pathname = usePathname();
 	const { settings } = useAppSelector((state: any) => state.theme);
 	const isGamified = settings.displayMode === "gamified";
