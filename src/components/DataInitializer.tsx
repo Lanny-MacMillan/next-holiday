@@ -9,6 +9,7 @@ import { fetchTasks } from "@/store/slices/tasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { fetchBudgets } from "@/store/slices/budgetsSlice";
 import { getCurrentUser } from "@/store/slices/userSlice";
+import { setHomeData } from "@/store/slices/homeSlice";
 
 export default function DataInitializer() {
 	const { user: auth0User, isAuthenticated } = useAuth0();
@@ -52,7 +53,39 @@ export default function DataInitializer() {
 		}
 	}, [isAuthenticated, auth0User, userInitialized, dispatch]);
 
-	// Home data is loaded by HomePageWrapper, so we don't need to fetch it here
+	// Load home data if not already initialized
+	useEffect(() => {
+		if (isAuthenticated && auth0User && !homeInitialized) {
+			console.log("DataInitializer: Fetching home data");
+			fetchHomeData();
+		}
+	}, [isAuthenticated, auth0User, homeInitialized]);
+
+	async function fetchHomeData() {
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User!.sub,
+						email: auth0User!.email,
+						name: auth0User!.name,
+						picture: auth0User!.picture,
+					}),
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to fetch home data");
+			}
+
+			const result = await response.json();
+			const data = result.data;
+			dispatch(setHomeData(data));
+		} catch (err) {
+			console.error("Error fetching home data:", err);
+		}
+	}
 
 	// Initialize other data
 	useEffect(() => {

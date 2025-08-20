@@ -41,13 +41,16 @@ export const fetchContacts = createAsyncThunk(
 		const currentContacts = state.addressBook.contacts;
 		const isInitialized = state.addressBook.initialized;
 
-		// Only fetch if we haven't initialized yet
-		if (isInitialized) {
-			return currentContacts;
-		}
-
 		// Get contacts from home data if available
 		const homeContacts = state.home?.data?.contacts;
+
+		// Check if we already have contacts and home data is available
+		if (isInitialized && currentContacts.length > 0) {
+			console.log(
+				"Already initialized with contacts, returning current contacts"
+			);
+			return currentContacts;
+		}
 		console.log("Home contacts available:", homeContacts);
 		if (homeContacts && homeContacts.length > 0) {
 			// Convert Date objects to strings for consistency with API responses
@@ -63,6 +66,10 @@ export const fetchContacts = createAsyncThunk(
 						: contact.updatedAt,
 			}));
 			console.log("Converted contacts:", convertedContacts);
+			console.log(
+				"Returning contacts from fetchContacts thunk:",
+				convertedContacts
+			);
 			return convertedContacts;
 		}
 
@@ -205,7 +212,15 @@ const addressBookSlice = createSlice({
 			})
 			.addCase(fetchContacts.fulfilled, (state, action) => {
 				state.loading = false;
+				console.log(
+					"fetchContacts.fulfilled - action.payload:",
+					action.payload
+				);
 				state.contacts = action.payload;
+				console.log(
+					"fetchContacts.fulfilled - state.contacts after setting:",
+					state.contacts
+				);
 				state.initialized = true; // Set initialized to true on successful fetch
 			})
 			.addCase(fetchContacts.rejected, (state, action) => {

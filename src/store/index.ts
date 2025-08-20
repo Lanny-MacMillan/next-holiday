@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { api } from "./api";
 import addressBookReducer from "./slices/addressBookSlice";
 import budgetsReducer from "./slices/budgetsSlice";
 import cardsReducer from "./slices/cardsSlice";
@@ -83,6 +84,7 @@ const shouldDisableSerializableCheck =
 
 export const store = configureStore({
 	reducer: {
+		[api.reducerPath]: api.reducer,
 		addressBook: addressBookReducer,
 		budgets: budgetsReducer,
 		cards: cardsReducer,
@@ -198,7 +200,7 @@ export const store = configureStore({
 			});
 		}
 
-		return middleware;
+		return middleware.concat(api.middleware);
 	},
 	// Enable Redux DevTools in development
 	devTools: process.env.NODE_ENV !== "production",

@@ -58,6 +58,13 @@ export default function FormModal({
 	contacts = [],
 	onAddressBookSelect,
 }: FormModalProps) {
+	// Debug contacts in FormModal
+	useEffect(() => {
+		if (isOpen && showAddressBook) {
+			console.log("FormModal contacts:", contacts);
+			console.log("FormModal contacts length:", contacts?.length);
+		}
+	}, [isOpen, showAddressBook, contacts]);
 	const [formValues, setFormValues] = useState<Record<string, any>>({});
 	const [showAddressBookInternal, setShowAddressBookInternal] = useState(false);
 

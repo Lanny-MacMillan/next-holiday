@@ -1,12 +1,16 @@
 import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useHolidayBudget } from "@/hooks/useHolidayBudget";
+import { useGetGiftsQuery } from "@/store/api";
 import { getCardStyling } from "@/utils/cardShadows";
 import { getHolidayAccentColor } from "@/utils/holidayUtils";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import { usePathname } from "next/navigation";
 
 interface BudgetInfo {
 	budgetLimit: number;
 	totalSpent: number;
+	totalPlanned: number;
 	remaining: number;
 	percentageUsed: number;
 	colorClass: string;
@@ -24,70 +28,57 @@ export function useBudgetInfo(
 	holiday?: string,
 	holidayId?: string
 ): BudgetInfo {
-	// Use the new centralized budget hook if holidayId is provided
-	const { budget, loading, error } = useHolidayBudget({ holidayId });
-
 	// Fallback to old logic for backward compatibility
 	const { settings } = useAppSelector((state: any) => state.theme);
 
-	// Determine which gift list to use based on holiday
-	let gifts: any[] = [];
-	switch (holiday) {
-		case "Hanukkah":
-			gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
-			break;
-		case "Valentine's Day":
-			gifts = useAppSelector((state: any) => state.valentinesGiftList.gifts);
-			break;
-		case "Halloween":
-			gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
-			break;
-		case "Thanksgiving":
-			gifts = useAppSelector((state: any) => state.thanksgivingGiftList.gifts);
-			break;
-		case "New Year":
-			gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
-			break;
-		case "Kwanzaa":
-			gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
-			break;
-		case "Easter":
-			gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
-			break;
-		case "Mother's Day":
-			gifts = useAppSelector((state: any) => state.mothersDayGiftList.gifts);
-			break;
-		case "Father's Day":
-			gifts = useAppSelector((state: any) => state.fathersDayGiftList.gifts);
-			break;
-		case "Fourth of July":
-			gifts = useAppSelector((state: any) => state.fourthOfJulyGiftList.gifts);
-			break;
-		case "Birthday":
-			gifts = useAppSelector((state: any) => state.birthdayGiftList.gifts);
-			break;
-		case "Anniversary":
-			gifts = useAppSelector((state: any) => state.anniversaryGiftList.gifts);
-			break;
-		case "Graduation":
-			gifts = useAppSelector((state: any) => state.graduationGiftList.gifts);
-			break;
-		case "Baby Shower":
-			gifts = useAppSelector((state: any) => state.babyShowerGiftList.gifts);
-			break;
-		default:
-			gifts = useAppSelector((state: any) => state.giftList.gifts);
-			break;
+	// Get auth0User and holiday preferences for RTK Query
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+
+	// Determine holiday ID for RTK Query
+	let queryHolidayId = holidayId;
+	if (!queryHolidayId && holiday) {
+		const routeHolidayId = getHolidayIdFromRoute(
+			`/${holiday.toLowerCase()}`,
+			holidayPreferences
+		);
+		queryHolidayId = routeHolidayId || undefined;
 	}
+
+	// Use the new centralized budget hook if holidayId is provided
+	const { budget, loading, error } = useHolidayBudget({
+		holidayId: queryHolidayId,
+	});
+
+	// Use RTK Query to fetch gifts data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: queryHolidayId || "", auth0User },
+		{ skip: !queryHolidayId || !auth0User }
+	);
 
 	// Use DB-backed budget if available, otherwise fallback to localStorage
 	let budgetLimit = 0;
 	let totalSpent = 0;
+	let totalPlanned = 0;
+
+	// Always calculate spent amount from completed gifts, regardless of DB budget
+	totalSpent = gifts.reduce((sum: number, gift: any) => {
+		const price = typeof gift.price === "number" ? gift.price : 0;
+		// Only count completed gifts as purchased/spent
+		return gift.isCompleted ? sum + price : sum;
+	}, 0);
+
+	// Always calculate planned amount from all gifts with prices
+	totalPlanned = gifts.reduce((sum: number, gift: any) => {
+		const price = typeof gift.price === "number" ? gift.price : 0;
+		return sum + price;
+	}, 0);
 
 	if (budget && holidayId) {
-		// Use DB-backed budget data
+		// Use DB-backed budget data for budget limit only
 		budgetLimit = budget.targetAmount || 0;
-		totalSpent = budget.spentAmount || 0;
 	} else {
 		// Fallback to old localStorage logic
 		if (holiday) {
@@ -100,12 +91,6 @@ export function useBudgetInfo(
 			budgetLimit = settings.giftBudgetLimit || 0;
 		}
 
-		// Calculate total spent from all gifts (both completed and incomplete)
-		totalSpent = gifts.reduce((sum: number, gift: any) => {
-			const price = typeof gift.price === "number" ? gift.price : 0;
-			return sum + price;
-		}, 0);
-
 		// For Thanksgiving, use the dedicated budget slice
 		if (holiday === "Thanksgiving") {
 			const budgetItems = useAppSelector(
@@ -116,6 +101,7 @@ export function useBudgetInfo(
 				return sum + amount;
 			}, 0);
 			totalSpent = budgetCosts; // Replace gift costs with budget costs for Thanksgiving
+			totalPlanned = budgetCosts; // For Thanksgiving, planned = spent
 		}
 	}
 
@@ -149,6 +135,7 @@ export function useBudgetInfo(
 	return {
 		budgetLimit,
 		totalSpent,
+		totalPlanned,
 		remaining,
 		percentageUsed,
 		colorClass,
