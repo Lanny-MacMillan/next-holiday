@@ -4,15 +4,37 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, assertHolidayAccess } from "@/lib/auth";
 import { created, badRequest, serverError, ok } from "@/lib/http";
 
-const bodySchema = z.object({
+// Base schema without contact_id
+const baseSchema = z.object({
 	name: z.string().min(1),
 	description: z.string().nullable().optional(),
 	price: z.number().min(0).optional(),
 	actual_price: z.number().min(0).optional(),
 	store: z.string().nullable().optional(),
-	product_link: z.string().url().nullable().optional(),
+	product_link: z
+		.union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
+		.optional(),
 	notes: z.string().nullable().optional(),
+});
+
+// Schema for holidays that require contact_id (like Christmas)
+const giftWithContactSchema = baseSchema.extend({
 	contact_id: z.string().uuid(),
+});
+
+// Schema for holidays that don't require contact_id (like Thanksgiving)
+const giftWithoutContactSchema = baseSchema.extend({
+	contact_id: z.string().uuid().nullable().optional(),
+	// For Thanksgiving, only name is required
+	name: z.string().min(1, "Shopping Item Name is required"),
+	description: z.string().nullable().optional(),
+	price: z.number().min(0).optional(),
+	actual_price: z.number().min(0).optional(),
+	store: z.string().nullable().optional(),
+	product_link: z
+		.union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
+		.optional(),
+	notes: z.string().nullable().optional(),
 });
 
 export async function POST(
@@ -25,8 +47,26 @@ export async function POST(
 		const forbidden = await assertHolidayAccess(id, user.id);
 		if (forbidden) return forbidden;
 
+		// Get holiday information to determine validation schema
+		const holiday = await prisma.holiday.findUnique({
+			where: { id },
+			select: { name: true },
+		});
+
+		if (!holiday) {
+			return badRequest("Holiday not found");
+		}
+
 		const json = await request.json();
-		const parsed = bodySchema.safeParse(json);
+
+		// Use different schema based on holiday
+		let parsed;
+		if (holiday.name === "Thanksgiving") {
+			parsed = giftWithoutContactSchema.safeParse(json);
+		} else {
+			parsed = giftWithContactSchema.safeParse(json);
+		}
+
 		if (!parsed.success) {
 			return badRequest(parsed.error.issues);
 		}
@@ -40,7 +80,10 @@ export async function POST(
 				price: data.price ?? 0,
 				actualPrice: data.actual_price ?? null,
 				store: data.store ?? null,
-				productLink: data.product_link ?? null,
+				productLink:
+					data.product_link && data.product_link.length > 0
+						? data.product_link
+						: null,
 				notes: data.notes ?? null,
 				contactId: data.contact_id,
 				createdBy: user.id,
@@ -168,11 +211,33 @@ export async function PATCH(
 		const forbidden = await assertHolidayAccess(id, user.id);
 		if (forbidden) return forbidden;
 
+		// Get holiday information to determine validation schema
+		const holiday = await prisma.holiday.findUnique({
+			where: { id },
+			select: { name: true },
+		});
+
+		if (!holiday) {
+			return badRequest("Holiday not found");
+		}
+
 		const json = await request.json();
 		const { giftId, ...updateData } = json;
 
 		if (!giftId) {
 			return badRequest("giftId is required");
+		}
+
+		// Validate update data based on holiday
+		let parsed;
+		if (holiday.name === "Thanksgiving") {
+			parsed = giftWithoutContactSchema.safeParse(updateData);
+		} else {
+			parsed = giftWithContactSchema.safeParse(updateData);
+		}
+
+		if (!parsed.success) {
+			return badRequest(parsed.error.issues);
 		}
 
 		// Update the gift
@@ -186,7 +251,10 @@ export async function PATCH(
 				description: updateData.description ?? null,
 				price: updateData.price ?? 0,
 				store: updateData.store ?? null,
-				productLink: updateData.product_link ?? null,
+				productLink:
+					updateData.product_link && updateData.product_link.length > 0
+						? updateData.product_link
+						: null,
 				notes: updateData.notes ?? null,
 				contactId: updateData.contact_id,
 			},

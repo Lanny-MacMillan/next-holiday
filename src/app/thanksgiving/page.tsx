@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchThanksgivingGifts } from "@/store/slices/thanksgiving/thanksgivingGiftListSlice";
-import { fetchThanksgivingTasks } from "@/store/slices/thanksgiving/thanksgivingTasksSlice";
-import { fetchThanksgivingGuests } from "@/store/slices/thanksgiving/thanksgivingGuestListSlice";
-import { fetchThanksgivingRecipes } from "@/store/slices/thanksgiving/thanksgivingMealPlanningSlice";
-import { fetchThanksgivingBudgetItems } from "@/store/slices/thanksgiving/thanksgivingBudgetSlice";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetTasksQuery,
+	useGetGuestListQuery,
+} from "@/store/api";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
@@ -45,26 +45,27 @@ const subsections = [
 ];
 
 export default function ThanksgivingPage() {
-	const dispatch = useAppDispatch();
-
-	const gifts = useAppSelector(
-		(state: any) => state.thanksgivingGiftList.gifts
-	);
-	const tasks = useAppSelector((state: any) => state.thanksgivingTasks.tasks);
-	const guests = useAppSelector(
-		(state: any) => state.thanksgivingGuestList.guests
-	);
-	const recipes = useAppSelector(
-		(state: any) => state.thanksgivingMealPlanning.recipes
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
 
-	useEffect(() => {
-		dispatch(fetchThanksgivingGifts());
-		dispatch(fetchThanksgivingTasks());
-		dispatch(fetchThanksgivingGuests());
-		dispatch(fetchThanksgivingRecipes());
-		dispatch(fetchThanksgivingBudgetItems());
-	}, [dispatch]);
+	// Get holiday ID for Thanksgiving
+	const holidayId = getHolidayIdFromRoute("/thanksgiving", holidayPreferences);
+
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: guests = [] } = useGetGuestListQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(sliceKey: string, category?: string) {
 		let total = 0;
@@ -72,6 +73,7 @@ export default function ThanksgivingPage() {
 
 		switch (sliceKey) {
 			case "giftList":
+			case "thanksgivingBudgetSlice": // For shopping list
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -80,8 +82,14 @@ export default function ThanksgivingPage() {
 				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
 			case "mealPlanning":
-				total = recipes.length;
-				completed = recipes.filter((recipe: any) => recipe.isCompleted).length;
+				// For meal planning, we'll use tasks with meal-planning category
+				const mealPlanningTasks = tasks.filter(
+					(task: any) => task.category === "meal-planning"
+				);
+				total = mealPlanningTasks.length;
+				completed = mealPlanningTasks.filter(
+					(task: any) => task.isCompleted
+				).length;
 				break;
 			case "tasks":
 				const filteredTasks = category

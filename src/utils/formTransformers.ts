@@ -26,6 +26,23 @@ export function transformGiftPayload(
 }
 
 /**
+ * Transform form values to Thanksgiving shopping item API payload
+ */
+export function transformThanksgivingShoppingPayload(
+	values: Record<string, any>
+) {
+	return {
+		name: values.giftName || "",
+		description: values.description || "",
+		price: values.price ? parseFloat(values.price) : 0,
+		store: values.store || "",
+		product_link: values.product_link || "",
+		notes: values.notes || "",
+		contact_id: null, // No recipient needed for Thanksgiving shopping items
+	};
+}
+
+/**
  * Transform form values to card API payload
  */
 export function transformCardPayload(

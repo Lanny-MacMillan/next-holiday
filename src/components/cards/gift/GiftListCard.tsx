@@ -74,12 +74,7 @@ export function useGiftListCardData(
 	// Use RTK Query to fetch gifts data
 	const { data: gifts = [] } = useGetGiftsQuery(
 		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User || isThanksgiving }
-	);
-
-	// Thanksgiving budget items
-	const thanksgivingBudgetItems = useAppSelector(
-		(state: any) => state.thanksgivingBudget?.budgetItems || []
+		{ skip: !holidayId || !auth0User }
 	);
 
 	// Map holiday name -> holidayId via home data, then pull budget entity from Redux (DB-backed)
@@ -126,32 +121,20 @@ export function useGiftListCardData(
 	let completedItems = 0;
 	let totalPlanned = 0;
 
-	if (isThanksgiving) {
-		// Use dedicated Thanksgiving budget slice
-		totalSpent = thanksgivingBudgetItems.reduce(
-			(sum: number, item: any) =>
-				sum + (typeof item.amount === "number" ? item.amount : 0),
-			0
-		);
-		totalItems = thanksgivingBudgetItems.length;
-		completedItems = 0; // No completion state for budget items
-		totalPlanned = totalSpent; // For Thanksgiving, planned = spent
-	} else {
-		// Default gift-based calculation - only count completed gifts as purchased
-		totalSpent = gifts.reduce((sum: number, gift: any) => {
-			const price = gift.price || 0;
-			// Only count completed gifts as purchased/spent
-			return gift.isCompleted ? sum + price : sum;
-		}, 0);
+	// Calculate totals using RTK Query data
+	totalSpent = gifts.reduce((sum: number, gift: any) => {
+		const price = gift.price || 0;
+		// Only count completed gifts as purchased/spent
+		return gift.isCompleted ? sum + price : sum;
+	}, 0);
 
-		// Calculate total planned (all gifts with prices)
-		totalPlanned = gifts.reduce(
-			(sum: number, gift: any) => sum + (gift.price || 0),
-			0
-		);
-		totalItems = gifts.length;
-		completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
-	}
+	// Calculate total planned (all gifts with prices)
+	totalPlanned = gifts.reduce(
+		(sum: number, gift: any) => sum + (gift.price || 0),
+		0
+	);
+	totalItems = gifts.length;
+	completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
 
 	// Always use calculated spent amount from completed gifts, not DB override
 	// The DB spentAmount might be outdated or not maintained properly

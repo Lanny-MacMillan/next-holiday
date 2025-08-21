@@ -42,6 +42,7 @@ export function useFormModalMutation() {
 			case "gift-list":
 			case "basket-list": // Easter basket-list is also a gift list
 			case "supplies-list": // New Year supplies-list is also a gift list
+			case "shopping-list": // Thanksgiving shopping-list is also a gift list
 				return {
 					mutation: createGift,
 					state: createGiftState,
@@ -59,7 +60,6 @@ export function useFormModalMutation() {
 			case "candle-lighting":
 			case "meal-planning":
 			case "decorations-checklist":
-			case "shopping-list":
 			case "date-ideas":
 			case "reservations":
 			case "party-planning":
