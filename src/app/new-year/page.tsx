@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchNewYearGifts } from "@/store/slices/new-year/newYearGiftListSlice";
 import { fetchNewYearTasks } from "@/store/slices/new-year/newYearTasksSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import { useGetGiftsQuery } from "@/store/api";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -14,7 +15,7 @@ const subsections = [
 		name: "Supplies List",
 		description: "Track your party supplies and fireworks",
 		href: "/new-year/supplies-list",
-		sliceKey: "newYearGiftList",
+		sliceKey: "gifts",
 		category: "Supplies",
 	},
 	{
@@ -42,14 +43,23 @@ const subsections = [
 
 export default function NewYearPage() {
 	const dispatch = useAppDispatch();
+	const { holidayId, auth0User } = useFormModalMutation();
 
-	const gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: giftsLoading,
+		error: giftsError,
+	} = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
 	const tasks = useAppSelector((state: any) => state.newYearTasks.tasks);
 
 	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
+		// Fetch tasks when component mounts if not already initialized
 		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchNewYearGifts());
 		dispatch(fetchNewYearTasks());
 	}, [dispatch]);
 
@@ -65,8 +75,7 @@ export default function NewYearPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
-			case "giftList":
-			case "newYearGiftList":
+			case "gifts":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -105,7 +114,7 @@ export default function NewYearPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (section.sliceKey.includes("GiftList")) {
+						if (section.sliceKey === "gifts") {
 							return (
 								<li key={section.name}>
 									<GiftListCard

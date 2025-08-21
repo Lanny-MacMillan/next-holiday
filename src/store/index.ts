@@ -18,7 +18,7 @@ import hanukkahCountdownReducer from "./slices/hanukkah/hanukkahCountdownSlice";
 import kwanzaaGiftListReducer from "./slices/kwanzaa/kwanzaaGiftListSlice";
 import kwanzaaTasksReducer from "./slices/kwanzaa/kwanzaaTasksSlice";
 import kwanzaaCountdownReducer from "./slices/kwanzaa/kwanzaaCountdownSlice";
-import newYearGiftListReducer from "./slices/new-year/newYearGiftListSlice";
+
 import newYearTasksReducer from "./slices/new-year/newYearTasksSlice";
 import newYearCountdownReducer from "./slices/new-year/newYearCountdownSlice";
 import valentinesGiftListReducer from "./slices/valentines/valentinesGiftListSlice";
@@ -102,7 +102,7 @@ export const store = configureStore({
 		kwanzaaGiftList: kwanzaaGiftListReducer,
 		kwanzaaTasks: kwanzaaTasksReducer,
 		kwanzaaCountdown: kwanzaaCountdownReducer,
-		newYearGiftList: newYearGiftListReducer,
+
 		newYearTasks: newYearTasksReducer,
 		newYearCountdown: newYearCountdownReducer,
 		valentinesGiftList: valentinesGiftListReducer,

@@ -48,9 +48,9 @@ export function useBudgetInfo(
 	}
 
 	// Use the new centralized budget hook if holidayId is provided
-	const { budget, loading, error } = useHolidayBudget({
-		holidayId: queryHolidayId,
-	});
+	const { budget, loading, error } = queryHolidayId 
+		? useHolidayBudget({ holidayId: queryHolidayId })
+		: { budget: null, loading: false, error: null };
 
 	// Use RTK Query to fetch gifts data
 	const { data: gifts = [] } = useGetGiftsQuery(

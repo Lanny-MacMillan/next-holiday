@@ -32,9 +32,7 @@ export default function HomeContent({ homeData }: HomeContentProps) {
 	const kwanzaaTasks = useAppSelector(
 		(state) => state.kwanzaaTasks?.tasks || []
 	);
-	const newYearGifts = useAppSelector(
-		(state) => state.newYearGiftList?.gifts || []
-	);
+
 	const newYearTasks = useAppSelector(
 		(state) => state.newYearTasks?.tasks || []
 	);
@@ -176,7 +174,7 @@ export default function HomeContent({ homeData }: HomeContentProps) {
 								hanukkahTasks: { tasks: hanukkahTasks },
 								kwanzaaGiftList: { gifts: kwanzaaGifts },
 								kwanzaaTasks: { tasks: kwanzaaTasks },
-								newYearGiftList: { gifts: newYearGifts },
+
 								newYearTasks: { tasks: newYearTasks },
 								valentinesGiftList: { gifts: valentinesGifts },
 								valentinesTasks: { tasks: valentinesTasks },

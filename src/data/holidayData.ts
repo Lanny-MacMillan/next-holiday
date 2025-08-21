@@ -141,7 +141,9 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-amber-400 dark:bg-amber-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.newYearGiftList?.gifts || [];
+			// Use RTK Query data
+			const gifts =
+				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
 			const tasks = state.newYearTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
@@ -152,7 +154,9 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.newYearGiftList?.gifts || [];
+			// Use RTK Query data
+			const gifts =
+				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
 			const tasks = state.newYearTasks?.tasks || [];
 
 			return (
@@ -161,7 +165,9 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.newYearGiftList?.gifts || [];
+			// Use RTK Query data
+			const gifts =
+				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
 			const tasks = state.newYearTasks?.tasks || [];
 
 			return gifts.length + tasks.length;

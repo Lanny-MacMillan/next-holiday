@@ -174,6 +174,56 @@ export const giftsFormConfig: FormConfig = {
 	showAddressBook: true,
 };
 
+// Supplies form configuration (for New Year supplies-list)
+export const suppliesFormConfig: FormConfig = {
+	title: "Add New Supply Item",
+	fields: [
+		{
+			id: "recipient",
+			type: "text",
+			placeholder: "Recipient*",
+			required: true,
+		},
+		{
+			id: "giftName",
+			type: "text",
+			placeholder: "Supply Item",
+		},
+		{
+			id: "description",
+			type: "text",
+			placeholder: "Description (optional)",
+		},
+		{
+			id: "price",
+			type: "number",
+			placeholder: "Price",
+			step: "0.01",
+		},
+		{
+			id: "store",
+			type: "text",
+			placeholder: "Store",
+		},
+		{
+			id: "product_link",
+			type: "url",
+			placeholder: "Product Link (optional)",
+		},
+		{
+			id: "notes",
+			type: "textarea",
+			placeholder: "Notes",
+			rows: 2,
+		},
+	],
+	submitText: "Add Supply Item",
+	cancelText: "Cancel",
+	cardClassName: "card",
+	submitButtonColor: "#f59e0b", // Amber for New Year
+	showAddressBook: true,
+};
+
 // Edit configurations (for editing existing items)
 export const editCardsFormConfig: FormConfig = {
 	...cardsFormConfig,
@@ -197,6 +247,12 @@ export const editGiftsFormConfig: FormConfig = {
 	...giftsFormConfig,
 	title: "Edit Gift",
 	submitText: "Update Gift",
+};
+
+export const editSuppliesFormConfig: FormConfig = {
+	...suppliesFormConfig,
+	title: "Edit Supply Item",
+	submitText: "Update Supply Item",
 };
 
 // Guest list form configuration
@@ -417,7 +473,14 @@ export const editAddressBookFormConfig: FormConfig = {
 };
 
 export function getFormConfig(
-	type: "cards" | "tasks" | "events" | "gifts" | "guests" | "addressBook",
+	type:
+		| "cards"
+		| "tasks"
+		| "events"
+		| "gifts"
+		| "guests"
+		| "addressBook"
+		| "supplies",
 	mode: "add" | "edit" = "add",
 	customTitle?: string,
 	customFieldLabel?: string,
@@ -428,6 +491,7 @@ export function getFormConfig(
 		tasks: mode === "add" ? tasksFormConfig : editTasksFormConfig,
 		events: mode === "add" ? eventsFormConfig : editEventsFormConfig,
 		gifts: mode === "add" ? giftsFormConfig : editGiftsFormConfig,
+		supplies: mode === "add" ? suppliesFormConfig : editSuppliesFormConfig,
 		guests: mode === "add" ? guestsFormConfig : editGuestsFormConfig,
 		addressBook:
 			mode === "add" ? addressBookFormConfig : editAddressBookFormConfig,

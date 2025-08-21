@@ -41,6 +41,7 @@ export function useFormModalMutation() {
 		switch (resourceType) {
 			case "gift-list":
 			case "basket-list": // Easter basket-list is also a gift list
+			case "supplies-list": // New Year supplies-list is also a gift list
 				return {
 					mutation: createGift,
 					state: createGiftState,
@@ -65,7 +66,6 @@ export function useFormModalMutation() {
 			case "costume-ideas":
 			case "trick-or-treat-prep":
 			case "resolutions":
-			case "supplies-list":
 			case "games":
 				return {
 					mutation: createTask,
