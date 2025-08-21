@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchGraduationCards } from "@/store/slices/graduation/graduationCardsSlice";
-import { fetchGraduationGifts } from "@/store/slices/graduation/graduationGiftListSlice";
-import { fetchGraduationTasks } from "@/store/slices/graduation/graduationTasksSlice";
-import { fetchGraduationContacts } from "@/store/slices/graduation/graduationAddressBookSlice";
-import { fetchGraduationGuests } from "@/store/slices/graduation/graduationGuestListSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track graduation gift ideas",
 		href: "/graduation/gift-list",
-		sliceKey: "graduationGiftList",
+		sliceKey: "giftList",
 		category: "Gifts",
 		type: "gift-list",
 	},
@@ -48,26 +47,27 @@ const subsections = [
 ];
 
 export default function GraduationPage() {
-	const dispatch = useAppDispatch();
-
-	const cards = useAppSelector((state: any) => state.graduationCards.cards);
-	const gifts = useAppSelector((state: any) => state.graduationGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.graduationTasks.tasks);
-	const contacts = useAppSelector(
-		(state: any) => state.graduationAddressBook.contacts
-	);
-	const guests = useAppSelector(
-		(state: any) => state.graduationGuestList.guests
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		dispatch(fetchGraduationCards());
-		dispatch(fetchGraduationGifts());
-		dispatch(fetchGraduationTasks());
-		dispatch(fetchGraduationContacts());
-		dispatch(fetchGraduationGuests());
-	}, [dispatch]);
+	// Get holiday ID for Graduation
+	const holidayId = getHolidayIdFromRoute("/graduation", holidayPreferences);
+
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(sliceKey: string): {
 		total: number;
@@ -83,21 +83,17 @@ export default function GraduationPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
-			case "graduationGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
-				break;
-			case "guestList":
-				total = guests.length;
-				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
 			case "tasks":
 				total = tasks.length;
 				completed = tasks.filter((task: any) => task.isCompleted).length;
 				break;
-			case "addressBook":
-				total = contacts.length;
-				completed = 0; // Address book doesn't have completion status
+			case "guestList":
+				// Guest list doesn't have completion status, so we'll show total count
+				total = 0;
+				completed = 0;
 				break;
 			default:
 				total = 0;
@@ -147,7 +143,6 @@ export default function GraduationPage() {
 											primaryColor: "#8b5cf6", // Purple for Graduation
 											accentColor: "#8b5cf6", // Purple accent
 										}}
-										gamified={true}
 										holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 									/>
 								</li>

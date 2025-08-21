@@ -3,22 +3,22 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchAnniversaryGifts,
-	addAnniversaryGift,
-	updateAnniversaryGift,
-	deleteAnniversaryGift,
-	toggleAnniversaryGiftCompletion,
-	AnniversaryGift,
-} from "@/store/slices/anniversary/anniversaryGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useUpdateGiftMutation,
+	useEditGiftMutation,
+	useDeleteGiftMutation,
+} from "@/store/api";
+import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
+
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
@@ -27,112 +27,165 @@ type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function GiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error, initialized } = useAppSelector(
-		(state: any) => state.anniversaryGiftList
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+	} = useFormModalMutation();
+
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: loading,
+		error,
+		isSuccess: initialized,
+	} = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
+	// Update gift mutation
+	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+
+	// Edit and delete mutations
+	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
+	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		giftId: string | null;
-	}>({
-		show: false,
-		giftId: null,
-	});
-	const [showForm, setShowForm] = useState(false);
-	const [editingGift, setEditingGift] = useState<AnniversaryGift | null>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [selectedGift, setSelectedGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+
+	// Get home data to check if contacts are available
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
 
 	useEffect(() => {
-		// Fetch gifts and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchAnniversaryGifts());
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
 		}
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch, homeInitialized]);
 
-	function handleAddGift(values: Record<string, any>) {
-		// Check if required fields are present
-		if (!values.description?.trim()) {
-			alert("Please enter a gift description");
-			return;
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+		if (!holidayId || !mutation) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await mutation({ holidayId, payload, auth0User }).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error creating gift. Please try again.");
+			}
 		}
-		if (!values.recipient?.trim()) {
-			alert("Please enter a recipient");
-			return;
-		}
-
-		if (editingGift) {
-			// Update existing gift
-			const updatedGift: AnniversaryGift = {
-				...editingGift,
-				name: values.description,
-				description: values.description || undefined,
-				price: parseFloat(values.price) || 0,
-				recipient: values.recipient,
-				store: values.store || undefined,
-				productLink: values.productLink || undefined,
-				notes: values.notes || undefined,
-			};
-
-			dispatch(updateAnniversaryGift(updatedGift));
-			setEditingGift(null);
-		} else {
-			// Add new gift
-			const newGift: Omit<AnniversaryGift, "id" | "createdAt" | "updatedAt"> = {
-				name: values.description,
-				description: values.description || undefined,
-				price: parseFloat(values.price) || 0,
-				recipient: values.recipient,
-				isCompleted: false,
-				store: values.store || undefined,
-				productLink: values.productLink || undefined,
-				notes: values.notes || undefined,
-			};
-
-			dispatch(addAnniversaryGift(newGift));
-		}
-
-		setShowForm(false);
 	}
 
 	function openForm() {
-		setShowForm(true);
-		setEditingGift(null);
+		setShowFormModal(true);
+		setSelectedGift(null);
 	}
 
 	function closeForm() {
-		setShowForm(false);
-		setEditingGift(null);
+		setShowFormModal(false);
+		setSelectedGift(null);
 	}
 
-	function handleToggleGift(giftId: string) {
-		dispatch(toggleAnniversaryGiftCompletion(giftId));
+	async function handleToggleGift(giftId: string) {
+		if (!holidayId) return;
+
+		try {
+			// Find the current gift to get its completion status
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (!currentGift) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentGift.isCompleted;
+
+			// Update the gift in the database
+			await updateGift({
+				holidayId: holidayId || "",
+				giftId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// The UI will automatically update due to RTK Query cache invalidation
+		} catch (error) {
+			console.error("Error toggling gift:", error);
+			// Handle error (could show a toast notification)
+		}
 	}
 
-	function handleDeleteGift(giftId: string) {
-		setDeleteConfirm({ show: true, giftId });
+	async function handleDeleteGift(gift: any) {
+		setGiftToDelete(gift);
+		setShowDeleteModal(true);
 	}
 
-	function handleEditGift(gift: AnniversaryGift) {
-		setEditingGift(gift);
-		setShowForm(true);
-	}
+	async function confirmDelete() {
+		if (!giftToDelete || !holidayId) return;
 
-	function confirmDelete() {
-		if (deleteConfirm.giftId) {
-			dispatch(deleteAnniversaryGift(deleteConfirm.giftId));
-			setDeleteConfirm({ show: false, giftId: null });
+		try {
+			await deleteGift({
+				holidayId,
+				giftId: giftToDelete.id,
+				auth0User,
+			}).unwrap();
+			setShowDeleteModal(false);
+			setGiftToDelete(null);
+		} catch (error) {
+			console.error("Error deleting gift:", error);
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, giftId: null });
+		setShowDeleteModal(false);
+		setGiftToDelete(null);
 	}
 
-	function sortGifts(giftsToSort: AnniversaryGift[]): AnniversaryGift[] {
+	async function handleEditGift(gift: any) {
+		setSelectedGift(gift);
+		setShowFormModal(true);
+	}
+
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !holidayId) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await editGift({
+				holidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
+	}
+
+	function sortGifts(giftsToSort: any[]): any[] {
 		switch (sortBy) {
 			case "recipient":
 				return [...giftsToSort].sort((a, b) =>
@@ -162,23 +215,19 @@ export default function GiftListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts);
-	const incompleteGifts = sortedGifts.filter(
-		(gift: AnniversaryGift) => !gift.isCompleted
-	);
-	const completedGifts = sortedGifts.filter(
-		(gift: AnniversaryGift) => gift.isCompleted
-	);
+	const sortedGifts = sortGifts(gifts || []);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
-	const renderGiftItem = (gift: AnniversaryGift) => (
+	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
-			loading={loading}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading || updateLoading}
 			theme={{
 				accentColor: "#ec4899", // Pink for Anniversary
 			}}
@@ -187,15 +236,15 @@ export default function GiftListPage() {
 		/>
 	);
 
-	const renderCompletedGiftItem = (gift: AnniversaryGift) => (
+	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
-			loading={loading}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading || updateLoading}
 			theme={{
 				accentColor: "#ec4899", // Pink for Anniversary
 			}}
@@ -209,14 +258,19 @@ export default function GiftListPage() {
 		{
 			id: "recipient",
 			type: "text" as const,
-			placeholder: "Recipient*",
+			placeholder: "Recipient (select from address book)*",
+			required: true,
+		},
+		{
+			id: "giftName",
+			type: "text" as const,
+			placeholder: "Gift Name*",
 			required: true,
 		},
 		{
 			id: "description",
 			type: "text" as const,
-			placeholder: "Gift*",
-			required: true,
+			placeholder: "Description",
 		},
 		{
 			id: "price",
@@ -230,7 +284,7 @@ export default function GiftListPage() {
 			placeholder: "Store",
 		},
 		{
-			id: "productLink",
+			id: "product_link",
 			type: "url" as const,
 			placeholder: "Product Link (optional)",
 		},
@@ -244,15 +298,16 @@ export default function GiftListPage() {
 
 	// Initial values for editing
 	const getInitialValues = () => {
-		if (!editingGift) return {};
+		if (!selectedGift) return {};
 
 		return {
-			description: editingGift.name,
-			price: editingGift.price.toString(),
-			recipient: editingGift.recipient,
-			store: editingGift.store || "",
-			productLink: editingGift.productLink || "",
-			notes: editingGift.notes || "",
+			recipient: selectedGift.recipient || "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price.toString(),
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
 		};
 	};
 
@@ -265,13 +320,14 @@ export default function GiftListPage() {
 				sortTitle="Sort gifts"
 				description="Plan your anniversary gift list with style!"
 				holidayColor="pink-500"
-				error={error}
+				error={error ? "Error loading gifts" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay
 					holiday="Anniversary"
 					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+					holidayId={holidayId || undefined}
 				/>
 
 				<AddButton title="Gift" onClick={openForm} color="pink" />
@@ -307,14 +363,14 @@ export default function GiftListPage() {
 
 			{/* Form Modal */}
 			<FormModal
-				isOpen={showForm}
-				title={editingGift ? "Edit Gift" : "Add New Gift"}
+				isOpen={showFormModal}
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
 				fields={formFields}
 				initialValues={getInitialValues()}
-				onSubmit={handleAddGift}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
 				onClose={closeForm}
-				loading={loading}
-				submitText={editingGift ? "Update Gift" : "Add Gift"}
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
 				cardClassName="card"
 				submitButtonColor="#ec4899"
@@ -324,11 +380,12 @@ export default function GiftListPage() {
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("gifts")}
+				isOpen={showDeleteModal}
+				title="Delete Gift"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteLoading}
 			/>
 
 			{/* Sort Modal */}

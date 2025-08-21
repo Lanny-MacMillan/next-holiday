@@ -25,7 +25,7 @@ import TaskSection from "@/components/common/TaskSection";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
-export default function BirthdayGiftListPage() {
+export default function HOLIDAY_GiftListPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 	const {
@@ -206,9 +206,9 @@ export default function BirthdayGiftListPage() {
 
 	if (loading && !initialized) {
 		return (
-			<div className="min-h-screen birthday-gradient flex items-center justify-center">
+			<div className="min-h-screen HOLIDAY-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-COLOR-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">Loading gifts...</p>
 				</div>
 			</div>
@@ -229,10 +229,10 @@ export default function BirthdayGiftListPage() {
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading || updateLoading}
 			theme={{
-				accentColor: "#3b82f6", // Blue for Birthday
+				accentColor: "#COLOR_CODE", // COLOR for HOLIDAY
 			}}
-			borderColor="rgb(var(--color-blue-500))" // Blue border for Birthday
-			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+			borderColor="rgb(var(--color-COLOR-500))" // COLOR border for HOLIDAY
+			gamifiedBackgroundColor="bg-gradient-to-br from-COLOR-300 to-COLOR-500"
 		/>
 	);
 
@@ -246,10 +246,10 @@ export default function BirthdayGiftListPage() {
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading || updateLoading}
 			theme={{
-				accentColor: "#3b82f6", // Blue for Birthday
+				accentColor: "#COLOR_CODE", // COLOR for HOLIDAY
 			}}
-			borderColor="rgb(var(--color-blue-500))" // Blue border for Birthday
-			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+			borderColor="rgb(var(--color-COLOR-500))" // COLOR border for HOLIDAY
+			gamifiedBackgroundColor="bg-gradient-to-br from-COLOR-300 to-COLOR-500"
 		/>
 	);
 
@@ -312,25 +312,25 @@ export default function BirthdayGiftListPage() {
 	};
 
 	return (
-		<div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen HOLIDAY-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="Gift List"
-				backHref="/birthday"
+				backHref="/HOLIDAY"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Plan your birthday gift list with style!"
-				holidayColor="blue-500"
+				description="Plan your HOLIDAY gift list with style!"
+				holidayColor="COLOR-500"
 				error={error ? "Error loading gifts" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay
-					holiday="Birthday"
-					holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+					holiday="HOLIDAY_NAME"
+					holidayColor="bg-gradient-to-br from-COLOR-300 to-COLOR-500"
 					holidayId={holidayId || undefined}
 				/>
 
-				<AddButton title="Gift" onClick={openForm} color="blue" />
+				<AddButton title="Gift" onClick={openForm} color="COLOR" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -373,7 +373,7 @@ export default function BirthdayGiftListPage() {
 				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
 				cardClassName="card"
-				submitButtonColor="#3b82f6"
+				submitButtonColor="#COLOR_CODE"
 				showAddressBook={true}
 				contacts={contacts}
 			/>

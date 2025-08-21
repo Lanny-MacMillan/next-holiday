@@ -11,6 +11,7 @@ import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 export interface GiftListCardProps {
 	holiday?: string;
 	holidayName?: string; // For backward compatibility
+	holidayId?: string; // Add holidayId prop for direct holiday ID
 	budget?: {
 		spent: number;
 		total: number;
@@ -31,7 +32,23 @@ export interface GiftListCardProps {
 	gamifiedBackgroundColor?: string; // New prop for background color
 }
 
-export function useGiftListCardData(holiday?: string) {
+// Helper function to convert holiday name to route format
+function getHolidayRoute(holiday: string): string {
+	const holidayToRouteMap: Record<string, string> = {
+		"Baby Shower": "baby-shower",
+		"Mothers Day": "mothers-day",
+		"Fathers Day": "fathers-day",
+		"New Year": "new-year",
+		"Fourth of July": "fourth-of-july",
+	};
+
+	return holidayToRouteMap[holiday] || holiday.toLowerCase();
+}
+
+export function useGiftListCardData(
+	holiday?: string,
+	providedHolidayId?: string
+) {
 	// Get holiday configuration
 	const config = getHolidayGiftListConfig(holiday);
 
@@ -44,10 +61,15 @@ export function useGiftListCardData(holiday?: string) {
 		(state: any) => state.home.data?.holidayPreferences || []
 	);
 
-	// Get holiday ID for the specific holiday
-	const holidayId = holiday
-		? getHolidayIdFromRoute(`/${holiday.toLowerCase()}`, giftHolidayPreferences)
-		: null;
+	// Use provided holidayId if available, otherwise resolve from route
+	const holidayId =
+		providedHolidayId ||
+		(holiday
+			? getHolidayIdFromRoute(
+					`/${getHolidayRoute(holiday)}`,
+					giftHolidayPreferences
+			  )
+			: null);
 
 	// Use RTK Query to fetch gifts data
 	const { data: gifts = [] } = useGetGiftsQuery(
@@ -166,6 +188,7 @@ export function useGiftListCardData(holiday?: string) {
 export default function GiftListCard({
 	holiday,
 	holidayName,
+	holidayId,
 	budget,
 	giftList,
 	theme = {},
@@ -186,7 +209,7 @@ export default function GiftListCard({
 	const isDarkMode = settings.theme === "dark";
 
 	// Use holiday-specific data if holiday prop is provided, otherwise use passed props
-	const holidayData = holiday ? useGiftListCardData(holiday) : null;
+	const holidayData = holiday ? useGiftListCardData(holiday, holidayId) : null;
 
 	const finalBudget = holidayData?.budget || budget;
 	const finalGiftList = holidayData?.giftList || giftList;

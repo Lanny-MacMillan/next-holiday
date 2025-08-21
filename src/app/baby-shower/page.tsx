@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchBabyShowerGifts } from "@/store/slices/baby-shower/babyShowerGiftListSlice";
-import { fetchBabyShowerTasks } from "@/store/slices/baby-shower/babyShowerTasksSlice";
-import { fetchBabyShowerContacts } from "@/store/slices/baby-shower/babyShowerAddressBookSlice";
-import { fetchBabyShowerGuests } from "@/store/slices/baby-shower/babyShowerGuestListSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Gift Registry Tracker",
 		description: "Track baby shower gifts and registry items",
 		href: "/baby-shower/gift-list",
-		sliceKey: "babyShowerGiftList",
+		sliceKey: "giftList",
 		category: "Gifts",
 		type: "gift-list",
 	},
@@ -26,7 +26,7 @@ const subsections = [
 		name: "Guest List",
 		description: "Manage your baby shower guest list",
 		href: "/baby-shower/guest-list",
-		sliceKey: "babyShowerGuestList",
+		sliceKey: "guestList",
 		type: "guest-list",
 	},
 	{
@@ -40,24 +40,27 @@ const subsections = [
 ];
 
 export default function BabyShowerPage() {
-	const dispatch = useAppDispatch();
-
-	const gifts = useAppSelector((state: any) => state.babyShowerGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.babyShowerTasks.tasks);
-	const contacts = useAppSelector(
-		(state: any) => state.babyShowerAddressBook.contacts
-	);
-	const guests = useAppSelector(
-		(state: any) => state.babyShowerGuestList.guests
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		dispatch(fetchBabyShowerGifts());
-		dispatch(fetchBabyShowerTasks());
-		dispatch(fetchBabyShowerContacts());
-		dispatch(fetchBabyShowerGuests());
-	}, [dispatch]);
+	// Get holiday ID for Baby Shower
+	const holidayId = getHolidayIdFromRoute("/baby-shower", holidayPreferences);
+
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(sliceKey: string): {
 		total: number;
@@ -68,8 +71,11 @@ export default function BabyShowerPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
+			case "cards":
+				total = cards.length;
+				completed = cards.filter((card: any) => card.isCompleted).length;
+				break;
 			case "giftList":
-			case "babyShowerGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -78,13 +84,9 @@ export default function BabyShowerPage() {
 				completed = tasks.filter((task: any) => task.isCompleted).length;
 				break;
 			case "guestList":
-			case "babyShowerGuestList":
-				total = guests.length;
-				completed = guests.filter((guest: any) => guest.isCompleted).length;
-				break;
-			case "addressBook":
-				total = contacts.length;
-				completed = 0; // Address book doesn't have completion status
+				// Guest list doesn't have completion status, so we'll show total count
+				total = 0;
+				completed = 0;
 				break;
 			default:
 				total = 0;

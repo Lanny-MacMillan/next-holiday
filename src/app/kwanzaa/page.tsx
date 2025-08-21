@@ -1,22 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchKwanzaaGifts } from "@/store/slices/kwanzaa/kwanzaaGiftListSlice";
-import { fetchKwanzaaTasks } from "@/store/slices/kwanzaa/kwanzaaTasksSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track your Kwanzaa gift ideas",
 		href: "/kwanzaa/gift-list",
-		sliceKey: "kwanzaaGiftList",
+		sliceKey: "giftList",
 		category: "Gifts",
+		type: "gift-list",
 	},
 	{
 		name: "Daily Principles",
@@ -24,6 +27,7 @@ const subsections = [
 		href: "/kwanzaa/daily-principles",
 		sliceKey: "tasks",
 		category: "Daily Principles",
+		type: "task",
 	},
 	{
 		name: "Events",
@@ -31,6 +35,7 @@ const subsections = [
 		href: "/kwanzaa/events",
 		sliceKey: "tasks",
 		category: "Events",
+		type: "task",
 	},
 	{
 		name: "Decorations",
@@ -38,21 +43,32 @@ const subsections = [
 		href: "/kwanzaa/decorations",
 		sliceKey: "tasks",
 		category: "Decorations",
+		type: "task",
 	},
 ];
 
 export default function KwanzaaPage() {
-	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
 
-	const gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.kwanzaaTasks.tasks);
+	// Get holiday ID for Kwanzaa
+	const holidayId = getHolidayIdFromRoute("/kwanzaa", holidayPreferences);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchKwanzaaGifts());
-		dispatch(fetchKwanzaaTasks());
-	}, [dispatch]);
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(
 		sliceKey: string,
@@ -66,8 +82,11 @@ export default function KwanzaaPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
+			case "cards":
+				total = cards.length;
+				completed = cards.filter((card: any) => card.isCompleted).length;
+				break;
 			case "giftList":
-			case "kwanzaaGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -100,16 +119,13 @@ export default function KwanzaaPage() {
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
-						const { total, completed } = getProgressData(
+						const { total, completed, progress } = getProgressData(
 							section.sliceKey,
 							section.category
 						);
 
-						// Use GiftListCard for gift list sections
-						if (
-							section.sliceKey === "giftList" ||
-							section.sliceKey === "kwanzaaGiftList"
-						) {
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -123,27 +139,27 @@ export default function KwanzaaPage() {
 									/>
 								</li>
 							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Kwanzaa"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#dc2626", // Red for Kwanzaa
+											accentColor: "#eab308",
+											progressColor: "#dc2626",
+										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+									/>
+								</li>
+							);
 						}
-
-						// Use HolidayTaskCard for task sections
-						return (
-							<li key={section.name}>
-								<HolidayTaskCard
-									holidayName="Kwanzaa"
-									sectionName={section.name}
-									description={section.description}
-									href={section.href}
-									totalItems={total}
-									completedItems={completed}
-									theme={{
-										primaryColor: "#dc2626", // Red for Kwanzaa
-										accentColor: "#eab308",
-										progressColor: "#dc2626",
-									}}
-									gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
-								/>
-							</li>
-						);
 					})}
 				</ul>
 			</main>

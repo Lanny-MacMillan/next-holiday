@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchValentinesGifts } from "@/store/slices/valentines/valentinesGiftListSlice";
-import { fetchValentinesTasks } from "@/store/slices/valentines/valentinesTasksSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
@@ -13,46 +17,53 @@ const subsections = [
 		name: "Gift List",
 		description: "Track your Valentine's gift ideas",
 		href: "/valentines/gift-list",
-		sliceKey: "valentinesGiftList",
+		sliceKey: "giftList",
+		category: "Gifts",
+		type: "gift-list",
 	},
 	{
 		name: "Date Ideas",
 		description: "Plan romantic activities and dates",
 		href: "/valentines/date-ideas",
-		sliceKey: "valentinesTasks",
+		sliceKey: "tasks",
 		category: "Date Ideas",
+		type: "task",
 	},
 	{
 		name: "Card List",
 		description: "Track your Valentine's cards",
 		href: "/valentines/cards",
-		sliceKey: "valentinesTasks",
+		sliceKey: "cards",
 		category: "Cards",
+		type: "task",
 	},
 	{
 		name: "Reservations Tracker",
 		description: "Track restaurant and activity reservations",
 		href: "/valentines/reservations",
-		sliceKey: "valentinesTasks",
+		sliceKey: "tasks",
 		category: "Reservations",
+		type: "task",
 	},
 ];
 
 export default function ValentinesPage() {
-	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const { holidayId } = useFormModalMutation();
 
-	const valentinesGifts = useAppSelector(
-		(state: any) => state.valentinesGiftList.gifts
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
 	);
-	const valentinesTasks = useAppSelector(
-		(state: any) => state.valentinesTasks.tasks
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
 	);
-
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		dispatch(fetchValentinesGifts());
-		dispatch(fetchValentinesTasks());
-	}, [dispatch]);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(
 		sliceKey: string,
@@ -66,17 +77,19 @@ export default function ValentinesPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
-			case "valentinesGiftList":
-				total = valentinesGifts.length;
-				completed = valentinesGifts.filter(
-					(gift: any) => gift.isCompleted
-				).length;
+			case "cards":
+				total = cards.length;
+				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
-			case "valentinesTasks":
+			case "giftList":
+				total = gifts.length;
+				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				break;
+			case "tasks":
 				// Filter tasks by category if provided
 				const filteredTasks = category
-					? valentinesTasks.filter((task: any) => task.category === category)
-					: valentinesTasks;
+					? tasks.filter((task: any) => task.category === category)
+					: tasks;
 				total = filteredTasks.length;
 				completed = filteredTasks.filter(
 					(task: any) => task.isCompleted
@@ -101,17 +114,18 @@ export default function ValentinesPage() {
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
-						const { total, completed } = getProgressData(
+						const { total, completed, progress } = getProgressData(
 							section.sliceKey,
 							section.category
 						);
 
-						// Use GiftListCard for gift list sections
-						if (section.sliceKey === "valentinesGiftList") {
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
 							return (
 								<li key={section.name}>
 									<GiftListCard
 										holiday="Valentine's Day"
+										holidayId={holidayId}
 										href={section.href}
 										theme={{
 											primaryColor: "#ec4899", // Pink for Valentine's Day
@@ -121,27 +135,27 @@ export default function ValentinesPage() {
 									/>
 								</li>
 							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Valentine's Day"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#ec4899", // Pink for Valentine's Day
+											accentColor: "#eab308",
+											progressColor: "#ec4899",
+										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+									/>
+								</li>
+							);
 						}
-
-						// Use HolidayTaskCard for task sections
-						return (
-							<li key={section.name}>
-								<HolidayTaskCard
-									holidayName="Valentine's Day"
-									sectionName={section.name}
-									description={section.description}
-									href={section.href}
-									totalItems={total}
-									completedItems={completed}
-									theme={{
-										primaryColor: "#ec4899", // Pink for Valentine's Day
-										accentColor: "#eab308",
-										progressColor: "#ec4899",
-									}}
-									gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
-								/>
-							</li>
-						);
 					})}
 				</ul>
 			</main>

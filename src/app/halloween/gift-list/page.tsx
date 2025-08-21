@@ -1,18 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
-	fetchHalloweenGifts,
-	addHalloweenGift,
-	updateHalloweenGift,
-	deleteHalloweenGift,
-	toggleHalloweenGiftCompletion,
-	setSelectedGift,
-	clearError,
-	HalloweenGift,
-} from "@/store/slices/halloween/halloweenGiftListSlice";
+	useGetGiftsQuery,
+	useUpdateGiftMutation,
+	useEditGiftMutation,
+	useDeleteGiftMutation,
+} from "@/store/api";
+import { transformGiftPayload } from "@/utils/formTransformers";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
@@ -20,207 +19,345 @@ import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";
-import { getHolidayAccentColor } from "@/utils/holidayUtils";
-import { usePathname } from "next/navigation";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 export default function HalloweenGiftListPage() {
-	const dispatch = useDispatch<AppDispatch>();
-	const pathname = usePathname();
-	const { gifts, loading, error, selectedGift } = useSelector(
-		(state: RootState) => state.halloweenGiftList
+	const dispatch = useAppDispatch();
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+	} = useFormModalMutation();
+
+	// Get holiday ID for Halloween
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+	const halloweenHolidayId = getHolidayIdFromRoute(
+		"/halloween",
+		holidayPreferences
 	);
 
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: loading,
+		error,
+		isSuccess: initialized,
+	} = useGetGiftsQuery(
+		{ holidayId: halloweenHolidayId || "", auth0User },
+		{ skip: !halloweenHolidayId || !auth0User }
+	);
+
+	// Update gift mutation
+	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+
+	// Edit and delete mutations
+	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
+	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+
 	// Modal states
-	const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-	const [giftToDelete, setGiftToDelete] = useState<HalloweenGift | null>(null);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [selectedGift, setSelectedGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
 	// Sort state
 	const [sortBy, setSortBy] = useState("name");
 
-	// Form fields for adding/editing gifts
+	// Get home data to check if contacts are available
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
+
+	useEffect(() => {
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
+		}
+	}, [dispatch, homeInitialized]);
+
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+		if (!halloweenHolidayId || !mutation) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await mutation({
+				holidayId: halloweenHolidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error creating gift. Please try again.");
+			}
+		}
+	}
+
+	function openForm() {
+		setShowFormModal(true);
+		setSelectedGift(null);
+	}
+
+	function closeForm() {
+		setShowFormModal(false);
+		setSelectedGift(null);
+	}
+
+	async function handleToggleGift(giftId: string) {
+		if (!halloweenHolidayId) return;
+
+		try {
+			// Find the current gift to get its completion status
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (!currentGift) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentGift.isCompleted;
+
+			// Update the gift in the database
+			await updateGift({
+				holidayId: halloweenHolidayId || "",
+				giftId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// The UI will automatically update due to RTK Query cache invalidation
+		} catch (error) {
+			console.error("Error toggling gift:", error);
+			// Handle error (could show a toast notification)
+		}
+	}
+
+	async function handleDeleteGift(gift: any) {
+		setGiftToDelete(gift);
+		setShowDeleteModal(true);
+	}
+
+	async function confirmDelete() {
+		if (!giftToDelete || !halloweenHolidayId) return;
+
+		try {
+			await deleteGift({
+				holidayId: halloweenHolidayId,
+				giftId: giftToDelete.id,
+				auth0User,
+			}).unwrap();
+			setShowDeleteModal(false);
+			setGiftToDelete(null);
+		} catch (error) {
+			console.error("Error deleting gift:", error);
+		}
+	}
+
+	function cancelDelete() {
+		setShowDeleteModal(false);
+		setGiftToDelete(null);
+	}
+
+	async function handleEditGift(gift: any) {
+		setSelectedGift(gift);
+		setShowFormModal(true);
+	}
+
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !halloweenHolidayId) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await editGift({
+				holidayId: halloweenHolidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
+	}
+
+	function sortGifts(giftsToSort: any[]): any[] {
+		switch (sortBy) {
+			case "name":
+				return [...giftsToSort].sort((a, b) => a.name.localeCompare(b.name));
+			case "recipient":
+				return [...giftsToSort].sort((a, b) =>
+					(a.recipient || "").localeCompare(b.recipient || "")
+				);
+			case "price":
+				return [...giftsToSort].sort((a, b) => a.price - b.price);
+			case "createdAt":
+				return [...giftsToSort].sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+				);
+			default:
+				return giftsToSort;
+		}
+	}
+
+	if (loading && !initialized) {
+		return (
+			<div className="min-h-screen halloween-gradient flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+					<p className="text-gray-600 dark:text-gray-300">Loading gifts...</p>
+				</div>
+			</div>
+		);
+	}
+
+	const sortedGifts = sortGifts(gifts || []);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
+
+	const renderGiftItem = (gift: any) => (
+		<GiftCardItem
+			key={gift.id}
+			gift={gift}
+			isCompleted={false}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading}
+			theme={{
+				accentColor: "#f97316", // Orange for Halloween
+			}}
+			borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+			gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
+		/>
+	);
+
+	const renderCompletedGiftItem = (gift: any) => (
+		<GiftCardItem
+			key={gift.id}
+			gift={gift}
+			isCompleted={true}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading}
+			theme={{
+				accentColor: "#f97316", // Orange for Halloween
+			}}
+			borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+			gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
+		/>
+	);
+
+	// Form fields configuration
 	const formFields = [
-		{
-			id: "name",
-			type: "text" as const,
-			required: true,
-			placeholder: "Enter gift name",
-		},
 		{
 			id: "recipient",
 			type: "text" as const,
+			placeholder: "Recipient (select from address book)*",
 			required: true,
-			placeholder: "Who is this gift for?",
+		},
+		{
+			id: "giftName",
+			type: "text" as const,
+			placeholder: "Gift Name*",
+			required: true,
 		},
 		{
 			id: "description",
-			type: "textarea" as const,
-			placeholder: "Describe the gift",
+			type: "text" as const,
+			placeholder: "Description",
 		},
 		{
 			id: "price",
 			type: "number" as const,
+			placeholder: "Price",
 			step: "0.01",
-			placeholder: "0.00",
 		},
 		{
-			id: "category",
+			id: "store",
 			type: "text" as const,
-			placeholder: "e.g., Decorations, Candy, Costumes",
+			placeholder: "Store",
+		},
+		{
+			id: "product_link",
+			type: "url" as const,
+			placeholder: "Product Link (optional)",
+		},
+		{
+			id: "notes",
+			type: "textarea" as const,
+			placeholder: "Notes",
+			rows: 2,
 		},
 	];
 
-	const sortOptions = [
-		{ value: "name", label: "Name" },
-		{ value: "recipient", label: "Recipient" },
-		{ value: "price", label: "Price" },
-		{ value: "createdAt", label: "Date Added" },
-	];
+	// Initial values for editing
+	const getInitialValues = () => {
+		if (!selectedGift) return {};
 
-	useEffect(() => {
-		dispatch(fetchHalloweenGifts());
-	}, [dispatch]);
-
-	useEffect(() => {
-		if (error) {
-			const timer = setTimeout(() => {
-				dispatch(clearError());
-			}, 5000);
-			return () => clearTimeout(timer);
-		}
-	}, [error, dispatch]);
-
-	const handleSortChange = (newSortBy: string) => {
-		setSortBy(newSortBy);
-	};
-
-	const handleAddGift = () => {
-		dispatch(setSelectedGift(null));
-		setIsFormModalOpen(true);
-	};
-
-	const handleEditGift = (gift: HalloweenGift) => {
-		dispatch(setSelectedGift(gift));
-		setIsFormModalOpen(true);
-	};
-
-	const handleDeleteGift = (giftId: string) => {
-		const gift = gifts.find((g) => g.id === giftId);
-		if (gift) {
-			setGiftToDelete(gift);
-			setIsDeleteModalOpen(true);
-		}
-	};
-
-	const handleConfirmDelete = () => {
-		if (giftToDelete) {
-			dispatch(deleteHalloweenGift(giftToDelete.id));
-			setGiftToDelete(null);
-			setIsDeleteModalOpen(false);
-		}
-	};
-
-	const handleFormSubmit = (values: Record<string, any>) => {
-		const giftData = {
-			name: values.name,
-			recipient: values.recipient,
-			description: values.description || "",
-			price: parseFloat(values.price) || 0,
-			category: values.category || "",
-			isCompleted: false,
+		return {
+			recipient: selectedGift.recipient || "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price.toString(),
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
 		};
-
-		if (selectedGift) {
-			dispatch(updateHalloweenGift({ ...selectedGift, ...giftData }));
-		} else {
-			dispatch(addHalloweenGift(giftData));
-		}
-		setIsFormModalOpen(false);
-	};
-
-	const handleToggleGift = (giftId: string) => {
-		dispatch(toggleHalloweenGiftCompletion(giftId));
-	};
-
-	const sortGifts = (giftsToSort: HalloweenGift[]) => {
-		return [...giftsToSort].sort((a, b) => {
-			switch (sortBy) {
-				case "name":
-					return a.name.localeCompare(b.name);
-				case "recipient":
-					return (a.recipient || "").localeCompare(b.recipient || "");
-				case "price":
-					return a.price - b.price;
-				case "createdAt":
-					return (
-						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-					);
-				default:
-					return 0;
-			}
-		});
-	};
-
-	const sortedGifts = sortGifts(gifts);
-	const activeGifts = sortedGifts.filter((gift) => !gift.isCompleted);
-	const completedGifts = sortedGifts.filter((gift) => gift.isCompleted);
-
-	const accentColor = getHolidayAccentColor(pathname);
-
-	const renderGiftItem = (gift: HalloweenGift) => {
-		// Convert HalloweenGift to Gift for compatibility
-		const giftForCard = {
-			...gift,
-			recipient: gift.recipient || "Unknown",
-			store: gift.category || "",
-			productLink: "",
-			notes: "",
-		};
-
-		return (
-			<GiftCardItem
-				key={gift.id}
-				gift={giftForCard}
-				isCompleted={gift.isCompleted}
-				onToggle={handleToggleGift}
-				onEdit={handleEditGift}
-				onDelete={handleDeleteGift}
-				loading={loading}
-				theme={{ accentColor }}
-				borderColor={accentColor}
-			/>
-		);
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-orange-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="Halloween Gifts"
 				backHref="/halloween"
-				onSortClick={() => setIsSortModalOpen(true)}
+				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Gifts"
 				description="Keep track of gift ideas and purchases!"
 				holidayColor="orange-500"
-				error={error}
+				error={error ? "Error loading gifts" : undefined}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Budget Display */}
+				<BudgetDisplay
+					holiday="Halloween"
+					holidayColor="bg-gradient-to-br from-orange-400 to-orange-600"
+					holidayId={halloweenHolidayId || undefined}
+				/>
+
 				<AddButton
 					title="Gift"
-					onClick={handleAddGift}
-					color="holiday"
+					onClick={openForm}
+					color="orange"
 					disabled={loading}
 				/>
 
 				<TaskSection
 					title="Active Gifts"
-					items={activeGifts}
+					items={incompleteGifts}
 					isCompleted={false}
 					emptyMessage="No gifts added yet."
 					completedMessage=""
 					renderItem={renderGiftItem}
-					borderColor={accentColor}
 				/>
 
 				{completedGifts.length > 0 && (
@@ -230,59 +367,52 @@ export default function HalloweenGiftListPage() {
 						isCompleted={true}
 						emptyMessage=""
 						completedMessage="No completed gifts yet"
-						renderItem={renderGiftItem}
-						borderColor={accentColor}
+						renderItem={renderCompletedGiftItem}
 					/>
 				)}
 			</main>
 
-			{/* Sort Modal */}
-			<SortModal
-				isOpen={isSortModalOpen}
-				onClose={() => setIsSortModalOpen(false)}
-				sortBy={sortBy}
-				onSortChange={handleSortChange}
-				sortOptions={sortOptions}
-				title="Sort Gifts"
-			/>
-
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={isDeleteModalOpen}
-				onConfirm={handleConfirmDelete}
-				onCancel={() => {
-					setIsDeleteModalOpen(false);
-					setGiftToDelete(null);
-				}}
-				title="Delete Gift"
-				itemName={giftToDelete?.name}
-				loading={loading}
-				confirmButtonColor={accentColor}
-			/>
-
 			{/* Form Modal */}
 			<FormModal
-				isOpen={isFormModalOpen}
-				onClose={() => setIsFormModalOpen(false)}
+				isOpen={showFormModal}
 				title={selectedGift ? "Edit Gift" : "Add New Gift"}
 				fields={formFields}
-				initialValues={
-					selectedGift
-						? {
-								name: selectedGift.name,
-								recipient: selectedGift.recipient,
-								description: selectedGift.description,
-								price: selectedGift.price,
-								category: selectedGift.category,
-						  }
-						: {}
-				}
-				onSubmit={handleFormSubmit}
-				loading={loading}
+				initialValues={getInitialValues()}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
+				onClose={closeForm}
+				loading={mutationLoading || editLoading}
 				submitText={selectedGift ? "Update Gift" : "Add Gift"}
-				submitButtonColor={accentColor}
+				cancelText="Cancel"
+				cardClassName="card"
+				submitButtonColor="#f97316"
+				showAddressBook={true}
+				contacts={contacts}
 			/>
-			{/* </div> */}
+
+			{/* Delete Confirmation Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title="Delete Gift"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={deleteLoading}
+			/>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) => setSortBy(sortOption)}
+				sortOptions={[
+					{ value: "name", label: "Name" },
+					{ value: "recipient", label: "Recipient" },
+					{ value: "price", label: "Price" },
+					{ value: "createdAt", label: "Date Added" },
+				]}
+				title="Sort Gifts"
+			/>
 		</div>
 	);
 }

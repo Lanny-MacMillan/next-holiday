@@ -2,129 +2,203 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchGraduationGifts,
-	addGraduationGift,
-	updateGraduationGift,
-	deleteGraduationGift,
-	GraduationGift,
-} from "@/store/slices/graduation/graduationGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useUpdateGiftMutation,
+	useEditGiftMutation,
+	useDeleteGiftMutation,
+} from "@/store/api";
+import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
+
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function GraduationGiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error, initialized } = useAppSelector(
-		(state: any) => state.graduationGiftList
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+	} = useFormModalMutation();
+
+	// Get holiday ID for Graduation
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+	const graduationHolidayId = getHolidayIdFromRoute(
+		"/graduation",
+		holidayPreferences
+	);
+
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: loading,
+		error,
+		isSuccess: initialized,
+	} = useGetGiftsQuery(
+		{ holidayId: graduationHolidayId || "", auth0User },
+		{ skip: !graduationHolidayId || !auth0User }
+	);
+
+	// Update gift mutation
+	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+
+	// Edit and delete mutations
+	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
+	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		giftId: string | null;
-	}>({
-		show: false,
-		giftId: null,
-	});
-	const [showForm, setShowForm] = useState(false);
-	const [editingGift, setEditingGift] = useState<GraduationGift | null>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [selectedGift, setSelectedGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+
+	// Get home data to check if contacts are available
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchGraduationGifts());
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
 		}
-		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch, homeInitialized]);
 
-	function handleAddGift(values: Record<string, any>) {
-		if (!values.description?.trim() || !values.recipient?.trim()) return;
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+		if (!graduationHolidayId || !mutation) return;
 
-		if (editingGift) {
-			const updatedGift: GraduationGift = {
-				...editingGift,
-				name: values.description,
-				description: values.description || undefined,
-				price: parseFloat(values.price) || 0,
-				recipient: values.recipient,
-				store: values.store || undefined,
-				productLink: values.productLink || undefined,
-				notes: values.notes || undefined,
-			};
-			dispatch(updateGraduationGift(updatedGift));
-			setEditingGift(null);
-		} else {
-			const newGift: Omit<GraduationGift, "id" | "createdAt" | "updatedAt"> = {
-				name: values.description,
-				description: values.description || undefined,
-				price: parseFloat(values.price) || 0,
-				recipient: values.recipient,
-				isCompleted: false,
-				store: values.store || undefined,
-				productLink: values.productLink || undefined,
-				notes: values.notes || undefined,
-			};
-			dispatch(addGraduationGift(newGift));
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await mutation({
+				holidayId: graduationHolidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error creating gift. Please try again.");
+			}
 		}
-		setShowForm(false);
 	}
 
 	function openForm() {
-		setShowForm(true);
-		setEditingGift(null);
+		setShowFormModal(true);
+		setSelectedGift(null);
 	}
 
 	function closeForm() {
-		setShowForm(false);
-		setEditingGift(null);
+		setShowFormModal(false);
+		setSelectedGift(null);
 	}
 
-	function handleToggleGift(giftId: string) {
-		// Find the gift and toggle its completion status
-		const gift = gifts.find((g: GraduationGift) => g.id === giftId);
-		if (gift) {
-			const updatedGift = {
-				...gift,
-				isCompleted: !gift.isCompleted,
-				completedDate: !gift.isCompleted ? new Date().toISOString() : undefined,
-			};
-			dispatch(updateGraduationGift(updatedGift));
+	async function handleToggleGift(giftId: string) {
+		if (!graduationHolidayId) return;
+
+		try {
+			// Find the current gift to get its completion status
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (!currentGift) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentGift.isCompleted;
+
+			// Update the gift in the database
+			await updateGift({
+				holidayId: graduationHolidayId || "",
+				giftId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// The UI will automatically update due to RTK Query cache invalidation
+		} catch (error) {
+			console.error("Error toggling gift:", error);
+			// Handle error (could show a toast notification)
 		}
 	}
 
-	function handleDeleteGift(giftId: string) {
-		setDeleteConfirm({ show: true, giftId });
+	async function handleDeleteGift(gift: any) {
+		setGiftToDelete(gift);
+		setShowDeleteModal(true);
 	}
 
-	function handleEditGift(gift: GraduationGift) {
-		setEditingGift(gift);
-		setShowForm(true);
-	}
+	async function confirmDelete() {
+		if (!giftToDelete || !graduationHolidayId) return;
 
-	function confirmDelete() {
-		if (deleteConfirm.giftId) {
-			dispatch(deleteGraduationGift(deleteConfirm.giftId));
-			setDeleteConfirm({ show: false, giftId: null });
+		try {
+			await deleteGift({
+				holidayId: graduationHolidayId,
+				giftId: giftToDelete.id,
+				auth0User,
+			}).unwrap();
+			setShowDeleteModal(false);
+			setGiftToDelete(null);
+		} catch (error) {
+			console.error("Error deleting gift:", error);
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, giftId: null });
+		setShowDeleteModal(false);
+		setGiftToDelete(null);
 	}
 
-	function sortGifts(giftsToSort: GraduationGift[]): GraduationGift[] {
+	async function handleEditGift(gift: any) {
+		setSelectedGift(gift);
+		setShowFormModal(true);
+	}
+
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !graduationHolidayId) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await editGift({
+				holidayId: graduationHolidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
+	}
+
+	function sortGifts(giftsToSort: any[]): any[] {
 		switch (sortBy) {
 			case "recipient":
 				return [...giftsToSort].sort((a, b) =>
@@ -154,59 +228,62 @@ export default function GraduationGiftListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts);
-	const incompleteGifts = sortedGifts.filter(
-		(gift: GraduationGift) => !gift.isCompleted
-	);
-	const completedGifts = sortedGifts.filter(
-		(gift: GraduationGift) => gift.isCompleted
-	);
+	const sortedGifts = sortGifts(gifts || []);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
-	const renderGiftItem = (gift: GraduationGift) => (
+	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading}
 			theme={{
-				accentColor: "#8b5cf6",
+				accentColor: "#8b5cf6", // Purple for Graduation
 			}}
-			borderColor="rgb(var(--color-purple-500))"
+			borderColor="rgb(var(--color-purple-500))" // Purple border for Graduation
 			gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 		/>
 	);
 
-	const renderCompletedGiftItem = (gift: GraduationGift) => (
+	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading}
 			theme={{
-				accentColor: "#8b5cf6",
+				accentColor: "#8b5cf6", // Purple for Graduation
 			}}
-			borderColor="rgb(var(--color-purple-500))"
+			borderColor="rgb(var(--color-purple-500))" // Purple border for Graduation
 			gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
 		/>
 	);
 
+	// Form fields configuration
 	const formFields = [
 		{
 			id: "recipient",
 			type: "text" as const,
-			placeholder: "Recipient*",
+			placeholder: "Recipient (select from address book)*",
+			required: true,
+		},
+		{
+			id: "giftName",
+			type: "text" as const,
+			placeholder: "Gift Name*",
 			required: true,
 		},
 		{
 			id: "description",
 			type: "text" as const,
-			placeholder: "Gift",
+			placeholder: "Description",
 		},
 		{
 			id: "price",
@@ -220,7 +297,7 @@ export default function GraduationGiftListPage() {
 			placeholder: "Store",
 		},
 		{
-			id: "productLink",
+			id: "product_link",
 			type: "url" as const,
 			placeholder: "Product Link (optional)",
 		},
@@ -232,15 +309,18 @@ export default function GraduationGiftListPage() {
 		},
 	];
 
+	// Initial values for editing
 	const getInitialValues = () => {
-		if (!editingGift) return {};
+		if (!selectedGift) return {};
+
 		return {
-			description: editingGift.name,
-			price: editingGift.price.toString(),
-			recipient: editingGift.recipient,
-			store: editingGift.store || "",
-			productLink: editingGift.productLink || "",
-			notes: editingGift.notes || "",
+			recipient: selectedGift.recipient || "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price.toString(),
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
 		};
 	};
 
@@ -253,13 +333,16 @@ export default function GraduationGiftListPage() {
 				sortTitle="Sort gifts"
 				description="Plan your graduation gift list with style!"
 				holidayColor="purple-500"
-				error={error}
+				error={error ? "Error loading gifts" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Budget Display */}
 				<BudgetDisplay
 					holiday="Graduation"
 					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+					holidayId={graduationHolidayId || undefined}
 				/>
+
 				<AddButton title="Gift" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -277,7 +360,7 @@ export default function GraduationGiftListPage() {
 					items={incompleteGifts}
 					isCompleted={false}
 					emptyMessage="All gifts completed! 🎉"
-					completedMessage="All gifts completed! 🎉"
+					completedMessage=""
 					renderItem={renderGiftItem}
 				/>
 
@@ -286,20 +369,21 @@ export default function GraduationGiftListPage() {
 					items={completedGifts}
 					isCompleted={true}
 					emptyMessage="No completed gifts yet."
-					completedMessage="No completed gifts yet."
+					completedMessage=""
 					renderItem={renderCompletedGiftItem}
 				/>
 			</main>
 
+			{/* Form Modal */}
 			<FormModal
-				isOpen={showForm}
-				title={editingGift ? "Edit Gift" : "Add New Gift"}
+				isOpen={showFormModal}
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
 				fields={formFields}
 				initialValues={getInitialValues()}
-				onSubmit={handleAddGift}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
 				onClose={closeForm}
-				loading={loading}
-				submitText={editingGift ? "Update Gift" : "Add Gift"}
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
 				cardClassName="card"
 				submitButtonColor="#8b5cf6"
@@ -307,14 +391,17 @@ export default function GraduationGiftListPage() {
 				contacts={contacts}
 			/>
 
+			{/* Delete Confirmation Modal */}
 			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("gifts")}
+				isOpen={showDeleteModal}
+				title="Delete Gift"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteLoading}
 			/>
 
+			{/* Sort Modal */}
 			<SortModal
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}

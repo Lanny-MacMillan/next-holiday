@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchKwanzaaGifts,
-	addKwanzaaGift,
-	updateKwanzaaGift,
-	deleteKwanzaaGift,
-	toggleKwanzaaGiftCompletion,
-	KwanzaaGift,
-} from "@/store/slices/kwanzaa/kwanzaaGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useUpdateGiftMutation,
+	useEditGiftMutation,
+	useDeleteGiftMutation,
+} from "@/store/api";
+import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
@@ -21,109 +21,184 @@ import { getDeleteConfig } from "@/config/deleteModalConfigs";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function KwanzaaGiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error, initialized } = useAppSelector(
-		(state: any) => state.kwanzaaGiftList
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+	} = useFormModalMutation();
+
+	// Get holiday ID for Kwanzaa
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+	const kwanzaaHolidayId = getHolidayIdFromRoute(
+		"/kwanzaa",
+		holidayPreferences
+	);
+
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: loading,
+		error,
+		isSuccess: initialized,
+	} = useGetGiftsQuery(
+		{ holidayId: kwanzaaHolidayId || "", auth0User },
+		{ skip: !kwanzaaHolidayId || !auth0User }
+	);
+
+	// Update gift mutation
+	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+
+	// Edit and delete mutations
+	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
+	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		giftId: string | null;
-	}>({
-		show: false,
-		giftId: null,
-	});
-	const [showForm, setShowForm] = useState(false);
-	const [editingGift, setEditingGift] = useState<KwanzaaGift | null>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [selectedGift, setSelectedGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+
+	// Get home data to check if contacts are available
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
 
 	useEffect(() => {
-		// Fetch gifts and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchKwanzaaGifts());
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
 		}
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch, homeInitialized]);
 
-	function handleAddGift(values: Record<string, any>) {
-		if (!values.name?.trim() || !values.recipient?.trim()) return;
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+		if (!kwanzaaHolidayId || !mutation) return;
 
-		if (editingGift) {
-			// Update existing gift
-			const updatedGift: KwanzaaGift = {
-				...editingGift,
-				name: values.name,
-				description: values.description || undefined,
-				price: parseFloat(values.price) || 0,
-				recipient: values.recipient,
-				store: values.store || undefined,
-				productLink: values.productLink || undefined,
-				notes: values.notes || undefined,
-			};
-
-			dispatch(updateKwanzaaGift(updatedGift));
-			setEditingGift(null);
-		} else {
-			// Add new gift
-			const newGift: Omit<KwanzaaGift, "id" | "createdAt" | "updatedAt"> = {
-				name: values.name,
-				description: values.description || undefined,
-				price: parseFloat(values.price) || 0,
-				recipient: values.recipient,
-				isCompleted: false,
-				store: values.store || undefined,
-				productLink: values.productLink || undefined,
-				notes: values.notes || undefined,
-			};
-
-			dispatch(addKwanzaaGift(newGift));
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await mutation({
+				holidayId: kwanzaaHolidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error creating gift. Please try again.");
+			}
 		}
-
-		setShowForm(false);
 	}
 
 	function openForm() {
-		setShowForm(true);
-		setEditingGift(null);
+		setShowFormModal(true);
+		setSelectedGift(null);
 	}
 
 	function closeForm() {
-		setShowForm(false);
-		setEditingGift(null);
+		setShowFormModal(false);
+		setSelectedGift(null);
 	}
 
-	function handleToggleGift(giftId: string) {
-		dispatch(toggleKwanzaaGiftCompletion(giftId));
+	async function handleToggleGift(giftId: string) {
+		if (!kwanzaaHolidayId) return;
+
+		try {
+			// Find the current gift to get its completion status
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (!currentGift) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentGift.isCompleted;
+
+			// Update the gift in the database
+			await updateGift({
+				holidayId: kwanzaaHolidayId || "",
+				giftId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// The UI will automatically update due to RTK Query cache invalidation
+		} catch (error) {
+			console.error("Error toggling gift:", error);
+			// Handle error (could show a toast notification)
+		}
 	}
 
-	function handleDeleteGift(giftId: string) {
-		setDeleteConfirm({ show: true, giftId });
+	async function handleDeleteGift(gift: any) {
+		setGiftToDelete(gift);
+		setShowDeleteModal(true);
 	}
 
-	function handleEditGift(gift: KwanzaaGift) {
-		setEditingGift(gift);
-		setShowForm(true);
-	}
+	async function confirmDelete() {
+		if (!giftToDelete || !kwanzaaHolidayId) return;
 
-	function confirmDelete() {
-		if (deleteConfirm.giftId) {
-			dispatch(deleteKwanzaaGift(deleteConfirm.giftId));
-			setDeleteConfirm({ show: false, giftId: null });
+		try {
+			await deleteGift({
+				holidayId: kwanzaaHolidayId,
+				giftId: giftToDelete.id,
+				auth0User,
+			}).unwrap();
+			setShowDeleteModal(false);
+			setGiftToDelete(null);
+		} catch (error) {
+			console.error("Error deleting gift:", error);
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, giftId: null });
+		setShowDeleteModal(false);
+		setGiftToDelete(null);
 	}
 
-	function sortGifts(giftsToSort: KwanzaaGift[]): KwanzaaGift[] {
+	async function handleEditGift(gift: any) {
+		setSelectedGift(gift);
+		setShowFormModal(true);
+	}
+
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !kwanzaaHolidayId) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await editGift({
+				holidayId: kwanzaaHolidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
+	}
+
+	function sortGifts(giftsToSort: any[]): any[] {
 		switch (sortBy) {
 			case "recipient":
 				return [...giftsToSort].sort((a, b) =>
@@ -153,22 +228,18 @@ export default function KwanzaaGiftListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts);
-	const incompleteGifts = sortedGifts.filter(
-		(gift: KwanzaaGift) => !gift.isCompleted
-	);
-	const completedGifts = sortedGifts.filter(
-		(gift: KwanzaaGift) => gift.isCompleted
-	);
+	const sortedGifts = sortGifts(gifts || []);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
-	const renderGiftItem = (gift: KwanzaaGift) => (
+	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading}
 			theme={{
 				accentColor: "#dc2626", // Red for Kwanzaa
@@ -178,14 +249,14 @@ export default function KwanzaaGiftListPage() {
 		/>
 	);
 
-	const renderCompletedGiftItem = (gift: KwanzaaGift) => (
+	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
-			onDelete={handleDeleteGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading}
 			theme={{
 				accentColor: "#dc2626", // Red for Kwanzaa
@@ -198,22 +269,21 @@ export default function KwanzaaGiftListPage() {
 	// Form fields configuration
 	const formFields = [
 		{
-			id: "name",
+			id: "recipient",
+			type: "text" as const,
+			placeholder: "Recipient (select from address book)*",
+			required: true,
+		},
+		{
+			id: "giftName",
 			type: "text" as const,
 			placeholder: "Gift Name*",
 			required: true,
 		},
 		{
-			id: "recipient",
-			type: "text" as const,
-			placeholder: "Recipient*",
-			required: true,
-		},
-		{
 			id: "description",
-			type: "textarea" as const,
+			type: "text" as const,
 			placeholder: "Description",
-			rows: 2,
 		},
 		{
 			id: "price",
@@ -227,7 +297,7 @@ export default function KwanzaaGiftListPage() {
 			placeholder: "Store",
 		},
 		{
-			id: "productLink",
+			id: "product_link",
 			type: "url" as const,
 			placeholder: "Product Link (optional)",
 		},
@@ -241,16 +311,16 @@ export default function KwanzaaGiftListPage() {
 
 	// Initial values for editing
 	const getInitialValues = () => {
-		if (!editingGift) return {};
+		if (!selectedGift) return {};
 
 		return {
-			name: editingGift.name,
-			description: editingGift.description || "",
-			price: editingGift.price.toString(),
-			recipient: editingGift.recipient,
-			store: editingGift.store || "",
-			productLink: editingGift.productLink || "",
-			notes: editingGift.notes || "",
+			recipient: selectedGift.recipient || "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price.toString(),
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
 		};
 	};
 
@@ -261,15 +331,16 @@ export default function KwanzaaGiftListPage() {
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Keep track of gift ideas and purchases!"
+				description="Plan your Kwanzaa gift list with style!"
 				holidayColor="red-500"
-				error={error}
+				error={error ? "Error loading gifts" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay
 					holiday="Kwanzaa"
 					holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+					holidayId={kwanzaaHolidayId || undefined}
 				/>
 
 				<AddButton title="Gift" onClick={openForm} color="red" />
@@ -288,7 +359,7 @@ export default function KwanzaaGiftListPage() {
 					title="Incomplete"
 					items={incompleteGifts}
 					isCompleted={false}
-					emptyMessage="All gifts completed! 🕯️"
+					emptyMessage="All gifts completed! 🎉"
 					completedMessage=""
 					renderItem={renderGiftItem}
 				/>
@@ -305,14 +376,14 @@ export default function KwanzaaGiftListPage() {
 
 			{/* Form Modal */}
 			<FormModal
-				isOpen={showForm}
-				title={editingGift ? "Edit Gift" : "Add New Gift"}
+				isOpen={showFormModal}
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
 				fields={formFields}
 				initialValues={getInitialValues()}
-				onSubmit={handleAddGift}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
 				onClose={closeForm}
-				loading={loading}
-				submitText={editingGift ? "Update Gift" : "Add Gift"}
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
 				cardClassName="card"
 				submitButtonColor="#dc2626"
@@ -322,11 +393,12 @@ export default function KwanzaaGiftListPage() {
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("gifts")}
+				isOpen={showDeleteModal}
+				title="Delete Gift"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteLoading}
 			/>
 
 			{/* Sort Modal */}

@@ -1,25 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCards } from "@/store/slices/cardsSlice";
-import { fetchHanukkahGifts } from "@/store/slices/hanukkah/hanukkahGiftListSlice";
-import { fetchHanukkahTasks } from "@/store/slices/hanukkah/hanukkahTasksSlice";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track your Hanukkah gift ideas",
 		href: "/hanukkah/gift-list",
-		sliceKey: "hanukkahGiftList",
+		sliceKey: "giftList",
 		category: "Gifts",
+		type: "gift-list",
 	},
 	{
 		name: "Candle Lighting Tracker",
@@ -27,6 +27,7 @@ const subsections = [
 		href: "/hanukkah/candle-lighting",
 		sliceKey: "tasks",
 		category: "Candle Lighting",
+		type: "task",
 	},
 	{
 		name: "Events",
@@ -34,6 +35,7 @@ const subsections = [
 		href: "/hanukkah/events",
 		sliceKey: "tasks",
 		category: "Events",
+		type: "task",
 	},
 	{
 		name: "Decorations Checklist",
@@ -41,25 +43,32 @@ const subsections = [
 		href: "/hanukkah/decorations",
 		sliceKey: "tasks",
 		category: "Decorations",
+		type: "task",
 	},
 ];
 
 export default function HanukkahPage() {
-	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
 
-	const cards = useAppSelector((state: any) => state.cards.cards);
-	const gifts = useAppSelector((state: any) => state.hanukkahGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.hanukkahTasks.tasks);
-	const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+	// Get holiday ID for Hanukkah
+	const holidayId = getHolidayIdFromRoute("/hanukkah", holidayPreferences);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchCards());
-		dispatch(fetchHanukkahGifts());
-		dispatch(fetchHanukkahTasks());
-		dispatch(fetchContacts());
-	}, [dispatch]);
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(
 		sliceKey: string,
@@ -78,7 +87,6 @@ export default function HanukkahPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
-			case "hanukkahGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -91,10 +99,6 @@ export default function HanukkahPage() {
 				completed = filteredTasks.filter(
 					(task: any) => task.isCompleted
 				).length;
-				break;
-			case "addressBook":
-				total = contacts.length;
-				completed = 0; // Address book doesn't have completion status
 				break;
 			default:
 				total = 0;
@@ -120,11 +124,8 @@ export default function HanukkahPage() {
 							section.category
 						);
 
-						// Use GiftListCard for gift list sections
-						if (
-							section.sliceKey === "giftList" ||
-							section.sliceKey === "hanukkahGiftList"
-						) {
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
 							return (
 								<li key={section.name}>
 									<GiftListCard
@@ -138,10 +139,8 @@ export default function HanukkahPage() {
 									/>
 								</li>
 							);
-						}
-
-						// Use HolidayTaskCard for task sections
-						if (section.sliceKey === "tasks") {
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
 							return (
 								<li key={section.name}>
 									<HolidayTaskCard
@@ -161,43 +160,6 @@ export default function HanukkahPage() {
 								</li>
 							);
 						}
-
-						return (
-							<li key={section.name}>
-								<Link
-									href={section.href}
-									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
-								>
-									<div className="flex items-center justify-between mb-1">
-										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
-											{section.name}
-										</h3>
-										<span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
-											{total}
-										</span>
-									</div>
-									<p className="text-gray-600 dark:text-gray-400 text-sm">
-										{section.description}
-									</p>
-									{/* Progress bar */}
-									<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-										<div
-											className="bg-blue-400 dark:bg-blue-500 h-2 rounded-full transition-all"
-											style={{ width: `${progress * 100}%` }}
-										/>
-									</div>
-									{/* Progress text */}
-									<div className="flex justify-between items-center mt-1">
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{Math.round(progress * 100)}% complete
-										</span>
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{completed}/{total} items
-										</span>
-									</div>
-								</Link>
-							</li>
-						);
 					})}
 				</ul>
 			</main>
