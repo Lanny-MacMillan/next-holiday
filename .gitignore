@@ -67,3 +67,14 @@ next-env.d.ts
 .pnpmrc
 .yarnrc
 /src/generated/prisma
+
+# iCloud sync conflicts
+*.icloud
+* 2.*
+* 3.*
+* 4.*
+* 5.*
+* 6.*
+* 7.*
+* 8.*
+* 9.*

@@ -7,6 +7,10 @@ import {
 	useCreateCardMutation,
 	useCreateGuestMutation,
 	useCreateDecorationMutation,
+	useUpdateCardMutation,
+	useEditCardMutation,
+	useDeleteCardMutation,
+	useCardOperationMutation,
 } from "@/store/api";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
@@ -29,6 +33,10 @@ export function useFormModalMutation() {
 	const [createTask, createTaskState] = useCreateTaskMutation();
 	const [createGift, createGiftState] = useCreateGiftMutation();
 	const [createCard, createCardState] = useCreateCardMutation();
+	const [updateCard, updateCardState] = useUpdateCardMutation();
+	const [editCard, editCardState] = useEditCardMutation();
+	const [deleteCard, deleteCardState] = useDeleteCardMutation();
+	const [cardMutation, cardMutationState] = useCardOperationMutation();
 	const [createGuest, createGuestState] = useCreateGuestMutation();
 	const [createDecoration, createDecorationState] =
 		useCreateDecorationMutation();
@@ -53,8 +61,8 @@ export function useFormModalMutation() {
 				};
 			case "cards":
 				return {
-					mutation: createCard,
-					state: createCardState,
+					mutation: cardMutation,
+					state: cardMutationState,
 					type: "card" as const,
 				};
 			case "tasks":
@@ -101,5 +109,12 @@ export function useFormModalMutation() {
 		isLoading: mutationInfo?.state.isLoading || false,
 		error: mutationInfo?.state.error,
 		auth0User,
+		// Card-specific mutations
+		updateCard,
+		editCard,
+		deleteCard,
+		updateCardState,
+		editCardState,
+		deleteCardState,
 	};
 }

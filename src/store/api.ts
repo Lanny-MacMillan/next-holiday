@@ -188,6 +188,244 @@ export const api = createApi({
 				{ type: "Cards", id: holidayId },
 			],
 		}),
+		// Generic card mutation that handles all operations
+		cardOperation: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => {
+				// Handle different operations
+				if (payload.action === "delete") {
+					// Use DELETE method with query parameter
+					return {
+						url: `holidays/${holidayId}/cards?cardId=${payload.id}`,
+						method: "DELETE",
+						headers: auth0User
+							? {
+									"x-test-user": JSON.stringify({
+										sub: auth0User.sub,
+										email: auth0User.email,
+										name: auth0User.name,
+										picture: auth0User.picture,
+									}),
+							  }
+							: {},
+					};
+				} else if (payload.action) {
+					// Use PUT for update operations
+					return {
+						url: `holidays/${holidayId}/cards`,
+						method: "PUT",
+						body: payload,
+						headers: auth0User
+							? {
+									"x-test-user": JSON.stringify({
+										sub: auth0User.sub,
+										email: auth0User.email,
+										name: auth0User.name,
+										picture: auth0User.picture,
+									}),
+							  }
+							: {},
+					};
+				} else {
+					// Use POST for create operations
+					return {
+						url: `holidays/${holidayId}/cards`,
+						method: "POST",
+						body: payload,
+						headers: auth0User
+							? {
+									"x-test-user": JSON.stringify({
+										sub: auth0User.sub,
+										email: auth0User.email,
+										name: auth0User.name,
+										picture: auth0User.picture,
+									}),
+							  }
+							: {},
+					};
+				}
+			},
+			invalidatesTags: (result, error, { holidayId, payload }) => {
+				// Don't invalidate cache for delete operations since we use optimistic updates
+				if (payload.action === "delete") {
+					return [];
+				}
+				return [{ type: "Cards", id: holidayId }];
+			},
+			// Use optimistic update for delete operations
+			async onQueryStarted(
+				{ holidayId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				if (payload.action === "delete") {
+					console.log(
+						"Delete card optimistic update - holidayId:",
+						holidayId,
+						"cardId:",
+						payload.id
+					);
+
+					// Optimistically update the cache by removing the deleted card
+					// Use the same parameters as the query to match the cache key exactly
+					const patchResult = dispatch(
+						api.util.updateQueryData(
+							"getCards",
+							{ holidayId, auth0User },
+							(draft) => {
+								console.log("UpdateQueryData callback - draft:", draft);
+								if (draft) {
+									const index = draft.findIndex(
+										(card: any) => card.id === payload.id
+									);
+									console.log("Found card at index:", index);
+									if (index !== -1) {
+										draft.splice(index, 1);
+										console.log("Removed card from cache");
+									} else {
+										console.log("Card not found in cache");
+									}
+								} else {
+									console.log("No draft found - query data not available");
+								}
+							}
+						)
+					);
+
+					try {
+						await queryFulfilled;
+						console.log("Delete card query fulfilled successfully");
+					} catch (error) {
+						console.log(
+							"Delete card query failed, reverting optimistic update:",
+							error
+						);
+						// If the delete fails, revert the optimistic update
+						patchResult.undo();
+					}
+				}
+			},
+		}),
+		updateCard: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				cardId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, cardId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/cards`,
+				method: "PUT",
+				body: { cardId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Cards", id: holidayId },
+			],
+		}),
+		editCard: builder.mutation<
+			any,
+			{ holidayId: string; cardId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, cardId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/cards`,
+				method: "PATCH",
+				body: { cardId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Cards", id: holidayId },
+			],
+		}),
+		deleteCard: builder.mutation<
+			any,
+			{ holidayId: string; cardId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, cardId, auth0User }) => ({
+				url: `holidays/${holidayId}/cards?cardId=${cardId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			// Use optimistic update to immediately remove the item from the cache
+			async onQueryStarted(
+				{ holidayId, cardId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				console.log(
+					"Delete card optimistic update - holidayId:",
+					holidayId,
+					"cardId:",
+					cardId
+				);
+
+				// Optimistically update the cache by removing the deleted card
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getCards",
+						{ holidayId, auth0User },
+						(draft) => {
+							console.log("UpdateQueryData callback - draft:", draft);
+							if (draft) {
+								const index = draft.findIndex(
+									(card: any) => card.id === cardId
+								);
+								console.log("Found card at index:", index);
+								if (index !== -1) {
+									draft.splice(index, 1);
+									console.log("Removed card from cache");
+								} else {
+									console.log("Card not found in cache");
+								}
+							} else {
+								console.log("No draft found - query data not available");
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+					console.log("Delete card query fulfilled successfully");
+				} catch (error) {
+					console.log(
+						"Delete card query failed, reverting optimistic update:",
+						error
+					);
+					// If the delete fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
+		}),
 		createGuest: builder.mutation<
 			any,
 			{ holidayId: string; payload: any; auth0User?: any }
@@ -483,11 +721,15 @@ export const {
 	useCreateGuestMutation,
 	useCreateDecorationMutation,
 	useUpdateGiftMutation,
+	useUpdateCardMutation,
 	useUpdateDecorationMutation,
 	useEditGiftMutation,
+	useEditCardMutation,
 	useEditDecorationMutation,
 	useDeleteGiftMutation,
+	useDeleteCardMutation,
 	useDeleteDecorationMutation,
+	useCardOperationMutation,
 	useGetGiftsQuery,
 	useGetCardsQuery,
 	useGetTasksQuery,
