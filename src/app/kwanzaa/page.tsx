@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchKwanzaaGifts } from "@/store/slices/kwanzaaGiftListSlice";
 import { fetchKwanzaaTasks } from "@/store/slices/kwanzaaTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 
 const subsections = [
 	{

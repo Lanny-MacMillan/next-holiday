@@ -7,7 +7,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchNewYearGifts } from "@/store/slices/newYearGiftListSlice";
 import { fetchNewYearTasks } from "@/store/slices/newYearTasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 
 const subsections = [
 	{
@@ -178,4 +178,4 @@ export default function NewYearPage() {
 			</footer>
 		</div>
 	);
-} 
+}
