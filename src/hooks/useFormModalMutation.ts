@@ -6,6 +6,7 @@ import {
 	useCreateGiftMutation,
 	useCreateCardMutation,
 	useCreateGuestMutation,
+	useCreateDecorationMutation,
 } from "@/store/api";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
@@ -29,6 +30,8 @@ export function useFormModalMutation() {
 	const [createGift, createGiftState] = useCreateGiftMutation();
 	const [createCard, createCardState] = useCreateCardMutation();
 	const [createGuest, createGuestState] = useCreateGuestMutation();
+	const [createDecoration, createDecorationState] =
+		useCreateDecorationMutation();
 
 	// Determine which mutation to use based on the route
 	const getMutationForRoute = () => {
@@ -57,6 +60,11 @@ export function useFormModalMutation() {
 			case "tasks":
 			case "events":
 			case "decorations":
+				return {
+					mutation: createDecoration,
+					state: createDecorationState,
+					type: "decoration" as const,
+				};
 			case "candle-lighting":
 			case "meal-planning":
 			case "decorations-checklist":

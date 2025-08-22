@@ -196,14 +196,16 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 
 						{/* Edit Button - Larger styling to match GiftListItem */}
 						{onEditTask && (
-							<div className="flex flex-col gap-1 mt-3">
+							<div className="flex flex-col gap-1 mt-3 relative z-20">
 								<button
 									onClick={(e) => {
 										e.stopPropagation();
+										console.log("Edit button clicked for task:", task.title);
 										onEditTask(task);
 									}}
-									className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors"
+									className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors cursor-pointer relative z-30"
 									disabled={loading}
+									style={{ pointerEvents: "auto" }}
 								>
 									Edit
 								</button>
@@ -242,13 +244,31 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 						</div>
 					)}
 				</div>
-				<button
-					onClick={handleDeleteTask}
-					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
-					disabled={loading}
-				>
-					Delete
-				</button>
+				<div className="flex gap-2">
+					{onEditTask && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								console.log("Edit button clicked for task:", task.title);
+								onEditTask(task);
+							}}
+							className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm cursor-pointer transition-colors"
+							disabled={loading}
+							style={{ pointerEvents: "auto" }}
+							title="Edit task"
+						>
+							Edit
+						</button>
+					)}
+					<button
+						onClick={handleDeleteTask}
+						className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm cursor-pointer transition-colors"
+						disabled={loading}
+						title="Delete task"
+					>
+						Delete
+					</button>
+				</div>
 			</li>
 		);
 	}
@@ -359,14 +379,16 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 
 					{/* Edit Button - Larger styling to match GiftListItem */}
 					{onEditTask && (
-						<div className="flex flex-col gap-1 mt-3">
+						<div className="flex flex-col gap-1 mt-3 relative z-20">
 							<button
 								onClick={(e) => {
 									e.stopPropagation();
+									console.log("Edit button clicked for task:", task.title);
 									onEditTask(task);
 								}}
-								className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors"
+								className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors cursor-pointer relative z-30"
 								disabled={loading}
+								style={{ pointerEvents: "auto" }}
 							>
 								Edit
 							</button>
@@ -414,13 +436,31 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
 					)}
 				</div>
 			</div>
-			<button
-				onClick={handleDeleteTask}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
-				disabled={loading}
-			>
-				Delete
-			</button>
+			<div className="flex gap-2">
+				{onEditTask && (
+					<button
+						onClick={(e) => {
+							e.stopPropagation();
+							console.log("Edit button clicked for task:", task.title);
+							onEditTask(task);
+						}}
+						className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm cursor-pointer transition-colors"
+						disabled={loading}
+						style={{ pointerEvents: "auto" }}
+						title="Edit task"
+					>
+						Edit
+					</button>
+				)}
+				<button
+					onClick={handleDeleteTask}
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm cursor-pointer transition-colors"
+					disabled={loading}
+					title="Delete task"
+				>
+					Delete
+				</button>
+			</div>
 		</li>
 	);
 };

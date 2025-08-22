@@ -79,3 +79,123 @@ export async function GET(
 		return serverError("Failed to fetch tasks");
 	}
 }
+
+export async function PUT(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		const user = await requireAuth(request);
+		const { id } = await params;
+		const forbidden = await assertHolidayAccess(id, user.id);
+		if (forbidden) return forbidden;
+
+		const json = await request.json();
+		const { taskId, isCompleted } = json;
+
+		if (!taskId || typeof isCompleted !== "boolean") {
+			return badRequest("taskId and isCompleted are required");
+		}
+
+		const task = await prisma.task.update({
+			where: {
+				id: taskId,
+				holidayId: id,
+			},
+			data: {
+				isCompleted,
+				completedDate: isCompleted ? new Date() : null,
+			},
+		});
+
+		return ok(task);
+	} catch (error) {
+		console.error("Error updating task:", error);
+		return serverError("Failed to update task");
+	}
+}
+
+export async function PATCH(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		const user = await requireAuth(request);
+		const { id } = await params;
+		const forbidden = await assertHolidayAccess(id, user.id);
+		if (forbidden) return forbidden;
+
+		const json = await request.json();
+		const { taskId, ...updateData } = json;
+
+		if (!taskId) {
+			return badRequest("taskId is required");
+		}
+
+		// Only allow updating specific fields
+		const allowedFields = [
+			"title",
+			"description",
+			"priority",
+			"category",
+			"dueDate",
+			"assignedTo",
+		];
+		const filteredData: any = {};
+
+		for (const field of allowedFields) {
+			if (updateData[field] !== undefined) {
+				filteredData[field] = updateData[field];
+			}
+		}
+
+		// Convert dueDate if provided
+		if (filteredData.dueDate) {
+			filteredData.dueDate = new Date(filteredData.dueDate);
+		}
+
+		const task = await prisma.task.update({
+			where: {
+				id: taskId,
+				holidayId: id,
+			},
+			data: filteredData,
+		});
+
+		return ok(task);
+	} catch (error) {
+		console.error("Error updating task:", error);
+		return serverError("Failed to update task");
+	}
+}
+
+export async function DELETE(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		const user = await requireAuth(request);
+		const { id } = await params;
+		const forbidden = await assertHolidayAccess(id, user.id);
+		if (forbidden) return forbidden;
+
+		const { searchParams } = new URL(request.url);
+		const taskId = searchParams.get("taskId");
+
+		if (!taskId) {
+			return badRequest("taskId is required");
+		}
+
+		await prisma.task.delete({
+			where: {
+				id: taskId,
+				holidayId: id,
+			},
+		});
+
+		return ok({ success: true });
+	} catch (error) {
+		console.error("Error deleting task:", error);
+		return serverError("Failed to delete task");
+	}
+}

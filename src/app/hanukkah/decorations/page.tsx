@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchHanukkahTasks,
-	addHanukkahTask,
-	updateHanukkahTask,
-	deleteHanukkahTask,
-	toggleHanukkahTaskCompletion,
-	HanukkahTask,
-} from "@/store/slices/hanukkah/hanukkahTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";
@@ -18,6 +11,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import { DecorationsListItem } from "@/components/cards/decorations";
+import { useDecorationMutations } from "@/hooks/useDecorationMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -74,9 +68,24 @@ const defaultDecorationTasks = [
 
 export default function HanukkahDecorationsPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.hanukkahTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new decoration mutations hook
+	const {
+		holidayId,
+		auth0User,
+		decorations,
+		loading,
+		error,
+		initialized,
+		createDecoration,
+		updateDecoration,
+		editDecoration,
+		deleteDecoration,
+		updateDecorationState,
+		editDecorationState,
+		deleteDecorationState,
+	} = useDecorationMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -89,55 +98,63 @@ export default function HanukkahDecorationsPage() {
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
 
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchHanukkahTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	// Check if default decoration tasks exist
 	useEffect(() => {
-		const decorationTasks = tasks.filter(
-			(task: HanukkahTask) => task.category === "Decorations"
-		);
-		if (decorationTasks.length === 0) {
+		if (decorations.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [tasks]);
+	}, [decorations, initialized]);
 
-	function handleAddTask(values: Record<string, any>) {
+	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
 
-		const newTask: Omit<HanukkahTask, "id" | "createdAt" | "updatedAt"> = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			category: values.category || "Decorations",
-			dueDate: values.dueDate || undefined,
-			isCompleted: false,
-		};
-
-		dispatch(addHanukkahTask(newTask));
-		setShowForm(false);
-	}
-
-	function addDefaultDecorationTasks() {
-		defaultDecorationTasks.forEach((task) => {
-			const newTask: Omit<HanukkahTask, "id" | "createdAt" | "updatedAt"> = {
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				assignedTo: undefined,
-				category: task.category,
-				dueDate: undefined,
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Decorations",
+				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			dispatch(addHanukkahTask(newTask));
-		});
-		setShowDefaultTasks(false);
+
+			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating decoration:", error);
+		}
+	}
+
+	async function addDefaultDecorationTasks() {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultDecorationTasks) {
+				const payload = {
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					assignedTo: undefined,
+					category: task.category,
+					dueDate: undefined,
+					isCompleted: false,
+				};
+				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default decoration tasks:", error);
+		}
 	}
 
 	function openForm() {
@@ -148,18 +165,40 @@ export default function HanukkahDecorationsPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleHanukkahTaskCompletion(taskId));
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const decoration = decorations.find((d: any) => d.id === taskId);
+			if (decoration) {
+				await updateDecoration({
+					holidayId,
+					taskId,
+					isCompleted: !decoration.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating decoration:", error);
+		}
 	}
 
 	function handleDeleteTask(taskId: string) {
 		setDeleteConfirm({ show: true, taskId });
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteHanukkahTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	async function confirmDelete() {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteDecoration({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting decoration:", error);
+			}
 		}
 	}
 
@@ -167,7 +206,7 @@ export default function HanukkahDecorationsPage() {
 		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: HanukkahTask[]): HanukkahTask[] {
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
 				const priorityOrder = { high: 3, medium: 2, low: 1 };
@@ -207,31 +246,52 @@ export default function HanukkahDecorationsPage() {
 		);
 	}
 
-	const decorationTasks = tasks.filter(
-		(task: HanukkahTask) => task.category === "Decorations"
-	);
-	const sortedTasks = sortTasks(decorationTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: HanukkahTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: HanukkahTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(decorations);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
-	// Placeholder edit function - can be implemented later
 	const handleEditTask = (task: any) => {
-		console.log("Edit task functionality not yet implemented for:", task);
-		// TODO: Implement edit modal/functionality
+		setEditingTask(task);
+		setShowEditModal(true);
 	};
 
-	const renderTaskItem = (task: HanukkahTask) => (
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editDecoration({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Decorations",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing decoration:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	const renderTaskItem = (task: any) => (
 		<DecorationsListItem
 			key={task.id}
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}
 			onEditTask={handleEditTask}
-			loading={loading}
+			loading={loading || updateDecorationState.isLoading}
 			holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
 	);
@@ -245,7 +305,7 @@ export default function HanukkahDecorationsPage() {
 				sortTitle="Sort tasks"
 				description="Keep track your Hanukkah decorations!"
 				holidayColor="blue-500"
-				error={error}
+				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}
@@ -351,12 +411,56 @@ export default function HanukkahDecorationsPage() {
 				cardClassName="card-tasks"
 			/>
 
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Decoration Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={editDecorationState.isLoading}
+				submitText="Update Task"
+				cardClassName="card-tasks"
+			/>
+
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={deleteConfirm.show}
 				onCancel={cancelDelete}
 				onConfirm={confirmDelete}
-				loading={loading}
+				loading={deleteDecorationState.isLoading}
 				cardClassName="card-tasks"
 				title="Confirm Delete"
 				message="Are you sure you want to delete this task? This action cannot be undone."
