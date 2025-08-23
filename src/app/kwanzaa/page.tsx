@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCards } from "@/store/slices/cardsSlice";
-import { fetchKwanzaaGifts } from "@/store/slices/kwanzaaGiftListSlice";
-import { fetchKwanzaaTasks } from "@/store/slices/kwanzaaTasksSlice";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useGetGiftsQuery, useGetTasksQuery } from "@/store/api";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
+import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
+import HolidayHeader from "@/components/common/HolidayHeader";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
@@ -15,13 +14,14 @@ const subsections = [
 		description: "Track your Kwanzaa gift ideas",
 		href: "/kwanzaa/gift-list",
 		sliceKey: "giftList",
-		category: undefined,
+		type: "gift-list",
 	},
 	{
 		name: "Daily Principle Tracker",
 		description: "Track the seven principles of Kwanzaa",
 		href: "/kwanzaa/daily-principles",
 		sliceKey: "tasks",
+		type: "task",
 		category: "Daily Principles",
 	},
 	{
@@ -29,6 +29,7 @@ const subsections = [
 		description: "Plan your Kwanzaa events and celebrations",
 		href: "/kwanzaa/events",
 		sliceKey: "tasks",
+		type: "task",
 		category: "Events",
 	},
 	{
@@ -36,26 +37,29 @@ const subsections = [
 		description: "Stay on top of your Kwanzaa decorations",
 		href: "/kwanzaa/decorations",
 		sliceKey: "tasks",
+		type: "task",
 		category: "Decorations",
 	},
 ];
 
-export default function HanukkahPage() {
-	const dispatch = useAppDispatch();
+export default function KwanzaaPage() {
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
 
-	const cards = useAppSelector((state: any) => state.cards.cards);
-	const gifts = useAppSelector((state: any) => state.kwanzaaGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.kwanzaaTasks.tasks);
-	const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+	// Get holiday ID for Kwanzaa
+	const holidayId = getHolidayIdFromRoute("/kwanzaa", holidayPreferences);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchCards());
-		dispatch(fetchKwanzaaGifts());
-		dispatch(fetchKwanzaaTasks());
-		dispatch(fetchContacts());
-	}, [dispatch]);
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(
 		sliceKey: string,
@@ -69,10 +73,6 @@ export default function HanukkahPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
-			case "cards":
-				total = cards.length;
-				completed = cards.filter((card: any) => card.isCompleted).length;
-				break;
 			case "giftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
@@ -87,10 +87,6 @@ export default function HanukkahPage() {
 					(task: any) => task.isCompleted
 				).length;
 				break;
-			case "addressBook":
-				total = contacts.length;
-				completed = 0; // Address book doesn't have completion status
-				break;
 			default:
 				total = 0;
 				completed = 0;
@@ -103,25 +99,11 @@ export default function HanukkahPage() {
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/"
-						className="absolute left-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-					>
-						←
-					</Link>
-					<div className="text-center">
-						<h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
-							Kwanzaa
-						</h1>
-						<p className="text-center text-gray-600 dark:text-gray-400">
-							Plan your Kwanzaa with ease!
-						</p>
-					</div>
-				</div>
-			</header>
-			<main className="flex-1 w-full max-w-md flex flex-col gap-6 mt-4">
+			<HolidayHeader
+				holidayName="Kwanzaa"
+				description="Plan your Kwanzaa with ease!"
+			/>
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
@@ -129,47 +111,42 @@ export default function HanukkahPage() {
 							section.category
 						);
 
-						return (
-							<li key={section.name}>
-								<Link
-									href={section.href}
-									className="block card card-cards rounded-2xl p-5 transition hover:scale-[1.02] active:scale-100"
-								>
-									{/* Budget Display for Gift List */}
-									{section.sliceKey === "giftList" && (
-										<BudgetDisplay holiday="Kwanzaa" />
-									)}
-
-									<div className="flex items-center justify-between mb-1">
-										<h3 className="text-lg font-bold text-gray-800 dark:text-white">
-											{section.name}
-										</h3>
-										<span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
-											{total}
-										</span>
-									</div>
-									<p className="text-gray-600 dark:text-gray-400 text-sm">
-										{section.description}
-									</p>
-									{/* Progress bar */}
-									<div className="mt-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-										<div
-											className="bg-red-400 dark:bg-red-500 h-2 rounded-full transition-all"
-											style={{ width: `${progress * 100}%` }}
-										/>
-									</div>
-									{/* Progress text */}
-									<div className="flex justify-between items-center mt-1">
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{Math.round(progress * 100)}% complete
-										</span>
-										<span className="text-xs text-gray-500 dark:text-gray-500">
-											{completed}/{total} items
-										</span>
-									</div>
-								</Link>
-							</li>
-						);
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Kwanzaa"
+										href={section.href}
+										theme={{
+											primaryColor: "#dc2626", // Red for Kwanzaa
+											accentColor: "#dc2626", // Red accent
+										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+									/>
+								</li>
+							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="Kwanzaa"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#dc2626", // Red for Kwanzaa
+											accentColor: "#dc2626", // Red accent
+											progressColor: "#dc2626", // Red for progress bar
+										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+									/>
+								</li>
+							);
+						}
 					})}
 				</ul>
 			</main>

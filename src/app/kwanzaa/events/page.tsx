@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchKwanzaaTasks,
-	addKwanzaaTask,
-	updateKwanzaaTask,
-	deleteKwanzaaTask,
-	toggleKwanzaaTaskCompletion,
-	KwanzaaTask,
-} from "@/store/slices/kwanzaa/kwanzaaTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -17,7 +10,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import TaskSection from "@/components/common/TaskSection";
 import { EventItems } from "@/components/cards/event";
 import AddButton from "@/components/common/AddButton";
-import { getFormConfig } from "@/config/formConfigs";
+import { useEventMutations } from "@/hooks/useEventMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -86,95 +79,144 @@ const defaultEventTasks = [
 
 export default function KwanzaaEventsPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.kwanzaaTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new event mutations hook
+	const {
+		holidayId,
+		auth0User,
+		events,
+		loading,
+		error,
+		initialized,
+		createEvent,
+		updateEvent,
+		editEvent,
+		deleteEvent,
+		updateEventState,
+		editEventState,
+		deleteEventState,
+	} = useEventMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
-		taskTitle?: string;
 	}>({
 		show: false,
 		taskId: null,
-		taskTitle: "",
 	});
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
 
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchKwanzaaTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	// Check if default event tasks exist
 	useEffect(() => {
-		const eventTasks = tasks.filter(
-			(task: KwanzaaTask) => task.category === "Events"
-		);
-		if (eventTasks.length === 0) {
+		if (events.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [tasks]);
+	}, [events, initialized]);
 
-	function handleAddTask(values: Record<string, any>) {
-		const newTask: Omit<KwanzaaTask, "id" | "createdAt" | "updatedAt"> = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			category: values.category || "Events",
-			dueDate: values.dueDate || undefined,
-			isCompleted: false,
-		};
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
 
-		dispatch(addKwanzaaTask(newTask));
-		setShowForm(false);
-	}
-
-	function addDefaultEventTasks() {
-		defaultEventTasks.forEach((task) => {
-			const newTask: Omit<KwanzaaTask, "id" | "createdAt" | "updatedAt"> = {
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				assignedTo: undefined,
-				category: task.category,
-				dueDate: undefined,
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Events",
+				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			dispatch(addKwanzaaTask(newTask));
-		});
-		setShowDefaultTasks(false);
+
+			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating event:", error);
+		}
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleKwanzaaTaskCompletion(taskId));
+	async function addDefaultEventTasks() {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultEventTasks) {
+				const payload = {
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					assignedTo: undefined,
+					category: task.category,
+					dueDate: undefined,
+					isCompleted: false,
+				};
+				await createEvent({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default event tasks:", error);
+		}
 	}
 
-	function handleDeleteTask(taskId: string, taskTitle?: string) {
-		setDeleteConfirm({ show: true, taskId, taskTitle });
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const event = events.find((e: any) => e.id === taskId);
+			if (event) {
+				await updateEvent({
+					holidayId,
+					taskId,
+					isCompleted: !event.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating event:", error);
+		}
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteKwanzaaTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
+	function handleDeleteTask(taskId: string) {
+		setDeleteConfirm({ show: true, taskId });
+	}
+
+	async function confirmDelete() {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteEvent({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting event:", error);
+			}
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
+		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: KwanzaaTask[]): KwanzaaTask[] {
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return [...tasksToSort].sort(
 					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
 				);
@@ -209,24 +251,52 @@ export default function KwanzaaEventsPage() {
 		);
 	}
 
-	const eventTasks = tasks.filter(
-		(task: KwanzaaTask) => task.category === "Events"
-	);
-	const sortedTasks = sortTasks(eventTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: KwanzaaTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: KwanzaaTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(events);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
-	const renderEventItem = (task: KwanzaaTask) => (
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editEvent({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Events",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing event:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	const renderEventItem = (task: any) => (
 		<EventItems
 			key={task.id}
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}
-			loading={loading}
+			onEditTask={handleEditTask}
+			loading={loading || updateEventState.isLoading}
 			themeColor="red"
 			holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 		/>
@@ -239,7 +309,7 @@ export default function KwanzaaEventsPage() {
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
-				error={error}
+				error={error ? "API Error" : undefined}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -312,29 +382,99 @@ export default function KwanzaaEventsPage() {
 			<FormModal
 				isOpen={showForm}
 				title="Add New Event Task"
-				fields={getFormConfig("events", "add").fields}
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: "",
+					description: "",
+					priority: "medium",
+					assignedTo: "",
+					dueDate: "",
+				}}
 				onSubmit={handleAddTask}
 				onClose={() => setShowForm(false)}
 				loading={loading}
-				submitText="Add Event Task"
-				cancelText="Cancel"
-				cardClassName="card card-events-kwanzaa"
-				submitButtonColor="#dc2626"
+				submitText="Add Task"
+				cardClassName="card-events-kwanzaa"
+			/>
+
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Event Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={editEventState.isLoading}
+				submitText="Update Task"
+				cardClassName="card-events-kwanzaa"
 			/>
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={deleteConfirm.show}
+				onCancel={cancelDelete}
+				onConfirm={confirmDelete}
+				loading={deleteEventState.isLoading}
+				cardClassName="card-events-kwanzaa"
 				title="Confirm Delete"
 				message="Are you sure you want to delete this task? This action cannot be undone."
-				itemName={deleteConfirm.taskTitle}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={loading}
-				cardClassName="card card-events-kwanzaa"
-				confirmText="Delete"
-				cancelText="Cancel"
-				confirmButtonColor="#ef4444"
 			/>
 
 			{/* Sort Modal */}

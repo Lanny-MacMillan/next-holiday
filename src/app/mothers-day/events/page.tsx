@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchMothersDayTasks,
-	addMothersDayTask,
-	updateMothersDayTask,
-	deleteMothersDayTask,
-	toggleMothersDayTaskCompletion,
-	MothersDayTask,
-} from "@/store/slices/mothers-day/mothersDayTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -19,15 +12,28 @@ import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
+import { useEventMutations } from "@/hooks/useEventMutations";
 
 export default function MothersDayEventsPage() {
 	const dispatch = useAppDispatch();
-	const tasks = useAppSelector((state) => state.mothersDayTasks.tasks);
-	const error = useAppSelector((state) => state.mothersDayTasks.error);
-	const loading = useAppSelector((state) => state.mothersDayTasks.loading);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	// Filter tasks for Events category
-	const eventTasks = tasks.filter((task) => task.category === "Events");
+	// Use the new event mutations hook
+	const {
+		holidayId,
+		auth0User,
+		events,
+		loading,
+		error,
+		initialized,
+		createEvent,
+		updateEvent,
+		editEvent,
+		deleteEvent,
+		updateEventState,
+		editEventState,
+		deleteEventState,
+	} = useEventMutations();
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -35,6 +41,7 @@ export default function MothersDayEventsPage() {
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [sortBy, setSortBy] = useState<string>("dateCreated");
+	const [showEditModal, setShowEditModal] = useState(false);
 
 	// Sort options for events
 	const sortOptions = [
@@ -73,37 +80,69 @@ export default function MothersDayEventsPage() {
 		}
 	};
 
-	const sortedEventTasks = sortTasks(eventTasks, sortBy);
+	const sortedEventTasks = sortTasks(events, sortBy);
 
 	useEffect(() => {
-		dispatch(fetchMothersDayTasks());
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
 	}, [dispatch]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
-		if (editingTask) {
-			await dispatch(updateMothersDayTask({ ...editingTask, ...values }));
-			setEditingTask(null);
-		} else {
-			await dispatch(
-				addMothersDayTask({
-					...values,
-					isCompleted: false,
-					category: "Events",
-					title: values.title || "",
-					priority: values.priority || "medium",
-				})
-			);
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Events",
+				dueDate: values.dueDate || undefined,
+				isCompleted: false,
+			};
+			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			setShowAddForm(false);
+		} catch (error) {
+			console.error("Error handling event:", error);
 		}
-		setShowAddForm(false);
 	};
 
-	const handleEdit = (task: any) => {
+	const handleEditTask = (task: any) => {
 		setEditingTask(task);
-		setShowAddForm(true);
+		setShowEditModal(true);
 	};
 
-	const handleDelete = (taskId: string, taskTitle?: string) => {
-		const task = tasks.find((t) => t.id === taskId);
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editEvent({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Events",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing event:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	const handleDelete = (taskId: string) => {
+		const task = events.find((e: any) => e.id === taskId);
 		if (task) {
 			setTaskToDelete(task);
 			setShowDeleteModal(true);
@@ -111,15 +150,37 @@ export default function MothersDayEventsPage() {
 	};
 
 	const confirmDelete = async () => {
-		if (taskToDelete) {
-			await dispatch(deleteMothersDayTask(taskToDelete.id));
-			setTaskToDelete(null);
+		if (taskToDelete && holidayId && auth0User) {
+			try {
+				await deleteEvent({
+					holidayId,
+					taskId: taskToDelete.id,
+					auth0User,
+				}).unwrap();
+				setTaskToDelete(null);
+			} catch (error) {
+				console.error("Error deleting event:", error);
+			}
 		}
 		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
-		await dispatch(toggleMothersDayTaskCompletion(taskId));
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const event = events.find((e: any) => e.id === taskId);
+			if (event) {
+				await updateEvent({
+					holidayId,
+					taskId,
+					isCompleted: !event.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating event:", error);
+		}
 	};
 
 	const handleSortChange = (sortOption: string) => {
@@ -131,7 +192,7 @@ export default function MothersDayEventsPage() {
 			<HolidayPageHeader
 				title="Mother's Day Events"
 				backHref="/mothers-day"
-				error={error}
+				error={error ? "API Error" : undefined}
 				onSortClick={() => setShowSortModal(true)}
 				description="Keep track of your Mother's Day events!"
 				holidayColor="pink-500"
@@ -157,6 +218,7 @@ export default function MothersDayEventsPage() {
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
+							onEditTask={handleEditTask}
 							loading={loading}
 							themeColor="pink"
 							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
@@ -176,6 +238,7 @@ export default function MothersDayEventsPage() {
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
+							onEditTask={handleEditTask}
 							loading={loading}
 							themeColor="pink"
 							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
@@ -197,7 +260,7 @@ export default function MothersDayEventsPage() {
 			{/* Form Modal */}
 			<FormModal
 				isOpen={showAddForm}
-				title={editingTask ? "Edit Event" : "Add New Event"}
+				title="Add New Event"
 				fields={[
 					{
 						id: "title",
@@ -221,51 +284,83 @@ export default function MothersDayEventsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
 					{
-						id: "notes",
-						type: "textarea" as const,
-						placeholder: "Notes",
-						rows: 2,
+						id: "assignedTo",
+						type: "text" as const,
+						placeholder: "Assigned To",
 					},
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
 				]}
-				initialValues={
-					editingTask
-						? {
-								title: editingTask.title,
-								description: editingTask.description || "",
-								priority: editingTask.priority,
-								dueDate: editingTask.dueDate
-									? editingTask.dueDate.split("T")[0]
-									: "",
-								notes: editingTask.notes || "",
-						  }
-						: { priority: "medium", category: "Events" }
-				}
+				initialValues={{ priority: "medium" }}
 				onSubmit={handleSubmit}
 				onClose={() => {
 					setShowAddForm(false);
-					setEditingTask(null);
 				}}
 				loading={loading}
-				submitText={editingTask ? "Update Event" : "Add Event"}
-				cardClassName="card"
-				submitButtonColor="#ec4899"
+				submitText="Add Event"
+				cardClassName="card-events-mothers-day"
+			/>
+
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Event"
+				fields={[
+					{
+						id: "title",
+						type: "text" as const,
+						placeholder: "Event Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea" as const,
+						placeholder: "Description",
+						rows: 3,
+					},
+					{
+						id: "priority",
+						type: "select" as const,
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{
+						id: "assignedTo",
+						type: "text" as const,
+						placeholder: "Assigned To",
+					},
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={editEventState.isLoading}
+				submitText="Update Event"
+				cardClassName="card-events-mothers-day"
 			/>
 
 			{/* Delete Modal */}
 			<DeleteModal
 				isOpen={showDeleteModal}
-				title="Delete Event"
-				itemName={taskToDelete?.title}
 				onConfirm={confirmDelete}
 				onCancel={() => {
 					setShowDeleteModal(false);
 					setTaskToDelete(null);
 				}}
-				loading={loading}
-				cardClassName="card"
-				confirmButtonColor="#ec4899"
+				loading={deleteEventState.isLoading}
+				cardClassName="card-events-mothers-day"
+				title="Delete Event"
+				message="Are you sure you want to delete this event? This action cannot be undone."
 			/>
 		</div>
 	);

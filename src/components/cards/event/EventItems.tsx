@@ -19,6 +19,7 @@ export interface EventItemsProps<T extends BaseEventTask> {
 	task: T;
 	onToggleTask: (taskId: string) => void;
 	onDeleteTask: (taskId: string, taskTitle: string) => void;
+	onEditTask?: (task: T) => void; // New prop for edit functionality
 	loading?: boolean;
 	themeColor?: string; // For hover effects and accents (e.g., "blue", "red", "green")
 	gamified?: boolean; // New prop to control display mode
@@ -30,6 +31,7 @@ const EventItems = <T extends BaseEventTask>({
 	task,
 	onToggleTask,
 	onDeleteTask,
+	onEditTask,
 	loading = false,
 	themeColor = "blue",
 	gamified = false,
@@ -48,6 +50,13 @@ const EventItems = <T extends BaseEventTask>({
 	const handleDeleteTask = (e: React.MouseEvent) => {
 		e.stopPropagation();
 		onDeleteTask(task.id, task.title);
+	};
+
+	const handleEditTask = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (onEditTask) {
+			onEditTask(task);
+		}
 	};
 
 	const getPriorityStyles = (priority: string) => {
@@ -133,13 +142,34 @@ const EventItems = <T extends BaseEventTask>({
 						<div className="absolute bottom-3 right-3 w-3 h-3 rounded-full bg-white opacity-20 pointer-events-none"></div>
 					</div>
 
-					{/* Delete Button - Top Right Corner */}
+					{/* Action Buttons - Top Right Corner */}
 					<div
-						className="absolute top-2 right-2 z-50"
+						className="absolute top-2 right-2 z-50 flex gap-1"
 						onClick={(e) => {
 							e.stopPropagation();
 						}}
 					>
+						{/* Edit Button */}
+						{onEditTask && (
+							<button
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									handleEditTask(e);
+								}}
+								className="text-blue-700 hover:text-blue-900 text-sm font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-blue-100 transition-colors cursor-pointer"
+								title="Edit task"
+								style={{
+									pointerEvents: "auto",
+								}}
+								disabled={loading}
+							>
+								<span className="text-lg sm:text-xl font-bold select-none">
+									✏️
+								</span>
+							</button>
+						)}
+						{/* Delete Button */}
 						<button
 							onClick={(e) => {
 								e.preventDefault();
@@ -225,11 +255,32 @@ const EventItems = <T extends BaseEventTask>({
 
 				{/* Delete Button - Top Right Corner */}
 				<div
-					className="absolute top-2 right-2 z-50"
+					className="absolute top-2 right-2 z-50 flex gap-1"
 					onClick={(e) => {
 						e.stopPropagation();
 					}}
 				>
+					{/* Edit Button */}
+					{onEditTask && (
+						<button
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								handleEditTask(e);
+							}}
+							className="text-blue-700 hover:text-blue-900 text-sm font-bold w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-blue-100 transition-colors cursor-pointer"
+							title="Edit task"
+							style={{
+								pointerEvents: "auto",
+							}}
+							disabled={loading}
+						>
+							<span className="text-lg sm:text-xl font-bold select-none">
+								✏️
+							</span>
+						</button>
+					)}
+					{/* Delete Button */}
 					<button
 						onClick={(e) => {
 							e.preventDefault();
@@ -323,13 +374,27 @@ const EventItems = <T extends BaseEventTask>({
 						</div>
 					)}
 				</div>
-				<button
-					onClick={handleDeleteTask}
-					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
-					disabled={loading}
-				>
-					Delete
-				</button>
+				<div className="flex gap-2">
+					{onEditTask && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditTask(e);
+							}}
+							className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm"
+							disabled={loading}
+						>
+							Edit
+						</button>
+					)}
+					<button
+						onClick={handleDeleteTask}
+						className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
+						disabled={loading}
+					>
+						Delete
+					</button>
+				</div>
 			</li>
 		);
 	}
@@ -370,13 +435,27 @@ const EventItems = <T extends BaseEventTask>({
 					)}
 				</div>
 			</div>
-			<button
-				onClick={handleDeleteTask}
-				className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
-				disabled={loading}
-			>
-				Delete
-			</button>
+			<div className="flex gap-2">
+				{onEditTask && (
+					<button
+						onClick={(e) => {
+							e.stopPropagation();
+							handleEditTask(e);
+						}}
+						className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm"
+						disabled={loading}
+					>
+						Edit
+					</button>
+				)}
+				<button
+					onClick={handleDeleteTask}
+					className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm"
+					disabled={loading}
+				>
+					Delete
+				</button>
+			</div>
 		</li>
 	);
 };

@@ -3,20 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchHanukkahTasks,
-	addHanukkahTask,
-	updateHanukkahTask,
-	deleteHanukkahTask,
-	toggleHanukkahTaskCompletion,
-	HanukkahTask,
-} from "@/store/slices/hanukkah/hanukkahTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import { EventItems } from "@/components/cards/event";
+import { useEventMutations } from "@/hooks/useEventMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -61,138 +56,155 @@ const defaultEventTasks = [
 
 export default function HanukkahEventsPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.hanukkahTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	const [form, setForm] = useState({
-		title: "",
-		description: "",
-		priority: "medium",
-		assignedTo: "",
-		category: "Events",
-		dueDate: "",
-	});
-	const [sortBy, setSortBy] = useState<SortOption>("none");
+	// Use the new event mutations hook
+	const {
+		holidayId,
+		auth0User,
+		events,
+		loading,
+		error,
+		initialized,
+		createEvent,
+		updateEvent,
+		editEvent,
+		deleteEvent,
+		updateEventState,
+		editEventState,
+		deleteEventState,
+	} = useEventMutations();
+
+	const [showAddForm, setShowAddForm] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [taskToDelete, setTaskToDelete] = useState<any>(null);
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [sortBy, setSortBy] = useState<string>("dateCreated");
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+	const [showForm, setShowForm] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
-		taskTitle?: string;
 	}>({
 		show: false,
 		taskId: null,
-		taskTitle: "",
 	});
-	const [showForm, setShowForm] = useState(false);
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchHanukkahTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	// Check if default event tasks exist
 	useEffect(() => {
-		const eventTasks = tasks.filter(
-			(task: HanukkahTask) => task.category === "Events"
-		);
-		if (eventTasks.length === 0) {
+		if (events.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [tasks]);
+	}, [events, initialized]);
 
-	function handleAddTask(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.title.trim()) return;
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
 
-		const newTask: Omit<HanukkahTask, "id" | "createdAt" | "updatedAt"> = {
-			title: form.title,
-			description: form.description || undefined,
-			priority: form.priority as "low" | "medium" | "high",
-			assignedTo: form.assignedTo || undefined,
-			category: form.category || undefined,
-			dueDate: form.dueDate || undefined,
-			isCompleted: false,
-		};
-
-		dispatch(addHanukkahTask(newTask));
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "Events",
-			dueDate: "",
-		});
-		setShowForm(false);
-	}
-
-	function addDefaultEventTasks() {
-		defaultEventTasks.forEach((task) => {
-			const newTask: Omit<HanukkahTask, "id" | "createdAt" | "updatedAt"> = {
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				assignedTo: undefined,
-				category: task.category,
-				dueDate: undefined,
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Events",
+				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			dispatch(addHanukkahTask(newTask));
-		});
-		setShowDefaultTasks(false);
+
+			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating event:", error);
+		}
+	}
+
+	async function addDefaultEventTasks() {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultEventTasks) {
+				const payload = {
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					assignedTo: undefined,
+					category: task.category,
+					dueDate: undefined,
+					isCompleted: false,
+				};
+				await createEvent({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default event tasks:", error);
+		}
 	}
 
 	function openForm() {
 		setShowForm(true);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "Events",
-			dueDate: "",
-		});
 	}
 
 	function closeForm() {
 		setShowForm(false);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "Events",
-			dueDate: "",
-		});
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleHanukkahTaskCompletion(taskId));
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const event = events.find((e: any) => e.id === taskId);
+			if (event) {
+				await updateEvent({
+					holidayId,
+					taskId,
+					isCompleted: !event.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating event:", error);
+		}
 	}
 
-	function handleDeleteTask(taskId: string, taskTitle?: string) {
-		setDeleteConfirm({ show: true, taskId, taskTitle });
+	function handleDeleteTask(taskId: string) {
+		setDeleteConfirm({ show: true, taskId });
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteHanukkahTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
+	async function confirmDelete() {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteEvent({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting event:", error);
+			}
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
+		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: HanukkahTask[]): HanukkahTask[] {
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return [...tasksToSort].sort(
 					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
 				);
@@ -227,24 +239,81 @@ export default function HanukkahEventsPage() {
 		);
 	}
 
-	const eventTasks = tasks.filter(
-		(task: HanukkahTask) => task.category === "Events"
-	);
-	const sortedTasks = sortTasks(eventTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: HanukkahTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: HanukkahTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(events);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
-	const renderEventItem = (task: HanukkahTask) => (
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editEvent({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Events",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing event:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editEvent({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Events",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing event:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	const renderEventItem = (task: any) => (
 		<EventItems
 			key={task.id}
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}
-			loading={loading}
+			onEditTask={handleEditTask}
+			loading={loading || updateEventState.isLoading}
 			themeColor="blue"
 			holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
 		/>
@@ -259,7 +328,7 @@ export default function HanukkahEventsPage() {
 				sortTitle="Sort tasks"
 				description="Keep track of Hanukkah events or plans!"
 				holidayColor="blue-500"
-				error={error}
+				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}
@@ -322,125 +391,102 @@ export default function HanukkahEventsPage() {
 			</main>
 
 			{/* Form Modal */}
-			{showForm && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-events-hanukkah rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-						<div className="flex justify-between items-center mb-4">
-							<h3
-								className="text-lg font-semibold text-gray-900 dark:text-white"
-								style={{ color: "#111827" }}
-							>
-								Add New Event Task
-							</h3>
-							<button
-								onClick={closeForm}
-								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-								style={{ color: "#4b5563" }}
-							>
-								×
-							</button>
-						</div>
-						<form onSubmit={handleAddTask} className="space-y-4">
-							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Task Title*"
-								value={form.title}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, title: e.target.value }))
-								}
-								required
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Description"
-								value={form.description}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, description: e.target.value }))
-								}
-								rows={2}
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<div className="flex gap-2">
-								<select
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									value={form.priority}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, priority: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								>
-									<option value="low">Low Priority</option>
-									<option value="medium">Medium Priority</option>
-									<option value="high">High Priority</option>
-								</select>
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Assigned To"
-									value={form.assignedTo}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-							</div>
-							<div className="flex gap-2">
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Category"
-									value={form.category}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, category: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Due Date"
-									type="date"
-									value={form.dueDate}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, dueDate: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-							</div>
-							<div className="flex gap-3 pt-2">
-								<button
-									type="button"
-									onClick={closeForm}
-									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-									style={{ color: "#374151", borderColor: "#d1d5db" }}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-									disabled={loading}
-									style={{ backgroundColor: "#3b82f6", color: "white" }}
-								>
-									{loading ? "Adding..." : "Add Task"}
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
+			<FormModal
+				isOpen={showForm}
+				title="Add New Event Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: "",
+					description: "",
+					priority: "medium",
+					assignedTo: "",
+					dueDate: "",
+				}}
+				onSubmit={handleAddTask}
+				onClose={closeForm}
+				loading={loading}
+				submitText="Add Task"
+				cardClassName="card-events-hanukkah"
+			/>
 
-			{/* Delete Modal */}
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Event Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={editEventState.isLoading}
+				submitText="Update Task"
+				cardClassName="card-events-hanukkah"
+			/>
+
+			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={deleteConfirm.show}
+				onCancel={cancelDelete}
+				onConfirm={confirmDelete}
+				loading={deleteEventState.isLoading}
+				cardClassName="card-events-hanukkah"
 				title="Confirm Delete"
 				message="Are you sure you want to delete this task? This action cannot be undone."
-				itemName={deleteConfirm.taskTitle}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={loading}
-				cardClassName="card-tasks"
-				confirmText="Delete"
-				cancelText="Cancel"
-				confirmButtonColor="#ef4444"
 			/>
 
 			{/* Sort Modal */}

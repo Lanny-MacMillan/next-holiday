@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchNewYearTasks,
-	addNewYearTask,
-	updateNewYearTask,
-	deleteNewYearTask,
-	toggleNewYearTaskCompletion,
-	NewYearTask,
-} from "@/store/slices/new-year/newYearTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";
@@ -17,22 +10,31 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import { EventItems } from "@/components/cards/event";
+import { useEventMutations } from "@/hooks/useEventMutations";
 
 type SortOption = "priority" | "dueDate" | "title" | "none";
 
 export default function NewYearEventsPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.newYearTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	const [form, setForm] = useState({
-		title: "",
-		description: "",
-		priority: "medium" as "low" | "medium" | "high",
-		dueDate: "",
-		notes: "",
-	});
+	// Use the new event mutations hook
+	const {
+		holidayId,
+		auth0User,
+		events,
+		loading,
+		error,
+		initialized,
+		createEvent,
+		updateEvent,
+		editEvent,
+		deleteEvent,
+		updateEventState,
+		editEventState,
+		deleteEventState,
+	} = useEventMutations();
+
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -43,31 +45,34 @@ export default function NewYearEventsPage() {
 	});
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchNewYearTasks());
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
+
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Events",
+				dueDate: values.dueDate || undefined,
+				isCompleted: false,
+			};
+
+			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating event:", error);
 		}
-	}, [dispatch, initialized]);
-
-	// Filter tasks by "Events" category
-	const events = tasks.filter(
-		(task: NewYearTask) => task.category === "Events"
-	);
-
-	function handleAddTask(values: Record<string, any>) {
-		const newTask: Omit<NewYearTask, "id" | "createdAt" | "updatedAt"> = {
-			title: values.title,
-			description: values.description || undefined,
-			isCompleted: false,
-			priority: values.priority,
-			category: "Events",
-			dueDate: values.dueDate || undefined,
-			notes: values.notes || undefined,
-		};
-
-		dispatch(addNewYearTask(newTask));
-		setShowForm(false);
 	}
 
 	function openForm() {
@@ -78,18 +83,40 @@ export default function NewYearEventsPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleNewYearTaskCompletion(taskId));
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const event = events.find((e: any) => e.id === taskId);
+			if (event) {
+				await updateEvent({
+					holidayId,
+					taskId,
+					isCompleted: !event.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating event:", error);
+		}
 	}
 
 	function handleDeleteTask(taskId: string) {
 		setDeleteConfirm({ show: true, taskId });
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteNewYearTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	async function confirmDelete() {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteEvent({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting event:", error);
+			}
 		}
 	}
 
@@ -97,10 +124,14 @@ export default function NewYearEventsPage() {
 		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: NewYearTask[]): NewYearTask[] {
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return [...tasksToSort].sort(
 					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
 				);
@@ -131,11 +162,43 @@ export default function NewYearEventsPage() {
 
 	const sortedEvents = sortTasks(events);
 	const incompleteEvents = sortedEvents.filter(
-		(task: NewYearTask) => !task.isCompleted
+		(task: any) => !task.isCompleted
 	);
-	const completedEvents = sortedEvents.filter(
-		(task: NewYearTask) => task.isCompleted
-	);
+	const completedEvents = sortedEvents.filter((task: any) => task.isCompleted);
+
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editEvent({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Events",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing event:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
 
 	const formFields = [
 		{
@@ -176,13 +239,14 @@ export default function NewYearEventsPage() {
 		},
 	];
 
-	const renderEventItem = (task: NewYearTask) => (
+	const renderEventItem = (task: any) => (
 		<EventItems
 			key={task.id}
 			task={task}
 			onToggleTask={handleToggleTask}
-			onDeleteTask={(taskId, taskTitle) => handleDeleteTask(taskId)}
-			loading={loading}
+			onDeleteTask={handleDeleteTask}
+			onEditTask={handleEditTask}
+			loading={loading || updateEventState.isLoading}
 			themeColor="amber"
 			holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
 		/>
@@ -197,7 +261,7 @@ export default function NewYearEventsPage() {
 				sortTitle="Sort events"
 				description="Keep track of all your Events!"
 				holidayColor="yellow-500"
-				error={error}
+				error={error ? "API Error" : undefined}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -237,26 +301,107 @@ export default function NewYearEventsPage() {
 				<FormModal
 					isOpen={showForm}
 					title="Add New Event"
-					fields={formFields}
+					fields={[
+						{
+							id: "title",
+							type: "text" as const,
+							placeholder: "Event Title*",
+							required: true,
+						},
+						{
+							id: "description",
+							type: "textarea" as const,
+							placeholder: "Description",
+							rows: 3,
+						},
+						{
+							id: "priority",
+							type: "select" as const,
+							placeholder: "Priority",
+							options: [
+								{ value: "low", label: "Low Priority" },
+								{ value: "medium", label: "Medium Priority" },
+								{ value: "high", label: "High Priority" },
+							],
+						},
+						{
+							id: "assignedTo",
+							type: "text" as const,
+							placeholder: "Assigned To",
+						},
+						{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
+					]}
+					initialValues={{
+						title: "",
+						description: "",
+						priority: "medium",
+						assignedTo: "",
+						dueDate: "",
+					}}
 					onSubmit={handleAddTask}
 					onClose={closeForm}
+					loading={loading}
 					submitText="Add Event"
-					cancelText="Cancel"
-					cardClassName="card card-events-new-year"
-					submitButtonColor="#f97316"
+					cardClassName="card-events-new-year"
+				/>
+
+				{/* Edit Modal */}
+				<FormModal
+					isOpen={showEditModal}
+					title="Edit Event"
+					fields={[
+						{
+							id: "title",
+							type: "text" as const,
+							placeholder: "Event Title*",
+							required: true,
+						},
+						{
+							id: "description",
+							type: "textarea" as const,
+							placeholder: "Description",
+							rows: 3,
+						},
+						{
+							id: "priority",
+							type: "select" as const,
+							placeholder: "Priority",
+							options: [
+								{ value: "low", label: "Low Priority" },
+								{ value: "medium", label: "Medium Priority" },
+								{ value: "high", label: "High Priority" },
+							],
+						},
+						{
+							id: "assignedTo",
+							type: "text" as const,
+							placeholder: "Assigned To",
+						},
+						{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
+					]}
+					initialValues={{
+						title: editingTask?.title || "",
+						description: editingTask?.description || "",
+						priority: editingTask?.priority || "medium",
+						assignedTo: editingTask?.assignedTo || "",
+						dueDate: editingTask?.dueDate || "",
+					}}
+					onSubmit={handleEditTaskSubmit}
+					onClose={closeEditModal}
+					loading={editEventState.isLoading}
+					submitText="Update Event"
+					cardClassName="card-events-new-year"
 				/>
 
 				{/* Delete Confirmation Modal */}
 				<DeleteModal
 					isOpen={deleteConfirm.show}
-					title="Delete Event"
-					message="Are you sure you want to delete this event? This action cannot be undone."
 					onConfirm={confirmDelete}
 					onCancel={cancelDelete}
-					confirmText="Delete"
-					cancelText="Cancel"
-					cardClassName="card card-events-new-year"
-					confirmButtonColor="#ef4444"
+					loading={deleteEventState.isLoading}
+					cardClassName="card-events-new-year"
+					title="Delete Event"
+					message="Are you sure you want to delete this event? This action cannot be undone."
 				/>
 
 				{/* Sort Modal */}
