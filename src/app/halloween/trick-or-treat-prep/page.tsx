@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchHalloweenTasks,
-	addHalloweenTask,
-	updateHalloweenTask,
-	deleteHalloweenTask,
-	toggleHalloweenTaskCompletion,
-	HalloweenTask,
-} from "@/store/slices/halloween/halloweenTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";
@@ -20,6 +13,7 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { useTrickOrTreatPrepMutations } from "@/hooks/useTrickOrTreatPrepMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -52,14 +46,30 @@ const defaultTrickOrTreatTasks = [
 
 export default function HalloweenTrickOrTreatPrepPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.halloweenTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new trick or treat prep mutations hook
+	const {
+		holidayId,
+		auth0User,
+		trickOrTreatPrep,
+		loading,
+		error,
+		initialized,
+		createTrickOrTreatPrep,
+		updateTrickOrTreatPrep,
+		editTrickOrTreatPrep,
+		deleteTrickOrTreatPrep,
+		createTrickOrTreatPrepState,
+		updateTrickOrTreatPrepState,
+		editTrickOrTreatPrepState,
+		deleteTrickOrTreatPrepState,
+	} = useTrickOrTreatPrepMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<HalloweenTask | null>(null);
+	const [editingTask, setEditingTask] = useState<any>(null);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
@@ -70,43 +80,58 @@ export default function HalloweenTrickOrTreatPrepPage() {
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchHalloweenTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	useEffect(() => {
-		const trickOrTreatTasks = tasks.filter(
-			(task: HalloweenTask) => task.category === "Trick-or-Treat Prep"
-		);
-		if (trickOrTreatTasks.length === 0) {
+		if (trickOrTreatPrep.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [tasks]);
+	}, [trickOrTreatPrep, initialized]);
 
-	function handleAddTask(formValues: Record<string, any>) {
-		if (!formValues.title?.trim()) return;
+	const handleAddTask = async (formValues: Record<string, any>) => {
+		if (!formValues.title?.trim() || !holidayId || !auth0User) return;
 
-		const newTask: Omit<HalloweenTask, "id" | "createdAt" | "updatedAt"> = {
-			title: formValues.title,
-			description: formValues.description || undefined,
-			priority: formValues.priority as "low" | "medium" | "high",
-			assignedTo: formValues.assignedTo || undefined,
-			category: "Trick-or-Treat Prep",
-			dueDate: formValues.dueDate || undefined,
-			isCompleted: false,
-		};
+		try {
+			const payload = {
+				title: formValues.title,
+				description: formValues.description || undefined,
+				priority: formValues.priority as "low" | "medium" | "high",
+				assignedTo: formValues.assignedTo || undefined,
+				category: "Trick or Treat Prep",
+				dueDate: formValues.dueDate || undefined,
+				isCompleted: false,
+			};
 
-		dispatch(addHalloweenTask(newTask));
-		setShowForm(false);
-	}
+			await createTrickOrTreatPrep({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating trick or treat prep task:", error);
+		}
+	};
 
-	function addDefaultTrickOrTreatTasks() {
-		defaultTrickOrTreatTasks.forEach((task) => {
-			dispatch(addHalloweenTask({ ...task, isCompleted: false }));
-		});
-		setShowDefaultTasks(false);
-	}
+	const addDefaultTrickOrTreatTasks = async () => {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultTrickOrTreatTasks) {
+				const payload = {
+					...task,
+					category: "Trick or Treat Prep",
+					isCompleted: false,
+				};
+				await createTrickOrTreatPrep({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default trick or treat prep tasks:", error);
+		}
+	};
 
 	function openForm() {
 		setShowForm(true);
@@ -116,43 +141,79 @@ export default function HalloweenTrickOrTreatPrepPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleHalloweenTaskCompletion(taskId));
-	}
+	const handleToggleTask = async (taskId: string) => {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const task = trickOrTreatPrep.find((t: any) => t.id === taskId);
+			if (task) {
+				await updateTrickOrTreatPrep({
+					holidayId,
+					taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating trick or treat prep task:", error);
+		}
+	};
 
 	function handleDeleteTask(taskId: string) {
 		setDeleteConfirm({ show: true, taskId });
 	}
 
-	function handleEditTask(task: HalloweenTask) {
+	const handleEditTask = (task: any) => {
 		setEditingTask(task);
-	}
+	};
 
-	function handleSaveEdit(
-		updatedTask: Omit<HalloweenTask, "id" | "createdAt" | "updatedAt">
-	) {
-		if (editingTask) {
-			dispatch(updateHalloweenTask({ ...editingTask, ...updatedTask }));
-			setEditingTask(null);
+	const handleSaveEdit = async (updatedTask: any) => {
+		if (editingTask && holidayId && auth0User) {
+			try {
+				await editTrickOrTreatPrep({
+					holidayId,
+					taskId: editingTask.id,
+					payload: {
+						title: updatedTask.title,
+						description: updatedTask.description || undefined,
+						priority: updatedTask.priority as "low" | "medium" | "high",
+						assignedTo: updatedTask.assignedTo || undefined,
+						category: "Trick or Treat Prep",
+						dueDate: updatedTask.dueDate || undefined,
+					},
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} catch (error) {
+				console.error("Error updating trick or treat prep task:", error);
+			}
 		}
-	}
+	};
 
 	function handleCloseEdit() {
 		setEditingTask(null);
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteHalloweenTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	const confirmDelete = async () => {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteTrickOrTreatPrep({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting trick or treat prep task:", error);
+			}
 		}
-	}
+	};
 
 	function cancelDelete() {
 		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: HalloweenTask[]): HalloweenTask[] {
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
 				return [...tasksToSort].sort((a, b) => {
@@ -196,16 +257,9 @@ export default function HalloweenTrickOrTreatPrepPage() {
 		);
 	}
 
-	const trickOrTreatTasks = tasks.filter(
-		(task: HalloweenTask) => task.category === "Trick-or-Treat Prep"
-	);
-	const sortedTasks = sortTasks(trickOrTreatTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: HalloweenTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: HalloweenTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(trickOrTreatPrep);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
 	return (
 		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -216,7 +270,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 				sortTitle="Sort tasks"
 				description="Keep track of trick-or-treat prep tasks!"
 				holidayColor="orange-500"
-				error={error}
+				error={error ? "An error occurred" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Modal */}
@@ -257,7 +311,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 					isCompleted={false}
 					emptyMessage="No trick-or-treat prep tasks yet. Add your first task!"
 					completedMessage="No trick-or-treat prep tasks yet. Add your first task!"
-					renderItem={(task: HalloweenTask) => (
+					renderItem={(task: any) => (
 						<ToDoCard
 							key={task.id}
 							task={task}
@@ -278,7 +332,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 					isCompleted={true}
 					emptyMessage="No completed trick-or-treat prep tasks yet."
 					completedMessage="No completed trick-or-treat prep tasks yet."
-					renderItem={(task: HalloweenTask) => (
+					renderItem={(task: any) => (
 						<ToDoCard
 							key={task.id}
 							task={task}
@@ -302,8 +356,10 @@ export default function HalloweenTrickOrTreatPrepPage() {
 				fields={getFormConfig("tasks", "add").fields}
 				onSubmit={handleAddTask}
 				onClose={closeForm}
-				loading={loading}
-				submitText={loading ? "Adding..." : "Add Task"}
+				loading={createTrickOrTreatPrepState.isLoading}
+				submitText={
+					createTrickOrTreatPrepState.isLoading ? "Adding..." : "Add Task"
+				}
 				cancelText="Cancel"
 				cardClassName="card card-tasks"
 				submitButtonColor="#f97316"
@@ -315,7 +371,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 				task={editingTask}
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
-				loading={loading}
+				loading={editTrickOrTreatPrepState.isLoading}
 			/>
 
 			{/* Delete Confirmation Modal */}
@@ -324,7 +380,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 				{...getDeleteConfig("tasks")}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteTrickOrTreatPrepState.isLoading}
 			/>
 
 			{/* Sort Modal */}

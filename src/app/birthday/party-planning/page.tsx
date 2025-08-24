@@ -1,16 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchBirthdayTasks,
-	addBirthdayTask,
-	updateBirthdayTask,
-	deleteBirthdayTask,
-	toggleBirthdayTaskCompletion,
-	clearBirthdayTaskError,
-} from "@/store/slices/birthday/birthdayTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -18,31 +10,46 @@ import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { usePartyPlanningMutations } from "@/hooks/usePartyPlanningMutations";
 
 export default function BirthdayPartyPlanningPage() {
 	const dispatch = useAppDispatch();
-	const tasks = useAppSelector((state) => state.birthdayTasks.tasks);
-	const error = useAppSelector((state) => state.birthdayTasks.error);
-	const loading = useAppSelector((state) => state.birthdayTasks.loading);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	// Filter tasks for Party Planning category
-	const partyPlanningTasks = tasks.filter(
-		(task) => task.category === "Party Planning"
-	);
+	// Use the new party planning mutations hook
+	const {
+		holidayId,
+		auth0User,
+		partyPlanning,
+		loading,
+		error,
+		initialized,
+		createPartyPlanning,
+		updatePartyPlanning,
+		editPartyPlanning,
+		deletePartyPlanning,
+		createPartyPlanningState,
+		updatePartyPlanningState,
+		editPartyPlanningState,
+		deletePartyPlanningState,
+	} = usePartyPlanningMutations();
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [sortBy, setSortBy] = useState<string>("dateCreated");
+	const [sortBy, setSortBy] = useState<string>("priority");
 
 	// Sort options for party planning
 	const sortOptions = [
-		{ value: "dateCreated", label: "Date Created" },
-		{ value: "title", label: "Title A-Z" },
 		{ value: "priority", label: "Priority" },
+		{ value: "title", label: "Title A-Z" },
 		{ value: "dueDate", label: "Due Date" },
+		{ value: "assignedTo", label: "Assigned To" },
+		{ value: "category", label: "Category" },
 	];
 
 	// Sort function
@@ -65,37 +72,67 @@ export default function BirthdayPartyPlanningPage() {
 					if (!b.dueDate) return -1;
 					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
 				});
-			case "dateCreated":
+			case "assignedTo":
+				return sortedTasks.sort((a, b) => {
+					if (!a.assignedTo && !b.assignedTo) return 0;
+					if (!a.assignedTo) return 1;
+					if (!b.assignedTo) return -1;
+					return a.assignedTo.localeCompare(b.assignedTo);
+				});
+			case "category":
+				return sortedTasks.sort((a, b) => {
+					if (!a.category && !b.category) return 0;
+					if (!a.category) return 1;
+					if (!b.category) return -1;
+					return a.category.localeCompare(b.category);
+				});
 			default:
-				return sortedTasks.sort(
-					(a, b) =>
-						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-				);
+				return sortedTasks;
 		}
 	};
 
-	const sortedPartyPlanningTasks = sortTasks(partyPlanningTasks, sortBy);
+	const sortedPartyPlanningTasks = sortTasks(partyPlanning, sortBy);
 
 	useEffect(() => {
-		dispatch(fetchBirthdayTasks());
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
 	}, [dispatch]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
-		if (editingTask) {
-			await dispatch(updateBirthdayTask({ ...editingTask, ...values }));
-			setEditingTask(null);
-		} else {
-			await dispatch(
-				addBirthdayTask({
-					...values,
-					isCompleted: false,
+		if (!holidayId || !auth0User) return;
+
+		try {
+			if (editingTask) {
+				await editPartyPlanning({
+					holidayId,
+					taskId: editingTask.id,
+					payload: {
+						title: values.title,
+						description: values.description || undefined,
+						priority: values.priority as "low" | "medium" | "high",
+						assignedTo: values.assignedTo || undefined,
+						category: "Party Planning",
+						dueDate: values.dueDate || undefined,
+					},
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} else {
+				const payload = {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
 					category: "Party Planning",
-					title: values.title || "",
-					priority: values.priority || "medium",
-				})
-			);
+					dueDate: values.dueDate || undefined,
+					isCompleted: false,
+				};
+				await createPartyPlanning({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowAddForm(false);
+		} catch (error) {
+			console.error("Error saving party planning task:", error);
 		}
-		setShowAddForm(false);
 	};
 
 	const handleEdit = (task: any) => {
@@ -107,7 +144,7 @@ export default function BirthdayPartyPlanningPage() {
 		// Handle both task object and task ID
 		const task =
 			typeof taskOrId === "string"
-				? partyPlanningTasks.find((t) => t.id === taskOrId)
+				? partyPlanning.find((t) => t.id === taskOrId)
 				: taskOrId;
 
 		if (task) {
@@ -117,15 +154,37 @@ export default function BirthdayPartyPlanningPage() {
 	};
 
 	const confirmDelete = async () => {
-		if (taskToDelete) {
-			await dispatch(deleteBirthdayTask(taskToDelete.id));
-			setTaskToDelete(null);
+		if (taskToDelete && holidayId && auth0User) {
+			try {
+				await deletePartyPlanning({
+					holidayId,
+					taskId: taskToDelete.id,
+					auth0User,
+				}).unwrap();
+				setTaskToDelete(null);
+			} catch (error) {
+				console.error("Error deleting party planning task:", error);
+			}
 		}
 		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
-		await dispatch(toggleBirthdayTaskCompletion(taskId));
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const task = partyPlanning.find((t: any) => t.id === taskId);
+			if (task) {
+				await updatePartyPlanning({
+					holidayId,
+					taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating party planning task:", error);
+		}
 	};
 
 	const handleSortChange = (sortOption: string) => {
@@ -141,7 +200,7 @@ export default function BirthdayPartyPlanningPage() {
 				sortTitle="Sort Party Planning"
 				description="Plan your birthday party with style!"
 				holidayColor="yellow-500"
-				error={error}
+				error={error ? "An error occurred" : undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
@@ -262,7 +321,11 @@ export default function BirthdayPartyPlanningPage() {
 					setShowAddForm(false);
 					setEditingTask(null);
 				}}
-				loading={loading}
+				loading={
+					editingTask
+						? editPartyPlanningState.isLoading
+						: createPartyPlanningState.isLoading
+				}
 				submitText={editingTask ? "Update Task" : "Add Task"}
 				cardClassName="card"
 				submitButtonColor="#f59e0b"
@@ -278,7 +341,7 @@ export default function BirthdayPartyPlanningPage() {
 					setShowDeleteModal(false);
 					setTaskToDelete(null);
 				}}
-				loading={loading}
+				loading={deletePartyPlanningState.isLoading}
 				cardClassName="card"
 				confirmButtonColor="#f59e0b"
 			/>

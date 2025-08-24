@@ -3,23 +3,37 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchHanukkahTasks,
-	addHanukkahTask,
-	updateHanukkahTask,
-	deleteHanukkahTask,
-	toggleHanukkahTaskCompletion,
-	HanukkahTask,
-} from "@/store/slices/hanukkahTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import FormModal from "@/components/modals/FormModal";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+import { useCandleLightingMutations } from "@/hooks/useCandleLightingMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
 export default function CandleLightingPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.hanukkahTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new candle lighting mutations hook
+	const {
+		holidayId,
+		auth0User,
+		candleLighting,
+		loading,
+		error,
+		initialized,
+		createCandleLighting,
+		updateCandleLighting,
+		editCandleLighting,
+		deleteCandleLighting,
+		updateCandleLightingState,
+		editCandleLightingState,
+		deleteCandleLightingState,
+	} = useCandleLightingMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -30,26 +44,79 @@ export default function CandleLightingPage() {
 		taskId: null,
 	});
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showForm, setShowForm] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
 
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchHanukkahTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleHanukkahTaskCompletion(taskId));
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Candle Lighting",
+				dueDate: values.dueDate || undefined,
+				isCompleted: false,
+			};
+
+			await createCandleLighting({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating candle lighting task:", error);
+		}
+	}
+
+	function openForm() {
+		setShowForm(true);
+	}
+
+	function closeForm() {
+		setShowForm(false);
+	}
+
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const task = candleLighting.find((t: any) => t.id === taskId);
+			if (task) {
+				await updateCandleLighting({
+					holidayId,
+					taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating candle lighting task:", error);
+		}
 	}
 
 	function handleDeleteTask(taskId: string) {
 		setDeleteConfirm({ show: true, taskId });
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteHanukkahTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	async function confirmDelete() {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteCandleLighting({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting candle lighting task:", error);
+			}
 		}
 	}
 
@@ -57,10 +124,48 @@ export default function CandleLightingPage() {
 		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: HanukkahTask[]): HanukkahTask[] {
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editCandleLighting({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Candle Lighting",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing candle lighting task:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return [...tasksToSort].sort(
 					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
 				);
@@ -97,49 +202,27 @@ export default function CandleLightingPage() {
 		);
 	}
 
-	const candleTasks = tasks.filter(
-		(task: HanukkahTask) => task.category === "Candle Lighting"
-	);
-	const sortedTasks = sortTasks(candleTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: HanukkahTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: HanukkahTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(candleLighting);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
 	return (
 		<div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/hanukkah"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Candle Lighting Tracker
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-						title="Sort tasks"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<HolidayPageHeader
+				title="Candle Lighting Tracker"
+				backHref="/hanukkah"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort tasks"
+				description="Keep track of your Hanukkah candle lighting!"
+				holidayColor="blue-500"
+				error={error ? "API Error" : undefined}
+			/>
+			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<AddButton
+					title="Candle Lighting Task"
+					onClick={openForm}
+					color="blue"
+				/>
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -151,163 +234,241 @@ export default function CandleLightingPage() {
 					)}
 				</div>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete ({incompleteTasks.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{incompleteTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All candles lit! 🕯️✨
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteTasks.map((task: HanukkahTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
-										onClick={() => handleToggleTask(task.id)}
+				<TaskSection
+					title="Incomplete"
+					items={incompleteTasks}
+					isCompleted={false}
+					emptyMessage="All candles lit! 🕯️✨"
+					completedMessage=""
+					renderItem={(task: any) => (
+						<li
+							key={task.id}
+							className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
+							onClick={() => handleToggleTask(task.id)}
+						>
+							<input
+								type="checkbox"
+								checked={task.isCompleted}
+								readOnly
+								className="mr-3 accent-blue-500"
+							/>
+							<div className="flex-1">
+								<div className="text-gray-900 dark:text-white">
+									{task.title}
+								</div>
+								{task.description && (
+									<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{task.description}
+									</div>
+								)}
+								<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+									<span
+										className={`px-2 py-1 rounded ${
+											task.priority === "high"
+												? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+												: task.priority === "medium"
+												? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+												: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+										}`}
 									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-															: task.priority === "medium"
-															? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-															: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.assignedTo && (
-													<span>Assigned: {task.assignedTo}</span>
-												)}
-												{task.category && <span>{task.category}</span>}
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+										{task.priority}
+									</span>
+									{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}
+									{task.category && <span>{task.category}</span>}
+									{task.dueDate && (
+										<span>
+											Due: {new Date(task.dueDate).toLocaleDateString()}
+										</span>
+									)}
+								</div>
+							</div>
+							<div className="flex gap-2">
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										handleEditTask(task);
+									}}
+									className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+									disabled={loading}
+								>
+									Edit
+								</button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDeleteTask(task.id);
+									}}
+									className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+									disabled={loading}
+								>
+									Delete
+								</button>
+							</div>
+						</li>
+					)}
+					cardClassName="card-tasks"
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed ({completedTasks.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{completedTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed tasks yet.
+				<TaskSection
+					title="Completed"
+					items={completedTasks}
+					isCompleted={true}
+					emptyMessage="No completed tasks yet."
+					completedMessage="No completed tasks yet."
+					renderItem={(task: any) => (
+						<li
+							key={task.id}
+							className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
+							onClick={() => handleToggleTask(task.id)}
+						>
+							<input
+								type="checkbox"
+								checked={task.isCompleted}
+								readOnly
+								className="mr-3 accent-blue-500"
+							/>
+							<div className="flex-1">
+								<div className="line-through text-gray-400 dark:text-gray-500">
+									{task.title}
+								</div>
+								{task.description && (
+									<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
+										{task.description}
+									</div>
+								)}
+								{task.completedDate && (
+									<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+										Completed:{" "}
+										{new Date(task.completedDate).toLocaleDateString()}
+									</div>
+								)}
 							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedTasks.map((task: HanukkahTask) => (
-									<li
-										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{task.description}
-												</div>
-											)}
-											{task.completedDate && (
-												<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-													Completed:{" "}
-													{new Date(task.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+							<div className="flex gap-2">
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										handleEditTask(task);
+									}}
+									className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+									disabled={loading}
+								>
+									Edit
+								</button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDeleteTask(task.id);
+									}}
+									className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+									disabled={loading}
+								>
+									Delete
+								</button>
+							</div>
+						</li>
+					)}
+					cardClassName="card-tasks"
+				/>
 			</main>
 
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showForm}
+				title="Add New Candle Lighting Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: "",
+					description: "",
+					priority: "medium",
+					assignedTo: "",
+					dueDate: "",
+				}}
+				onSubmit={handleAddTask}
+				onClose={closeForm}
+				loading={loading}
+				submitText="Add Task"
+				cardClassName="card-tasks"
+			/>
+
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Candle Lighting Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={editCandleLightingState.isLoading}
+				submitText="Update Task"
+				cardClassName="card-tasks"
+			/>
+
 			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-tasks rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							Confirm Delete
-						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-6">
-							Are you sure you want to delete this task? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				onCancel={cancelDelete}
+				onConfirm={confirmDelete}
+				loading={deleteCandleLightingState.isLoading}
+				cardClassName="card-tasks"
+				title="Confirm Delete"
+				message="Are you sure you want to delete this task? This action cannot be undone."
+			/>
 
 			{/* Sort Modal */}
 			<SortModal

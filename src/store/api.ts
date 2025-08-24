@@ -6,7 +6,20 @@ export const api = createApi({
 		baseUrl: "/api",
 		credentials: "include",
 	}),
-	tagTypes: ["Tasks", "Gifts", "Cards", "GuestList", "Decorations", "Events"],
+	tagTypes: [
+		"Tasks",
+		"Gifts",
+		"Cards",
+		"GuestList",
+		"Decorations",
+		"Events",
+		"CandleLighting",
+		"DateIdeas",
+		"CostumeIdeas",
+		"TrickOrTreatPrep",
+		"MealPlanning",
+		"PartyPlanning",
+	],
 	endpoints: (builder) => ({
 		// Query endpoints
 		getGifts: builder.query<any[], { holidayId: string; auth0User?: any }>({
@@ -140,6 +153,169 @@ export const api = createApi({
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "Events", id: holidayId },
+			],
+		}),
+		getCandleLighting: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for candle lighting category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Candle Lighting"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "CandleLighting", id: holidayId },
+			],
+		}),
+		getDateIdeas: builder.query<any[], { holidayId: string; auth0User?: any }>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for date ideas category
+				const allTasks = response.data || [];
+				return allTasks.filter((task: any) => task.category === "Date Ideas");
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "DateIdeas", id: holidayId },
+			],
+		}),
+		getCostumeIdeas: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for costume ideas category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Costume Ideas"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "CostumeIdeas", id: holidayId },
+			],
+		}),
+		getTrickOrTreatPrep: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for trick or treat prep category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Trick or Treat Prep"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "TrickOrTreatPrep", id: holidayId },
+			],
+		}),
+		getMealPlanning: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for meal planning category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Meal Planning"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "MealPlanning", id: holidayId },
+			],
+		}),
+		getPartyPlanning: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for party planning category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Party Planning"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "PartyPlanning", id: holidayId },
 			],
 		}),
 		createTask: builder.mutation<
@@ -518,6 +694,144 @@ export const api = createApi({
 				{ type: "Events", id: holidayId },
 			],
 		}),
+		createCandleLighting: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Candle Lighting" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "CandleLighting", id: holidayId },
+			],
+		}),
+		createDateIdeas: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Date Ideas" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "DateIdeas", id: holidayId },
+			],
+		}),
+		createCostumeIdeas: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Costume Ideas" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "CostumeIdeas", id: holidayId },
+			],
+		}),
+		createTrickOrTreatPrep: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Trick or Treat Prep" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "TrickOrTreatPrep", id: holidayId },
+			],
+		}),
+		createMealPlanning: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Meal Planning" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "MealPlanning", id: holidayId },
+			],
+		}),
+		createPartyPlanning: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Party Planning" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "PartyPlanning", id: holidayId },
+			],
+		}),
 		updateGift: builder.mutation<
 			any,
 			{
@@ -876,6 +1190,594 @@ export const api = createApi({
 				}
 			},
 		}),
+		// Candle Lighting mutations
+		updateCandleLighting: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "CandleLighting", id: holidayId },
+			],
+		}),
+		editCandleLighting: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "CandleLighting", id: holidayId },
+			],
+		}),
+		deleteCandleLighting: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getCandleLighting",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
+		// Date Ideas mutations
+		updateDateIdeas: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "DateIdeas", id: holidayId },
+			],
+		}),
+		editDateIdeas: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "DateIdeas", id: holidayId },
+			],
+		}),
+		deleteDateIdeas: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getDateIdeas",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
+		// Costume Ideas mutations
+		updateCostumeIdeas: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "CostumeIdeas", id: holidayId },
+			],
+		}),
+		editCostumeIdeas: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "CostumeIdeas", id: holidayId },
+			],
+		}),
+		deleteCostumeIdeas: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getCostumeIdeas",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
+		// Trick or Treat Prep mutations
+		updateTrickOrTreatPrep: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "TrickOrTreatPrep", id: holidayId },
+			],
+		}),
+		editTrickOrTreatPrep: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "TrickOrTreatPrep", id: holidayId },
+			],
+		}),
+		deleteTrickOrTreatPrep: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTrickOrTreatPrep",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
+		// Meal Planning mutations
+		updateMealPlanning: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "MealPlanning", id: holidayId },
+			],
+		}),
+		editMealPlanning: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "MealPlanning", id: holidayId },
+			],
+		}),
+		deleteMealPlanning: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getMealPlanning",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
+		// Party Planning mutations
+		updatePartyPlanning: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "PartyPlanning", id: holidayId },
+			],
+		}),
+		editPartyPlanning: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "PartyPlanning", id: holidayId },
+			],
+		}),
+		deletePartyPlanning: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getPartyPlanning",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
 	}),
 });
 
@@ -886,18 +1788,42 @@ export const {
 	useCreateGuestMutation,
 	useCreateDecorationMutation,
 	useCreateEventMutation,
+	useCreateCandleLightingMutation,
+	useCreateDateIdeasMutation,
+	useCreateCostumeIdeasMutation,
+	useCreateTrickOrTreatPrepMutation,
+	useCreateMealPlanningMutation,
+	useCreatePartyPlanningMutation,
 	useUpdateGiftMutation,
 	useUpdateCardMutation,
 	useUpdateDecorationMutation,
 	useUpdateEventMutation,
+	useUpdateCandleLightingMutation,
+	useUpdateDateIdeasMutation,
+	useUpdateCostumeIdeasMutation,
+	useUpdateTrickOrTreatPrepMutation,
+	useUpdateMealPlanningMutation,
+	useUpdatePartyPlanningMutation,
 	useEditGiftMutation,
 	useEditCardMutation,
 	useEditDecorationMutation,
 	useEditEventMutation,
+	useEditCandleLightingMutation,
+	useEditDateIdeasMutation,
+	useEditCostumeIdeasMutation,
+	useEditTrickOrTreatPrepMutation,
+	useEditMealPlanningMutation,
+	useEditPartyPlanningMutation,
 	useDeleteGiftMutation,
 	useDeleteCardMutation,
 	useDeleteDecorationMutation,
 	useDeleteEventMutation,
+	useDeleteCandleLightingMutation,
+	useDeleteDateIdeasMutation,
+	useDeleteCostumeIdeasMutation,
+	useDeleteTrickOrTreatPrepMutation,
+	useDeleteMealPlanningMutation,
+	useDeletePartyPlanningMutation,
 	useCardOperationMutation,
 	useGetGiftsQuery,
 	useGetCardsQuery,
@@ -905,4 +1831,10 @@ export const {
 	useGetGuestListQuery,
 	useGetDecorationsQuery,
 	useGetEventsQuery,
+	useGetCandleLightingQuery,
+	useGetDateIdeasQuery,
+	useGetCostumeIdeasQuery,
+	useGetTrickOrTreatPrepQuery,
+	useGetMealPlanningQuery,
+	useGetPartyPlanningQuery,
 } = api;
