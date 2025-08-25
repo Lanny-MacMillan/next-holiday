@@ -70,13 +70,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
@@ -159,8 +152,18 @@ export default function HalloweenTrickOrTreatPrepPage() {
 		}
 	};
 
-	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+	async function handleDeleteTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			await deleteTrickOrTreatPrep({
+				holidayId,
+				taskId,
+				auth0User,
+			}).unwrap();
+		} catch (error) {
+			console.error("Error deleting trick or treat prep task:", error);
+		}
 	}
 
 	const handleEditTask = (task: any) => {
@@ -192,25 +195,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
 
 	function handleCloseEdit() {
 		setEditingTask(null);
-	}
-
-	const confirmDelete = async () => {
-		if (deleteConfirm.taskId && holidayId && auth0User) {
-			try {
-				await deleteTrickOrTreatPrep({
-					holidayId,
-					taskId: deleteConfirm.taskId,
-					auth0User,
-				}).unwrap();
-				setDeleteConfirm({ show: false, taskId: null });
-			} catch (error) {
-				console.error("Error deleting trick or treat prep task:", error);
-			}
-		}
-	};
-
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
 	}
 
 	function sortTasks(tasksToSort: any[]): any[] {
@@ -322,6 +306,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 								accentColor: "#f97316", // Orange for Halloween
 							}}
 							borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -344,6 +329,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 								accentColor: "#f97316", // Orange for Halloween
 							}}
 							borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -372,15 +358,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
 				loading={editTrickOrTreatPrepState.isLoading}
-			/>
-
-			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("tasks")}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={deleteTrickOrTreatPrepState.isLoading}
 			/>
 
 			{/* Sort Modal */}

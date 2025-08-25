@@ -39,8 +39,6 @@ export default function ValentinesDateIdeasPage() {
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showFormModal, setShowFormModal] = useState(false);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 	const [sortBy, setSortBy] = useState("title");
 
 	useEffect(() => {
@@ -92,30 +90,18 @@ export default function ValentinesDateIdeasPage() {
 		setShowFormModal(true);
 	};
 
-	const handleDeleteTask = (taskId: string) => {
-		setTaskToDelete(taskId);
-		setShowDeleteModal(true);
-	};
+	const handleDeleteTask = async (taskId: string) => {
+		if (!holidayId || !auth0User) return;
 
-	const confirmDelete = async () => {
-		if (taskToDelete && holidayId && auth0User) {
-			try {
-				await deleteDateIdeas({
-					holidayId,
-					taskId: taskToDelete,
-					auth0User,
-				}).unwrap();
-				setTaskToDelete(null);
-			} catch (error) {
-				console.error("Error deleting date idea:", error);
-			}
+		try {
+			await deleteDateIdeas({
+				holidayId,
+				taskId,
+				auth0User,
+			}).unwrap();
+		} catch (error) {
+			console.error("Error deleting date idea:", error);
 		}
-		setShowDeleteModal(false);
-	};
-
-	const cancelDelete = () => {
-		setTaskToDelete(null);
-		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
@@ -194,11 +180,6 @@ export default function ValentinesDateIdeasPage() {
 		editingTask ? "Update Date Idea" : "Add Date Idea"
 	);
 	const deleteConfig = getDeleteConfig("tasks");
-
-	// Get the task name for delete confirmation
-	const taskToDeleteName = taskToDelete
-		? dateIdeas.find((task: any) => task.id === taskToDelete)?.title
-		: undefined;
 
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -316,21 +297,6 @@ export default function ValentinesDateIdeasPage() {
 				cancelText={formConfig.cancelText}
 				cardClassName={formConfig.cardClassName}
 				submitButtonColor={formConfig.submitButtonColor}
-			/>
-
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				title="Delete Date Idea?"
-				message="Are you sure you want to delete this date idea? This action cannot be undone."
-				itemName={taskToDeleteName}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={loading}
-				cardClassName="card card-cards"
-				confirmText={deleteConfig.confirmText}
-				cancelText={deleteConfig.cancelText}
-				confirmButtonColor={deleteConfig.confirmButtonColor}
 			/>
 
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">

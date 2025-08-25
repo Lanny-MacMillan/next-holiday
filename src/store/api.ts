@@ -85,6 +85,30 @@ export const api = createApi({
 				{ type: "Tasks", id: holidayId },
 			],
 		}),
+		getHanukkahTasks: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+		}),
 		getGuestList: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
 				url: `holidays/${holidayId}/guest-lists`,
@@ -319,6 +343,29 @@ export const api = createApi({
 			],
 		}),
 		createTask: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: payload,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+		}),
+		createHanukkahTask: builder.mutation<
 			any,
 			{ holidayId: string; payload: any; auth0User?: any }
 		>({

@@ -10,7 +10,9 @@ import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
-import { useCandleLightingMutations } from "@/hooks/useCandleLightingMutations";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
+import { useHanukkahTasksMutations } from "@/hooks/useHanukkahTasksMutations";
+import { fetchHanukkahTasks } from "@/store/slices/hanukkah/hanukkahTasksSlice";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -18,31 +20,25 @@ export default function CandleLightingPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	// Use the new candle lighting mutations hook
+	// Use the new Hanukkah tasks mutations hook
 	const {
 		holidayId,
 		auth0User,
-		candleLighting,
+		hanukkahTasks,
 		loading,
 		error,
 		initialized,
-		createCandleLighting,
-		updateCandleLighting,
-		editCandleLighting,
-		deleteCandleLighting,
-		updateCandleLightingState,
-		editCandleLightingState,
-		deleteCandleLightingState,
-	} = useCandleLightingMutations();
+		createHanukkahTask,
+		updateHanukkahTask,
+		editHanukkahTask,
+		deleteHanukkahTask,
+		createHanukkahTaskState,
+		updateHanukkahTaskState,
+		editHanukkahTaskState,
+		deleteHanukkahTaskState,
+	} = useHanukkahTasksMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showForm, setShowForm] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
@@ -53,26 +49,29 @@ export default function CandleLightingPage() {
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
-	async function handleAddTask(values: Record<string, any>) {
+	useEffect(() => {
+		// Initialize Hanukkah tasks if not already initialized
+		if (!initialized) {
+			dispatch(fetchHanukkahTasks());
+		}
+	}, [dispatch, initialized]);
+
+	function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
 		if (!holidayId || !auth0User) return;
 
-		try {
-			const payload = {
-				title: values.title,
-				description: values.description || undefined,
-				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
-				category: "Candle Lighting",
-				dueDate: values.dueDate || undefined,
-				isCompleted: false,
-			};
+		const payload = {
+			title: values.title,
+			description: values.description || undefined,
+			priority: values.priority as "low" | "medium" | "high",
+			assignedTo: values.assignedTo || undefined,
+			category: "Candle Lighting",
+			dueDate: values.dueDate || undefined,
+			isCompleted: false,
+		};
 
-			await createCandleLighting({ holidayId, payload, auth0User }).unwrap();
-			setShowForm(false);
-		} catch (error) {
-			console.error("Error creating candle lighting task:", error);
-		}
+		createHanukkahTask({ holidayId, payload, auth0User });
+		setShowForm(false);
 	}
 
 	function openForm() {
@@ -83,45 +82,25 @@ export default function CandleLightingPage() {
 		setShowForm(false);
 	}
 
-	async function handleToggleTask(taskId: string) {
+	function handleToggleTask(taskId: string) {
 		if (!holidayId || !auth0User) return;
 
-		try {
-			const task = candleLighting.find((t: any) => t.id === taskId);
-			if (task) {
-				await updateCandleLighting({
-					holidayId,
-					taskId,
-					isCompleted: !task.isCompleted,
-					auth0User,
-				}).unwrap();
-			}
-		} catch (error) {
-			console.error("Error updating candle lighting task:", error);
-		}
+		updateHanukkahTask({
+			holidayId,
+			taskId,
+			isCompleted: true, // This will toggle in the slice
+			auth0User,
+		});
 	}
 
 	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
-	}
+		if (!holidayId || !auth0User) return;
 
-	async function confirmDelete() {
-		if (deleteConfirm.taskId && holidayId && auth0User) {
-			try {
-				await deleteCandleLighting({
-					holidayId,
-					taskId: deleteConfirm.taskId,
-					auth0User,
-				}).unwrap();
-				setDeleteConfirm({ show: false, taskId: null });
-			} catch (error) {
-				console.error("Error deleting candle lighting task:", error);
-			}
-		}
-	}
-
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
+		deleteHanukkahTask({
+			holidayId,
+			taskId,
+			auth0User,
+		});
 	}
 
 	const handleEditTask = (task: any) => {
@@ -129,28 +108,24 @@ export default function CandleLightingPage() {
 		setShowEditModal(true);
 	};
 
-	async function handleEditTaskSubmit(values: Record<string, any>) {
+	function handleEditTaskSubmit(values: Record<string, any>) {
 		if (!editingTask || !holidayId || !auth0User) return;
 
-		try {
-			await editCandleLighting({
-				holidayId,
-				taskId: editingTask.id,
-				payload: {
-					title: values.title,
-					description: values.description || undefined,
-					priority: values.priority as "low" | "medium" | "high",
-					assignedTo: values.assignedTo || undefined,
-					category: "Candle Lighting",
-					dueDate: values.dueDate || undefined,
-				},
-				auth0User,
-			}).unwrap();
-			setShowEditModal(false);
-			setEditingTask(null);
-		} catch (error) {
-			console.error("Error editing candle lighting task:", error);
-		}
+		editHanukkahTask({
+			holidayId,
+			taskId: editingTask.id,
+			payload: {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Candle Lighting",
+				dueDate: values.dueDate || undefined,
+			},
+			auth0User,
+		});
+		setShowEditModal(false);
+		setEditingTask(null);
 	}
 
 	function closeEditModal() {
@@ -202,7 +177,7 @@ export default function CandleLightingPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(candleLighting);
+	const sortedTasks = sortTasks(hanukkahTasks);
 	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
@@ -241,72 +216,19 @@ export default function CandleLightingPage() {
 					emptyMessage="All candles lit! 🕯️✨"
 					completedMessage=""
 					renderItem={(task: any) => (
-						<li
+						<ToDoCard
 							key={task.id}
-							className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
-							onClick={() => handleToggleTask(task.id)}
-						>
-							<input
-								type="checkbox"
-								checked={task.isCompleted}
-								readOnly
-								className="mr-3 accent-blue-500"
-							/>
-							<div className="flex-1">
-								<div className="text-gray-900 dark:text-white">
-									{task.title}
-								</div>
-								{task.description && (
-									<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-										{task.description}
-									</div>
-								)}
-								<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-									<span
-										className={`px-2 py-1 rounded ${
-											task.priority === "high"
-												? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-												: task.priority === "medium"
-												? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-												: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-										}`}
-									>
-										{task.priority}
-									</span>
-									{task.assignedTo && <span>Assigned: {task.assignedTo}</span>}
-									{task.category && <span>{task.category}</span>}
-									{task.dueDate && (
-										<span>
-											Due: {new Date(task.dueDate).toLocaleDateString()}
-										</span>
-									)}
-								</div>
-							</div>
-							<div className="flex gap-2">
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										handleEditTask(task);
-									}}
-									className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
-									disabled={loading}
-								>
-									Edit
-								</button>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										handleDeleteTask(task.id);
-									}}
-									className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-									disabled={loading}
-								>
-									Delete
-								</button>
-							</div>
-						</li>
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							theme={{
+								accentColor: "#3b82f6", // Blue for Hanukkah
+							}}
+							borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
+							disableInternalModal={true}
+						/>
 					)}
-					cardClassName="card-tasks"
 				/>
 
 				<TaskSection
@@ -316,58 +238,20 @@ export default function CandleLightingPage() {
 					emptyMessage="No completed tasks yet."
 					completedMessage="No completed tasks yet."
 					renderItem={(task: any) => (
-						<li
+						<ToDoCard
 							key={task.id}
-							className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
-							onClick={() => handleToggleTask(task.id)}
-						>
-							<input
-								type="checkbox"
-								checked={task.isCompleted}
-								readOnly
-								className="mr-3 accent-blue-500"
-							/>
-							<div className="flex-1">
-								<div className="line-through text-gray-400 dark:text-gray-500">
-									{task.title}
-								</div>
-								{task.description && (
-									<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-										{task.description}
-									</div>
-								)}
-								{task.completedDate && (
-									<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-										Completed:{" "}
-										{new Date(task.completedDate).toLocaleDateString()}
-									</div>
-								)}
-							</div>
-							<div className="flex gap-2">
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										handleEditTask(task);
-									}}
-									className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
-									disabled={loading}
-								>
-									Edit
-								</button>
-								<button
-									onClick={(e) => {
-										e.stopPropagation();
-										handleDeleteTask(task.id);
-									}}
-									className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-									disabled={loading}
-								>
-									Delete
-								</button>
-							</div>
-						</li>
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							className="opacity-60"
+							theme={{
+								accentColor: "#3b82f6", // Blue for Hanukkah
+							}}
+							borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
+							disableInternalModal={true}
+						/>
 					)}
-					cardClassName="card-tasks"
 				/>
 			</main>
 
@@ -454,20 +338,9 @@ export default function CandleLightingPage() {
 				}}
 				onSubmit={handleEditTaskSubmit}
 				onClose={closeEditModal}
-				loading={editCandleLightingState.isLoading}
+				loading={editHanukkahTaskState.isLoading}
 				submitText="Update Task"
 				cardClassName="card-tasks"
-			/>
-
-			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={deleteConfirm.show}
-				onCancel={cancelDelete}
-				onConfirm={confirmDelete}
-				loading={deleteCandleLightingState.isLoading}
-				cardClassName="card-tasks"
-				title="Confirm Delete"
-				message="Are you sure you want to delete this task? This action cannot be undone."
 			/>
 
 			{/* Sort Modal */}
