@@ -565,31 +565,25 @@ export const holidayData: HolidayData[] = [
 		},
 		getProgress: (state) => {
 			const gifts = state.babyShowerGiftList?.gifts || [];
-			const tasks = state.babyShowerTasks?.tasks || [];
 			const contacts = state.babyShowerAddressBook?.contacts || [];
 
-			const totalItems = gifts.length + tasks.length + contacts.length;
-			const completedItems =
-				gifts.filter((gift: any) => gift.isCompleted).length +
-				tasks.filter((task: any) => task.isCompleted).length;
+			const totalItems = gifts.length + contacts.length;
+			const completedItems = gifts.filter(
+				(gift: any) => gift.isCompleted
+			).length;
 
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
 			const gifts = state.babyShowerGiftList?.gifts || [];
-			const tasks = state.babyShowerTasks?.tasks || [];
 
-			return (
-				gifts.filter((gift: any) => gift.isCompleted).length +
-				tasks.filter((task: any) => task.isCompleted).length
-			);
+			return gifts.filter((gift: any) => gift.isCompleted).length;
 		},
 		getTotalItems: (state) => {
 			const gifts = state.babyShowerGiftList?.gifts || [];
-			const tasks = state.babyShowerTasks?.tasks || [];
 			const contacts = state.babyShowerAddressBook?.contacts || [];
 
-			return gifts.length + tasks.length + contacts.length;
+			return gifts.length + contacts.length;
 		},
 	},
 ];

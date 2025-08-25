@@ -19,6 +19,7 @@ export const api = createApi({
 		"TrickOrTreatPrep",
 		"MealPlanning",
 		"PartyPlanning",
+		"BabyShowerGames",
 	],
 	endpoints: (builder) => ({
 		// Query endpoints
@@ -340,6 +341,32 @@ export const api = createApi({
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "PartyPlanning", id: holidayId },
+			],
+		}),
+		getBabyShowerGames: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for baby shower games category
+				const allTasks = response.data || [];
+				return allTasks.filter((task: any) => task.category === "Games");
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "BabyShowerGames", id: holidayId },
 			],
 		}),
 		createTask: builder.mutation<
@@ -877,6 +904,29 @@ export const api = createApi({
 			}),
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "PartyPlanning", id: holidayId },
+			],
+		}),
+		createBabyShowerGames: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Games" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "BabyShowerGames", id: holidayId },
 			],
 		}),
 		updateGift: builder.mutation<
@@ -1756,6 +1806,34 @@ export const api = createApi({
 				{ type: "PartyPlanning", id: holidayId },
 			],
 		}),
+		updateBabyShowerGames: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "BabyShowerGames", id: holidayId },
+			],
+		}),
 		editPartyPlanning: builder.mutation<
 			any,
 			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
@@ -1777,6 +1855,29 @@ export const api = createApi({
 			}),
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "PartyPlanning", id: holidayId },
+			],
+		}),
+		editBabyShowerGames: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "BabyShowerGames", id: holidayId },
 			],
 		}),
 		deletePartyPlanning: builder.mutation<
@@ -1825,6 +1926,52 @@ export const api = createApi({
 				}
 			},
 		}),
+		deleteBabyShowerGames: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getBabyShowerGames",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
 	}),
 });
 
@@ -1841,6 +1988,7 @@ export const {
 	useCreateTrickOrTreatPrepMutation,
 	useCreateMealPlanningMutation,
 	useCreatePartyPlanningMutation,
+	useCreateBabyShowerGamesMutation,
 	useUpdateGiftMutation,
 	useUpdateCardMutation,
 	useUpdateDecorationMutation,
@@ -1851,6 +1999,7 @@ export const {
 	useUpdateTrickOrTreatPrepMutation,
 	useUpdateMealPlanningMutation,
 	useUpdatePartyPlanningMutation,
+	useUpdateBabyShowerGamesMutation,
 	useEditGiftMutation,
 	useEditCardMutation,
 	useEditDecorationMutation,
@@ -1861,6 +2010,7 @@ export const {
 	useEditTrickOrTreatPrepMutation,
 	useEditMealPlanningMutation,
 	useEditPartyPlanningMutation,
+	useEditBabyShowerGamesMutation,
 	useDeleteGiftMutation,
 	useDeleteCardMutation,
 	useDeleteDecorationMutation,
@@ -1871,6 +2021,7 @@ export const {
 	useDeleteTrickOrTreatPrepMutation,
 	useDeleteMealPlanningMutation,
 	useDeletePartyPlanningMutation,
+	useDeleteBabyShowerGamesMutation,
 	useCardOperationMutation,
 	useGetGiftsQuery,
 	useGetCardsQuery,
@@ -1884,4 +2035,5 @@ export const {
 	useGetTrickOrTreatPrepQuery,
 	useGetMealPlanningQuery,
 	useGetPartyPlanningQuery,
+	useGetBabyShowerGamesQuery,
 } = api;

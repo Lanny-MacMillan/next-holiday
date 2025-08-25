@@ -58,7 +58,6 @@ import graduationCardsReducer from "./slices/graduation/graduationCardsSlice";
 import graduationAddressBookReducer from "./slices/graduation/graduationAddressBookSlice";
 import graduationGuestListReducer from "./slices/graduation/graduationGuestListSlice";
 import babyShowerGiftListReducer from "./slices/baby-shower/babyShowerGiftListSlice";
-import babyShowerTasksReducer from "./slices/baby-shower/babyShowerTasksSlice";
 import babyShowerAddressBookReducer from "./slices/baby-shower/babyShowerAddressBookSlice";
 import babyShowerGuestListReducer from "./slices/baby-shower/babyShowerGuestListSlice";
 import christmasGuestListReducer from "./slices/christmas/christmasGuestListSlice";
@@ -142,7 +141,6 @@ export const store = configureStore({
 		graduationAddressBook: graduationAddressBookReducer,
 		graduationGuestList: graduationGuestListReducer,
 		babyShowerGiftList: babyShowerGiftListReducer,
-		babyShowerTasks: babyShowerTasksReducer,
 		babyShowerAddressBook: babyShowerAddressBookReducer,
 		babyShowerGuestList: babyShowerGuestListReducer,
 		christmasGuestList: christmasGuestListReducer,

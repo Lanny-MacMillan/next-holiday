@@ -94,9 +94,6 @@ export default function HomeContent({ homeData }: HomeContentProps) {
 	const babyShowerGifts = useAppSelector(
 		(state) => state.babyShowerGiftList?.gifts || []
 	);
-	const babyShowerTasks = useAppSelector(
-		(state) => state.babyShowerTasks?.tasks || []
-	);
 
 	// Filter holidays based on server data
 	const getSelectedHolidays = () => {
@@ -196,7 +193,6 @@ export default function HomeContent({ homeData }: HomeContentProps) {
 								graduationGiftList: { gifts: graduationGifts },
 								graduationTasks: { tasks: graduationTasks },
 								babyShowerGiftList: { gifts: babyShowerGifts },
-								babyShowerTasks: { tasks: babyShowerTasks },
 							};
 
 							const progress = holiday.getProgress(state);
