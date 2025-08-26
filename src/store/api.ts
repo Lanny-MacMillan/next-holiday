@@ -20,6 +20,7 @@ export const api = createApi({
 		"MealPlanning",
 		"PartyPlanning",
 		"BabyShowerGames",
+		"KwanzaaPrinciples",
 	],
 	endpoints: (builder) => ({
 		// Query endpoints
@@ -367,6 +368,34 @@ export const api = createApi({
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "BabyShowerGames", id: holidayId },
+			],
+		}),
+		getKwanzaaPrinciples: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for daily principles category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Daily Principles"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "KwanzaaPrinciples", id: holidayId },
 			],
 		}),
 		createTask: builder.mutation<
@@ -927,6 +956,29 @@ export const api = createApi({
 			}),
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "BabyShowerGames", id: holidayId },
+			],
+		}),
+		createKwanzaaPrinciples: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Daily Principles" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "KwanzaaPrinciples", id: holidayId },
 			],
 		}),
 		updateGift: builder.mutation<
@@ -1972,6 +2024,104 @@ export const api = createApi({
 				}
 			},
 		}),
+		// Kwanzaa Principles mutations
+		updateKwanzaaPrinciples: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "KwanzaaPrinciples", id: holidayId },
+			],
+		}),
+		editKwanzaaPrinciples: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "KwanzaaPrinciples", id: holidayId },
+			],
+		}),
+		deleteKwanzaaPrinciples: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getKwanzaaPrinciples",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
 	}),
 });
 
@@ -1989,6 +2139,7 @@ export const {
 	useCreateMealPlanningMutation,
 	useCreatePartyPlanningMutation,
 	useCreateBabyShowerGamesMutation,
+	useCreateKwanzaaPrinciplesMutation,
 	useUpdateGiftMutation,
 	useUpdateCardMutation,
 	useUpdateDecorationMutation,
@@ -2000,6 +2151,7 @@ export const {
 	useUpdateMealPlanningMutation,
 	useUpdatePartyPlanningMutation,
 	useUpdateBabyShowerGamesMutation,
+	useUpdateKwanzaaPrinciplesMutation,
 	useEditGiftMutation,
 	useEditCardMutation,
 	useEditDecorationMutation,
@@ -2011,6 +2163,7 @@ export const {
 	useEditMealPlanningMutation,
 	useEditPartyPlanningMutation,
 	useEditBabyShowerGamesMutation,
+	useEditKwanzaaPrinciplesMutation,
 	useDeleteGiftMutation,
 	useDeleteCardMutation,
 	useDeleteDecorationMutation,
@@ -2022,6 +2175,7 @@ export const {
 	useDeleteMealPlanningMutation,
 	useDeletePartyPlanningMutation,
 	useDeleteBabyShowerGamesMutation,
+	useDeleteKwanzaaPrinciplesMutation,
 	useCardOperationMutation,
 	useGetGiftsQuery,
 	useGetCardsQuery,
@@ -2036,4 +2190,5 @@ export const {
 	useGetMealPlanningQuery,
 	useGetPartyPlanningQuery,
 	useGetBabyShowerGamesQuery,
+	useGetKwanzaaPrinciplesQuery,
 } = api;

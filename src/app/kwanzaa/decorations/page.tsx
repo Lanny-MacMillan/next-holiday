@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchKwanzaaTasks,
-	addKwanzaaTask,
-	updateKwanzaaTask,
-	deleteKwanzaaTask,
-	toggleKwanzaaTaskCompletion,
-	KwanzaaTask,
-} from "@/store/slices/kwanzaaTasksSlice";
-import SortModal from "@/components/SortModal";
+import { useDecorationMutations } from "@/hooks/useDecorationMutations";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
+import SortModal from "@/components/modals/SortModal";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import AddButton from "@/components/common/AddButton";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -88,138 +87,176 @@ const defaultDecorationTasks = [
 
 export default function KwanzaaDecorationsPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.kwanzaaTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	const [form, setForm] = useState({
-		title: "",
-		description: "",
-		priority: "medium",
-		assignedTo: "",
-		category: "Decorations",
-		dueDate: "",
-	});
+	// Use the decoration mutations hook
+	const {
+		holidayId,
+		auth0User,
+		decorations,
+		loading,
+		error,
+		initialized,
+		createDecoration,
+		updateDecoration,
+		editDecoration,
+		deleteDecoration,
+		updateDecorationState,
+		editDecorationState,
+		deleteDecorationState,
+	} = useDecorationMutations();
+
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
+	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchKwanzaaTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	// Check if default decoration tasks exist
 	useEffect(() => {
-		const decorationTasks = tasks.filter(
-			(task: KwanzaaTask) => task.category === "Decorations"
-		);
-		if (decorationTasks.length === 0) {
+		if (decorations.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [tasks]);
+	}, [decorations, initialized]);
 
-	function handleAddTask(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.title.trim()) return;
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
 
-		const newTask: Omit<KwanzaaTask, "id" | "createdAt" | "updatedAt"> = {
-			title: form.title,
-			description: form.description || undefined,
-			priority: form.priority as "low" | "medium" | "high",
-			assignedTo: form.assignedTo || undefined,
-			category: form.category || undefined,
-			dueDate: form.dueDate || undefined,
-			isCompleted: false,
-		};
-
-		dispatch(addKwanzaaTask(newTask));
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "Decorations",
-			dueDate: "",
-		});
-		setShowForm(false);
-	}
-
-	function addDefaultDecorationTasks() {
-		defaultDecorationTasks.forEach((task) => {
-			const newTask: Omit<KwanzaaTask, "id" | "createdAt" | "updatedAt"> = {
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				assignedTo: undefined,
-				category: task.category,
-				dueDate: undefined,
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Decorations",
+				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			dispatch(addKwanzaaTask(newTask));
-		});
-		setShowDefaultTasks(false);
+
+			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating decoration:", error);
+		}
+	}
+
+	async function addDefaultDecorationTasks() {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultDecorationTasks) {
+				const payload = {
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					assignedTo: undefined,
+					category: task.category,
+					dueDate: undefined,
+					isCompleted: false,
+				};
+				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default decoration tasks:", error);
+		}
 	}
 
 	function openForm() {
 		setShowForm(true);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "Decorations",
-			dueDate: "",
-		});
 	}
 
 	function closeForm() {
 		setShowForm(false);
-		setForm({
-			title: "",
-			description: "",
-			priority: "medium",
-			assignedTo: "",
-			category: "Decorations",
-			dueDate: "",
-		});
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleKwanzaaTaskCompletion(taskId));
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const decoration = decorations.find((d: any) => d.id === taskId);
+			if (decoration) {
+				await updateDecoration({
+					holidayId,
+					taskId,
+					isCompleted: !decoration.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating decoration:", error);
+		}
 	}
 
 	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+		const task = decorations.find((d: any) => d.id === taskId);
+		setTaskToDelete(task);
+		setShowDeleteModal(true);
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteKwanzaaTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	async function confirmDelete() {
+		if (taskToDelete) {
+			try {
+				await deleteDecoration({
+					holidayId: holidayId || "",
+					taskId: taskToDelete.id,
+					auth0User,
+				}).unwrap();
+				setShowDeleteModal(false);
+				setTaskToDelete(null);
+			} catch (error) {
+				console.error("Error deleting decoration:", error);
+			}
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
+		setShowDeleteModal(false);
+		setTaskToDelete(null);
 	}
 
-	function sortTasks(tasksToSort: KwanzaaTask[]): KwanzaaTask[] {
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editDecoration({
+				holidayId,
+				taskId: editingTask.id,
+				payload: values,
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing decoration:", error);
+		}
+	}
+
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return [...tasksToSort].sort(
-					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+					(a, b) =>
+						(priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
 				);
 			case "dateDue":
 				return [...tasksToSort].sort((a, b) => {
@@ -254,49 +291,25 @@ export default function KwanzaaDecorationsPage() {
 		);
 	}
 
-	const decorationTasks = tasks.filter(
-		(task: KwanzaaTask) => task.category === "Decorations"
-	);
-	const sortedTasks = sortTasks(decorationTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: KwanzaaTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: KwanzaaTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(decorations);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+
+	// Get form configuration
+	const formConfig = getFormConfig("tasks", editingTask ? "edit" : "add");
+	const deleteConfig = getDeleteConfig("tasks");
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/kwanzaa"
-						className="absolute left-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Decorations Checklist
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xl"
-						title="Sort tasks"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<HolidayPageHeader
+				title="Decorations Checklist"
+				backHref="/kwanzaa"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Decorations"
+				error={error ? "API Error" : undefined}
+				holidayColor="red-600"
+			/>
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}
 				{showDefaultTasks && (
 					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
@@ -323,13 +336,7 @@ export default function KwanzaaDecorationsPage() {
 					</div>
 				)}
 
-				<button
-					onClick={openForm}
-					className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-					style={{ backgroundColor: "#3b82f6", color: "white" }}
-				>
-					Add New Decoration Task
-				</button>
+				<AddButton title="Decoration Task" onClick={openForm} color="red" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -352,7 +359,7 @@ export default function KwanzaaDecorationsPage() {
 							</div>
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteTasks.map((task: KwanzaaTask) => (
+								{incompleteTasks.map((task: any) => (
 									<li
 										key={task.id}
 										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -424,7 +431,7 @@ export default function KwanzaaDecorationsPage() {
 							</div>
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedTasks.map((task: KwanzaaTask) => (
+								{completedTasks.map((task: any) => (
 									<li
 										key={task.id}
 										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
@@ -471,140 +478,97 @@ export default function KwanzaaDecorationsPage() {
 			</main>
 
 			{/* Form Modal */}
-			{showForm && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-tasks rounded-lg p-6 max-w-md mx-4 w-full max-h-[90vh] overflow-y-auto">
-						<div className="flex justify-between items-center mb-4">
-							<h3
-								className="text-lg font-semibold text-gray-900 dark:text-white"
-								style={{ color: "#111827" }}
-							>
-								Add New Decoration Task
-							</h3>
-							<button
-								onClick={closeForm}
-								className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
-								style={{ color: "#4b5563" }}
-							>
-								×
-							</button>
-						</div>
-						<form onSubmit={handleAddTask} className="space-y-4">
-							<input
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Task Title*"
-								value={form.title}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, title: e.target.value }))
-								}
-								required
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<textarea
-								className="border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-								placeholder="Description"
-								value={form.description}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, description: e.target.value }))
-								}
-								rows={2}
-								style={{ color: "#111827", backgroundColor: "white" }}
-							/>
-							<div className="flex gap-2">
-								<select
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									value={form.priority}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, priority: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								>
-									<option value="low">Low Priority</option>
-									<option value="medium">Medium Priority</option>
-									<option value="high">High Priority</option>
-								</select>
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Assigned To"
-									value={form.assignedTo}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-							</div>
-							<div className="flex gap-2">
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Category"
-									value={form.category}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, category: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-								<input
-									className="flex-1 border rounded px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-									placeholder="Due Date"
-									type="date"
-									value={form.dueDate}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, dueDate: e.target.value }))
-									}
-									style={{ color: "#111827", backgroundColor: "white" }}
-								/>
-							</div>
-							<div className="flex gap-3 pt-2">
-								<button
-									type="button"
-									onClick={closeForm}
-									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-									style={{ color: "#374151", borderColor: "#d1d5db" }}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-									disabled={loading}
-									style={{ backgroundColor: "#3b82f6", color: "white" }}
-								>
-									{loading ? "Adding..." : "Add Task"}
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
 
-			{/* Delete Confirmation Modal */}
-			{deleteConfirm.show && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="card card-tasks rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							Confirm Delete
-						</h3>
-						<p className="text-gray-600 dark:text-gray-300 mb-6">
-							Are you sure you want to delete this task? This action cannot be
-							undone.
-						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={cancelDelete}
-								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={confirmDelete}
-								className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showForm}
+				title={formConfig.title}
+				fields={formConfig.fields}
+				initialValues={
+					editingTask
+						? {
+								title: editingTask.title || "",
+								description: editingTask.description || "",
+								priority: editingTask.priority || "medium",
+								assignedTo: editingTask.assignedTo || "",
+								dueDate: editingTask.dueDate || "",
+						  }
+						: {}
+				}
+				onSubmit={editingTask ? handleEditTaskSubmit : handleAddTask}
+				onClose={closeForm}
+				loading={editDecorationState.isLoading}
+				submitText={formConfig.submitText}
+				cancelText={formConfig.cancelText}
+				cardClassName={formConfig.cardClassName}
+				submitButtonColor={formConfig.submitButtonColor}
+			/>
+
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Decoration Task"
+				fields={[
+					{
+						id: "title",
+						type: "text" as const,
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea" as const,
+						placeholder: "Description",
+						rows: 3,
+					},
+					{
+						id: "priority",
+						type: "select" as const,
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{
+						id: "assignedTo",
+						type: "text" as const,
+						placeholder: "Assigned To",
+					},
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={() => {
+					setShowEditModal(false);
+					setEditingTask(null);
+				}}
+				loading={editDecorationState.isLoading}
+				submitText="Update Task"
+				cardClassName="card card-tasks"
+			/>
+
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title={deleteConfig.title}
+				message={deleteConfig.message}
+				itemName={taskToDelete?.title}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={deleteDecorationState.isLoading}
+				cardClassName={deleteConfig.cardClassName}
+				confirmText={deleteConfig.confirmText}
+				cancelText={deleteConfig.cancelText}
+				confirmButtonColor={deleteConfig.confirmButtonColor}
+			/>
 
 			{/* Sort Modal */}
 			<SortModal

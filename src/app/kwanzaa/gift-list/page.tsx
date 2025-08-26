@@ -3,128 +3,129 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchKwanzaaGifts,
-	addKwanzaaGift,
-	updateKwanzaaGift,
-	deleteKwanzaaGift,
-	toggleKwanzaaGiftCompletion,
-	KwanzaaGift,
-} from "@/store/slices/kwanzaaGiftListSlice";
+import { useKwanzaaGiftsMutations } from "@/hooks/useKwanzaaGiftsMutations";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { BudgetDisplay } from "@/components/BudgetDisplay";
-import SortModal from "@/components/SortModal";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import SortModal from "@/components/modals/SortModal";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import AddButton from "@/components/common/AddButton";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function KwanzaaGiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error, initialized } = useAppSelector(
-		(state: any) => state.kwanzaaGiftList
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	const [form, setForm] = useState({
-		name: "",
-		description: "",
-		price: "",
-		recipient: "",
-		store: "",
-		productLink: "",
-		notes: "",
-	});
+	// Use the Kwanzaa gifts mutations hook
+	const {
+		holidayId,
+		auth0User,
+		gifts,
+		loading,
+		error,
+		initialized,
+		createGift,
+		updateGift,
+		editGift,
+		deleteGift,
+		createGiftState,
+		updateGiftState,
+		editGiftState,
+		deleteGiftState,
+	} = useKwanzaaGiftsMutations();
+
 	const [showAddressBook, setShowAddressBook] = useState(false);
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		giftId: string | null;
-	}>({
-		show: false,
-		giftId: null,
-	});
 	const [showForm, setShowForm] = useState(false);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [editingGift, setEditingGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
 	useEffect(() => {
-		// Fetch gifts and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchKwanzaaGifts());
-		}
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch]);
 
-	function handleAddGift(e: React.FormEvent) {
-		e.preventDefault();
-		if (!form.name.trim() || !form.recipient.trim()) return;
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.name?.trim() || !values.recipient?.trim()) return;
+		if (!holidayId || !auth0User) return;
 
-		const newGift: Omit<KwanzaaGift, "id" | "createdAt" | "updatedAt"> = {
-			name: form.name,
-			description: form.description || undefined,
-			price: parseFloat(form.price) || 0,
-			recipient: form.recipient,
-			isCompleted: false,
-			store: form.store || undefined,
-			productLink: form.productLink || undefined,
-			notes: form.notes || undefined,
-		};
+		try {
+			const payload = {
+				name: values.name,
+				description: values.description || undefined,
+				price: parseFloat(values.price) || 0,
+				recipient: values.recipient,
+				isCompleted: false,
+				store: values.store || undefined,
+				productLink: values.productLink || undefined,
+				notes: values.notes || undefined,
+			};
 
-		dispatch(addKwanzaaGift(newGift));
-		setForm({
-			name: "",
-			description: "",
-			price: "",
-			recipient: "",
-			store: "",
-			productLink: "",
-			notes: "",
-		});
-		setShowForm(false);
+			await createGift({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+		}
 	}
 
 	function openForm() {
 		setShowForm(true);
-		setForm({
-			name: "",
-			description: "",
-			price: "",
-			recipient: "",
-			store: "",
-			productLink: "",
-			notes: "",
-		});
 	}
 
 	function closeForm() {
 		setShowForm(false);
-		setForm({
-			name: "",
-			description: "",
-			price: "",
-			recipient: "",
-			store: "",
-			productLink: "",
-			notes: "",
-		});
 	}
 
-	function handleToggleGift(giftId: string) {
-		dispatch(toggleKwanzaaGiftCompletion(giftId));
+	async function handleToggleGift(giftId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const gift = gifts.find((g: any) => g.id === giftId);
+			if (gift) {
+				await updateGift({
+					holidayId,
+					giftId,
+					isCompleted: !gift.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating gift:", error);
+		}
 	}
 
 	function handleDeleteGift(giftId: string) {
-		setDeleteConfirm({ show: true, giftId });
+		const gift = gifts.find((g: any) => g.id === giftId);
+		setGiftToDelete(gift);
+		setShowDeleteModal(true);
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.giftId) {
-			dispatch(deleteKwanzaaGift(deleteConfirm.giftId));
-			setDeleteConfirm({ show: false, giftId: null });
+	async function confirmDelete() {
+		if (giftToDelete) {
+			try {
+				await deleteGift({
+					holidayId: holidayId || "",
+					giftId: giftToDelete.id,
+					auth0User,
+				}).unwrap();
+				setShowDeleteModal(false);
+				setGiftToDelete(null);
+			} catch (error) {
+				console.error("Error deleting gift:", error);
+			}
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, giftId: null });
+		setShowDeleteModal(false);
+		setGiftToDelete(null);
 	}
 
 	function addFromAddressBook(contact: any) {
@@ -166,55 +167,28 @@ export default function KwanzaaGiftListPage() {
 	}
 
 	const sortedGifts = sortGifts(gifts);
-	const incompleteGifts = sortedGifts.filter(
-		(gift: KwanzaaGift) => !gift.isCompleted
-	);
-	const completedGifts = sortedGifts.filter(
-		(gift: KwanzaaGift) => gift.isCompleted
-	);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
+
+	// Get form configuration
+	const formConfig = getFormConfig("gifts", "add");
+	const deleteConfig = getDeleteConfig("gifts");
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<header className="w-full max-w-md py-6">
-				<div className="flex items-center justify-center relative">
-					<Link
-						href="/kwanzaa"
-						className="absolute left-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-					>
-						←
-					</Link>
-					<h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-						Kwanzaa Gift List
-					</h1>
-					<button
-						onClick={() => setShowSortModal(true)}
-						className="absolute right-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xl"
-						title="Sort gifts"
-					>
-						<div className="flex flex-col gap-0.5">
-							<div className="w-4 h-0.5 bg-current"></div>
-							<div className="w-3 h-0.5 bg-current ml-1"></div>
-							<div className="w-2 h-0.5 bg-current ml-2"></div>
-						</div>
-					</button>
-				</div>
-				{error && (
-					<div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-2 rounded mb-4">
-						{error}
-					</div>
-				)}
-			</header>
-			<main className="w-full max-w-md flex flex-col gap-6">
+			<HolidayPageHeader
+				title="Kwanzaa Gift List"
+				backHref="/kwanzaa"
+				onSortClick={() => setShowSortModal(true)}
+				sortTitle="Sort Gifts"
+				error={error ? "API Error" : undefined}
+				holidayColor="red-600"
+			/>
+			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay holiday="Kwanzaa" />
 
-				<button
-					onClick={openForm}
-					className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-					style={{ backgroundColor: "#3b82f6", color: "white" }}
-				>
-					Add New Gift
-				</button>
+				<AddButton title="Gift" onClick={openForm} color="red" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -237,7 +211,7 @@ export default function KwanzaaGiftListPage() {
 							</div>
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteGifts.map((gift: HanukkahGift) => (
+								{incompleteGifts.map((gift: any) => (
 									<li
 										key={gift.id}
 										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -314,7 +288,7 @@ export default function KwanzaaGiftListPage() {
 							</div>
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedGifts.map((gift: HanukkahGift) => (
+								{completedGifts.map((gift: any) => (
 									<li
 										key={gift.id}
 										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
@@ -549,6 +523,36 @@ export default function KwanzaaGiftListPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showForm}
+				title={formConfig.title}
+				fields={formConfig.fields}
+				initialValues={{}}
+				onSubmit={handleAddGift}
+				onClose={closeForm}
+				loading={createGiftState.isLoading}
+				submitText={formConfig.submitText}
+				cancelText={formConfig.cancelText}
+				cardClassName={formConfig.cardClassName}
+				submitButtonColor={formConfig.submitButtonColor}
+			/>
+
+			{/* Delete Confirmation Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title={deleteConfig.title}
+				message={deleteConfig.message}
+				itemName={giftToDelete?.name}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={deleteGiftState.isLoading}
+				cardClassName={deleteConfig.cardClassName}
+				confirmText={deleteConfig.confirmText}
+				cancelText={deleteConfig.cancelText}
+				confirmButtonColor={deleteConfig.confirmButtonColor}
+			/>
 
 			{/* Sort Modal */}
 			<SortModal
