@@ -12,7 +12,7 @@ const subsections = [
 	{
 		name: "Resolution Tracker",
 		description: "Track your New Year resolutions and goals",
-		href: "/new-year/resolutions",
+		href: "/new-year/resolution-tracker",
 		sliceKey: "tasks",
 		type: "task",
 		category: "Resolutions",
