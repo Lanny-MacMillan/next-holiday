@@ -10,6 +10,7 @@ interface ReservationCardProps {
 	notes?: string;
 	onToggleCompletion: (id: string) => void;
 	onDelete: (id: string) => void;
+	onEdit?: (task: any) => void;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -22,6 +23,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 	notes,
 	onToggleCompletion,
 	onDelete,
+	onEdit,
 }) => {
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
@@ -94,8 +96,36 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
 				>
 					{isCompleted ? "Confirmed" : "Mark Confirmed"}
 				</button>
+				{onEdit && (
+					<button
+						onClick={() =>
+							onEdit({
+								id,
+								title,
+								description,
+								dueDate,
+								priority,
+								isCompleted,
+								notes,
+							})
+						}
+						className="flex-1 px-2 py-2 sm:px-3 sm:py-2 bg-blue-500 text-white rounded text-xs sm:text-sm font-medium transition-colors hover:bg-blue-600"
+					>
+						Edit
+					</button>
+				)}
 				<button
-					onClick={() => onDelete(id)}
+					onClick={() =>
+						onDelete({
+							id,
+							title,
+							description,
+							dueDate,
+							priority,
+							isCompleted,
+							notes,
+						})
+					}
 					className="flex-1 px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white rounded text-xs sm:text-sm font-medium transition-colors hover:bg-red-600"
 				>
 					Delete

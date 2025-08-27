@@ -22,6 +22,7 @@ export const api = createApi({
 		"BabyShowerGames",
 		"KwanzaaPrinciples",
 		"Resolutions",
+		"Reservations",
 	],
 	endpoints: (builder) => ({
 		// Query endpoints
@@ -423,6 +424,34 @@ export const api = createApi({
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "KwanzaaPrinciples", id: holidayId },
+			],
+		}),
+		getReservations: builder.query<
+			any[],
+			{ holidayId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				// Filter for reservations category
+				const allTasks = response.data || [];
+				return allTasks.filter(
+					(task: any) => task.category === "Reservations"
+				);
+			},
+			providesTags: (result, error, { holidayId }) => [
+				{ type: "Reservations", id: holidayId },
 			],
 		}),
 		createTask: builder.mutation<
@@ -891,6 +920,29 @@ export const api = createApi({
 			}),
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Resolutions", id: holidayId },
+			],
+		}),
+		createReservations: builder.mutation<
+			any,
+			{ holidayId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "POST",
+				body: { ...payload, category: "Reservations" },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Reservations", id: holidayId },
 			],
 		}),
 		createCostumeIdeas: builder.mutation<
@@ -1683,6 +1735,104 @@ export const api = createApi({
 				}
 			},
 		}),
+		// Reservations mutations
+		updateReservations: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Reservations", id: holidayId },
+			],
+		}),
+		editReservations: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Reservations", id: holidayId },
+			],
+		}),
+		deleteReservations: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getReservations",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const index = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (index !== -1) {
+									draft.splice(index, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					patchResult.undo();
+				}
+			},
+		}),
 		// Costume Ideas mutations
 		updateCostumeIdeas: builder.mutation<
 			any,
@@ -2283,6 +2433,7 @@ export const {
 	useCreateCandleLightingMutation,
 	useCreateDateIdeasMutation,
 	useCreateResolutionsMutation,
+	useCreateReservationsMutation,
 	useCreateCostumeIdeasMutation,
 	useCreateTrickOrTreatPrepMutation,
 	useCreateMealPlanningMutation,
@@ -2296,6 +2447,7 @@ export const {
 	useUpdateCandleLightingMutation,
 	useUpdateDateIdeasMutation,
 	useUpdateResolutionsMutation,
+	useUpdateReservationsMutation,
 	useUpdateCostumeIdeasMutation,
 	useUpdateTrickOrTreatPrepMutation,
 	useUpdateMealPlanningMutation,
@@ -2309,6 +2461,7 @@ export const {
 	useEditCandleLightingMutation,
 	useEditDateIdeasMutation,
 	useEditResolutionsMutation,
+	useEditReservationsMutation,
 	useEditCostumeIdeasMutation,
 	useEditTrickOrTreatPrepMutation,
 	useEditMealPlanningMutation,
@@ -2322,6 +2475,7 @@ export const {
 	useDeleteCandleLightingMutation,
 	useDeleteDateIdeasMutation,
 	useDeleteResolutionsMutation,
+	useDeleteReservationsMutation,
 	useDeleteCostumeIdeasMutation,
 	useDeleteTrickOrTreatPrepMutation,
 	useDeleteMealPlanningMutation,
@@ -2338,6 +2492,7 @@ export const {
 	useGetCandleLightingQuery,
 	useGetDateIdeasQuery,
 	useGetResolutionsQuery,
+	useGetReservationsQuery,
 	useGetCostumeIdeasQuery,
 	useGetTrickOrTreatPrepQuery,
 	useGetMealPlanningQuery,
