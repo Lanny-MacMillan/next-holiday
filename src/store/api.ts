@@ -446,9 +446,7 @@ export const api = createApi({
 			transformResponse: (response: { success: boolean; data: any[] }) => {
 				// Filter for reservations category
 				const allTasks = response.data || [];
-				return allTasks.filter(
-					(task: any) => task.category === "Reservations"
-				);
+				return allTasks.filter((task: any) => task.category === "Reservations");
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "Reservations", id: holidayId },
@@ -2420,6 +2418,126 @@ export const api = createApi({
 				}
 			},
 		}),
+		// Guest List mutations
+		updateGuest: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				guestId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, guestId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/guest-lists`,
+				method: "PUT",
+				body: { guestId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "GuestList", id: holidayId },
+			],
+		}),
+		editGuest: builder.mutation<
+			any,
+			{ holidayId: string; guestId: string; payload: any; auth0User?: any }
+		>({
+			query: ({ holidayId, guestId, payload, auth0User }) => ({
+				url: `holidays/${holidayId}/guest-lists`,
+				method: "PATCH",
+				body: { guestId, ...payload },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "GuestList", id: holidayId },
+			],
+		}),
+		deleteGuest: builder.mutation<
+			any,
+			{ holidayId: string; guestId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, guestId, auth0User }) => ({
+				url: `holidays/${holidayId}/guest-lists?guestId=${guestId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			// Use optimistic update to immediately remove the item from the cache
+			async onQueryStarted(
+				{ holidayId, guestId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				console.log(
+					"Delete guest optimistic update - holidayId:",
+					holidayId,
+					"guestId:",
+					guestId
+				);
+
+				// Optimistically update the cache by removing the deleted guest
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getGuestList",
+						{ holidayId, auth0User },
+						(draft) => {
+							console.log("UpdateQueryData callback - draft:", draft);
+							if (draft) {
+								const index = draft.findIndex(
+									(guest: any) => guest.id === guestId
+								);
+								console.log("Found guest at index:", index);
+								if (index !== -1) {
+									draft.splice(index, 1);
+									console.log("Removed guest from cache");
+								} else {
+									console.log("Guest not found in cache");
+								}
+							} else {
+								console.log("No draft found - query data not available");
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+					console.log("Delete guest query fulfilled successfully");
+				} catch (error) {
+					console.log(
+						"Delete guest query failed, reverting optimistic update:",
+						error
+					);
+					// If the delete fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
+		}),
 	}),
 });
 
@@ -2482,6 +2600,9 @@ export const {
 	useDeletePartyPlanningMutation,
 	useDeleteBabyShowerGamesMutation,
 	useDeleteKwanzaaPrinciplesMutation,
+	useUpdateGuestMutation,
+	useEditGuestMutation,
+	useDeleteGuestMutation,
 	useCardOperationMutation,
 	useGetGiftsQuery,
 	useGetCardsQuery,

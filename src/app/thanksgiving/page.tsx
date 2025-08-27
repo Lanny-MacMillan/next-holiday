@@ -50,6 +50,10 @@ export default function ThanksgivingPage() {
 		(state: any) => state.home.data?.holidayPreferences || []
 	);
 
+	// Get user preferences for display mode
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
+	const isGamifiedMode = preferences?.displayMode === "gamified";
+
 	// Get holiday ID for Thanksgiving
 	const holidayId = getHolidayIdFromRoute("/thanksgiving", holidayPreferences);
 
@@ -151,7 +155,7 @@ export default function ThanksgivingPage() {
 											primaryColor: "#d97706", // Amber for Thanksgiving
 											accentColor: "#eab308",
 										}}
-										gamified={true}
+										gamified={isGamifiedMode}
 										holidayColor="bg-gradient-to-br from-amber-400 to-amber-600"
 									/>
 								</li>

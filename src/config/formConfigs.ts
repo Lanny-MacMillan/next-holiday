@@ -255,7 +255,7 @@ export const editSuppliesFormConfig: FormConfig = {
 	submitText: "Update Supply Item",
 };
 
-// Guest list form configuration
+// Guest list form configuration (simplified for current database schema)
 export const guestsFormConfig: FormConfig = {
 	title: "Add New Guest",
 	fields: [
@@ -268,17 +268,17 @@ export const guestsFormConfig: FormConfig = {
 		{
 			id: "email",
 			type: "email",
-			placeholder: "Email",
+			placeholder: "Email (optional)",
 		},
 		{
 			id: "phone",
 			type: "tel",
-			placeholder: "Phone",
+			placeholder: "Phone (optional)",
 		},
 		{
 			id: "address",
 			type: "text",
-			placeholder: "Address",
+			placeholder: "Address (optional)",
 		},
 		{
 			id: "rsvpStatus",
@@ -291,26 +291,9 @@ export const guestsFormConfig: FormConfig = {
 			],
 		},
 		{
-			id: "numberOfGuests",
-			type: "number",
-			placeholder: "Number of Guests*",
-			required: true,
-			min: "1",
-		},
-		{
-			id: "dietaryRestrictions",
-			type: "text",
-			placeholder: "Dietary Restrictions",
-		},
-		{
-			id: "bringingDish",
-			type: "text",
-			placeholder: "Dish They're Bringing",
-		},
-		{
 			id: "notes",
 			type: "textarea",
-			placeholder: "Notes",
+			placeholder: "Notes (optional)",
 			rows: 2,
 		},
 	],

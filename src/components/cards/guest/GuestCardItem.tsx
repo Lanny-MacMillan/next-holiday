@@ -196,11 +196,8 @@ export default function GuestCardItem({
 									{guest.notes}
 								</div>
 							)}
-							{guest.completedDate && isCompleted && (
-								<div className="text-xs text-green-200 mt-1">
-									Completed:{" "}
-									{new Date(guest.completedDate).toLocaleDateString()}
-								</div>
+							{isCompleted && (
+								<div className="text-xs text-green-200 mt-1">Confirmed</div>
 							)}
 						</div>
 					</div>
@@ -333,9 +330,9 @@ export default function GuestCardItem({
 						{guest.notes}
 					</div>
 				)}
-				{guest.completedDate && isCompleted && (
+				{isCompleted && (
 					<div className="text-xs text-green-600 dark:text-green-400 mt-1">
-						Completed: {new Date(guest.completedDate).toLocaleDateString()}
+						Confirmed
 					</div>
 				)}
 			</div>

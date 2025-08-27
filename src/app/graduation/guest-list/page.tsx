@@ -1,14 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchGraduationGuests,
-	addGraduationGuest,
-	updateGraduationGuest,
-	deleteGraduationGuest,
-	GraduationGuest,
-} from "@/store/slices/graduation/graduationGuestListSlice";
+import { useGuestMutations } from "@/hooks/useGuestMutations";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import GuestCardItem from "@/components/cards/guest/GuestCardItem";
@@ -21,14 +16,42 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
+interface Guest {
+	id: string;
+	name: string;
+	email?: string;
+	phone?: string;
+	address?: string;
+	rsvpStatus: "pending" | "confirmed" | "declined";
+	numberOfGuests: number; // Required for compatibility with existing components
+	notes?: string;
+	isCompleted: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export default function GraduationGuestListPage() {
 	const dispatch = useAppDispatch();
-	const { guests, loading, error, initialized } = useAppSelector(
-		(state: any) => state.graduationGuestList
-	);
-	const { contacts: globalContacts } = useAppSelector(
-		(state: any) => state.addressBook
-	);
+
+	// Use the guest mutations hook
+	const {
+		holidayId,
+		auth0User,
+		guests,
+		loading,
+		error,
+		initialized,
+		createGuest,
+		updateGuest,
+		editGuest,
+		deleteGuest,
+		createGuestState,
+		updateGuestState,
+		editGuestState,
+		deleteGuestState,
+	} = useGuestMutations();
+
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -38,66 +61,70 @@ export default function GraduationGuestListPage() {
 		guestId: null,
 	});
 	const [showForm, setShowForm] = useState(false);
-	const [editingGuest, setEditingGuest] = useState<GraduationGuest | null>(
-		null
-	);
+	const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
 	const [sortBy, setSortBy] = useState<string>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchGraduationGuests());
-		}
+		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch]);
 
-	function handleAddGuest(formValues: Record<string, any>) {
-		if (!formValues.name || (typeof formValues.name === "string" && !formValues.name.trim())) return;
+	async function handleAddGuest(formValues: Record<string, any>) {
+		if (
+			!formValues.name ||
+			(typeof formValues.name === "string" && !formValues.name.trim())
+		)
+			return;
+
+		if (!holidayId || !auth0User) return;
 
 		if (editingGuest) {
-			const updatedGuest: GraduationGuest = {
-				...editingGuest,
-				name: formValues.name,
-				email: formValues.email || undefined,
-				phone: formValues.phone || undefined,
-				address: formValues.address || undefined,
-				rsvpStatus: formValues.rsvpStatus || "pending",
-				numberOfGuests: parseInt(formValues.numberOfGuests) || 1,
-				dietaryRestrictions: formValues.dietaryRestrictions || undefined,
-				bringingDish: formValues.bringingDish || undefined,
-				notes: formValues.notes || undefined,
-				isCompleted: formValues.rsvpStatus === "confirmed",
-			};
-			dispatch(updateGraduationGuest(updatedGuest));
-			setEditingGuest(null);
-		} else {
-			const newGuest: Omit<GraduationGuest, "id" | "createdAt" | "updatedAt"> =
-				{
+			// Update existing guest
+			try {
+				const payload = {
 					name: formValues.name,
 					email: formValues.email || undefined,
 					phone: formValues.phone || undefined,
 					address: formValues.address || undefined,
-					rsvpStatus: formValues.rsvpStatus || "pending",
-					numberOfGuests: parseInt(formValues.numberOfGuests) || 1,
-					dietaryRestrictions: formValues.dietaryRestrictions || undefined,
-					bringingDish: formValues.bringingDish || undefined,
+					rsvpStatus: formValues.rsvpStatus as
+						| "pending"
+						| "confirmed"
+						| "declined",
 					notes: formValues.notes || undefined,
-					isCompleted: formValues.rsvpStatus === "confirmed",
 				};
-			dispatch(addGraduationGuest(newGuest));
-		}
-		setShowForm(false);
-	}
 
-	function handleToggleGuest(guestId: string) {
-		// For now, we'll just toggle the completion status
-		const guest = guests.find((g: GraduationGuest) => g.id === guestId);
-		if (guest) {
-			const updatedGuest = {
-				...guest,
-				isCompleted: !guest.isCompleted,
-			};
-			dispatch(updateGraduationGuest(updatedGuest));
+				await editGuest({
+					holidayId,
+					guestId: editingGuest.id,
+					payload,
+					auth0User,
+				}).unwrap();
+				setEditingGuest(null);
+				setShowForm(false);
+			} catch (error) {
+				console.error("Error editing guest:", error);
+			}
+		} else {
+			// Add new guest
+			try {
+				const payload = {
+					name: formValues.name,
+					email: formValues.email || undefined,
+					phone: formValues.phone || undefined,
+					address: formValues.address || undefined,
+					rsvpStatus: formValues.rsvpStatus as
+						| "pending"
+						| "confirmed"
+						| "declined",
+					notes: formValues.notes || undefined,
+				};
+
+				await createGuest({ holidayId, payload, auth0User }).unwrap();
+				setShowForm(false);
+			} catch (error) {
+				console.error("Error creating guest:", error);
+			}
 		}
 	}
 
@@ -110,7 +137,27 @@ export default function GraduationGuestListPage() {
 		setEditingGuest(null);
 	}
 
-	function handleEditGuest(guest: GraduationGuest) {
+	async function handleToggleGuest(guestId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const guest = guests.find((g: Guest) => g.id === guestId);
+			if (guest) {
+				// Toggle RSVP status: if confirmed, set to pending; if pending, set to confirmed
+				const newIsCompleted = guest.rsvpStatus !== "confirmed";
+				await updateGuest({
+					holidayId,
+					guestId,
+					isCompleted: newIsCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating guest:", error);
+		}
+	}
+
+	function handleEditGuest(guest: Guest) {
 		setEditingGuest(guest);
 		setShowForm(true);
 	}
@@ -119,10 +166,18 @@ export default function GraduationGuestListPage() {
 		setDeleteConfirm({ show: true, guestId });
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.guestId) {
-			dispatch(deleteGraduationGuest(deleteConfirm.guestId));
-			setDeleteConfirm({ show: false, guestId: null });
+	async function confirmDelete() {
+		if (deleteConfirm.guestId && holidayId && auth0User) {
+			try {
+				await deleteGuest({
+					holidayId,
+					guestId: deleteConfirm.guestId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, guestId: null });
+			} catch (error) {
+				console.error("Error deleting guest:", error);
+			}
 		}
 	}
 
@@ -130,13 +185,17 @@ export default function GraduationGuestListPage() {
 		setDeleteConfirm({ show: false, guestId: null });
 	}
 
-	function sortGuests(guestsToSort: GraduationGuest[]): GraduationGuest[] {
+	function sortGuests(guestsToSort: Guest[]): Guest[] {
 		switch (sortBy) {
 			case "name":
 				return [...guestsToSort].sort((a, b) => a.name.localeCompare(b.name));
 			case "rsvpStatus":
 				return [...guestsToSort].sort((a, b) =>
 					a.rsvpStatus.localeCompare(b.rsvpStatus)
+				);
+			case "numberOfGuests":
+				return [...guestsToSort].sort(
+					(a, b) => b.numberOfGuests - a.numberOfGuests
 				);
 			case "date-created":
 				return [...guestsToSort].sort(
@@ -160,6 +219,15 @@ export default function GraduationGuestListPage() {
 	}
 
 	const sortedGuests = sortGuests(guests);
+	const pendingGuests = sortedGuests.filter(
+		(guest: Guest) => guest.rsvpStatus === "pending"
+	);
+	const confirmedGuests = sortedGuests.filter(
+		(guest: Guest) => guest.rsvpStatus === "confirmed"
+	);
+	const declinedGuests = sortedGuests.filter(
+		(guest: Guest) => guest.rsvpStatus === "declined"
+	);
 
 	return (
 		<div className="min-h-screen graduation-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -168,15 +236,15 @@ export default function GraduationGuestListPage() {
 				backHref="/graduation"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
-				description="Plan your graduation guest list with style!"
-				holidayColor="purple-500"
-				error={error}
+				description="Keep track of your Graduation guests!"
+				holidayColor="purple-600"
+				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<ReservationsTracker
 					guests={guests}
 					title="Graduation Guest Tracker"
-					accentColor="#8b5cf6"
+					accentColor="#9333ea"
 				/>
 				<AddButton title="Guest" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
@@ -184,6 +252,7 @@ export default function GraduationGuestListPage() {
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
 							{sortBy === "name" && "Sorted by Name"}
 							{sortBy === "rsvpStatus" && "Sorted by RSVP Status"}
+							{sortBy === "numberOfGuests" && "Sorted by Number of Guests"}
 							{sortBy === "date-created" && "Sorted by Date Created"}
 						</div>
 					)}
@@ -191,77 +260,78 @@ export default function GraduationGuestListPage() {
 
 				<RSVPSection
 					title="Pending"
-					items={sortedGuests.filter(
-						(guest: GraduationGuest) => guest.rsvpStatus === "pending"
-					)}
+					items={pendingGuests}
 					rsvpStatus="pending"
-					emptyMessage="No pending guests yet."
-					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-					renderItem={(guest: GraduationGuest) => (
+					emptyMessage="No pending RSVPs yet."
+					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}
 							guest={guest}
 							onToggle={handleToggleGuest}
-							onEdit={handleEditGuest}
+							onEdit={(guest) => {
+								handleEditGuest(guest);
+								setShowForm(true);
+							}}
 							onDelete={handleDeleteGuest}
 							loading={loading}
 							theme={{
-								accentColor: "#8b5cf6",
+								accentColor: "#9333ea", // Purple for Graduation
 							}}
-							borderColor="rgb(var(--color-purple-500))"
+							borderColor="rgb(var(--color-purple-500))" // Purple border for Graduation
 						/>
 					)}
 				/>
 
 				<RSVPSection
 					title="Confirmed"
-					items={sortedGuests.filter(
-						(guest: GraduationGuest) => guest.rsvpStatus === "confirmed"
-					)}
+					items={confirmedGuests}
 					rsvpStatus="confirmed"
-					emptyMessage="No confirmed guests yet."
-					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-					renderItem={(guest: GraduationGuest) => (
+					emptyMessage="No confirmed RSVPs yet."
+					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}
 							guest={guest}
 							onToggle={handleToggleGuest}
-							onEdit={handleEditGuest}
+							onEdit={(guest) => {
+								handleEditGuest(guest);
+								setShowForm(true);
+							}}
 							onDelete={handleDeleteGuest}
 							loading={loading}
 							theme={{
-								accentColor: "#8b5cf6",
+								accentColor: "#9333ea", // Purple for Graduation
 							}}
-							borderColor="rgb(var(--color-purple-500))"
+							borderColor="rgb(var(--color-purple-500))" // Purple border for Graduation
 						/>
 					)}
 				/>
 
 				<RSVPSection
 					title="Declined"
-					items={sortedGuests.filter(
-						(guest: GraduationGuest) => guest.rsvpStatus === "declined"
-					)}
+					items={declinedGuests}
 					rsvpStatus="declined"
-					emptyMessage="No declined guests yet."
-					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-					renderItem={(guest: GraduationGuest) => (
+					emptyMessage="No declined RSVPs yet."
+					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}
 							guest={guest}
 							onToggle={handleToggleGuest}
-							onEdit={handleEditGuest}
+							onEdit={(guest) => {
+								handleEditGuest(guest);
+								setShowForm(true);
+							}}
 							onDelete={handleDeleteGuest}
 							loading={loading}
 							theme={{
-								accentColor: "#8b5cf6",
+								accentColor: "#9333ea", // Purple for Graduation
 							}}
-							borderColor="rgb(var(--color-purple-500))"
+							borderColor="rgb(var(--color-purple-500))" // Purple border for Graduation
 						/>
 					)}
 				/>
 			</main>
 
+			{/* Form Modal */}
 			<FormModal
 				isOpen={showForm}
 				title={editingGuest ? "Edit Guest" : "Add New Guest"}
@@ -273,24 +343,19 @@ export default function GraduationGuestListPage() {
 								email: editingGuest.email || "",
 								phone: editingGuest.phone || "",
 								address: editingGuest.address || "",
-								notes: editingGuest.notes || "",
 								rsvpStatus: editingGuest.rsvpStatus,
-								numberOfGuests: editingGuest.numberOfGuests?.toString() || "1",
+								numberOfGuests: editingGuest.numberOfGuests.toString(),
 								dietaryRestrictions: editingGuest.dietaryRestrictions || "",
 								bringingDish: editingGuest.bringingDish || "",
+								notes: editingGuest.notes || "",
 						  }
-						: {
-								rsvpStatus: "pending",
-								numberOfGuests: "1",
-								dietaryRestrictions: "",
-								bringingDish: "",
-						  }
+						: {}
 				}
 				onSubmit={handleAddGuest}
 				onClose={closeForm}
-				loading={loading}
+				loading={editGuestState.isLoading || createGuestState.isLoading}
 				submitText={
-					loading
+					editGuestState.isLoading || createGuestState.isLoading
 						? editingGuest
 							? "Updating..."
 							: "Adding..."
@@ -300,19 +365,24 @@ export default function GraduationGuestListPage() {
 				}
 				cancelText="Cancel"
 				cardClassName="card"
-				submitButtonColor="#8b5cf6"
+				submitButtonColor="#9333ea"
 				showAddressBook={true}
-				contacts={globalContacts}
+				contacts={contacts}
+				onAddressBookSelect={(contact) => {
+					// The FormModal will handle the form values internally
+				}}
 			/>
 
+			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={deleteConfirm.show}
 				{...getDeleteConfig("guests")}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteGuestState.isLoading}
 			/>
 
+			{/* Sort Modal */}
 			<SortModal
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
@@ -322,6 +392,7 @@ export default function GraduationGuestListPage() {
 					{ value: "none", label: "None" },
 					{ value: "name", label: "Name" },
 					{ value: "rsvpStatus", label: "RSVP Status" },
+					{ value: "numberOfGuests", label: "Number of Guests" },
 					{ value: "date-created", label: "Date Created" },
 				]}
 				title="Sort Guests"

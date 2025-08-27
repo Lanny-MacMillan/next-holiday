@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { isEmptyString, isEmptyNumber } from "@/utils/formValidation";
+import {
+	isEmptyString,
+	isEmptyNumber,
+	isValidEmail,
+} from "@/utils/formValidation";
 
 export interface FormField {
 	id: string;
@@ -108,6 +112,23 @@ export default function FormModal({
 		if (missingFields.length > 0) {
 			alert(
 				`Please fill in all required fields: ${missingFields
+					.map((f) => f.placeholder || f.id)
+					.join(", ")}`
+			);
+			return;
+		}
+
+		// Validate email fields if they have values
+		const emailFields = fields.filter((field) => field.type === "email");
+		const invalidEmails = emailFields.filter((field) => {
+			const value = formValues[field.id];
+			// Only validate if email field has a value (since it's optional)
+			return value && !isValidEmail(value);
+		});
+
+		if (invalidEmails.length > 0) {
+			alert(
+				`Please enter valid email addresses for: ${invalidEmails
 					.map((f) => f.placeholder || f.id)
 					.join(", ")}`
 			);
