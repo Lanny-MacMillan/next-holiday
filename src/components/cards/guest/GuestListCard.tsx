@@ -293,9 +293,9 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 	return (
 		<Link href={href} className="block group">
 			<div
-				className="card rounded-lg p-4 sm:p-6 transition-all duration-200 border-l-4"
+				className="card rounded-lg p-4 sm:p-6 transition-all duration-200"
 				style={{
-					borderLeftColor: theme.primaryColor,
+					borderLeft: `4px solid ${theme.primaryColor}`,
 					...getCardStyling({
 						isDarkMode,
 						isGamified: false,
