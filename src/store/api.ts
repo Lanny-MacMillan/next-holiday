@@ -1,11 +1,18 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createTracedBaseQuery, isRTKTracingEnabled } from "@/lib/traceRTK";
+
+const baseQuery = fetchBaseQuery({
+	baseUrl: "/api",
+	credentials: "include",
+});
+
+const tracedBaseQuery = isRTKTracingEnabled()
+	? createTracedBaseQuery(baseQuery)
+	: baseQuery;
 
 export const api = createApi({
 	reducerPath: "api",
-	baseQuery: fetchBaseQuery({
-		baseUrl: "/api",
-		credentials: "include",
-	}),
+	baseQuery: tracedBaseQuery,
 	tagTypes: [
 		"Tasks",
 		"Gifts",

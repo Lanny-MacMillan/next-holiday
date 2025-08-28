@@ -9,6 +9,13 @@ import { HomeData } from "@/types/home";
  * This function handles all the data fetching logic that was previously done on the client
  */
 export async function getHomeData(request: Request): Promise<HomeData> {
+	// Add caching for read-mostly data
+	const cacheKey = `home-data-${
+		request.headers.get("x-test-user") || "anonymous"
+	}`;
+
+	// For now, use no-store since this is user-specific data
+	// In production, you might want to use revalidate with tags for better performance
 	try {
 		// Convert Request to NextRequest for compatibility
 		const nextRequest = new NextRequest(request.url, {

@@ -279,7 +279,7 @@ export default function EasterDecorationsPage() {
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
 				description="Keep track of Easter decorations!"
-				holidayColor="green-500"
+				holidayColor="purple-500"
 				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -309,7 +309,7 @@ export default function EasterDecorationsPage() {
 					</div>
 				)}
 
-				<AddButton title="Decoration Task" onClick={openForm} color="green" />
+				<AddButton title="Decoration Task" onClick={openForm} color="purple" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
