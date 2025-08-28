@@ -16,8 +16,8 @@ export interface DeleteModalProps {
 
 export default function DeleteModal({
 	isOpen,
-	title = "Confirm Delete",
-	message = "Are you sure you want to delete this item? This action cannot be undone.",
+	title = "Delete Item",
+	message = "This action cannot be undone.",
 	itemName,
 	onConfirm,
 	onCancel,
@@ -30,7 +30,7 @@ export default function DeleteModal({
 	if (!isOpen) return null;
 
 	const displayMessage = itemName
-		? `Are you sure you want to delete "${itemName}"? This action cannot be undone.`
+		? `Delete "${itemName}"? This action cannot be undone.`
 		: message;
 
 	return (

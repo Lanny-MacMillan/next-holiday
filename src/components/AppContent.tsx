@@ -3,7 +3,7 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { initializeTheme } from "@/store/slices/themeSlice";
+import { initializeTheme, clearCachedData } from "@/store/slices/themeSlice";
 import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
 import AuthWrapper from "./auth/AuthWrapper";
 import Header from "./common/Header";
@@ -17,7 +17,7 @@ interface AppContentProps {
 }
 
 export default function AppContent({ children }: AppContentProps) {
-	const { isAuthenticated, isLoading } = useAuth0();
+	const { isAuthenticated, isLoading, user: auth0User } = useAuth0();
 	const dispatch = useAppDispatch();
 	const { settings, initialized } = useAppSelector((state: any) => state.theme);
 	const { preferences, initialized: preferencesInitialized } = useAppSelector(
@@ -30,6 +30,14 @@ export default function AppContent({ children }: AppContentProps) {
 			dispatch(initializeTheme());
 		}
 	}, [dispatch, initialized]);
+
+	// Clear cached data when user logs in to prevent seeing stale holiday preferences
+	useEffect(() => {
+		if (isAuthenticated && auth0User) {
+			// Clear any cached holiday preferences from localStorage
+			dispatch(clearCachedData());
+		}
+	}, [isAuthenticated, auth0User, dispatch]);
 
 	// Apply theme to document
 	useEffect(() => {

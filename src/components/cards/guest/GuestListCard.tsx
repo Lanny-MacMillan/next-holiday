@@ -1,6 +1,9 @@
 import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useGetGuestListQuery } from "@/store/api";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import { getCardStyling } from "@/utils/cardShadows";
 
 interface GuestListCardProps {
@@ -22,40 +25,42 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 	holidayColor,
 }) => {
 	const { settings } = useAppSelector((state: any) => state.theme);
+	const { user: auth0User } = useAuth0();
 	const isDarkMode = settings.theme === "dark";
 	const isGamifiedMode = gamified || settings.displayMode === "gamified";
-	const guests = useAppSelector((state: any) => {
-		// Get the appropriate guest list based on holiday
-		switch (holiday.toLowerCase()) {
-			case "thanksgiving":
-				return state.thanksgivingGuestList.guests;
-			case "christmas":
-				return state.christmasGuestList?.guests || [];
-			case "easter":
-				return state.easterGuestList?.guests || [];
-			case "hanukkah":
-				return state.hanukkahGuestList?.guests || [];
-			case "kwanzaa":
-				return state.kwanzaaGuestList?.guests || [];
-			case "new-year":
-				return state.newYearGuestList?.guests || [];
-			case "valentines":
-				return state.valentinesGuestList?.guests || [];
-			case "fourth of july":
-				return state.fourthOfJulyGuestList?.guests || [];
-			case "birthday":
-				return state.birthdayGuestList?.guests || [];
-			case "baby shower":
-			case "Baby Shower":
-				return state.babyShowerGuestList?.guests || [];
-			case "graduation":
-				return state.graduationGuestList?.guests || [];
-			case "halloween":
-				return state.halloweenGuestList?.guests || [];
-			default:
-				return [];
-		}
-	});
+
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
+
+	// Get holiday ID from the href path
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute(href, holidayPreferences)
+		: null;
+
+	// Use RTK Query to get guest list data
+	const { data: guestLists = [] } = useGetGuestListQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
+	// Transform guest list data to match expected format
+	const guests = guestLists.map((guestList: any) => ({
+		id: guestList.id,
+		name: guestList.contact.name,
+		email: guestList.contact.email || undefined,
+		phone: guestList.contact.phone || undefined,
+		address: guestList.contact.streetAddress || undefined,
+		rsvpStatus: guestList.rsvpStatus || "pending",
+		numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
+		notes: guestList.notes || undefined,
+		isCompleted: guestList.rsvpStatus === "confirmed",
+		createdAt: guestList.createdAt,
+		updatedAt: guestList.updatedAt,
+	}));
 
 	// Calculate RSVP statistics
 	const totalGuests = guests.length;
@@ -288,9 +293,9 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 	return (
 		<Link href={href} className="block group">
 			<div
-				className="card rounded-lg p-4 sm:p-6 transition-all duration-200 border-l-4"
+				className="card rounded-lg p-4 sm:p-6 transition-all duration-200"
 				style={{
-					borderLeftColor: theme.primaryColor,
+					borderLeft: `4px solid ${theme.primaryColor}`,
 					...getCardStyling({
 						isDarkMode,
 						isGamified: false,

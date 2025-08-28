@@ -3,138 +3,202 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchBirthdayGifts,
-	addBirthdayGift,
-	updateBirthdayGift,
-	deleteBirthdayGift,
-	toggleBirthdayGiftCompletion,
-	BirthdayGift,
-} from "@/store/slices/birthday/birthdayGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useUpdateGiftMutation,
+	useEditGiftMutation,
+	useDeleteGiftMutation,
+} from "@/store/api";
+import { transformGiftPayload } from "@/utils/formTransformers";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
+import TaskSection from "@/components/common/TaskSection";
+
+type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function BirthdayGiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error, initialized } = useAppSelector(
-		(state: any) => state.birthdayGiftList
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+	} = useFormModalMutation();
 
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		giftId: string | null;
-	}>({
-		show: false,
-		giftId: null,
-	});
-	const [showForm, setShowForm] = useState(false);
-	const [editingGift, setEditingGift] = useState<BirthdayGift | null>(null);
-	const [sortBy, setSortBy] = useState<string>("none");
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: loading,
+		error,
+		isSuccess: initialized,
+	} = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
+	// Update gift mutation
+	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+
+	// Edit and delete mutations
+	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
+	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+
+	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [selectedGift, setSelectedGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+
+	// Get home data to check if contacts are available
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
 
 	useEffect(() => {
-		// Fetch gifts and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchBirthdayGifts());
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
 		}
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch, homeInitialized]);
 
-	function handleAddGift(formValues: Record<string, any>) {
-		if (!formValues.description || (typeof formValues.description === "string" && !formValues.description.trim()) || !formValues.recipient || (typeof formValues.recipient === "string" && !formValues.recipient.trim()))
-			return;
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+		if (!holidayId || !mutation) return;
 
-		if (editingGift) {
-			// Update existing gift
-			const updatedGift: BirthdayGift = {
-				...editingGift,
-				name: formValues.description,
-				description: formValues.description || undefined,
-				price: parseFloat(formValues.price) || 0,
-				recipient: formValues.recipient,
-				store: formValues.store || undefined,
-				productLink: formValues.productLink || undefined,
-				notes: formValues.notes || undefined,
-			};
-			dispatch(updateBirthdayGift(updatedGift));
-			setEditingGift(null);
-		} else {
-			// Add new gift
-			const newGift: Omit<BirthdayGift, "id" | "createdAt" | "updatedAt"> = {
-				name: formValues.description,
-				description: formValues.description || undefined,
-				price: parseFloat(formValues.price) || 0,
-				recipient: formValues.recipient,
-				store: formValues.store || undefined,
-				productLink: formValues.productLink || undefined,
-				notes: formValues.notes || undefined,
-				isCompleted: false,
-			};
-			dispatch(addBirthdayGift(newGift));
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await mutation({ holidayId, payload, auth0User }).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error creating gift. Please try again.");
+			}
 		}
-
-		setShowForm(false);
 	}
 
 	function openForm() {
-		setShowForm(true);
+		setShowFormModal(true);
+		setSelectedGift(null);
 	}
 
 	function closeForm() {
-		setShowForm(false);
-		setEditingGift(null);
+		setShowFormModal(false);
+		setSelectedGift(null);
 	}
 
-	function handleToggleGift(giftId: string) {
-		dispatch(toggleBirthdayGiftCompletion(giftId));
+	async function handleToggleGift(giftId: string) {
+		if (!holidayId) return;
+
+		try {
+			// Find the current gift to get its completion status
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (!currentGift) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentGift.isCompleted;
+
+			// Update the gift in the database
+			await updateGift({
+				holidayId: holidayId || "",
+				giftId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// The UI will automatically update due to RTK Query cache invalidation
+		} catch (error) {
+			console.error("Error toggling gift:", error);
+			// Handle error (could show a toast notification)
+		}
 	}
 
-	function handleEditGift(gift: BirthdayGift) {
-		setEditingGift(gift);
-		setShowForm(true);
+	async function handleDeleteGift(gift: any) {
+		setGiftToDelete(gift);
+		setShowDeleteModal(true);
 	}
 
-	function handleDeleteGift(giftId: string) {
-		setDeleteConfirm({ show: true, giftId });
-	}
+	async function confirmDelete() {
+		if (!giftToDelete || !holidayId) return;
 
-	function confirmDelete() {
-		if (deleteConfirm.giftId) {
-			dispatch(deleteBirthdayGift(deleteConfirm.giftId));
-			setDeleteConfirm({ show: false, giftId: null });
+		try {
+			await deleteGift({
+				holidayId,
+				giftId: giftToDelete.id,
+				auth0User,
+			}).unwrap();
+			setShowDeleteModal(false);
+			setGiftToDelete(null);
+		} catch (error) {
+			console.error("Error deleting gift:", error);
 		}
 	}
 
 	function cancelDelete() {
-		setDeleteConfirm({ show: false, giftId: null });
+		setShowDeleteModal(false);
+		setGiftToDelete(null);
 	}
 
-	function sortGifts(giftsToSort: BirthdayGift[]): BirthdayGift[] {
+	async function handleEditGift(gift: any) {
+		setSelectedGift(gift);
+		setShowFormModal(true);
+	}
+
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !holidayId) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await editGift({
+				holidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
+	}
+
+	function sortGifts(giftsToSort: any[]): any[] {
 		switch (sortBy) {
-			case "name":
-				return [...giftsToSort].sort((a, b) => a.name.localeCompare(b.name));
 			case "recipient":
 				return [...giftsToSort].sort((a, b) =>
 					a.recipient.localeCompare(b.recipient)
 				);
-			case "price":
-				return [...giftsToSort].sort((a, b) => b.price - a.price);
-			case "date-created":
-				return [...giftsToSort].sort(
-					(a, b) =>
-						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+			case "store":
+				return [...giftsToSort].sort((a, b) =>
+					(a.store || "").localeCompare(b.store || "")
 				);
+			case "price-high":
+				return [...giftsToSort].sort((a, b) => b.price - a.price);
+			case "price-low":
+				return [...giftsToSort].sort((a, b) => a.price - b.price);
 			default:
 				return giftsToSort;
 		}
@@ -144,20 +208,108 @@ export default function BirthdayGiftListPage() {
 		return (
 			<div className="min-h-screen birthday-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">Loading gifts...</p>
 				</div>
 			</div>
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts);
-	const incompleteGifts = sortedGifts.filter(
-		(gift: BirthdayGift) => !gift.isCompleted
+	const sortedGifts = sortGifts(gifts || []);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
+
+	const renderGiftItem = (gift: any) => (
+		<GiftCardItem
+			key={gift.id}
+			gift={gift}
+			isCompleted={false}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading || updateLoading}
+			theme={{
+				accentColor: "#3b82f6", // Blue for Birthday
+			}}
+			borderColor="rgb(var(--color-blue-500))" // Blue border for Birthday
+			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+		/>
 	);
-	const completedGifts = sortedGifts.filter(
-		(gift: BirthdayGift) => gift.isCompleted
+
+	const renderCompletedGiftItem = (gift: any) => (
+		<GiftCardItem
+			key={gift.id}
+			gift={gift}
+			isCompleted={true}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading || updateLoading}
+			theme={{
+				accentColor: "#3b82f6", // Blue for Birthday
+			}}
+			borderColor="rgb(var(--color-blue-500))" // Blue border for Birthday
+			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+		/>
 	);
+
+	// Form fields configuration
+	const formFields = [
+		{
+			id: "recipient",
+			type: "text" as const,
+			placeholder: "Recipient (select from address book)*",
+			required: true,
+		},
+		{
+			id: "giftName",
+			type: "text" as const,
+			placeholder: "Gift Name*",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "text" as const,
+			placeholder: "Description",
+		},
+		{
+			id: "price",
+			type: "number" as const,
+			placeholder: "Price",
+			step: "0.01",
+		},
+		{
+			id: "store",
+			type: "text" as const,
+			placeholder: "Store",
+		},
+		{
+			id: "product_link",
+			type: "url" as const,
+			placeholder: "Product Link (optional)",
+		},
+		{
+			id: "notes",
+			type: "textarea" as const,
+			placeholder: "Notes",
+			rows: 2,
+		},
+	];
+
+	// Initial values for editing
+	const getInitialValues = () => {
+		if (!selectedGift) return {};
+
+		return {
+			recipient: selectedGift.recipient || "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price.toString(),
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
+		};
+	};
 
 	return (
 		<div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -166,23 +318,26 @@ export default function BirthdayGiftListPage() {
 				backHref="/birthday"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Keep track of gift ideas and purchases!"
-				holidayColor="yellow-500"
-				error={error}
+				description="Plan your birthday gift list with style!"
+				holidayColor="blue-500"
+				error={error ? "Error loading gifts" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Budget Display */}
 				<BudgetDisplay
 					holiday="Birthday"
-					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+					holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+					holidayId={holidayId || undefined}
 				/>
-				<AddButton title="Gift" onClick={openForm} color="amber" />
+
+				<AddButton title="Gift" onClick={openForm} color="blue" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "name" && "Sorted by Name"}
 							{sortBy === "recipient" && "Sorted by Recipient"}
-							{sortBy === "price" && "Sorted by Price"}
-							{sortBy === "date-created" && "Sorted by Date Created"}
+							{sortBy === "store" && "Sorted by Store"}
+							{sortBy === "price-high" && "Sorted by Price (High to Low)"}
+							{sortBy === "price-low" && "Sorted by Price (Low to High)"}
 						</div>
 					)}
 				</div>
@@ -192,25 +347,8 @@ export default function BirthdayGiftListPage() {
 					items={incompleteGifts}
 					isCompleted={false}
 					emptyMessage="All gifts completed! 🎉"
-					completedMessage="All gifts completed! 🎉"
-					renderItem={(gift: BirthdayGift) => (
-						<GiftCardItem
-							key={gift.id}
-							gift={gift}
-							onToggle={handleToggleGift}
-							onEdit={(gift) => {
-								handleEditGift(gift);
-								setShowForm(true);
-							}}
-							onDelete={handleDeleteGift}
-							loading={loading}
-							theme={{
-								accentColor: "#f59e0b", // Amber for Birthday
-							}}
-							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
-						/>
-					)}
+					completedMessage=""
+					renderItem={renderGiftItem}
 				/>
 
 				<TaskSection
@@ -218,74 +356,36 @@ export default function BirthdayGiftListPage() {
 					items={completedGifts}
 					isCompleted={true}
 					emptyMessage="No completed gifts yet."
-					completedMessage="No completed gifts yet."
-					renderItem={(gift: BirthdayGift) => (
-						<GiftCardItem
-							key={gift.id}
-							gift={gift}
-							onToggle={handleToggleGift}
-							onEdit={(gift) => {
-								handleEditGift(gift);
-								setShowForm(true);
-							}}
-							onDelete={handleDeleteGift}
-							loading={loading}
-							theme={{
-								accentColor: "#f59e0b", // Amber for Birthday
-							}}
-							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
-						/>
-					)}
+					completedMessage=""
+					renderItem={renderCompletedGiftItem}
 				/>
 			</main>
 
 			{/* Form Modal */}
 			<FormModal
-				isOpen={showForm}
-				title={editingGift ? "Edit Gift" : "Add New Gift"}
-				fields={getFormConfig("gifts", editingGift ? "edit" : "add").fields}
-				initialValues={
-					editingGift
-						? {
-								description: editingGift.name,
-								price: editingGift.price.toString(),
-								recipient: editingGift.recipient,
-								store: editingGift.store || "",
-								productLink: editingGift.productLink || "",
-								notes: editingGift.notes || "",
-						  }
-						: {}
-				}
-				onSubmit={handleAddGift}
+				isOpen={showFormModal}
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
+				fields={formFields}
+				initialValues={getInitialValues()}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
 				onClose={closeForm}
-				loading={loading}
-				submitText={
-					loading
-						? editingGift
-							? "Updating..."
-							: "Adding..."
-						: editingGift
-						? "Update Gift"
-						: "Add Gift"
-				}
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cancelText="Cancel"
 				cardClassName="card"
-				submitButtonColor="#f59e0b"
+				submitButtonColor="#3b82f6"
 				showAddressBook={true}
 				contacts={contacts}
-				onAddressBookSelect={(contact) => {
-					// The FormModal will handle the form values internally
-				}}
 			/>
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("gifts")}
+				isOpen={showDeleteModal}
+				title="Delete Gift"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteLoading}
 			/>
 
 			{/* Sort Modal */}
@@ -293,13 +393,15 @@ export default function BirthdayGiftListPage() {
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
 				sortBy={sortBy}
-				onSortChange={setSortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
 				sortOptions={[
 					{ value: "none", label: "None" },
-					{ value: "name", label: "Name" },
 					{ value: "recipient", label: "Recipient" },
-					{ value: "price", label: "Price" },
-					{ value: "date-created", label: "Date Created" },
+					{ value: "store", label: "Store" },
+					{ value: "price-high", label: "Price: High to Low" },
+					{ value: "price-low", label: "Price: Low to High" },
 				]}
 				title="Sort Gifts"
 			/>

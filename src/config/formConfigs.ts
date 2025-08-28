@@ -174,6 +174,56 @@ export const giftsFormConfig: FormConfig = {
 	showAddressBook: true,
 };
 
+// Supplies form configuration (for New Year supplies-list)
+export const suppliesFormConfig: FormConfig = {
+	title: "Add New Supply Item",
+	fields: [
+		{
+			id: "recipient",
+			type: "text",
+			placeholder: "Recipient*",
+			required: true,
+		},
+		{
+			id: "giftName",
+			type: "text",
+			placeholder: "Supply Item",
+		},
+		{
+			id: "description",
+			type: "text",
+			placeholder: "Description (optional)",
+		},
+		{
+			id: "price",
+			type: "number",
+			placeholder: "Price",
+			step: "0.01",
+		},
+		{
+			id: "store",
+			type: "text",
+			placeholder: "Store",
+		},
+		{
+			id: "product_link",
+			type: "url",
+			placeholder: "Product Link (optional)",
+		},
+		{
+			id: "notes",
+			type: "textarea",
+			placeholder: "Notes",
+			rows: 2,
+		},
+	],
+	submitText: "Add Supply Item",
+	cancelText: "Cancel",
+	cardClassName: "card",
+	submitButtonColor: "#f59e0b", // Amber for New Year
+	showAddressBook: true,
+};
+
 // Edit configurations (for editing existing items)
 export const editCardsFormConfig: FormConfig = {
 	...cardsFormConfig,
@@ -199,7 +249,13 @@ export const editGiftsFormConfig: FormConfig = {
 	submitText: "Update Gift",
 };
 
-// Guest list form configuration
+export const editSuppliesFormConfig: FormConfig = {
+	...suppliesFormConfig,
+	title: "Edit Supply Item",
+	submitText: "Update Supply Item",
+};
+
+// Guest list form configuration (simplified for current database schema)
 export const guestsFormConfig: FormConfig = {
 	title: "Add New Guest",
 	fields: [
@@ -212,17 +268,17 @@ export const guestsFormConfig: FormConfig = {
 		{
 			id: "email",
 			type: "email",
-			placeholder: "Email",
+			placeholder: "Email (optional)",
 		},
 		{
 			id: "phone",
 			type: "tel",
-			placeholder: "Phone",
+			placeholder: "Phone (optional)",
 		},
 		{
 			id: "address",
 			type: "text",
-			placeholder: "Address",
+			placeholder: "Address (optional)",
 		},
 		{
 			id: "rsvpStatus",
@@ -235,26 +291,9 @@ export const guestsFormConfig: FormConfig = {
 			],
 		},
 		{
-			id: "numberOfGuests",
-			type: "number",
-			placeholder: "Number of Guests*",
-			required: true,
-			min: "1",
-		},
-		{
-			id: "dietaryRestrictions",
-			type: "text",
-			placeholder: "Dietary Restrictions",
-		},
-		{
-			id: "bringingDish",
-			type: "text",
-			placeholder: "Dish They're Bringing",
-		},
-		{
 			id: "notes",
 			type: "textarea",
-			placeholder: "Notes",
+			placeholder: "Notes (optional)",
 			rows: 2,
 		},
 	],
@@ -417,7 +456,14 @@ export const editAddressBookFormConfig: FormConfig = {
 };
 
 export function getFormConfig(
-	type: "cards" | "tasks" | "events" | "gifts" | "guests" | "addressBook",
+	type:
+		| "cards"
+		| "tasks"
+		| "events"
+		| "gifts"
+		| "guests"
+		| "addressBook"
+		| "supplies",
 	mode: "add" | "edit" = "add",
 	customTitle?: string,
 	customFieldLabel?: string,
@@ -428,6 +474,7 @@ export function getFormConfig(
 		tasks: mode === "add" ? tasksFormConfig : editTasksFormConfig,
 		events: mode === "add" ? eventsFormConfig : editEventsFormConfig,
 		gifts: mode === "add" ? giftsFormConfig : editGiftsFormConfig,
+		supplies: mode === "add" ? suppliesFormConfig : editSuppliesFormConfig,
 		guests: mode === "add" ? guestsFormConfig : editGuestsFormConfig,
 		addressBook:
 			mode === "add" ? addressBookFormConfig : editAddressBookFormConfig,

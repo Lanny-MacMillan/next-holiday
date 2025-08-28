@@ -1,22 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchFathersDayGifts } from "@/store/slices/fathers-day/fathersDayGiftListSlice";
-import { fetchFathersDayTasks } from "@/store/slices/fathers-day/fathersDayTasksSlice";
-import { fetchFathersDayCards } from "@/store/slices/fathers-day/fathersDayCardsSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
 
 const fathersDaySubsections = [
 	{
 		name: "Gift Ideas",
 		description: "Track gift ideas for Father's Day",
 		href: "/fathers-day/gift-list",
-		sliceKey: "fathersDayGiftList",
+		sliceKey: "giftList",
+		type: "gift",
 		category: "Gifts",
 	},
 	{
@@ -24,28 +24,34 @@ const fathersDaySubsections = [
 		description: "Track cards to send on Father's Day",
 		href: "/fathers-day/cards",
 		sliceKey: "cards",
+		type: "card",
 	},
 	{
 		name: "Event Planning",
 		description: "Plan Father's Day celebrations",
 		href: "/fathers-day/events",
 		sliceKey: "tasks",
+		type: "task",
 		category: "Events",
 	},
 ];
 
 export default function FathersDayPage() {
-	const dispatch = useAppDispatch();
+	const { holidayId, auth0User } = useFormModalMutation();
 
-	const gifts = useAppSelector((state: any) => state.fathersDayGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.fathersDayTasks.tasks);
-	const cards = useAppSelector((state: any) => state.fathersDayCards.cards);
-
-	useEffect(() => {
-		dispatch(fetchFathersDayGifts());
-		dispatch(fetchFathersDayTasks());
-		dispatch(fetchFathersDayCards());
-	}, [dispatch]);
+	// Fetch data using RTK Query
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(sliceKey: string, category?: string) {
 		let total = 0;
@@ -53,7 +59,6 @@ export default function FathersDayPage() {
 
 		switch (sliceKey) {
 			case "giftList":
-			case "fathersDayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -94,15 +99,13 @@ export default function FathersDayPage() {
 						);
 
 						// Use GiftListCard for gift list sections
-						if (
-							section.sliceKey === "giftList" ||
-							section.sliceKey === "fathersDayGiftList"
-						) {
+						if (section.type === "gift") {
 							return (
 								<li key={section.name}>
 									<GiftListCard
 										holiday="Father's Day"
 										href={section.href}
+										holidayId={holidayId}
 										theme={{
 											primaryColor: "#3b82f6", // Blue for Father's Day
 											accentColor: "#60a5fa",

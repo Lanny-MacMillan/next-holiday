@@ -8,6 +8,8 @@ interface CountdownWithInviteCompactProps {
 	holiday?: string;
 	holidayKey?: string;
 	showInviteButton?: boolean;
+	holidayId?: string; // New prop for API-based countdown
+	countdownTimer?: string | null; // New prop for countdown timer
 }
 
 export default function CountdownWithInviteCompact({
@@ -15,6 +17,8 @@ export default function CountdownWithInviteCompact({
 	holiday,
 	holidayKey,
 	showInviteButton = true,
+	holidayId,
+	countdownTimer,
 }: CountdownWithInviteCompactProps) {
 	// Map holiday names to holiday keys if not provided
 	const getHolidayKey = () => {
@@ -45,7 +49,11 @@ export default function CountdownWithInviteCompact({
 
 	return (
 		<div className={`flex flex-col items-end gap-1 ${className}`}>
-			<CountdownTimer holiday={holiday} />
+			<CountdownTimer
+				holiday={holiday}
+				holidayId={holidayId}
+				initialCountdownTimer={countdownTimer}
+			/>
 			{currentHolidayKey && showInviteButton && (
 				<InviteButton
 					holidayKey={currentHolidayKey}

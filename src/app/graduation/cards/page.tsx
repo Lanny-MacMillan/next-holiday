@@ -2,90 +2,68 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchGraduationCards,
-	addGraduationCard,
-	updateGraduationCard,
-	deleteGraduationCard,
-	GraduationCard,
-} from "@/store/slices/graduation/graduationCardsSlice";
-import { Card } from "@/store/slices/cardsSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import SortModal from "@/components/modals/SortModal";
-import HolidayCard from "@/components/cards/card/HolidayCard";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import { useGetCardsQuery } from "@/store/api";
+import { transformCardPayload } from "@/utils/formTransformers";
 import FormModal from "@/components/modals/FormModal";
+import AddButton from "@/components/common/AddButton";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import MailCardStatus from "@/components/cards/MailCardStatus";
+import MailCard from "@/components/cards/MailCard";
+import TaskSection from "@/components/common/TaskSection";
+import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
-import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
-
-type SortOption = "recipient" | "address" | "message" | "date-created" | "none";
-
-// Helper function to convert GraduationCard to Card
-const convertToCard = (graduationCard: GraduationCard): Card => {
-	return {
-		id: graduationCard.id,
-		recipient: graduationCard.recipient,
-		address: graduationCard.address,
-		message: graduationCard.message,
-		isCompleted: graduationCard.isCompleted,
-		completedDate: graduationCard.completedDate,
-		createdAt: graduationCard.createdAt,
-		updatedAt: graduationCard.updatedAt,
-	};
-};
 
 export default function GraduationCardsPage() {
 	const dispatch = useAppDispatch();
-	const { cards, loading, error, initialized } = useAppSelector(
-		(state: any) => state.graduationCards
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+		updateCard,
+		editCard,
+		deleteCard,
+	} = useFormModalMutation();
 
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		cardId: string | null;
-	}>({
-		show: false,
-		cardId: null,
-	});
+	// Fetch cards using RTK Query
+	const {
+		data: cards = [],
+		isLoading: loading,
+		error: cardsError,
+	} = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
 	const [showForm, setShowForm] = useState(false);
-	const [editingCard, setEditingCard] = useState<GraduationCard | null>(null);
-	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [cardToDelete, setCardToDelete] = useState<any>(null);
+	const [cardToEdit, setCardToEdit] = useState<any>(null);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [sortBy, setSortBy] = useState("recipient");
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchGraduationCards());
-		}
+		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch]);
 
-	function handleAddCard(formValues: Record<string, any>) {
-		if (!formValues.recipient?.trim() || !formValues.message?.trim()) return;
+	async function handleAddCard(values: Record<string, any>) {
+		if (!values.recipient?.trim() || !values.message?.trim()) return;
+		if (!holidayId || !mutation) return;
 
-		if (editingCard) {
-			const updatedCard: GraduationCard = {
-				...editingCard,
-				recipient: formValues.recipient,
-				address: formValues.address || "",
-				message: formValues.message,
-			};
-			dispatch(updateGraduationCard(updatedCard));
-			setEditingCard(null);
-		} else {
-			const newCard: Omit<GraduationCard, "id" | "createdAt" | "updatedAt"> = {
-				recipient: formValues.recipient,
-				address: formValues.address || "",
-				message: formValues.message,
-				isCompleted: false,
-				priority: "medium",
-			};
-			dispatch(addGraduationCard(newCard));
+		try {
+			const payload = transformCardPayload(values, contacts);
+			await mutation({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating card:", error);
+			// Handle error (could show a toast notification)
 		}
-		setShowForm(false);
 	}
 
 	function openForm() {
@@ -94,82 +72,126 @@ export default function GraduationCardsPage() {
 
 	function closeForm() {
 		setShowForm(false);
-		setEditingCard(null);
 	}
 
-	function handleToggleCard(cardId: string) {
-		const card = cards.find((c: GraduationCard) => c.id === cardId);
-		if (card) {
-			const updatedCard = {
-				...card,
-				isCompleted: !card.isCompleted,
-			};
-			dispatch(updateGraduationCard(updatedCard));
+	const handleDeleteCard = async (cardId: string) => {
+		const card = cards.find((c) => c.id === cardId);
+		setCardToDelete(card);
+		setShowDeleteModal(true);
+	};
+
+	const handleEditCard = async (card: any) => {
+		// Transform the card to match the expected interface
+		const transformedCard = {
+			id: card.id,
+			recipient: card.recipient,
+			message: card.message,
+			address: card.address,
+			notes: card.notes,
+			isCompleted: card.isCompleted,
+		};
+		setCardToEdit(transformedCard);
+		setShowEditModal(true);
+	};
+
+	const confirmDelete = async () => {
+		if (cardToDelete && mutation && holidayId) {
+			try {
+				const payload = {
+					id: cardToDelete.id,
+					action: "delete",
+					recipient: cardToDelete.recipient,
+					message: cardToDelete.message || "",
+					address: cardToDelete.address || "",
+				};
+				await mutation({ holidayId, payload, auth0User }).unwrap();
+				setShowDeleteModal(false);
+				setCardToDelete(null);
+			} catch (error) {
+				console.error("Error deleting card:", error);
+			}
 		}
-	}
+	};
 
-	function handleEditCard(card: GraduationCard) {
-		setEditingCard(card);
-		setShowForm(true);
-	}
-
-	function handleDeleteCard(cardId: string) {
-		setDeleteConfirm({ show: true, cardId });
-	}
-
-	function confirmDelete() {
-		if (deleteConfirm.cardId) {
-			dispatch(deleteGraduationCard(deleteConfirm.cardId));
-			setDeleteConfirm({ show: false, cardId: null });
+	const handleEditSubmit = async (values: Record<string, any>) => {
+		if (cardToEdit && mutation && holidayId) {
+			try {
+				const payload = {
+					...transformCardPayload(values, contacts),
+					id: cardToEdit.id,
+					action: "update",
+				};
+				await mutation({ holidayId, payload, auth0User }).unwrap();
+				setShowEditModal(false);
+				setCardToEdit(null);
+			} catch (error) {
+				console.error("Error updating card:", error);
+			}
 		}
-	}
+	};
 
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, cardId: null });
-	}
+	const handleToggleCompletion = async (cardId: string) => {
+		if (mutation && holidayId) {
+			try {
+				const card = cards.find((c) => c.id === cardId);
+				if (card) {
+					const payload = {
+						id: cardId,
+						action: "update",
+						isCompleted: !card.isCompleted,
+						recipient: card.recipient,
+						message: card.message,
+						address: card.address,
+					};
+					await mutation({ holidayId, payload, auth0User }).unwrap();
+				}
+			} catch (error) {
+				console.error("Error toggling card completion:", error);
+			}
+		}
+	};
 
-	function sortCards(cardsToSort: GraduationCard[]): GraduationCard[] {
+	const sortedCards = [...cards].sort((a, b) => {
 		switch (sortBy) {
 			case "recipient":
-				return [...cardsToSort].sort((a, b) =>
-					a.recipient.localeCompare(b.recipient)
-				);
-			case "address":
-				return [...cardsToSort].sort((a, b) =>
-					(a.address || "").localeCompare(b.address || "")
-				);
+				return a.recipient.localeCompare(b.recipient);
+			case "completed":
+				return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
 			case "message":
-				return [...cardsToSort].sort((a, b) =>
-					(a.message || "").localeCompare(b.message || "")
-				);
-			case "date-created":
-				return [...cardsToSort].sort(
-					(a, b) =>
-						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-				);
+				return (a.message || "").localeCompare(b.message || "");
 			default:
-				return cardsToSort;
+				return 0;
 		}
-	}
+	});
 
-	if (loading && !initialized) {
-		return (
-			<div className="min-h-screen graduation-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading cards...</p>
-				</div>
-			</div>
-		);
-	}
+	const completedCards = cards.filter((card) => card.isCompleted);
+	const incompleteCards = cards.filter((card) => !card.isCompleted);
 
-	const sortedCards = sortCards(cards);
-	const incompleteCards = sortedCards.filter(
-		(card: GraduationCard) => !card.isCompleted
-	);
-	const completedCards = sortedCards.filter(
-		(card: GraduationCard) => card.isCompleted
-	);
+	// Form fields configuration for cards
+	const formFields = [
+		{
+			id: "recipient",
+			type: "text" as const,
+			label: "Recipient",
+			placeholder: "Recipient's name",
+			required: true,
+		},
+		{
+			id: "message",
+			type: "textarea" as const,
+			label: "Message",
+			placeholder: "Write your graduation message here...",
+			rows: 3,
+			required: true,
+		},
+		{
+			id: "address",
+			type: "textarea" as const,
+			label: "Address",
+			placeholder: "Recipient's address...",
+			rows: 2,
+		},
+	];
 
 	return (
 		<div className="min-h-screen graduation-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -177,133 +199,151 @@ export default function GraduationCardsPage() {
 				title="Graduation Cards"
 				backHref="/graduation"
 				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort cards"
-				description="Plan your graduation cards with style!"
+				description="Keep track of your cards!"
 				holidayColor="purple-500"
-				error={error}
+				error={mutationError ? "API Error" : undefined}
+				sortTitle="Sort Cards"
 			/>
+
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Summary Stats */}
+				<MailCardStatus
+					totalCards={cards.length}
+					completedCards={completedCards.length}
+					incompleteCards={incompleteCards.length}
+					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+				/>
+
 				<AddButton title="Card" onClick={openForm} color="purple" />
-				<div className="flex items-center justify-center">
-					{sortBy !== "none" && (
-						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "recipient" && "Sorted by Recipient"}
-							{sortBy === "address" && "Sorted by Address"}
-							{sortBy === "message" && "Sorted by Message"}
-							{sortBy === "date-created" && "Sorted by Date Created"}
-						</div>
-					)}
-				</div>
 
-				<TaskSection
-					title="Incomplete"
-					items={incompleteCards}
-					isCompleted={false}
-					emptyMessage="All cards completed! 🎉"
-					completedMessage="All cards completed! 🎉"
-					renderItem={(card: GraduationCard) => (
-						<HolidayCard
-							key={card.id}
-							card={convertToCard(card)}
-							onToggle={handleToggleCard}
-							onEdit={(card) => {
-								handleEditCard(card as any);
-								setShowForm(true);
-							}}
-							onDelete={handleDeleteCard}
-							loading={loading}
-							theme={{
-								accentColor: "#8b5cf6",
-							}}
-							borderColor="rgb(var(--color-purple-500))"
-							gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
+				{/* Card List */}
+				{loading ? (
+					<div className="text-center py-8">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+						<p className="text-gray-600 dark:text-gray-400 mt-2">
+							Loading cards...
+						</p>
+					</div>
+				) : cardsError ? (
+					<div className="text-center text-red-500 py-8">
+						<p>Error loading cards: {cardsError.toString()}</p>
+					</div>
+				) : sortedCards.length === 0 ? (
+					<div className="text-center py-8">
+						<p className="text-gray-600 dark:text-gray-400">
+							No cards added yet.
+						</p>
+						<button
+							onClick={() => setShowForm(true)}
+							className="mt-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+						>
+							Add your first card
+						</button>
+					</div>
+				) : (
+					<div className="space-y-6">
+						<TaskSection
+							title="Cards to Send"
+							items={incompleteCards}
+							isCompleted={false}
+							emptyMessage="No cards to send yet."
+							completedMessage="All cards sent!"
+							renderItem={(card) => (
+								<MailCard
+									key={card.id}
+									card={card}
+									onToggleCompletion={handleToggleCompletion}
+									onEditCard={handleEditCard}
+									onDeleteCard={handleDeleteCard}
+									holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+								/>
+							)}
 						/>
-					)}
-				/>
 
-				<TaskSection
-					title="Completed"
-					items={completedCards}
-					isCompleted={true}
-					emptyMessage="No completed cards yet."
-					completedMessage="No completed cards yet."
-					renderItem={(card: GraduationCard) => (
-						<HolidayCard
-							key={card.id}
-							card={convertToCard(card)}
-							onToggle={handleToggleCard}
-							onEdit={(card) => {
-								handleEditCard(card as any);
-								setShowForm(true);
-							}}
-							onDelete={handleDeleteCard}
-							loading={loading}
-							theme={{
-								accentColor: "#8b5cf6",
-							}}
-							borderColor="rgb(var(--color-purple-500))"
-							gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
+						<TaskSection
+							title="Sent Cards"
+							items={completedCards}
+							isCompleted={true}
+							emptyMessage="No cards sent yet."
+							completedMessage="No sent cards to display."
+							renderItem={(card) => (
+								<MailCard
+									key={card.id}
+									card={card}
+									onToggleCompletion={handleToggleCompletion}
+									onEditCard={handleEditCard}
+									onDeleteCard={handleDeleteCard}
+									holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+								/>
+							)}
 						/>
-					)}
-				/>
+					</div>
+				)}
 			</main>
 
+			{/* Form Modal */}
 			<FormModal
 				isOpen={showForm}
-				title={editingCard ? "Edit Card" : "Add New Card"}
-				fields={getFormConfig("cards", editingCard ? "edit" : "add").fields}
-				initialValues={
-					editingCard
-						? {
-								recipient: editingCard.recipient,
-								address: editingCard.address || "",
-								message: editingCard.message,
-						  }
-						: {}
-				}
+				title="Add New Card"
+				fields={formFields}
 				onSubmit={handleAddCard}
 				onClose={closeForm}
-				loading={loading}
-				submitText={
-					loading
-						? editingCard
-							? "Updating..."
-							: "Adding..."
-						: editingCard
-						? "Update Card"
-						: "Add Card"
-				}
+				submitText="Add Card"
 				cancelText="Cancel"
-				cardClassName="card"
+				cardClassName="card card-valentines"
 				submitButtonColor="#8b5cf6"
 				showAddressBook={true}
 				contacts={contacts}
 			/>
 
-			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("cards")}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={loading}
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Card"
+				fields={formFields}
+				initialValues={cardToEdit}
+				onSubmit={handleEditSubmit}
+				onClose={() => {
+					setShowEditModal(false);
+					setCardToEdit(null);
+				}}
+				submitText="Update Card"
+				cancelText="Cancel"
+				cardClassName="card card-valentines"
+				submitButtonColor="#8b5cf6"
 			/>
 
+			{/* Delete Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title="Delete Card"
+				itemName={cardToDelete?.recipient}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setCardToDelete(null);
+				}}
+				cardClassName="card card-valentines"
+				confirmButtonColor="#8b5cf6"
+			/>
+
+			{/* Sort Modal */}
 			<SortModal
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
 				sortBy={sortBy}
-				onSortChange={(sortOption: string) =>
-					setSortBy(sortOption as SortOption)
-				}
+				onSortChange={setSortBy}
 				sortOptions={[
-					{ value: "none", label: "None" },
 					{ value: "recipient", label: "Recipient" },
-					{ value: "address", label: "Address" },
+					{ value: "completed", label: "Completion Status" },
 					{ value: "message", label: "Message" },
-					{ value: "date-created", label: "Date Created" },
 				]}
 				title="Sort Cards"
 			/>
+
+			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
+				&copy; {new Date().getFullYear()} Next Holiday
+			</footer>
 		</div>
 	);
 }

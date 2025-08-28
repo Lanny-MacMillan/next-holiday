@@ -32,6 +32,22 @@ export default function MailCard({
 	const isGamifiedMode = gamified || settings.displayMode === "gamified";
 	const isDarkMode = settings.theme === "dark";
 
+	// Helper function to get message background color based on holiday color
+	const getMessageBackgroundColor = () => {
+		if (!holidayColor) return "bg-pink-300 dark:bg-pink-900/20";
+
+		// Extract color from gradient or solid color
+		if (holidayColor.includes("pink")) return "bg-pink-300 dark:bg-pink-900/20";
+		if (holidayColor.includes("red")) return "bg-red-300 dark:bg-red-900/20";
+		if (holidayColor.includes("yellow"))
+			return "bg-yellow-300 dark:bg-yellow-900/20";
+		if (holidayColor.includes("blue")) return "bg-blue-300 dark:bg-blue-900/20";
+		if (holidayColor.includes("purple"))
+			return "bg-purple-300 dark:bg-purple-900/20";
+
+		return "bg-pink-300 dark:bg-pink-900/20"; // fallback
+	};
+
 	if (isGamifiedMode) {
 		// Gamified mode design
 		const backgroundColor =
@@ -81,6 +97,16 @@ export default function MailCard({
 										style={{ fontFamily: "var(--font-family-fredoka)" }}
 									>
 										"{card.message}"
+									</p>
+								</div>
+							)}
+							{card.address && (
+								<div className="mt-2 p-2 bg-white bg-opacity-10 rounded-lg backdrop-blur-sm">
+									<p
+										className="text-xs text-white opacity-90"
+										style={{ fontFamily: "var(--font-family-fredoka)" }}
+									>
+										📍 {card.address}
 									</p>
 								</div>
 							)}
@@ -143,9 +169,18 @@ export default function MailCard({
 							)}
 						</div>
 						{card.message && (
-							<div className="mt-2 p-3 bg-pink-300 dark:bg-pink-900/20 rounded-lg">
+							<div
+								className={`mt-2 p-3 ${getMessageBackgroundColor()} rounded-lg`}
+							>
 								<p className="text-xs sm:text-sm text-white dark:text-gray-300 italic">
 									"{card.message}"
+								</p>
+							</div>
+						)}
+						{card.address && (
+							<div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+								<p className="text-xs text-gray-600 dark:text-gray-400">
+									📍 {card.address}
 								</p>
 							</div>
 						)}

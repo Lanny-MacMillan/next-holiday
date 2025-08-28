@@ -1,12 +1,17 @@
 import React from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useGetGiftsQuery } from "@/store/api";
 import { getCardStyling } from "@/utils/cardShadows";
+import { getGamifiedBackgroundColor } from "@/utils/gamifiedUtils";
 import { getHolidayGiftListConfig } from "@/utils/holidayGiftListConfig";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 export interface GiftListCardProps {
 	holiday?: string;
 	holidayName?: string; // For backward compatibility
+	holidayId?: string; // Add holidayId prop for direct holiday ID
 	budget?: {
 		spent: number;
 		total: number;
@@ -27,59 +32,112 @@ export interface GiftListCardProps {
 	gamifiedBackgroundColor?: string; // New prop for background color
 }
 
-export function useGiftListCardData(holiday?: string) {
+// Helper function to convert holiday name to route format
+function getHolidayRoute(holiday: string): string {
+	const holidayToRouteMap: Record<string, string> = {
+		"Baby Shower": "baby-shower",
+		"Mothers Day": "mothers-day",
+		"Fathers Day": "fathers-day",
+		"New Year": "new-year",
+		"Fourth of July": "fourth-of-july",
+	};
+
+	return holidayToRouteMap[holiday] || holiday.toLowerCase();
+}
+
+export function useGiftListCardData(
+	holiday?: string,
+	providedHolidayId?: string
+) {
 	// Get holiday configuration
 	const config = getHolidayGiftListConfig(holiday);
 
 	// Determine data source based on holiday
 	const isThanksgiving = holiday === "Thanksgiving";
 
-	// Gifts for most holidays
-	const gifts = useAppSelector(
-		(state: any) => (state[config.sliceName]?.gifts as any[]) || []
+	// Get holiday ID and auth0User for RTK Query
+	const { user: auth0User } = useAuth0();
+	const giftHolidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
 
-	// Thanksgiving budget items
-	const thanksgivingBudgetItems = useAppSelector(
-		(state: any) => state.thanksgivingBudget?.budgetItems || []
+	// Use provided holidayId if available, otherwise resolve from route
+	const holidayId =
+		providedHolidayId ||
+		(holiday
+			? getHolidayIdFromRoute(
+					`/${getHolidayRoute(holiday)}`,
+					giftHolidayPreferences
+			  )
+			: null);
+
+	// Use RTK Query to fetch gifts data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
 	);
 
-	// Get budget limit based on holiday
+	// Map holiday name -> holidayId via home data, then pull budget entity from Redux (DB-backed)
+	const budgetHolidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+	const budgetEntity = useAppSelector((state: any) => {
+		if (!holiday) return null;
+		const pref = budgetHolidayPreferences.find(
+			(p: { holiday: string; holidayId: string }) => p.holiday === holiday
+		);
+		if (!pref?.holidayId) return null;
+		return state.budgets?.entities?.[pref.holidayId] || null;
+	});
+
+	// Get budget limit, preferring DB/Redux budgets; fallback to theme settings
 	const { settings } = useAppSelector((state: any) => state.theme);
 	let budgetLimit = 0;
-	if (holiday) {
-		const holidayChoice = settings.holidayChoices?.find(
-			(choice: { holiday: string; budget: number }) =>
-				choice.holiday === holiday
-		);
-		budgetLimit = holidayChoice?.budget || 0;
+	let overrideSpent: number | undefined = undefined;
+
+	if (budgetEntity) {
+		budgetLimit =
+			typeof budgetEntity.targetAmount === "number"
+				? budgetEntity.targetAmount
+				: 0;
+		if (typeof budgetEntity.spentAmount === "number") {
+			overrideSpent = budgetEntity.spentAmount;
+		}
 	} else {
-		budgetLimit = settings.giftBudgetLimit || 0;
+		if (holiday) {
+			const holidayChoice = settings.holidayChoices?.find(
+				(choice: { holiday: string; budget: number }) =>
+					choice.holiday === holiday
+			);
+			budgetLimit = holidayChoice?.budget || 0;
+		} else {
+			budgetLimit = settings.giftBudgetLimit || 0;
+		}
 	}
 
 	// Calculate totals
 	let totalSpent = 0;
 	let totalItems = 0;
 	let completedItems = 0;
+	let totalPlanned = 0;
 
-	if (isThanksgiving) {
-		// Use dedicated Thanksgiving budget slice
-		totalSpent = thanksgivingBudgetItems.reduce(
-			(sum: number, item: any) =>
-				sum + (typeof item.amount === "number" ? item.amount : 0),
-			0
-		);
-		totalItems = thanksgivingBudgetItems.length;
-		completedItems = 0; // No completion state for budget items
-	} else {
-		// Default gift-based calculation
-		totalSpent = gifts.reduce(
-			(sum: number, gift: any) => sum + (gift.price || 0),
-			0
-		);
-		totalItems = gifts.length;
-		completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
-	}
+	// Calculate totals using RTK Query data
+	totalSpent = gifts.reduce((sum: number, gift: any) => {
+		const price = gift.price || 0;
+		// Only count completed gifts as purchased/spent
+		return gift.isCompleted ? sum + price : sum;
+	}, 0);
+
+	// Calculate total planned (all gifts with prices)
+	totalPlanned = gifts.reduce(
+		(sum: number, gift: any) => sum + (gift.price || 0),
+		0
+	);
+	totalItems = gifts.length;
+	completedItems = gifts.filter((gift: any) => gift.isCompleted).length;
+
+	// Always use calculated spent amount from completed gifts, not DB override
+	// The DB spentAmount might be outdated or not maintained properly
 
 	const remaining = budgetLimit - totalSpent;
 	const budgetPercentage =
@@ -96,6 +154,7 @@ export function useGiftListCardData(holiday?: string) {
 	return {
 		budget: {
 			spent: totalSpent,
+			planned: totalPlanned,
 			total: budgetLimit,
 			remaining,
 			percentage: budgetPercentage,
@@ -112,6 +171,7 @@ export function useGiftListCardData(holiday?: string) {
 export default function GiftListCard({
 	holiday,
 	holidayName,
+	holidayId,
 	budget,
 	giftList,
 	theme = {},
@@ -132,7 +192,7 @@ export default function GiftListCard({
 	const isDarkMode = settings.theme === "dark";
 
 	// Use holiday-specific data if holiday prop is provided, otherwise use passed props
-	const holidayData = holiday ? useGiftListCardData(holiday) : null;
+	const holidayData = holiday ? useGiftListCardData(holiday, holidayId) : null;
 
 	const finalBudget = holidayData?.budget || budget;
 	const finalGiftList = holidayData?.giftList || giftList;
@@ -168,7 +228,9 @@ export default function GiftListCard({
 
 	// Get gamified background gradient based on holiday
 	const backgroundColor =
-		gamifiedBackgroundColor || "bg-gradient-to-br from-gray-400 to-gray-600";
+		gamifiedBackgroundColor ||
+		getGamifiedBackgroundColor(holiday) ||
+		"bg-gradient-to-br from-gray-400 to-gray-600";
 
 	if (isGamifiedMode) {
 		// Gamified mode design
@@ -219,10 +281,23 @@ export default function GiftListCard({
 							</div>
 							<div className="flex justify-between items-center mb-2">
 								<div className="text-xs sm:text-sm text-white opacity-90">
+									Planned: ${(finalBudget as any).planned?.toFixed(2) || "0.00"}
+								</div>
+								<div className="text-xs sm:text-sm text-white opacity-90">
 									Budget: ${finalBudget.total.toFixed(2)}
 								</div>
+							</div>
+							<div className="flex justify-between items-center mb-2">
+								<div className="text-xs sm:text-sm text-white opacity-90">
+									{budgetPercentage.toFixed(1)}% of budget used
+								</div>
 								<div className="text-xs sm:text-sm text-white opacity-90 text-right">
-									{budgetPercentage.toFixed(1)}% used
+									{(finalBudget as any).planned
+										? `${(
+												((finalBudget as any).planned / finalBudget.total) *
+												100
+										  ).toFixed(1)}% planned`
+										: ""}
 								</div>
 							</div>
 						</div>

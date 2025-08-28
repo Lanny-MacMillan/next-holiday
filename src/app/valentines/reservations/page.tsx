@@ -3,13 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchValentinesTasks,
-	addValentinesTask,
-	updateValentinesTask,
-	deleteValentinesTask,
-	toggleValentinesTaskCompletion,
-} from "@/store/slices/valentines/valentinesTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import {
 	ReservationCard,
 	ReservationsTracker,
@@ -20,64 +14,197 @@ import SortModal from "@/components/modals/SortModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { useReservationsMutations } from "@/hooks/useReservationsMutations";
 
 export default function ValentinesReservationsPage() {
 	const dispatch = useAppDispatch();
-	const [isAddingTask, setIsAddingTask] = useState(false);
-	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new reservations mutations hook
+	const {
+		holidayId,
+		auth0User,
+		reservations,
+		loading,
+		error,
+		initialized,
+		createReservations,
+		updateReservations,
+		editReservations,
+		deleteReservations,
+		updateReservationsState,
+		editReservationsState,
+		deleteReservationsState,
+	} = useReservationsMutations();
+
+	const [showAddForm, setShowAddForm] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [sortBy, setSortBy] = useState("title");
-	const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+	const [sortBy, setSortBy] = useState<string>("dateCreated");
+	const [showEditModal, setShowEditModal] = useState(false);
 
-	const allTasks = useAppSelector((state) => state.valentinesTasks.tasks);
-	const loading = useAppSelector((state) => state.valentinesTasks.loading);
+	// Sort options for reservations
+	const sortOptions = [
+		{ value: "dateCreated", label: "Date Created" },
+		{ value: "title", label: "Title A-Z" },
+		{ value: "priority", label: "Priority" },
+		{ value: "dueDate", label: "Due Date" },
+	];
 
-	// Filter tasks for Reservations category
-	const tasks = allTasks.filter((task) => task.category === "Reservations");
-
-	useEffect(() => {
-		dispatch(fetchValentinesTasks());
-	}, [dispatch]);
-
-	const handleToggleCompletion = async (taskId: string) => {
-		await dispatch(toggleValentinesTaskCompletion(taskId));
+	// Sort function
+	const sortTasks = (tasks: any[], sortOption: string) => {
+		switch (sortOption) {
+			case "title":
+				return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
+			case "priority":
+				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				return [...tasks].sort(
+					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+				);
+			case "dueDate":
+				return [...tasks].sort((a, b) => {
+					if (!a.dueDate && !b.dueDate) return 0;
+					if (!a.dueDate) return 1;
+					if (!b.dueDate) return -1;
+					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+				});
+			case "dateCreated":
+			default:
+				return [...tasks].sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+				);
+		}
 	};
 
-	const handleDeleteTask = async (taskId: string) => {
-		setTaskToDelete(taskId);
-		setIsDeleteModalOpen(true);
+	const sortedReservations = sortTasks(reservations, sortBy);
+
+	useEffect(() => {
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
+
+	async function handleFormSubmit(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
+
+		try {
+			if (editingTask) {
+				await editReservations({
+					holidayId,
+					taskId: editingTask.id,
+					payload: {
+						title: values.title,
+						description: values.description || undefined,
+						priority: values.priority as "low" | "medium" | "high",
+						assignedTo: values.assignedTo || undefined,
+						category: "Reservations",
+						dueDate: values.dueDate || undefined,
+					},
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} else {
+				const payload = {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Reservations",
+					dueDate: values.dueDate || undefined,
+					isCompleted: false,
+				};
+				await createReservations({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowAddForm(false);
+		} catch (error) {
+			console.error("Error handling reservation:", error);
+		}
+	}
+
+	const handleEdit = (task: any) => {
+		setEditingTask(task);
+		setShowAddForm(true);
+	};
+
+	const handleDelete = (task: any) => {
+		setTaskToDelete(task);
+		setShowDeleteModal(true);
 	};
 
 	const confirmDelete = async () => {
-		if (taskToDelete) {
-			await dispatch(deleteValentinesTask(taskToDelete));
-			setIsDeleteModalOpen(false);
-			setTaskToDelete(null);
+		if (taskToDelete && holidayId && auth0User) {
+			try {
+				await deleteReservations({
+					holidayId,
+					taskId: taskToDelete.id,
+					auth0User,
+				}).unwrap();
+				setTaskToDelete(null);
+			} catch (error) {
+				console.error("Error deleting reservation:", error);
+			}
+		}
+		setShowDeleteModal(false);
+	};
+
+	const handleToggleCompletion = async (taskId: string) => {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const reservation = reservations.find((r: any) => r.id === taskId);
+			if (reservation) {
+				await updateReservations({
+					holidayId,
+					taskId,
+					isCompleted: !reservation.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating reservation:", error);
 		}
 	};
 
-	// Sort tasks based on current sortBy value
-	const sortedTasks = [...tasks].sort((a, b) => {
-		switch (sortBy) {
-			case "title":
-				return a.title.localeCompare(b.title);
-			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
-				return priorityOrder[b.priority] - priorityOrder[a.priority];
-			case "dueDate":
-				if (!a.dueDate && !b.dueDate) return 0;
-				if (!a.dueDate) return 1;
-				if (!b.dueDate) return -1;
-				return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-			case "completed":
-				return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
-			default:
-				return 0;
-		}
-	});
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
 
-	const completedTasks = sortedTasks.filter((task) => task.isCompleted);
-	const incompleteTasks = sortedTasks.filter((task) => !task.isCompleted);
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editReservations({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Reservations",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing reservation:", error);
+		}
+	}
+
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	const handleSortChange = (sortOption: string) => {
+		setSortBy(sortOption);
+	};
 
 	// Form fields for the FormModal
 	const formFields = [
@@ -119,53 +246,59 @@ export default function ValentinesReservationsPage() {
 		},
 	];
 
-	const handleFormSubmit = async (values: Record<string, any>) => {
-		await dispatch(
-			addValentinesTask({
-				title: values.title || "",
-				description: values.description || "",
-				priority: values.priority || "medium",
-				category: "Reservations" as const,
-				dueDate: values.dueDate || "",
-				notes: values.notes || "",
-				isCompleted: false,
-			})
-		);
-		setIsAddingTask(false);
-	};
-
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="Reservations"
 				backHref="/valentines"
+				error={error ? "API Error" : undefined}
 				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort Cards"
+				sortTitle="Sort Reservations"
 				description="Keep track of your reservations!"
 				holidayColor="pink-500"
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
-				<ReservationsTracker tasks={tasks} title="Reservations Tracker" />
+				<ReservationsTracker
+					tasks={reservations}
+					title="Reservations Tracker"
+				/>
 
 				<AddButton
 					title="Reservation"
-					onClick={() => setIsAddingTask(true)}
+					onClick={() => setShowAddForm(true)}
 					color="pink"
 					disabled={loading}
 				/>
 
-				{/* Add Task Form Modal */}
+				{/* Add/Edit Task Form Modal */}
 				<FormModal
-					isOpen={isAddingTask}
-					title="Add New Reservation"
+					isOpen={showAddForm}
+					title={editingTask ? "Edit Reservation" : "Add New Reservation"}
 					fields={formFields}
 					onSubmit={handleFormSubmit}
-					onClose={() => setIsAddingTask(false)}
-					submitText="Add Reservation"
+					onClose={() => {
+						setShowAddForm(false);
+						setEditingTask(null);
+					}}
+					submitText={editingTask ? "Update Reservation" : "Add Reservation"}
 					submitButtonColor="#ec4899"
 					cardClassName="card card-valentines"
+					initialValues={editingTask || {}}
+				/>
+
+				{/* Edit Task Form Modal */}
+				<FormModal
+					isOpen={showEditModal}
+					title="Edit Reservation"
+					fields={formFields}
+					onSubmit={handleEditTaskSubmit}
+					onClose={closeEditModal}
+					submitText="Update Reservation"
+					submitButtonColor="#ec4899"
+					cardClassName="card card-valentines"
+					initialValues={editingTask || {}}
 				/>
 
 				{/* Task List */}
@@ -176,13 +309,13 @@ export default function ValentinesReservationsPage() {
 							Loading reservations...
 						</p>
 					</div>
-				) : tasks.length === 0 ? (
+				) : reservations.length === 0 ? (
 					<div className="text-center py-8">
 						<p className="text-gray-600 dark:text-gray-400">
 							No reservations added yet.
 						</p>
 						<button
-							onClick={() => setIsAddingTask(true)}
+							onClick={() => setShowAddForm(true)}
 							className="mt-2 text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300"
 						>
 							Add your first reservation
@@ -192,7 +325,7 @@ export default function ValentinesReservationsPage() {
 					<div className="space-y-6">
 						<TaskSection
 							title="Pending Reservations"
-							items={incompleteTasks}
+							items={sortedReservations.filter((task) => !task.isCompleted)}
 							isCompleted={false}
 							emptyMessage="No pending reservations"
 							completedMessage=""
@@ -207,7 +340,8 @@ export default function ValentinesReservationsPage() {
 										isCompleted={task.isCompleted}
 										notes={task.notes}
 										onToggleCompletion={handleToggleCompletion}
-										onDelete={handleDeleteTask}
+										onDelete={handleDelete}
+										onEdit={handleEditTask}
 									/>
 								</li>
 							)}
@@ -215,7 +349,7 @@ export default function ValentinesReservationsPage() {
 
 						<TaskSection
 							title="Confirmed Reservations"
-							items={completedTasks}
+							items={sortedReservations.filter((task) => task.isCompleted)}
 							isCompleted={true}
 							emptyMessage="No confirmed reservations"
 							completedMessage="No reservations confirmed!"
@@ -230,7 +364,8 @@ export default function ValentinesReservationsPage() {
 										isCompleted={task.isCompleted}
 										notes={task.notes}
 										onToggleCompletion={handleToggleCompletion}
-										onDelete={handleDeleteTask}
+										onDelete={handleDelete}
+										onEdit={handleEditTask}
 									/>
 								</li>
 							)}
@@ -245,12 +380,12 @@ export default function ValentinesReservationsPage() {
 
 			{/* Delete Modal */}
 			<DeleteModal
-				isOpen={isDeleteModalOpen}
+				isOpen={showDeleteModal}
 				title="Delete Reservation"
-				message="Are you sure you want to delete this reservation? This action cannot be undone."
+				message="This action cannot be undone."
 				onConfirm={confirmDelete}
 				onCancel={() => {
-					setIsDeleteModalOpen(false);
+					setShowDeleteModal(false);
 					setTaskToDelete(null);
 				}}
 				confirmText="Delete"
@@ -264,13 +399,8 @@ export default function ValentinesReservationsPage() {
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
 				sortBy={sortBy}
-				onSortChange={setSortBy}
-				sortOptions={[
-					{ value: "title", label: "Title" },
-					{ value: "priority", label: "Priority" },
-					{ value: "dueDate", label: "Due Date" },
-					{ value: "completed", label: "Completion Status" },
-				]}
+				onSortChange={handleSortChange}
+				sortOptions={sortOptions}
 				title="Sort Reservations"
 			/>
 		</div>

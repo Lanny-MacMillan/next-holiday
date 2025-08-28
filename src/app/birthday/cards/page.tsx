@@ -1,81 +1,69 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchBirthdayCards,
-	addBirthdayCard,
-	updateBirthdayCard,
-	deleteBirthdayCard,
-	toggleBirthdayCardCompletion,
-	BirthdayCard,
-} from "@/store/slices/birthday/birthdayCardsSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import SortModal from "@/components/modals/SortModal";
-import HolidayCard from "@/components/cards/card/HolidayCard";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import { useGetCardsQuery } from "@/store/api";
+import { transformCardPayload } from "@/utils/formTransformers";
 import FormModal from "@/components/modals/FormModal";
+import AddButton from "@/components/common/AddButton";
+import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import MailCardStatus from "@/components/cards/MailCardStatus";
+import MailCard from "@/components/cards/MailCard";
+import TaskSection from "@/components/common/TaskSection";
+import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
-import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 export default function BirthdayCardsPage() {
 	const dispatch = useAppDispatch();
-	const { cards, loading, error, initialized } = useAppSelector(
-		(state: any) => state.birthdayCards
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+		updateCard,
+		editCard,
+		deleteCard,
+	} = useFormModalMutation();
 
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		cardId: string | null;
-	}>({
-		show: false,
-		cardId: null,
-	});
+	// Fetch cards using RTK Query
+	const {
+		data: cards = [],
+		isLoading: loading,
+		error: cardsError,
+	} = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
 	const [showForm, setShowForm] = useState(false);
-	const [editingCard, setEditingCard] = useState<BirthdayCard | null>(null);
-	const [sortBy, setSortBy] = useState<string>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [cardToDelete, setCardToDelete] = useState<any>(null);
+	const [cardToEdit, setCardToEdit] = useState<any>(null);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [sortBy, setSortBy] = useState("recipient");
 
 	useEffect(() => {
-		// Fetch cards and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchBirthdayCards());
-		}
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch]);
 
-	function handleAddCard(formValues: Record<string, any>) {
-		if (!formValues.recipient || (typeof formValues.recipient === "string" && !formValues.recipient.trim()) || !formValues.message || (typeof formValues.message === "string" && !formValues.message.trim())) return;
+	async function handleAddCard(values: Record<string, any>) {
+		if (!values.recipient?.trim() || !values.message?.trim()) return;
+		if (!holidayId || !mutation) return;
 
-		if (editingCard) {
-			// Update existing card
-			const updatedCard: BirthdayCard = {
-				...editingCard,
-				recipient: formValues.recipient,
-				message: formValues.message,
-				notes: formValues.notes || undefined,
-			};
-			dispatch(updateBirthdayCard(updatedCard));
-			setEditingCard(null);
-		} else {
-			// Add new card
-			const newCard: Omit<BirthdayCard, "id" | "createdAt" | "updatedAt"> = {
-				recipient: formValues.recipient,
-				message: formValues.message,
-				notes: formValues.notes || undefined,
-				isCompleted: false,
-				priority: formValues.priority || "medium",
-			};
-			dispatch(addBirthdayCard(newCard));
+		try {
+			const payload = transformCardPayload(values, contacts);
+			await mutation({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating card:", error);
+			// Handle error (could show a toast notification)
 		}
-
-		setShowForm(false);
 	}
 
 	function openForm() {
@@ -84,78 +72,126 @@ export default function BirthdayCardsPage() {
 
 	function closeForm() {
 		setShowForm(false);
-		setEditingCard(null);
 	}
 
-	function handleToggleCard(cardId: string) {
-		dispatch(toggleBirthdayCardCompletion(cardId));
-	}
+	const handleDeleteCard = async (cardId: string) => {
+		const card = cards.find((c) => c.id === cardId);
+		setCardToDelete(card);
+		setShowDeleteModal(true);
+	};
 
-	function handleEditCard(card: BirthdayCard) {
-		setEditingCard(card);
-		setShowForm(true);
-	}
+	const handleEditCard = async (card: any) => {
+		// Transform the card to match the expected interface
+		const transformedCard = {
+			id: card.id,
+			recipient: card.recipient,
+			message: card.message,
+			address: card.address,
+			notes: card.notes,
+			isCompleted: card.isCompleted,
+		};
+		setCardToEdit(transformedCard);
+		setShowEditModal(true);
+	};
 
-	function handleDeleteCard(cardId: string) {
-		setDeleteConfirm({ show: true, cardId });
-	}
-
-	function confirmDelete() {
-		if (deleteConfirm.cardId) {
-			dispatch(deleteBirthdayCard(deleteConfirm.cardId));
-			setDeleteConfirm({ show: false, cardId: null });
+	const confirmDelete = async () => {
+		if (cardToDelete && mutation && holidayId) {
+			try {
+				const payload = {
+					id: cardToDelete.id,
+					action: "delete",
+					recipient: cardToDelete.recipient,
+					message: cardToDelete.message || "",
+					address: cardToDelete.address || "",
+				};
+				await mutation({ holidayId, payload, auth0User }).unwrap();
+				setShowDeleteModal(false);
+				setCardToDelete(null);
+			} catch (error) {
+				console.error("Error deleting card:", error);
+			}
 		}
-	}
+	};
 
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, cardId: null });
-	}
+	const handleEditSubmit = async (values: Record<string, any>) => {
+		if (cardToEdit && mutation && holidayId) {
+			try {
+				const payload = {
+					...transformCardPayload(values, contacts),
+					id: cardToEdit.id,
+					action: "update",
+				};
+				await mutation({ holidayId, payload, auth0User }).unwrap();
+				setShowEditModal(false);
+				setCardToEdit(null);
+			} catch (error) {
+				console.error("Error updating card:", error);
+			}
+		}
+	};
 
-	function sortCards(cardsToSort: BirthdayCard[]): BirthdayCard[] {
+	const handleToggleCompletion = async (cardId: string) => {
+		if (mutation && holidayId) {
+			try {
+				const card = cards.find((c) => c.id === cardId);
+				if (card) {
+					const payload = {
+						id: cardId,
+						action: "update",
+						isCompleted: !card.isCompleted,
+						recipient: card.recipient,
+						message: card.message,
+						address: card.address,
+					};
+					await mutation({ holidayId, payload, auth0User }).unwrap();
+				}
+			} catch (error) {
+				console.error("Error toggling card completion:", error);
+			}
+		}
+	};
+
+	const sortedCards = [...cards].sort((a, b) => {
 		switch (sortBy) {
 			case "recipient":
-				return [...cardsToSort].sort((a, b) =>
-					a.recipient.localeCompare(b.recipient)
-				);
+				return a.recipient.localeCompare(b.recipient);
+			case "completed":
+				return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
 			case "message":
-				return [...cardsToSort].sort((a, b) =>
-					(a.message || "").localeCompare(b.message || "")
-				);
-			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
-				return [...cardsToSort].sort(
-					(a, b) =>
-						(priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
-						(priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
-				);
-			case "date-created":
-				return [...cardsToSort].sort(
-					(a, b) =>
-						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-				);
+				return (a.message || "").localeCompare(b.message || "");
 			default:
-				return cardsToSort;
+				return 0;
 		}
-	}
+	});
 
-	if (loading && !initialized) {
-		return (
-			<div className="min-h-screen birthday-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading cards...</p>
-				</div>
-			</div>
-		);
-	}
+	const completedCards = cards.filter((card) => card.isCompleted);
+	const incompleteCards = cards.filter((card) => !card.isCompleted);
 
-	const sortedCards = sortCards(cards);
-	const incompleteCards = sortedCards.filter(
-		(card: BirthdayCard) => !card.isCompleted
-	);
-	const completedCards = sortedCards.filter(
-		(card: BirthdayCard) => card.isCompleted
-	);
+	// Form fields configuration for cards
+	const formFields = [
+		{
+			id: "recipient",
+			type: "text" as const,
+			label: "Recipient",
+			placeholder: "Recipient's name",
+			required: true,
+		},
+		{
+			id: "message",
+			type: "textarea" as const,
+			label: "Message",
+			placeholder: "Write your birthday message here...",
+			rows: 3,
+			required: true,
+		},
+		{
+			id: "address",
+			type: "textarea" as const,
+			label: "Address",
+			placeholder: "Recipient's address...",
+			rows: 2,
+		},
+	];
 
 	return (
 		<div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -163,121 +199,132 @@ export default function BirthdayCardsPage() {
 				title="Birthday Cards"
 				backHref="/birthday"
 				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort cards"
-				description="Plan your birthday celebrations with style!"
+				description="Keep track of your cards!"
 				holidayColor="yellow-500"
-				error={error}
+				error={mutationError ? "API Error" : undefined}
+				sortTitle="Sort Cards"
 			/>
+
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Summary Stats */}
+				<MailCardStatus
+					totalCards={cards.length}
+					completedCards={completedCards.length}
+					incompleteCards={incompleteCards.length}
+					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+				/>
+
 				<AddButton title="Card" onClick={openForm} color="amber" />
-				<div className="flex items-center justify-center">
-					{sortBy !== "none" && (
-						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "recipient" && "Sorted by Recipient"}
-							{sortBy === "message" && "Sorted by Message"}
-							{sortBy === "priority" && "Sorted by Priority"}
-							{sortBy === "date-created" && "Sorted by Date Created"}
-						</div>
-					)}
-				</div>
 
-				<TaskSection
-					title="Incomplete"
-					items={incompleteCards}
-					isCompleted={false}
-					emptyMessage="All cards completed! 🎉"
-					completedMessage="All cards completed! 🎉"
-					renderItem={(card: BirthdayCard) => (
-						<HolidayCard
-							key={card.id}
-							card={card as any}
-							onToggle={handleToggleCard}
-							onEdit={(card) => {
-								handleEditCard(card as BirthdayCard);
-								setShowForm(true);
-							}}
-							onDelete={handleDeleteCard}
-							loading={loading}
-							theme={{
-								accentColor: "#f59e0b", // Amber for Birthday
-							}}
-							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+				{/* Card List */}
+				{loading ? (
+					<div className="text-center py-8">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto"></div>
+						<p className="text-gray-600 dark:text-gray-400 mt-2">
+							Loading cards...
+						</p>
+					</div>
+				) : cardsError ? (
+					<div className="text-center text-red-500 py-8">
+						<p>Error loading cards: {cardsError.toString()}</p>
+					</div>
+				) : sortedCards.length === 0 ? (
+					<div className="text-center py-8">
+						<p className="text-gray-600 dark:text-gray-400">
+							No cards added yet.
+						</p>
+						<button
+							onClick={() => setShowForm(true)}
+							className="mt-2 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+						>
+							Add your first card
+						</button>
+					</div>
+				) : (
+					<div className="space-y-6">
+						<TaskSection
+							title="Cards to Send"
+							items={incompleteCards}
+							isCompleted={false}
+							emptyMessage="No cards to send yet."
+							completedMessage="All cards sent!"
+							renderItem={(card) => (
+								<MailCard
+									key={card.id}
+									card={card}
+									onToggleCompletion={handleToggleCompletion}
+									onEditCard={handleEditCard}
+									onDeleteCard={handleDeleteCard}
+									holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+								/>
+							)}
 						/>
-					)}
-				/>
 
-				<TaskSection
-					title="Completed"
-					items={completedCards}
-					isCompleted={true}
-					emptyMessage="No completed cards yet."
-					completedMessage="No completed cards yet."
-					renderItem={(card: BirthdayCard) => (
-						<HolidayCard
-							key={card.id}
-							card={card as any}
-							onToggle={handleToggleCard}
-							onEdit={(card) => {
-								handleEditCard(card as BirthdayCard);
-								setShowForm(true);
-							}}
-							onDelete={handleDeleteCard}
-							loading={loading}
-							theme={{
-								accentColor: "#f59e0b", // Amber for Birthday
-							}}
-							borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-							gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+						<TaskSection
+							title="Sent Cards"
+							items={completedCards}
+							isCompleted={true}
+							emptyMessage="No cards sent yet."
+							completedMessage="No sent cards to display."
+							renderItem={(card) => (
+								<MailCard
+									key={card.id}
+									card={card}
+									onToggleCompletion={handleToggleCompletion}
+									onEditCard={handleEditCard}
+									onDeleteCard={handleDeleteCard}
+									holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+								/>
+							)}
 						/>
-					)}
-				/>
+					</div>
+				)}
 			</main>
 
 			{/* Form Modal */}
 			<FormModal
 				isOpen={showForm}
-				title={editingCard ? "Edit Card" : "Add New Card"}
-				fields={getFormConfig("cards", editingCard ? "edit" : "add").fields}
-				initialValues={
-					editingCard
-						? {
-								recipient: editingCard.recipient,
-								message: editingCard.message,
-								notes: editingCard.notes || "",
-								priority: editingCard.priority,
-						  }
-						: {}
-				}
+				title="Add New Card"
+				fields={formFields}
 				onSubmit={handleAddCard}
 				onClose={closeForm}
-				loading={loading}
-				submitText={
-					loading
-						? editingCard
-							? "Updating..."
-							: "Adding..."
-						: editingCard
-						? "Update Card"
-						: "Add Card"
-				}
+				submitText="Add Card"
 				cancelText="Cancel"
-				cardClassName="card"
+				cardClassName="card card-valentines"
 				submitButtonColor="#f59e0b"
 				showAddressBook={true}
 				contacts={contacts}
-				onAddressBookSelect={(contact) => {
-					// The FormModal will handle the form values internally
-				}}
 			/>
 
-			{/* Delete Confirmation Modal */}
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Card"
+				fields={formFields}
+				initialValues={cardToEdit}
+				onSubmit={handleEditSubmit}
+				onClose={() => {
+					setShowEditModal(false);
+					setCardToEdit(null);
+				}}
+				submitText="Update Card"
+				cancelText="Cancel"
+				cardClassName="card card-valentines"
+				submitButtonColor="#f59e0b"
+			/>
+
+			{/* Delete Modal */}
 			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("cards")}
+				isOpen={showDeleteModal}
+				title="Delete Card"
+				itemName={cardToDelete?.recipient}
 				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={loading}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setCardToDelete(null);
+				}}
+				cardClassName="card card-valentines"
+				confirmButtonColor="#f59e0b"
 			/>
 
 			{/* Sort Modal */}
@@ -287,14 +334,16 @@ export default function BirthdayCardsPage() {
 				sortBy={sortBy}
 				onSortChange={setSortBy}
 				sortOptions={[
-					{ value: "none", label: "None" },
 					{ value: "recipient", label: "Recipient" },
+					{ value: "completed", label: "Completion Status" },
 					{ value: "message", label: "Message" },
-					{ value: "priority", label: "Priority" },
-					{ value: "date-created", label: "Date Created" },
 				]}
 				title="Sort Cards"
 			/>
+
+			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
+				&copy; {new Date().getFullYear()} Next Holiday
+			</footer>
 		</div>
 	);
 }

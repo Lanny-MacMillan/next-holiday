@@ -18,6 +18,11 @@ const CreateBudgetSchema = z.object({
 	endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD format
 });
 
+// Validation schema
+const FetchBudgetsSchema = z.object({
+	holidayIds: z.array(z.string().min(1)),
+});
+
 // GET /api/budgets - List budgets
 export async function GET(request: NextRequest) {
 	try {
@@ -74,76 +79,118 @@ export async function GET(request: NextRequest) {
 	}
 }
 
-// POST /api/budgets - Create new budget
+// POST /api/budgets - Handle both creating and fetching budgets
 export async function POST(request: NextRequest) {
 	try {
 		const user = await requireAuth(request);
-
-		// Parse and validate request body
 		const body = await request.json();
-		const validation = CreateBudgetSchema.safeParse(body);
 
-		if (!validation.success) {
-			return badRequest(validation.error.issues);
-		}
+		// Check if this is a fetch request (has holidayIds array)
+		if (body.holidayIds && Array.isArray(body.holidayIds)) {
+			// This is a fetch request
+			const validation = FetchBudgetsSchema.safeParse(body);
 
-		const { holidayId, totalBudget, startDate, endDate, ...data } =
-			validation.data;
+			if (!validation.success) {
+				return badRequest(validation.error.issues);
+			}
 
-		// Get holiday to check account access
-		const holiday = await prisma.holiday.findUnique({
-			where: { id: holidayId },
-			select: { accountId: true },
-		});
+			const { holidayIds } = validation.data;
 
-		if (!holiday) {
-			return notFound("Holiday not found");
-		}
-
-		// Check account access
-		await requireAccountAccess(holiday.accountId, user.id);
-
-		// Create budget
-		const budget = await prisma.budget.create({
-			data: {
-				id: uuidv4(),
-				holidayId,
-				totalBudget: parseFloat(totalBudget),
-				spentAmount: 0,
-				remainingAmount: parseFloat(totalBudget),
-				startDate: dateOnlyToUTC(startDate),
-				endDate: dateOnlyToUTC(endDate),
-				createdBy: user.id,
-				...data,
-			},
-			include: {
-				holiday: {
-					select: {
-						id: true,
-						name: true,
-						holidayType: true,
+			// Fetch budgets with transactions for spent amount calculation
+			const budgets = await prisma.budget.findMany({
+				where: {
+					holidayId: {
+						in: holidayIds,
 					},
 				},
-				creator: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
+				include: {
+					transactions: true,
+				},
+			});
+
+			// Transform to match our Budget interface
+			const transformedBudgets = budgets.map((budget) => {
+				// Calculate spent amount from transactions
+				const spentAmount = budget.transactions.reduce(
+					(sum, transaction) => sum + parseFloat(transaction.amount.toString()),
+					0
+				);
+
+				return {
+					holidayId: budget.holidayId,
+					targetAmount: parseFloat(budget.totalBudget.toString()),
+					spentAmount,
+					updatedAt: budget.updatedAt.toISOString(),
+				};
+			});
+
+			return ok(transformedBudgets);
+		} else {
+			// This is a create request
+			const validation = CreateBudgetSchema.safeParse(body);
+
+			if (!validation.success) {
+				return badRequest(validation.error.issues);
+			}
+
+			const { holidayId, totalBudget, startDate, endDate, ...data } =
+				validation.data;
+
+			// Get holiday to check account access
+			const holiday = await prisma.holiday.findUnique({
+				where: { id: holidayId },
+				select: { accountId: true },
+			});
+
+			if (!holiday) {
+				return notFound("Holiday not found");
+			}
+
+			// Check account access
+			await requireAccountAccess(holiday.accountId, user.id);
+
+			// Create budget
+			const budget = await prisma.budget.create({
+				data: {
+					id: uuidv4(),
+					holidayId,
+					totalBudget: parseFloat(totalBudget),
+					spentAmount: 0,
+					remainingAmount: parseFloat(totalBudget),
+					startDate: dateOnlyToUTC(startDate),
+					endDate: dateOnlyToUTC(endDate),
+					createdBy: user.id,
+					...data,
+				},
+				include: {
+					holiday: {
+						select: {
+							id: true,
+							name: true,
+							holidayType: true,
+						},
+					},
+					creator: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+						},
 					},
 				},
-			},
-		});
+			});
 
-		// Transform date fields to strings for API response
-		const transformedBudget = {
-			...budget,
-			startDate: toDateOnlyString(budget.startDate),
-			endDate: toDateOnlyString(budget.endDate),
-		};
+			// Transform date fields to strings for API response
+			const transformedBudget = {
+				...budget,
+				startDate: toDateOnlyString(budget.startDate),
+				endDate: toDateOnlyString(budget.endDate),
+			};
 
-		return created(toPlain(transformedBudget));
+			return created(toPlain(transformedBudget));
+		}
 	} catch (error) {
-		console.error("Error creating budget:", error);
-		return serverError("Failed to create budget");
+		console.error("Error in budgets API:", error);
+		return serverError("Failed to process budget request");
 	}
 }

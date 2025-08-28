@@ -1,10 +1,17 @@
 "use client";
 
 import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetTasksQuery,
+} from "@/store/api";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
@@ -31,9 +38,27 @@ const subsections = [
 ];
 
 export default function ChristmasPage() {
-	const cards = useAppSelector((state: any) => state.cards.cards);
-	const gifts = useAppSelector((state: any) => state.giftList.gifts);
-	const tasks = useAppSelector((state: any) => state.tasks.tasks);
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
+
+	// Get holiday ID for Christmas
+	const holidayId = getHolidayIdFromRoute("/christmas", holidayPreferences);
+
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	// DataInitializer component handles data fetching
 	// No need to fetch here as it's already handled globally

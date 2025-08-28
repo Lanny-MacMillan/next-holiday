@@ -1,7 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { api } from "./api";
 import addressBookReducer from "./slices/addressBookSlice";
+import budgetsReducer from "./slices/budgetsSlice";
 import cardsReducer from "./slices/cardsSlice";
 import giftListReducer from "./slices/giftListSlice";
+import homeReducer from "./slices/homeSlice";
 import tasksReducer from "./slices/tasksSlice";
 import userReducer from "./slices/userSlice";
 import themeReducer from "./slices/themeSlice";
@@ -15,7 +18,7 @@ import hanukkahCountdownReducer from "./slices/hanukkah/hanukkahCountdownSlice";
 import kwanzaaGiftListReducer from "./slices/kwanzaa/kwanzaaGiftListSlice";
 import kwanzaaTasksReducer from "./slices/kwanzaa/kwanzaaTasksSlice";
 import kwanzaaCountdownReducer from "./slices/kwanzaa/kwanzaaCountdownSlice";
-import newYearGiftListReducer from "./slices/new-year/newYearGiftListSlice";
+
 import newYearTasksReducer from "./slices/new-year/newYearTasksSlice";
 import newYearCountdownReducer from "./slices/new-year/newYearCountdownSlice";
 import valentinesGiftListReducer from "./slices/valentines/valentinesGiftListSlice";
@@ -55,7 +58,6 @@ import graduationCardsReducer from "./slices/graduation/graduationCardsSlice";
 import graduationAddressBookReducer from "./slices/graduation/graduationAddressBookSlice";
 import graduationGuestListReducer from "./slices/graduation/graduationGuestListSlice";
 import babyShowerGiftListReducer from "./slices/baby-shower/babyShowerGiftListSlice";
-import babyShowerTasksReducer from "./slices/baby-shower/babyShowerTasksSlice";
 import babyShowerAddressBookReducer from "./slices/baby-shower/babyShowerAddressBookSlice";
 import babyShowerGuestListReducer from "./slices/baby-shower/babyShowerGuestListSlice";
 import christmasGuestListReducer from "./slices/christmas/christmasGuestListSlice";
@@ -72,6 +74,7 @@ import fathersDayCountdownReducer from "./slices/fathers-day/fathersDayCountdown
 import mothersDayCountdownReducer from "./slices/mothers-day/mothersDayCountdownSlice";
 import christmasCountdownReducer from "./slices/christmas/christmasCountdownSlice";
 import userPreferencesReducer from "./slices/userPreferencesSlice";
+import countdownTimerReducer from "./slices/countdownTimerSlice";
 
 // Check if we should disable serializable checks in development
 const shouldDisableSerializableCheck =
@@ -80,9 +83,12 @@ const shouldDisableSerializableCheck =
 
 export const store = configureStore({
 	reducer: {
+		[api.reducerPath]: api.reducer,
 		addressBook: addressBookReducer,
+		budgets: budgetsReducer,
 		cards: cardsReducer,
 		giftList: giftListReducer,
+		home: homeReducer,
 		tasks: tasksReducer,
 		user: userReducer,
 		theme: themeReducer,
@@ -95,7 +101,7 @@ export const store = configureStore({
 		kwanzaaGiftList: kwanzaaGiftListReducer,
 		kwanzaaTasks: kwanzaaTasksReducer,
 		kwanzaaCountdown: kwanzaaCountdownReducer,
-		newYearGiftList: newYearGiftListReducer,
+
 		newYearTasks: newYearTasksReducer,
 		newYearCountdown: newYearCountdownReducer,
 		valentinesGiftList: valentinesGiftListReducer,
@@ -135,7 +141,6 @@ export const store = configureStore({
 		graduationAddressBook: graduationAddressBookReducer,
 		graduationGuestList: graduationGuestListReducer,
 		babyShowerGiftList: babyShowerGiftListReducer,
-		babyShowerTasks: babyShowerTasksReducer,
 		babyShowerAddressBook: babyShowerAddressBookReducer,
 		babyShowerGuestList: babyShowerGuestListReducer,
 		christmasGuestList: christmasGuestListReducer,
@@ -153,6 +158,7 @@ export const store = configureStore({
 		christmasCountdown: christmasCountdownReducer,
 		userPreferences: userPreferencesReducer,
 		holidayPreferences: holidayPreferencesReducer,
+		countdownTimer: countdownTimerReducer,
 	},
 	middleware: (getDefaultMiddleware) => {
 		const middleware = getDefaultMiddleware({
@@ -192,7 +198,7 @@ export const store = configureStore({
 			});
 		}
 
-		return middleware;
+		return middleware.concat(api.middleware);
 	},
 	// Enable Redux DevTools in development
 	devTools: process.env.NODE_ENV !== "production",

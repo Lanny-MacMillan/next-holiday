@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
 		// Transform to preferences format
 		const preferences = holidays.map((holiday) => ({
 			holiday: holiday.holidayType,
+			holidayId: holiday.id,
 			budget: holiday.budgets[0]?.totalBudget
 				? parseFloat(holiday.budgets[0].totalBudget.toString())
 				: undefined,

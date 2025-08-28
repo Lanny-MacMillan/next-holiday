@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchValentinesGifts,
-	addValentinesGift,
-	updateValentinesGift,
-	deleteValentinesGift,
-	toggleValentinesGiftCompletion,
-	ValentinesGift,
-} from "@/store/slices/valentines/valentinesGiftListSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useGetGiftsQuery,
+	useUpdateGiftMutation,
+	useEditGiftMutation,
+	useDeleteGiftMutation,
+} from "@/store/api";
+import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -25,94 +25,184 @@ type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function ValentinesGiftListPage() {
 	const dispatch = useAppDispatch();
-	const { gifts, loading, error, initialized } = useAppSelector(
-		(state: any) => state.valentinesGiftList
-	);
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const {
+		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
+		auth0User,
+	} = useFormModalMutation();
+
+	// Fetch gifts using RTK Query
+	const {
+		data: gifts = [],
+		isLoading: loading,
+		error,
+		isSuccess: initialized,
+	} = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
+	// Update gift mutation
+	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+
+	// Edit and delete mutations
+	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
+	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [showFormModal, setShowFormModal] = useState(false);
-	const [showEditModal, setShowEditModal] = useState(false);
-	const [selectedGift, setSelectedGift] = useState<ValentinesGift | null>(null);
-	const [giftToDelete, setGiftToDelete] = useState<string | null>(null);
+	const [selectedGift, setSelectedGift] = useState<any>(null);
+	const [giftToDelete, setGiftToDelete] = useState<any>(null);
+
+	// Get home data to check if contacts are available
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
 
 	useEffect(() => {
-		// Fetch gifts and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchValentinesGifts());
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
 		}
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch, homeInitialized]);
 
-	const handleAddGift = (formData: Record<string, any>) => {
-		const newGift: Omit<ValentinesGift, "id" | "createdAt" | "updatedAt"> = {
-			name: formData.name,
-			description: formData.description || undefined,
-			price: parseFloat(formData.price) || 0,
-			recipient: formData.recipient,
-			isCompleted: false,
-			store: formData.store || undefined,
-			productLink: formData.productLink || undefined,
-			notes: formData.notes || undefined,
-		};
+	async function handleAddGift(values: Record<string, any>) {
+		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+		if (!holidayId || !mutation) return;
 
-		dispatch(addValentinesGift(newGift));
-		setShowFormModal(false);
-	};
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await mutation({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error creating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error creating gift. Please try again.");
+			}
+		}
+	}
 
-	const handleEditGift = (formData: Record<string, any>) => {
-		if (!selectedGift) return;
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !holidayId) return;
 
-		const updatedGift: Omit<ValentinesGift, "id" | "createdAt" | "updatedAt"> =
-			{
-				name: formData.name,
-				description: formData.description || undefined,
-				price: parseFloat(formData.price) || 0,
-				recipient: formData.recipient,
-				isCompleted: formData.isCompleted || false,
-				store: formData.store || undefined,
-				productLink: formData.productLink || undefined,
-				notes: formData.notes || undefined,
-			};
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			await editGift({
+				holidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
+	}
 
-		dispatch(
-			updateValentinesGift({
-				id: selectedGift.id,
-				...updatedGift,
-				createdAt: selectedGift.createdAt,
-				updatedAt: new Date().toISOString(),
-			})
-		);
-		setShowEditModal(false);
-		setSelectedGift(null);
-	};
+	async function handleToggleGift(giftId: string) {
+		if (!holidayId) return;
 
-	const handleToggleGift = (giftId: string) => {
-		dispatch(toggleValentinesGiftCompletion(giftId));
-	};
+		try {
+			// Find the current gift to get its completion status
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (!currentGift) return;
 
-	const handleDeleteGift = (giftId: string) => {
-		setGiftToDelete(giftId);
+			// Toggle the completion status
+			const newIsCompleted = !currentGift.isCompleted;
+
+			// Update the gift in the database
+			await updateGift({
+				holidayId: holidayId || "",
+				giftId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// The UI will automatically update due to RTK Query cache invalidation
+		} catch (error) {
+			console.error("Error toggling gift:", error);
+			// Handle error (could show a toast notification)
+		}
+	}
+
+	async function handleDeleteGift(gift: any) {
+		setGiftToDelete(gift);
 		setShowDeleteModal(true);
-	};
+	}
 
-	const confirmDelete = () => {
-		if (giftToDelete) {
-			dispatch(deleteValentinesGift(giftToDelete));
+	async function confirmDelete() {
+		if (!giftToDelete || !holidayId) return;
+
+		try {
+			await deleteGift({
+				holidayId,
+				giftId: giftToDelete.id,
+				auth0User,
+			}).unwrap();
+			setShowDeleteModal(false);
+			setGiftToDelete(null);
+		} catch (error) {
+			console.error("Error deleting gift:", error);
 		}
+	}
+
+	function cancelDelete() {
 		setShowDeleteModal(false);
 		setGiftToDelete(null);
-	};
+	}
 
-	const handleEditGiftClick = (gift: ValentinesGift) => {
+	async function handleEditGift(gift: any) {
 		setSelectedGift(gift);
-		setShowEditModal(true);
+		setShowFormModal(true);
+	}
+
+	function openForm() {
+		setShowFormModal(true);
+		setSelectedGift(null);
+	}
+
+	function closeForm() {
+		setShowFormModal(false);
+		setSelectedGift(null);
+	}
+
+	// Initial values for editing
+	const getInitialValues = () => {
+		if (!selectedGift) return {};
+
+		return {
+			recipient: selectedGift.recipient || "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price.toString(),
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
+		};
 	};
 
-	const sortGifts = (giftsToSort: ValentinesGift[]): ValentinesGift[] => {
+	function sortGifts(giftsToSort: any[]): any[] {
 		switch (sortBy) {
 			case "recipient":
 				return [...giftsToSort].sort((a, b) =>
@@ -131,7 +221,7 @@ export default function ValentinesGiftListPage() {
 			default:
 				return giftsToSort;
 		}
-	};
+	}
 
 	if (loading && !initialized) {
 		return (
@@ -148,24 +238,24 @@ export default function ValentinesGiftListPage() {
 	const incompleteGifts = sortedGifts.filter((gift) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift) => gift.isCompleted);
 
+	// Form fields configuration
 	const formFields = [
 		{
-			id: "name",
+			id: "recipient",
+			type: "text" as const,
+			placeholder: "Recipient (select from address book)*",
+			required: true,
+		},
+		{
+			id: "giftName",
 			type: "text" as const,
 			placeholder: "Gift Name*",
 			required: true,
 		},
 		{
-			id: "recipient",
-			type: "text" as const,
-			placeholder: "Recipient*",
-			required: true,
-		},
-		{
 			id: "description",
-			type: "textarea" as const,
+			type: "text" as const,
 			placeholder: "Description",
-			rows: 2,
 		},
 		{
 			id: "price",
@@ -173,29 +263,54 @@ export default function ValentinesGiftListPage() {
 			placeholder: "Price",
 			step: "0.01",
 		},
-		{ id: "store", type: "text" as const, placeholder: "Store" },
 		{
-			id: "productLink",
+			id: "store",
+			type: "text" as const,
+			placeholder: "Store",
+		},
+		{
+			id: "product_link",
 			type: "url" as const,
 			placeholder: "Product Link (optional)",
 		},
-		{ id: "notes", type: "textarea" as const, placeholder: "Notes", rows: 2 },
+		{
+			id: "notes",
+			type: "textarea" as const,
+			placeholder: "Notes",
+			rows: 2,
+		},
 	];
 
-	const renderGiftItem = (gift: ValentinesGift) => (
+	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
 			gift={gift}
-			isCompleted={gift.isCompleted}
+			isCompleted={false}
 			onToggle={handleToggleGift}
-			onEdit={handleEditGiftClick}
-			onDelete={handleDeleteGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={loading}
 			theme={{
-				accentColor: "#ec4899",
-				hoverColor: "hover:bg-pink-50 dark:hover:bg-pink-900/20",
+				accentColor: "#ec4899", // Pink for Valentine's Day
 			}}
-			borderColor="#ec4899"
+			borderColor="rgb(var(--color-pink-500))" // Pink border for Valentine's Day
+			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+		/>
+	);
+
+	const renderCompletedGiftItem = (gift: any) => (
+		<GiftCardItem
+			key={gift.id}
+			gift={gift}
+			isCompleted={true}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={loading}
+			theme={{
+				accentColor: "#ec4899", // Pink for Valentine's Day
+			}}
+			borderColor="rgb(var(--color-pink-500))" // Pink border for Valentine's Day
 			gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 		/>
 	);
@@ -209,22 +324,25 @@ export default function ValentinesGiftListPage() {
 				sortTitle="Sort gifts"
 				description="Keep track of gift ideas and purchases!"
 				holidayColor="pink-500"
-				error={error}
+				error={error ? "Error loading gifts" : undefined}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				<BudgetDisplay
-					holiday="Valentine's Day"
-					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
-				/>
+				{holidayId && (
+					<BudgetDisplay
+						holiday="Valentine's Day"
+						holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+						holidayId={holidayId}
+					/>
+				)}
+				{!holidayId && (
+					<div className="text-center text-gray-500 p-4">
+						Loading budget information...
+					</div>
+				)}
 
-				<AddButton
-					title="Gift"
-					onClick={() => setShowFormModal(true)}
-					color="pink"
-					disabled={loading}
-				/>
+				<AddButton title="Gift" onClick={openForm} color="pink" />
 
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -260,50 +378,22 @@ export default function ValentinesGiftListPage() {
 				/>
 			</main>
 
-			{/* Form Modal for adding new gifts */}
+			{/* Form Modal */}
 			<FormModal
 				isOpen={showFormModal}
-				title="Add New Gift"
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
 				fields={formFields}
-				onSubmit={handleAddGift}
-				onClose={() => setShowFormModal(false)}
-				loading={loading}
-				submitText="Add Gift"
-				cardClassName="card card-valentines"
+				initialValues={getInitialValues()}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
+				onClose={closeForm}
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
+				cancelText="Cancel"
+				cardClassName="card"
 				submitButtonColor="#ec4899"
 				showAddressBook={true}
 				contacts={contacts}
 			/>
-
-			{/* Edit Modal for editing gifts */}
-			{selectedGift && (
-				<FormModal
-					isOpen={showEditModal}
-					title="Edit Gift"
-					fields={formFields}
-					initialValues={{
-						name: selectedGift.name,
-						recipient: selectedGift.recipient,
-						description: selectedGift.description || "",
-						price: selectedGift.price.toString(),
-						store: selectedGift.store || "",
-						productLink: selectedGift.productLink || "",
-						notes: selectedGift.notes || "",
-						isCompleted: selectedGift.isCompleted,
-					}}
-					onSubmit={handleEditGift}
-					onClose={() => {
-						setShowEditModal(false);
-						setSelectedGift(null);
-					}}
-					loading={loading}
-					submitText="Save Changes"
-					cardClassName="card card-valentines"
-					submitButtonColor="#ec4899"
-					showAddressBook={true}
-					contacts={contacts}
-				/>
-			)}
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
@@ -315,7 +405,7 @@ export default function ValentinesGiftListPage() {
 					setShowDeleteModal(false);
 					setGiftToDelete(null);
 				}}
-				loading={loading}
+				loading={deleteLoading}
 				cardClassName="card card-valentines"
 				confirmButtonColor="#ec4899"
 			/>

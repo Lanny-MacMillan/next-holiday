@@ -1,0 +1,39 @@
+export interface HomeData {
+	user: {
+		id: string;
+		email?: string | null;
+		name?: string | null;
+		picture?: string | null;
+	} | null;
+	account: {
+		id: string;
+		name: string;
+		owner: {
+			id: string;
+			name: string | null;
+			email: string | null;
+		};
+	} | null;
+	holidayPreferences: Array<{
+		holiday: string;
+		holidayId: string;
+		budget?: number;
+		countdownTimer?: string;
+	}> | null;
+	contacts: Array<{
+		id: string;
+		name: string;
+		email?: string | null;
+		phone?: string | null;
+		streetAddress?: string | null;
+		city?: string | null;
+		state?: string | null;
+		postalCode?: string | null;
+		relationship?: string | null;
+		notes?: string | null;
+		createdAt: Date;
+		updatedAt: Date;
+	}> | null;
+	needsUserSetup: boolean;
+	needsHolidaySelection: boolean;
+}

@@ -25,9 +25,9 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-green-400 dark:bg-green-500",
 		},
 		getProgress: (state) => {
-			const cards = state.cards.cards;
-			const gifts = state.giftList.gifts;
-			const tasks = state.tasks.tasks;
+			const cards = state.cards?.cards || [];
+			const gifts = state.giftList?.gifts || [];
+			const tasks = state.tasks?.tasks || [];
 
 			const totalItems = cards.length + gifts.length + tasks.length;
 			const completedItems =
@@ -38,9 +38,9 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const cards = state.cards.cards;
-			const gifts = state.giftList.gifts;
-			const tasks = state.tasks.tasks;
+			const cards = state.cards?.cards || [];
+			const gifts = state.giftList?.gifts || [];
+			const tasks = state.tasks?.tasks || [];
 
 			return (
 				cards.filter((card: any) => card.isCompleted).length +
@@ -49,9 +49,9 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const cards = state.cards.cards;
-			const gifts = state.giftList.gifts;
-			const tasks = state.tasks.tasks;
+			const cards = state.cards?.cards || [];
+			const gifts = state.giftList?.gifts || [];
+			const tasks = state.tasks?.tasks || [];
 
 			return cards.length + gifts.length + tasks.length;
 		},
@@ -67,8 +67,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-blue-400 dark:bg-blue-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.hanukkahGiftList.gifts;
-			const tasks = state.hanukkahTasks.tasks;
+			const gifts = state.hanukkahGiftList?.gifts || [];
+			const tasks = state.hanukkahTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -78,8 +78,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.hanukkahGiftList.gifts;
-			const tasks = state.hanukkahTasks.tasks;
+			const gifts = state.hanukkahGiftList?.gifts || [];
+			const tasks = state.hanukkahTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -87,8 +87,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.hanukkahGiftList.gifts;
-			const tasks = state.hanukkahTasks.tasks;
+			const gifts = state.hanukkahGiftList?.gifts || [];
+			const tasks = state.hanukkahTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -104,8 +104,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-red-400 dark:bg-red-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.kwanzaaGiftList.gifts;
-			const tasks = state.kwanzaaTasks.tasks;
+			const gifts = state.kwanzaaGiftList?.gifts || [];
+			const tasks = state.kwanzaaTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -115,8 +115,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.kwanzaaGiftList.gifts;
-			const tasks = state.kwanzaaTasks.tasks;
+			const gifts = state.kwanzaaGiftList?.gifts || [];
+			const tasks = state.kwanzaaTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -124,8 +124,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.kwanzaaGiftList.gifts;
-			const tasks = state.kwanzaaTasks.tasks;
+			const gifts = state.kwanzaaGiftList?.gifts || [];
+			const tasks = state.kwanzaaTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -141,8 +141,10 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-amber-400 dark:bg-amber-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.newYearGiftList.gifts;
-			const tasks = state.newYearTasks.tasks;
+			// Use RTK Query data
+			const gifts =
+				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
+			const tasks = state.newYearTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -152,8 +154,10 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.newYearGiftList.gifts;
-			const tasks = state.newYearTasks.tasks;
+			// Use RTK Query data
+			const gifts =
+				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
+			const tasks = state.newYearTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -161,8 +165,10 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.newYearGiftList.gifts;
-			const tasks = state.newYearTasks.tasks;
+			// Use RTK Query data
+			const gifts =
+				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
+			const tasks = state.newYearTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -178,8 +184,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-pink-400 dark:bg-pink-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.valentinesGiftList.gifts;
-			const tasks = state.valentinesTasks.tasks;
+			const gifts = state.valentinesGiftList?.gifts || [];
+			const tasks = state.valentinesTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -189,8 +195,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.valentinesGiftList.gifts;
-			const tasks = state.valentinesTasks.tasks;
+			const gifts = state.valentinesGiftList?.gifts || [];
+			const tasks = state.valentinesTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -198,8 +204,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.valentinesGiftList.gifts;
-			const tasks = state.valentinesTasks.tasks;
+			const gifts = state.valentinesGiftList?.gifts || [];
+			const tasks = state.valentinesTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -215,8 +221,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-purple-400 dark:bg-purple-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.easterGiftList.gifts;
-			const tasks = state.easterTasks.tasks;
+			const gifts = state.easterGiftList?.gifts || [];
+			const tasks = state.easterTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -226,8 +232,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.easterGiftList.gifts;
-			const tasks = state.easterTasks.tasks;
+			const gifts = state.easterGiftList?.gifts || [];
+			const tasks = state.easterTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -235,8 +241,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.easterGiftList.gifts;
-			const tasks = state.easterTasks.tasks;
+			const gifts = state.easterGiftList?.gifts || [];
+			const tasks = state.easterTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -252,8 +258,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-orange-400 dark:bg-orange-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.halloweenGiftList.gifts;
-			const tasks = state.halloweenTasks.tasks;
+			const gifts = state.halloweenGiftList?.gifts || [];
+			const tasks = state.halloweenTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -263,8 +269,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.halloweenGiftList.gifts;
-			const tasks = state.halloweenTasks.tasks;
+			const gifts = state.halloweenGiftList?.gifts || [];
+			const tasks = state.halloweenTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -272,8 +278,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.halloweenGiftList.gifts;
-			const tasks = state.halloweenTasks.tasks;
+			const gifts = state.halloweenGiftList?.gifts || [];
+			const tasks = state.halloweenTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -289,8 +295,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-amber-600 dark:bg-amber-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.thanksgivingGiftList.gifts;
-			const tasks = state.thanksgivingTasks.tasks;
+			const gifts = state.thanksgivingGiftList?.gifts || [];
+			const tasks = state.thanksgivingTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -300,8 +306,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.thanksgivingGiftList.gifts;
-			const tasks = state.thanksgivingTasks.tasks;
+			const gifts = state.thanksgivingGiftList?.gifts || [];
+			const tasks = state.thanksgivingTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -309,8 +315,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.thanksgivingGiftList.gifts;
-			const tasks = state.thanksgivingTasks.tasks;
+			const gifts = state.thanksgivingGiftList?.gifts || [];
+			const tasks = state.thanksgivingTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -326,8 +332,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-pink-400 dark:bg-pink-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.mothersDayGiftList.gifts;
-			const tasks = state.mothersDayTasks.tasks;
+			const gifts = state.mothersDayGiftList?.gifts || [];
+			const tasks = state.mothersDayTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -337,8 +343,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.mothersDayGiftList.gifts;
-			const tasks = state.mothersDayTasks.tasks;
+			const gifts = state.mothersDayGiftList?.gifts || [];
+			const tasks = state.mothersDayTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -346,8 +352,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.mothersDayGiftList.gifts;
-			const tasks = state.mothersDayTasks.tasks;
+			const gifts = state.mothersDayGiftList?.gifts || [];
+			const tasks = state.mothersDayTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -363,8 +369,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-blue-400 dark:bg-blue-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.fathersDayGiftList.gifts;
-			const tasks = state.fathersDayTasks.tasks;
+			const gifts = state.fathersDayGiftList?.gifts || [];
+			const tasks = state.fathersDayTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -374,8 +380,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.fathersDayGiftList.gifts;
-			const tasks = state.fathersDayTasks.tasks;
+			const gifts = state.fathersDayGiftList?.gifts || [];
+			const tasks = state.fathersDayTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -383,8 +389,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.fathersDayGiftList.gifts;
-			const tasks = state.fathersDayTasks.tasks;
+			const gifts = state.fathersDayGiftList?.gifts || [];
+			const tasks = state.fathersDayTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -400,7 +406,7 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-red-400 dark:bg-red-500",
 		},
 		getProgress: (state) => {
-			const tasks = state.fourthOfJulyTasks.tasks;
+			const tasks = state.fourthOfJulyTasks?.tasks || [];
 
 			const totalItems = tasks.length;
 			const completedItems = tasks.filter(
@@ -410,12 +416,12 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const tasks = state.fourthOfJulyTasks.tasks;
+			const tasks = state.fourthOfJulyTasks?.tasks || [];
 
 			return tasks.filter((task: any) => task.isCompleted).length;
 		},
 		getTotalItems: (state) => {
-			const tasks = state.fourthOfJulyTasks.tasks;
+			const tasks = state.fourthOfJulyTasks?.tasks || [];
 
 			return tasks.length;
 		},
@@ -431,10 +437,10 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-amber-400 dark:bg-amber-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.birthdayGiftList.gifts;
-			const tasks = state.birthdayTasks.tasks;
-			const cards = state.birthdayCards.cards;
-			const contacts = state.birthdayAddressBook.contacts;
+			const gifts = state.birthdayGiftList?.gifts || [];
+			const tasks = state.birthdayTasks?.tasks || [];
+			const cards = state.birthdayCards?.cards || [];
+			const contacts = state.birthdayAddressBook?.contacts || [];
 
 			const totalItems =
 				gifts.length + tasks.length + cards.length + contacts.length;
@@ -446,9 +452,9 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.birthdayGiftList.gifts;
-			const tasks = state.birthdayTasks.tasks;
-			const cards = state.birthdayCards.cards;
+			const gifts = state.birthdayGiftList?.gifts || [];
+			const tasks = state.birthdayTasks?.tasks || [];
+			const cards = state.birthdayCards?.cards || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -457,10 +463,10 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.birthdayGiftList.gifts;
-			const tasks = state.birthdayTasks.tasks;
-			const cards = state.birthdayCards.cards;
-			const contacts = state.birthdayAddressBook.contacts;
+			const gifts = state.birthdayGiftList?.gifts || [];
+			const tasks = state.birthdayTasks?.tasks || [];
+			const cards = state.birthdayCards?.cards || [];
+			const contacts = state.birthdayAddressBook?.contacts || [];
 
 			return gifts.length + tasks.length + cards.length + contacts.length;
 		},
@@ -476,8 +482,8 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-pink-400 dark:bg-pink-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.anniversaryGiftList.gifts;
-			const tasks = state.anniversaryTasks.tasks;
+			const gifts = state.anniversaryGiftList?.gifts || [];
+			const tasks = state.anniversaryTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
 			const completedItems =
@@ -487,8 +493,8 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.anniversaryGiftList.gifts;
-			const tasks = state.anniversaryTasks.tasks;
+			const gifts = state.anniversaryGiftList?.gifts || [];
+			const tasks = state.anniversaryTasks?.tasks || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -496,8 +502,8 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.anniversaryGiftList.gifts;
-			const tasks = state.anniversaryTasks.tasks;
+			const gifts = state.anniversaryGiftList?.gifts || [];
+			const tasks = state.anniversaryTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
 		},
@@ -513,10 +519,10 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-purple-400 dark:bg-purple-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.graduationGiftList.gifts;
-			const tasks = state.graduationTasks.tasks;
-			const cards = state.graduationCards.cards;
-			const contacts = state.graduationAddressBook.contacts;
+			const gifts = state.graduationGiftList?.gifts || [];
+			const tasks = state.graduationTasks?.tasks || [];
+			const cards = state.graduationCards?.cards || [];
+			const contacts = state.graduationAddressBook?.contacts || [];
 
 			const totalItems =
 				gifts.length + tasks.length + cards.length + contacts.length;
@@ -528,9 +534,9 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.graduationGiftList.gifts;
-			const tasks = state.graduationTasks.tasks;
-			const cards = state.graduationCards.cards;
+			const gifts = state.graduationGiftList?.gifts || [];
+			const tasks = state.graduationTasks?.tasks || [];
+			const cards = state.graduationCards?.cards || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
@@ -539,10 +545,10 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			const gifts = state.graduationGiftList.gifts;
-			const tasks = state.graduationTasks.tasks;
-			const cards = state.graduationCards.cards;
-			const contacts = state.graduationAddressBook.contacts;
+			const gifts = state.graduationGiftList?.gifts || [];
+			const tasks = state.graduationTasks?.tasks || [];
+			const cards = state.graduationCards?.cards || [];
+			const contacts = state.graduationAddressBook?.contacts || [];
 
 			return gifts.length + tasks.length + cards.length + contacts.length;
 		},
@@ -558,32 +564,26 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-cyan-400 dark:bg-cyan-500",
 		},
 		getProgress: (state) => {
-			const gifts = state.babyShowerGiftList.gifts;
-			const tasks = state.babyShowerTasks.tasks;
-			const contacts = state.babyShowerAddressBook.contacts;
+			const gifts = state.babyShowerGiftList?.gifts || [];
+			const contacts = state.babyShowerAddressBook?.contacts || [];
 
-			const totalItems = gifts.length + tasks.length + contacts.length;
-			const completedItems =
-				gifts.filter((gift: any) => gift.isCompleted).length +
-				tasks.filter((task: any) => task.isCompleted).length;
+			const totalItems = gifts.length + contacts.length;
+			const completedItems = gifts.filter(
+				(gift: any) => gift.isCompleted
+			).length;
 
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			const gifts = state.babyShowerGiftList.gifts;
-			const tasks = state.babyShowerTasks.tasks;
+			const gifts = state.babyShowerGiftList?.gifts || [];
 
-			return (
-				gifts.filter((gift: any) => gift.isCompleted).length +
-				tasks.filter((task: any) => task.isCompleted).length
-			);
+			return gifts.filter((gift: any) => gift.isCompleted).length;
 		},
 		getTotalItems: (state) => {
-			const gifts = state.babyShowerGiftList.gifts;
-			const tasks = state.babyShowerTasks.tasks;
-			const contacts = state.babyShowerAddressBook.contacts;
+			const gifts = state.babyShowerGiftList?.gifts || [];
+			const contacts = state.babyShowerAddressBook?.contacts || [];
 
-			return gifts.length + tasks.length + contacts.length;
+			return gifts.length + contacts.length;
 		},
 	},
 ];

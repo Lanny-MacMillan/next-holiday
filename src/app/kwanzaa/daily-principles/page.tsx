@@ -1,156 +1,224 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchKwanzaaTasks,
-	addKwanzaaTask,
-	updateKwanzaaTask,
-	deleteKwanzaaTask,
-	toggleKwanzaaTaskCompletion,
-	KwanzaaTask,
-} from "@/store/slices/kwanzaa/kwanzaaTasksSlice";
+import { useKwanzaaPrinciplesMutations } from "@/hooks/useKwanzaaPrinciplesMutations";
 import SortModal from "@/components/modals/SortModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import TaskSection from "@/components/common/TaskSection";
-import EventItems from "@/components/cards/event/EventItems";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import FormModal from "@/components/modals/FormModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import AddButton from "@/components/common/AddButton";
+import { getFormConfig } from "@/config/formConfigs";
+import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
-// Helper function to get day number from principle ID
-const getDayNumber = (taskId: string): number => {
-	const match = taskId.match(/principle_(\d+)/);
-	return match ? parseInt(match[1]) : 0;
-};
-
-// Helper function to get alternating color for each day
-const getDayColor = (
-	dayNumber: number
-): { themeColor: string; holidayColor: string; backgroundColor: string } => {
-	switch (dayNumber) {
-		case 1:
-			return {
-				themeColor: "black",
-				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
-			};
-		case 2:
-			return {
-				themeColor: "red",
-				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
-			};
-		case 3:
-			return {
-				themeColor: "green",
-				holidayColor: "bg-gradient-to-br from-green-400 to-green-600",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(34, 197, 94), rgb(21, 128, 61))",
-			};
-		case 4:
-			return {
-				themeColor: "black",
-				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
-			};
-		case 5:
-			return {
-				themeColor: "red",
-				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
-			};
-		case 6:
-			return {
-				themeColor: "green",
-				holidayColor: "bg-gradient-to-br from-green-400 to-green-600",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(34, 197, 94), rgb(21, 128, 61))",
-			};
-		case 7:
-			return {
-				themeColor: "black",
-				holidayColor: "bg-gradient-to-br from-gray-800 to-black",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(31, 41, 55), rgb(0, 0, 0))",
-			};
-		default:
-			return {
-				themeColor: "red",
-				holidayColor: "bg-gradient-to-br from-red-400 to-red-600",
-				backgroundColor:
-					"linear-gradient(to bottom right, rgb(239, 68, 68), rgb(220, 38, 38))",
-			};
-	}
-};
-
-// Helper function to add day prefix to title
-const addDayPrefix = (task: KwanzaaTask): KwanzaaTask => {
-	const dayNumber = getDayNumber(task.id);
-	if (dayNumber > 0) {
-		return {
-			...task,
-			title: `Day ${dayNumber} — ${task.title}`,
-		};
-	}
-	return task;
-};
+// Default Kwanzaa principles for preloading
+const defaultKwanzaaPrinciples = [
+	{
+		dayNumber: 1,
+		name: "Umoja (Unity)",
+		description: "First day of Kwanzaa - focus on unity",
+		priority: "high" as const,
+	},
+	{
+		dayNumber: 2,
+		name: "Kujichagulia (Self-Determination)",
+		description: "Second day of Kwanzaa - focus on self-determination",
+		priority: "high" as const,
+	},
+	{
+		dayNumber: 3,
+		name: "Ujima (Collective Work and Responsibility)",
+		description: "Third day of Kwanzaa - focus on collective work",
+		priority: "high" as const,
+	},
+	{
+		dayNumber: 4,
+		name: "Ujamaa (Cooperative Economics)",
+		description: "Fourth day of Kwanzaa - focus on cooperative economics",
+		priority: "high" as const,
+	},
+	{
+		dayNumber: 5,
+		name: "Nia (Purpose)",
+		description: "Fifth day of Kwanzaa - focus on purpose",
+		priority: "high" as const,
+	},
+	{
+		dayNumber: 6,
+		name: "Kuumba (Creativity)",
+		description: "Sixth day of Kwanzaa - focus on creativity",
+		priority: "high" as const,
+	},
+	{
+		dayNumber: 7,
+		name: "Imani (Faith)",
+		description: "Seventh day of Kwanzaa - focus on faith",
+		priority: "high" as const,
+	},
+];
 
 export default function DailyPrinciplesPage() {
-	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.kwanzaaTasks
-	);
+	const {
+		holidayId,
+		auth0User,
+		kwanzaaPrinciples,
+		loading,
+		error,
+		initialized,
+		createKwanzaaPrinciples,
+		updateKwanzaaPrinciples,
+		editKwanzaaPrinciples,
+		deleteKwanzaaPrinciples,
+		createKwanzaaPrinciplesState,
+		updateKwanzaaPrinciplesState,
+		editKwanzaaPrinciplesState,
+		deleteKwanzaaPrinciplesState,
+	} = useKwanzaaPrinciplesMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-		taskTitle?: string;
-	}>({
-		show: false,
-		taskId: null,
-		taskTitle: "",
-	});
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showDefaultPrinciples, setShowDefaultPrinciples] = useState(false);
+	const [editingPrinciple, setEditingPrinciple] = useState<any>(null);
+	const [principleToDelete, setPrincipleToDelete] = useState<any>(null);
 
+	// Check if default principles exist
 	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchKwanzaaTasks());
+		if (kwanzaaPrinciples.length === 0 && initialized) {
+			setShowDefaultPrinciples(true);
 		}
-	}, [dispatch, initialized]);
+	}, [kwanzaaPrinciples, initialized]);
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleKwanzaaTaskCompletion(taskId));
-	}
-
-	function handleDeleteTask(taskId: string, taskTitle?: string) {
-		setDeleteConfirm({ show: true, taskId, taskTitle });
-	}
-
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteKwanzaaTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
+	const handleToggleTask = async (taskId: string) => {
+		const task = kwanzaaPrinciples.find((t: any) => t.id === taskId);
+		if (task) {
+			try {
+				await updateKwanzaaPrinciples({
+					holidayId: holidayId || "",
+					taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			} catch (error) {
+				console.error("Failed to update principle:", error);
+			}
 		}
-	}
+	};
 
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null, taskTitle: "" });
-	}
+	const handleDeleteTask = (taskId: string) => {
+		const task = kwanzaaPrinciples.find((t: any) => t.id === taskId);
+		setPrincipleToDelete(task);
+		setShowDeleteModal(true);
+	};
 
-	function sortTasks(tasksToSort: KwanzaaTask[]): KwanzaaTask[] {
+	const confirmDelete = async () => {
+		if (principleToDelete) {
+			try {
+				await deleteKwanzaaPrinciples({
+					holidayId: holidayId || "",
+					taskId: principleToDelete.id,
+					auth0User,
+				}).unwrap();
+				setShowDeleteModal(false);
+				setPrincipleToDelete(null);
+			} catch (error) {
+				console.error("Failed to delete principle:", error);
+			}
+		}
+	};
+
+	const cancelDelete = () => {
+		setShowDeleteModal(false);
+		setPrincipleToDelete(null);
+	};
+
+	const handleAddPrinciple = async (formValues: Record<string, any>) => {
+		try {
+			await createKwanzaaPrinciples({
+				holidayId: holidayId || "",
+				payload: formValues,
+				auth0User,
+			}).unwrap();
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Failed to create principle:", error);
+		}
+	};
+
+	const addDefaultPrinciples = async () => {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const principle of defaultKwanzaaPrinciples) {
+				const payload = {
+					title: principle.name,
+					description: principle.description,
+					priority: principle.priority,
+					category: "Daily Principles",
+					isCompleted: false,
+				};
+
+				await createKwanzaaPrinciples({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+			}
+			setShowDefaultPrinciples(false);
+		} catch (error) {
+			console.error("Error adding default principles:", error);
+		}
+	};
+
+	const handleEditPrinciple = async (formValues: Record<string, any>) => {
+		if (editingPrinciple) {
+			try {
+				// Clean up the form values - convert empty strings to undefined
+				const cleanedPayload = {
+					title: formValues.title,
+					description: formValues.description || undefined,
+					priority: formValues.priority,
+					assignedTo: formValues.assignedTo || undefined,
+					dueDate: formValues.dueDate || undefined,
+				};
+
+				await editKwanzaaPrinciples({
+					holidayId: holidayId || "",
+					taskId: editingPrinciple.id,
+					payload: cleanedPayload,
+					auth0User,
+				}).unwrap();
+				setShowFormModal(false);
+				setEditingPrinciple(null);
+			} catch (error) {
+				console.error("Failed to edit principle:", error);
+			}
+		}
+	};
+
+	const openEditModal = (principle: any) => {
+		setEditingPrinciple(principle);
+		setShowFormModal(true);
+	};
+
+	const closeForm = () => {
+		setShowFormModal(false);
+		setEditingPrinciple(null);
+	};
+
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return [...tasksToSort].sort(
-					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+					(a, b) =>
+						(priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
 				);
 			case "dateDue":
 				return [...tasksToSort].sort((a, b) => {
@@ -185,53 +253,63 @@ export default function DailyPrinciplesPage() {
 		);
 	}
 
-	const principleTasks = tasks.filter(
-		(task: KwanzaaTask) => task.category === "Daily Principles"
+	const sortedTasks = sortTasks(kwanzaaPrinciples);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+
+	// Get form configuration with custom titles for Kwanzaa principles
+	const formConfig = getFormConfig(
+		"tasks",
+		editingPrinciple ? "edit" : "add",
+		editingPrinciple ? "Edit Principle" : "Add New Principle",
+		"Principle Title*",
+		editingPrinciple ? "Update Principle" : "Add Principle"
 	);
-
-	// Add day prefixes to principle tasks
-	const principleTasksWithPrefixes = principleTasks.map(addDayPrefix);
-
-	const sortedTasks = sortTasks(principleTasksWithPrefixes);
-	const incompleteTasks = sortedTasks.filter(
-		(task: KwanzaaTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: KwanzaaTask) => task.isCompleted
-	);
-
-	const renderTaskItem = (task: KwanzaaTask) => {
-		const dayNumber = getDayNumber(task.id);
-		const { themeColor, holidayColor, backgroundColor } =
-			getDayColor(dayNumber);
-
-		return (
-			<EventItems
-				key={task.id}
-				task={task}
-				onToggleTask={handleToggleTask}
-				onDeleteTask={handleDeleteTask}
-				loading={loading}
-				themeColor={themeColor}
-				holidayColor={holidayColor}
-				backgroundColor={backgroundColor}
-				gamified={true}
-			/>
-		);
-	};
+	const deleteConfig = getDeleteConfig("tasks");
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Seven Principles of Kwanzaa"
+				title="Daily Principle Tracker"
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort gifts"
-				description="Track each day's candle and reflection"
-				holidayColor="red-500"
-				error={error}
+				sortTitle="Sort Principles"
+				error={error ? "API Error" : undefined}
+				holidayColor="red-600"
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Default Principles Prompt */}
+				{showDefaultPrinciples && (
+					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+						<h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+							🕯️ Set Up Kwanzaa Principles
+						</h3>
+						<p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
+							Would you like to add the seven traditional Kwanzaa principles to
+							track daily?
+						</p>
+						<div className="flex gap-2">
+							<button
+								onClick={addDefaultPrinciples}
+								className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
+							>
+								Add Default Principles
+							</button>
+							<button
+								onClick={() => setShowDefaultPrinciples(false)}
+								className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
+							>
+								Skip
+							</button>
+						</div>
+					</div>
+				)}
+
+				<AddButton
+					title="Principle"
+					onClick={() => setShowFormModal(true)}
+					color="red"
+				/>
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -243,42 +321,201 @@ export default function DailyPrinciplesPage() {
 					)}
 				</div>
 
-				<TaskSection
-					title="Incomplete"
-					items={incompleteTasks}
-					isCompleted={false}
-					emptyMessage="All principles practiced! 🕯️✨"
-					completedMessage=""
-					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
-					borderColor="rgb(var(--color-red-500))"
-				/>
+				<div>
+					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
+						Incomplete ({incompleteTasks.length})
+					</h2>
+					<div className="card card-tasks rounded shadow">
+						{incompleteTasks.length === 0 ? (
+							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
+								All candles lit! 🕯️✨
+							</div>
+						) : (
+							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
+								{incompleteTasks.map((task: any) => (
+									<li
+										key={task.id}
+										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
+										onClick={() => handleToggleTask(task.id)}
+									>
+										<input
+											type="checkbox"
+											checked={task.isCompleted}
+											readOnly
+											className="mr-3 accent-blue-500"
+										/>
+										<div className="flex-1">
+											<div className="text-gray-900 dark:text-white">
+												{task.title}
+											</div>
+											{task.description && (
+												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+													{task.description}
+												</div>
+											)}
+											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+												<span
+													className={`px-2 py-1 rounded ${
+														task.priority === "high"
+															? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+															: task.priority === "medium"
+															? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+															: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+													}`}
+												>
+													{task.priority}
+												</span>
+												{task.assignedTo && (
+													<span>Assigned: {task.assignedTo}</span>
+												)}
+												{task.category && <span>{task.category}</span>}
+												{task.dueDate && (
+													<span>
+														Due: {new Date(task.dueDate).toLocaleDateString()}
+													</span>
+												)}
+											</div>
+										</div>
+										<div className="flex gap-2">
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													openEditModal(task);
+												}}
+												className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+												disabled={loading}
+											>
+												Edit
+											</button>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleDeleteTask(task.id);
+												}}
+												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+												disabled={loading}
+											>
+												Delete
+											</button>
+										</div>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+				</div>
 
-				<TaskSection
-					title="Completed"
-					items={completedTasks}
-					isCompleted={true}
-					emptyMessage="No completed principles yet."
-					completedMessage="No completed principles yet."
-					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
-					borderColor="rgb(var(--color-red-500))"
-				/>
+				<div>
+					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
+						Completed ({completedTasks.length})
+					</h2>
+					<div className="card card-tasks rounded shadow">
+						{completedTasks.length === 0 ? (
+							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
+								No completed tasks yet.
+							</div>
+						) : (
+							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
+								{completedTasks.map((task: any) => (
+									<li
+										key={task.id}
+										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
+										onClick={() => handleToggleTask(task.id)}
+									>
+										<input
+											type="checkbox"
+											checked={task.isCompleted}
+											readOnly
+											className="mr-3 accent-blue-500"
+										/>
+										<div className="flex-1">
+											<div className="line-through text-gray-400 dark:text-gray-500">
+												{task.title}
+											</div>
+											{task.description && (
+												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
+													{task.description}
+												</div>
+											)}
+											{task.completedDate && (
+												<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+													Completed:{" "}
+													{new Date(task.completedDate).toLocaleDateString()}
+												</div>
+											)}
+										</div>
+										<div className="flex gap-2">
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													openEditModal(task);
+												}}
+												className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+												disabled={loading}
+											>
+												Edit
+											</button>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleDeleteTask(task.id);
+												}}
+												className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
+												disabled={loading}
+											>
+												Delete
+											</button>
+										</div>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+				</div>
 			</main>
 
-			{/* Delete Confirmation Modal */}
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showFormModal}
+				title={editingPrinciple ? "Edit Principle" : "Add Principle"}
+				fields={formConfig.fields}
+				initialValues={
+					editingPrinciple
+						? {
+								title: editingPrinciple.title || "",
+								description: editingPrinciple.description || "",
+								priority: editingPrinciple.priority || "medium",
+								assignedTo: editingPrinciple.assignedTo || "",
+								dueDate: editingPrinciple.dueDate || "",
+						  }
+						: {}
+				}
+				onSubmit={editingPrinciple ? handleEditPrinciple : handleAddPrinciple}
+				onClose={closeForm}
+				loading={
+					editingPrinciple
+						? editKwanzaaPrinciplesState.isLoading
+						: createKwanzaaPrinciplesState.isLoading
+				}
+				submitText={editingPrinciple ? "Update Principle" : "Add Principle"}
+				cancelText="Cancel"
+				cardClassName="card card-tasks"
+				submitButtonColor="#dc2626"
+			/>
+
+			{/* Delete Modal */}
 			<DeleteModal
-				isOpen={deleteConfirm.show}
-				title="Confirm Delete"
-				message="Are you sure you want to delete this task? This action cannot be undone."
-				itemName={deleteConfirm.taskTitle}
+				isOpen={showDeleteModal}
+				title={deleteConfig.title}
+				message={deleteConfig.message}
+				itemName={principleToDelete?.title}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
-				cardClassName="card card-tasks"
-				confirmText="Delete"
-				cancelText="Cancel"
-				confirmButtonColor="#ef4444"
+				loading={deleteKwanzaaPrinciplesState.isLoading}
+				cardClassName={deleteConfig.cardClassName}
+				confirmText={deleteConfig.confirmText}
+				cancelText={deleteConfig.cancelText}
+				confirmButtonColor={deleteConfig.confirmButtonColor}
 			/>
 
 			{/* Sort Modal */}

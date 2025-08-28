@@ -1,34 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchNewYearGifts } from "@/store/slices/new-year/newYearGiftListSlice";
-import { fetchNewYearTasks } from "@/store/slices/new-year/newYearTasksSlice";
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useGetGiftsQuery, useGetTasksQuery } from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
-		name: "Supplies List",
-		description: "Track your party supplies and fireworks",
-		href: "/new-year/supplies-list",
-		sliceKey: "newYearGiftList",
-		category: "Supplies",
+		name: "Resolution Tracker",
+		description: "Track your New Year resolutions and goals",
+		href: "/new-year/resolution-tracker",
+		sliceKey: "tasks",
+		type: "task",
+		category: "Resolutions",
 	},
 	{
-		name: "Resolution Tracker",
-		description: "Track your New Year resolutions",
-		href: "/new-year/resolutions",
-		sliceKey: "tasks",
-		category: "Resolutions",
+		name: "Supplies List",
+		description: "Plan your party supplies and fireworks",
+		href: "/new-year/supplies",
+		sliceKey: "giftList",
+		type: "gift-list",
 	},
 	{
 		name: "Events",
 		description: "Plan your New Year events and celebrations",
 		href: "/new-year/events",
 		sliceKey: "tasks",
+		type: "task",
 		category: "Events",
 	},
 	{
@@ -36,22 +37,29 @@ const subsections = [
 		description: "Stay on top of your New Year decorations",
 		href: "/new-year/decorations",
 		sliceKey: "tasks",
+		type: "task",
 		category: "Decorations",
 	},
 ];
 
 export default function NewYearPage() {
-	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
 
-	const gifts = useAppSelector((state: any) => state.newYearGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.newYearTasks.tasks);
+	// Get holiday ID for New Year
+	const holidayId = getHolidayIdFromRoute("/new-year", holidayPreferences);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchNewYearGifts());
-		dispatch(fetchNewYearTasks());
-	}, [dispatch]);
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(
 		sliceKey: string,
@@ -66,7 +74,6 @@ export default function NewYearPage() {
 
 		switch (sliceKey) {
 			case "giftList":
-			case "newYearGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
@@ -91,7 +98,7 @@ export default function NewYearPage() {
 	}
 
 	return (
-		<div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayHeader
 				holidayName="New Year"
 				description="Plan your New Year with ease!"
@@ -99,47 +106,47 @@ export default function NewYearPage() {
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
-						const { total, completed } = getProgressData(
+						const { total, completed, progress } = getProgressData(
 							section.sliceKey,
 							section.category
 						);
 
-						// Use GiftListCard for gift list sections
-						if (section.sliceKey.includes("GiftList")) {
+						// Determine which card component to use based on type
+						if (section.type === "gift-list") {
 							return (
 								<li key={section.name}>
 									<GiftListCard
 										holiday="New Year"
 										href={section.href}
 										theme={{
-											primaryColor: "#f59e0b", // Amber for New Year
-											accentColor: "#eab308",
+											primaryColor: "#d97706", // Amber for New Year
+											accentColor: "#d97706", // Amber accent
 										}}
-										gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
+										gamifiedBackgroundColor="bg-gradient-to-br from-amber-400 to-amber-600"
+									/>
+								</li>
+							);
+						} else {
+							// Use HolidayTaskCard for tasks and other sections
+							return (
+								<li key={section.name}>
+									<HolidayTaskCard
+										holidayName="New Year"
+										sectionName={section.name}
+										description={section.description}
+										href={section.href}
+										totalItems={total}
+										completedItems={completed}
+										theme={{
+											primaryColor: "#d97706", // Amber for New Year
+											accentColor: "#d97706", // Amber accent
+											progressColor: "#d97706", // Amber for progress bar
+										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-amber-400 to-amber-600"
 									/>
 								</li>
 							);
 						}
-
-						// Use HolidayTaskCard for task sections
-						return (
-							<li key={section.name}>
-								<HolidayTaskCard
-									holidayName="New Year"
-									sectionName={section.name}
-									description={section.description}
-									href={section.href}
-									totalItems={total}
-									completedItems={completed}
-									theme={{
-										primaryColor: "#f59e0b", // Amber for New Year
-										accentColor: "#eab308",
-										progressColor: "#f59e0b",
-									}}
-									gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
-								/>
-							</li>
-						);
 					})}
 				</ul>
 			</main>

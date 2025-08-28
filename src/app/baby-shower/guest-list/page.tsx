@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchBabyShowerGuests,
-	addBabyShowerGuest,
-	updateBabyShowerGuest,
-	deleteBabyShowerGuest,
-	toggleBabyShowerGuestCompletion,
-	BabyShowerGuest,
-} from "@/store/slices/baby-shower/babyShowerGuestListSlice";
+import { useGuestMutations } from "@/hooks/useGuestMutations";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import GuestCardItem from "@/components/cards/guest/GuestCardItem";
@@ -22,13 +15,42 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { isEmptyString } from "@/utils/formValidation";
+
+interface Guest {
+	id: string;
+	name: string;
+	email?: string;
+	phone?: string;
+	address?: string;
+	rsvpStatus: "pending" | "confirmed" | "declined";
+	numberOfGuests: number; // Required for compatibility with existing components
+	notes?: string;
+	isCompleted: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
 
 export default function BabyShowerGuestListPage() {
 	const dispatch = useAppDispatch();
-	const { guests, loading, error, initialized } = useAppSelector(
-		(state: any) => state.babyShowerGuestList
-	);
+
+	// Use the guest mutations hook
+	const {
+		holidayId,
+		auth0User,
+		guests,
+		loading,
+		error,
+		initialized,
+		createGuest,
+		updateGuest,
+		editGuest,
+		deleteGuest,
+		createGuestState,
+		updateGuestState,
+		editGuestState,
+		deleteGuestState,
+	} = useGuestMutations();
+
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -39,47 +61,28 @@ export default function BabyShowerGuestListPage() {
 		guestId: null,
 	});
 	const [showForm, setShowForm] = useState(false);
-	const [editingGuest, setEditingGuest] = useState<BabyShowerGuest | null>(
-		null
-	);
+	const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
 	const [sortBy, setSortBy] = useState<string>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
-		// Fetch guests and contacts when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchBabyShowerGuests());
-		}
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
-	}, [dispatch, initialized]);
+	}, [dispatch]);
 
-	function handleAddGuest(formValues: Record<string, any>) {
-		if (isEmptyString(formValues.name) || !formValues.numberOfGuests) return;
+	async function handleAddGuest(formValues: Record<string, any>) {
+		if (
+			!formValues.name ||
+			(typeof formValues.name === "string" && !formValues.name.trim())
+		)
+			return;
+
+		if (!holidayId || !auth0User) return;
 
 		if (editingGuest) {
 			// Update existing guest
-			const updatedGuest: BabyShowerGuest = {
-				...editingGuest,
-				name: formValues.name,
-				email: formValues.email || undefined,
-				phone: formValues.phone || undefined,
-				address: formValues.address || undefined,
-				rsvpStatus: formValues.rsvpStatus as
-					| "pending"
-					| "confirmed"
-					| "declined",
-				numberOfGuests: parseInt(formValues.numberOfGuests),
-				dietaryRestrictions: formValues.dietaryRestrictions || undefined,
-				bringingGift: formValues.bringingGift || undefined,
-				notes: formValues.notes || undefined,
-			};
-			dispatch(updateBabyShowerGuest(updatedGuest));
-			setEditingGuest(null);
-		} else {
-			// Add new guest
-			const newGuest: Omit<BabyShowerGuest, "id" | "createdAt" | "updatedAt"> =
-				{
+			try {
+				const payload = {
 					name: formValues.name,
 					email: formValues.email || undefined,
 					phone: formValues.phone || undefined,
@@ -88,16 +91,41 @@ export default function BabyShowerGuestListPage() {
 						| "pending"
 						| "confirmed"
 						| "declined",
-					numberOfGuests: parseInt(formValues.numberOfGuests),
-					dietaryRestrictions: formValues.dietaryRestrictions || undefined,
-					bringingGift: formValues.bringingGift || undefined,
 					notes: formValues.notes || undefined,
-					isCompleted: false,
 				};
-			dispatch(addBabyShowerGuest(newGuest));
-		}
 
-		setShowForm(false);
+				await editGuest({
+					holidayId,
+					guestId: editingGuest.id,
+					payload,
+					auth0User,
+				}).unwrap();
+				setEditingGuest(null);
+				setShowForm(false);
+			} catch (error) {
+				console.error("Error editing guest:", error);
+			}
+		} else {
+			// Add new guest
+			try {
+				const payload = {
+					name: formValues.name,
+					email: formValues.email || undefined,
+					phone: formValues.phone || undefined,
+					address: formValues.address || undefined,
+					rsvpStatus: formValues.rsvpStatus as
+						| "pending"
+						| "confirmed"
+						| "declined",
+					notes: formValues.notes || undefined,
+				};
+
+				await createGuest({ holidayId, payload, auth0User }).unwrap();
+				setShowForm(false);
+			} catch (error) {
+				console.error("Error creating guest:", error);
+			}
+		}
 	}
 
 	function openForm() {
@@ -109,19 +137,27 @@ export default function BabyShowerGuestListPage() {
 		setEditingGuest(null);
 	}
 
-	function handleToggleGuest(guestId: string) {
-		// Find the guest and toggle their completion status
-		const guest = guests.find((g: BabyShowerGuest) => g.id === guestId);
-		if (guest) {
-			const updatedGuest = {
-				...guest,
-				isCompleted: !guest.isCompleted,
-			};
-			dispatch(updateBabyShowerGuest(updatedGuest));
+	async function handleToggleGuest(guestId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const guest = guests.find((g: Guest) => g.id === guestId);
+			if (guest) {
+				// Toggle RSVP status: if confirmed, set to pending; if pending, set to confirmed
+				const newIsCompleted = guest.rsvpStatus !== "confirmed";
+				await updateGuest({
+					holidayId,
+					guestId,
+					isCompleted: newIsCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating guest:", error);
 		}
 	}
 
-	function handleEditGuest(guest: BabyShowerGuest) {
+	function handleEditGuest(guest: Guest) {
 		setEditingGuest(guest);
 		setShowForm(true);
 	}
@@ -130,10 +166,18 @@ export default function BabyShowerGuestListPage() {
 		setDeleteConfirm({ show: true, guestId });
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.guestId) {
-			dispatch(deleteBabyShowerGuest(deleteConfirm.guestId));
-			setDeleteConfirm({ show: false, guestId: null });
+	async function confirmDelete() {
+		if (deleteConfirm.guestId && holidayId && auth0User) {
+			try {
+				await deleteGuest({
+					holidayId,
+					guestId: deleteConfirm.guestId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, guestId: null });
+			} catch (error) {
+				console.error("Error deleting guest:", error);
+			}
 		}
 	}
 
@@ -141,7 +185,7 @@ export default function BabyShowerGuestListPage() {
 		setDeleteConfirm({ show: false, guestId: null });
 	}
 
-	function sortGuests(guestsToSort: BabyShowerGuest[]): BabyShowerGuest[] {
+	function sortGuests(guestsToSort: Guest[]): Guest[] {
 		switch (sortBy) {
 			case "name":
 				return [...guestsToSort].sort((a, b) => a.name.localeCompare(b.name));
@@ -167,7 +211,7 @@ export default function BabyShowerGuestListPage() {
 		return (
 			<div className="min-h-screen baby-shower-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">Loading guests...</p>
 				</div>
 			</div>
@@ -176,15 +220,13 @@ export default function BabyShowerGuestListPage() {
 
 	const sortedGuests = sortGuests(guests);
 	const pendingGuests = sortedGuests.filter(
-		(guest: BabyShowerGuest) =>
-			!guest.isCompleted && guest.rsvpStatus !== "declined"
+		(guest: Guest) => guest.rsvpStatus === "pending"
 	);
 	const confirmedGuests = sortedGuests.filter(
-		(guest: BabyShowerGuest) =>
-			guest.isCompleted && guest.rsvpStatus !== "declined"
+		(guest: Guest) => guest.rsvpStatus === "confirmed"
 	);
 	const declinedGuests = sortedGuests.filter(
-		(guest: BabyShowerGuest) => guest.rsvpStatus === "declined"
+		(guest: Guest) => guest.rsvpStatus === "declined"
 	);
 
 	return (
@@ -194,17 +236,17 @@ export default function BabyShowerGuestListPage() {
 				backHref="/baby-shower"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
-				description="Plan your baby shower guest list with style!"
-				holidayColor="cyan-500"
-				error={error}
+				description="Keep track of your Baby Shower guests!"
+				holidayColor="pink-600"
+				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<ReservationsTracker
 					guests={guests}
 					title="Baby Shower Guest Tracker"
-					accentColor="#06b6d4"
+					accentColor="#ec4899"
 				/>
-				<AddButton title="Guest" onClick={openForm} color="cyan" />
+				<AddButton title="Guest" onClick={openForm} color="pink" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -221,14 +263,10 @@ export default function BabyShowerGuestListPage() {
 					items={pendingGuests}
 					rsvpStatus="pending"
 					emptyMessage="No pending RSVPs yet."
-					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
-					renderItem={(guest: BabyShowerGuest) => (
+					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}
-							guest={{
-								...guest,
-								rsvpStatus: "pending" as any,
-							}}
+							guest={guest}
 							onToggle={handleToggleGuest}
 							onEdit={(guest) => {
 								handleEditGuest(guest);
@@ -237,9 +275,9 @@ export default function BabyShowerGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={loading}
 							theme={{
-								accentColor: "#06b6d4", // Cyan for Baby Shower
+								accentColor: "#ec4899", // Pink for Baby Shower
 							}}
-							borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
+							borderColor="rgb(var(--color-pink-500))" // Pink border for Baby Shower
 						/>
 					)}
 				/>
@@ -249,14 +287,10 @@ export default function BabyShowerGuestListPage() {
 					items={confirmedGuests}
 					rsvpStatus="confirmed"
 					emptyMessage="No confirmed RSVPs yet."
-					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
-					renderItem={(guest: BabyShowerGuest) => (
+					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}
-							guest={{
-								...guest,
-								rsvpStatus: "confirmed" as any,
-							}}
+							guest={guest}
 							onToggle={handleToggleGuest}
 							onEdit={(guest) => {
 								handleEditGuest(guest);
@@ -265,9 +299,9 @@ export default function BabyShowerGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={loading}
 							theme={{
-								accentColor: "#06b6d4", // Cyan for Baby Shower
+								accentColor: "#ec4899", // Pink for Baby Shower
 							}}
-							borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
+							borderColor="rgb(var(--color-pink-500))" // Pink border for Baby Shower
 						/>
 					)}
 				/>
@@ -277,14 +311,10 @@ export default function BabyShowerGuestListPage() {
 					items={declinedGuests}
 					rsvpStatus="declined"
 					emptyMessage="No declined RSVPs yet."
-					holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
-					renderItem={(guest: BabyShowerGuest) => (
+					renderItem={(guest: Guest) => (
 						<GuestCardItem
 							key={guest.id}
-							guest={{
-								...guest,
-								rsvpStatus: "declined" as any,
-							}}
+							guest={guest}
 							onToggle={handleToggleGuest}
 							onEdit={(guest) => {
 								handleEditGuest(guest);
@@ -293,9 +323,9 @@ export default function BabyShowerGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={loading}
 							theme={{
-								accentColor: "#06b6d4", // Cyan for Baby Shower
+								accentColor: "#ec4899", // Pink for Baby Shower
 							}}
-							borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
+							borderColor="rgb(var(--color-pink-500))" // Pink border for Baby Shower
 						/>
 					)}
 				/>
@@ -305,64 +335,7 @@ export default function BabyShowerGuestListPage() {
 			<FormModal
 				isOpen={showForm}
 				title={editingGuest ? "Edit Guest" : "Add New Guest"}
-				fields={[
-					{
-						id: "name",
-						type: "text" as const,
-						placeholder: "Guest Name*",
-						required: true,
-					},
-					{
-						id: "email",
-						type: "email" as const,
-						placeholder: "Email",
-					},
-					{
-						id: "phone",
-						type: "tel" as const,
-						placeholder: "Phone",
-					},
-					{
-						id: "address",
-						type: "textarea" as const,
-						placeholder: "Address",
-						rows: 2,
-					},
-					{
-						id: "rsvpStatus",
-						type: "select" as const,
-						placeholder: "RSVP Status*",
-						required: true,
-						options: [
-							{ value: "pending", label: "Pending" },
-							{ value: "confirmed", label: "Confirmed" },
-							{ value: "declined", label: "Declined" },
-						],
-					},
-					{
-						id: "numberOfGuests",
-						type: "number" as const,
-						placeholder: "Number of Guests*",
-						required: true,
-						min: "1",
-					},
-					{
-						id: "dietaryRestrictions",
-						type: "text" as const,
-						placeholder: "Dietary Restrictions",
-					},
-					{
-						id: "bringingGift",
-						type: "text" as const,
-						placeholder: "Bringing Gift",
-					},
-					{
-						id: "notes",
-						type: "textarea" as const,
-						placeholder: "Notes",
-						rows: 2,
-					},
-				]}
+				fields={getFormConfig("guests", editingGuest ? "edit" : "add").fields}
 				initialValues={
 					editingGuest
 						? {
@@ -373,16 +346,16 @@ export default function BabyShowerGuestListPage() {
 								rsvpStatus: editingGuest.rsvpStatus,
 								numberOfGuests: editingGuest.numberOfGuests.toString(),
 								dietaryRestrictions: editingGuest.dietaryRestrictions || "",
-								bringingGift: editingGuest.bringingGift || "",
+								bringingDish: editingGuest.bringingDish || "",
 								notes: editingGuest.notes || "",
 						  }
-						: { rsvpStatus: "pending", numberOfGuests: "1" }
+						: {}
 				}
 				onSubmit={handleAddGuest}
 				onClose={closeForm}
-				loading={loading}
+				loading={editGuestState.isLoading || createGuestState.isLoading}
 				submitText={
-					loading
+					editGuestState.isLoading || createGuestState.isLoading
 						? editingGuest
 							? "Updating..."
 							: "Adding..."
@@ -392,7 +365,7 @@ export default function BabyShowerGuestListPage() {
 				}
 				cancelText="Cancel"
 				cardClassName="card"
-				submitButtonColor="#06b6d4"
+				submitButtonColor="#ec4899"
 				showAddressBook={true}
 				contacts={contacts}
 				onAddressBookSelect={(contact) => {
@@ -406,7 +379,7 @@ export default function BabyShowerGuestListPage() {
 				{...getDeleteConfig("guests")}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteGuestState.isLoading}
 			/>
 
 			{/* Sort Modal */}

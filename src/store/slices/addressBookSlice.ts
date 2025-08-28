@@ -3,16 +3,16 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 export interface Contact {
 	id: string;
 	name: string;
-	email?: string;
-	phone?: string;
-	streetAddress?: string;
-	city?: string;
-	state?: string;
-	zipCode?: string;
-	relationship?: string;
-	notes?: string;
-	createdAt: string;
-	updatedAt: string;
+	email?: string | null;
+	phone?: string | null;
+	streetAddress?: string | null;
+	city?: string | null;
+	state?: string | null;
+	postalCode?: string | null; // Note: DB uses postalCode, not zipCode
+	relationship?: string | null;
+	notes?: string | null;
+	createdAt: string | Date;
+	updatedAt: string | Date;
 }
 
 interface AddressBookState {
@@ -35,77 +35,160 @@ const initialState: AddressBookState = {
 export const fetchContacts = createAsyncThunk(
 	"addressBook/fetchContacts",
 	async (_, { getState }) => {
+		console.log("fetchContacts thunk called");
 		// Get current state to check if we already have data
 		const state = getState() as any;
 		const currentContacts = state.addressBook.contacts;
 		const isInitialized = state.addressBook.initialized;
 
-		// Only fetch if we haven't initialized yet
-		if (isInitialized) {
+		// Get contacts from home data if available
+		const homeContacts = state.home?.data?.contacts;
+
+		// Check if we already have contacts and home data is available
+		if (isInitialized && currentContacts.length > 0) {
+			console.log(
+				"Already initialized with contacts, returning current contacts"
+			);
 			return currentContacts;
 		}
+		console.log("Home contacts available:", homeContacts);
+		if (homeContacts && homeContacts.length > 0) {
+			// Convert Date objects to strings for consistency with API responses
+			const convertedContacts = homeContacts.map((contact: any) => ({
+				...contact,
+				createdAt:
+					contact.createdAt instanceof Date
+						? contact.createdAt.toISOString()
+						: contact.createdAt,
+				updatedAt:
+					contact.updatedAt instanceof Date
+						? contact.updatedAt.toISOString()
+						: contact.updatedAt,
+			}));
+			console.log("Converted contacts:", convertedContacts);
+			console.log(
+				"Returning contacts from fetchContacts thunk:",
+				convertedContacts
+			);
+			return convertedContacts;
+		}
 
-		// Simulate API call
-		const response = await new Promise<Contact[]>((resolve) => {
-			setTimeout(() => {
-				resolve([
-					{
-						id: "1",
-						name: "John Doe",
-						email: "john@example.com",
-						phone: "+1234567890",
-						streetAddress: "123 Main St",
-						city: "New York",
-						state: "NY",
-						zipCode: "10001",
-						relationship: "Friend",
-						notes: "Family friend",
-						createdAt: new Date().toISOString(),
-						updatedAt: new Date().toISOString(),
-					},
-				]);
-			}, 1000);
-		});
-		return response;
+		// If no home data available, return empty array instead of making unauthenticated API call
+		// The contacts will be loaded properly when the user navigates to the address book page
+		return [];
 	}
 );
 
 export const addContact = createAsyncThunk(
 	"addressBook/addContact",
-	async (contact: Omit<Contact, "id" | "createdAt" | "updatedAt">) => {
-		// Simulate API call
-		const newContact: Contact = {
-			...contact,
-			id: Date.now().toString(),
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+	async (
+		contact: Omit<Contact, "id" | "createdAt" | "updatedAt"> & {
+			auth0User?: any;
+		}
+	) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
 		};
 
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		return newContact;
+		// Add authentication header if auth0User is provided
+		if (contact.auth0User) {
+			headers["x-test-user"] = JSON.stringify({
+				sub: contact.auth0User.sub,
+				email: contact.auth0User.email,
+				name: contact.auth0User.name,
+			});
+		}
+
+		// Real API call
+		const response = await fetch("/api/contacts", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				...contact,
+				zipCode: contact.postalCode, // Convert postalCode to zipCode for API
+			}),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to add contact");
+		}
+
+		const result = await response.json();
+		console.log("Add Contact API Response:", result);
+		const contactData = result.data || result; // Handle both {data: contact} and direct contact response
+		console.log("Returning contact data:", contactData);
+		return contactData;
 	}
 );
 
 export const updateContact = createAsyncThunk(
 	"addressBook/updateContact",
-	async (contact: Contact) => {
-		// Simulate API call
-		const updatedContact: Contact = {
-			...contact,
-			updatedAt: new Date().toISOString(),
+	async (contact: Contact & { auth0User?: any }) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
 		};
 
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		return updatedContact;
+		// Add authentication header if auth0User is provided
+		if (contact.auth0User) {
+			headers["x-test-user"] = JSON.stringify({
+				sub: contact.auth0User.sub,
+				email: contact.auth0User.email,
+				name: contact.auth0User.name,
+			});
+		}
+
+		// Real API call
+		const response = await fetch(`/api/contacts/${contact.id}`, {
+			method: "PUT",
+			headers,
+			body: JSON.stringify({
+				...contact,
+				zipCode: contact.postalCode, // Convert postalCode to zipCode for API
+			}),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to update contact");
+		}
+
+		const result = await response.json();
+		console.log("Update Contact API Response:", result);
+		const contactData = result.data || result; // Handle both {data: contact} and direct contact response
+		console.log("Returning updated contact data:", contactData);
+		return contactData;
 	}
 );
 
 export const deleteContact = createAsyncThunk(
 	"addressBook/deleteContact",
-	async (contactId: string) => {
-		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		return contactId;
+	async (request: { contactId: string; auth0User?: any }) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+
+		// Add authentication header if auth0User is provided
+		if (request.auth0User) {
+			headers["x-test-user"] = JSON.stringify({
+				sub: request.auth0User.sub,
+				email: request.auth0User.email,
+				name: request.auth0User.name,
+			});
+		}
+
+		// Real API call
+		const response = await fetch(`/api/contacts/${request.contactId}`, {
+			method: "DELETE",
+			headers,
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to delete contact");
+		}
+
+		return request.contactId;
 	}
 );
 
@@ -129,7 +212,15 @@ const addressBookSlice = createSlice({
 			})
 			.addCase(fetchContacts.fulfilled, (state, action) => {
 				state.loading = false;
+				console.log(
+					"fetchContacts.fulfilled - action.payload:",
+					action.payload
+				);
 				state.contacts = action.payload;
+				console.log(
+					"fetchContacts.fulfilled - state.contacts after setting:",
+					state.contacts
+				);
 				state.initialized = true; // Set initialized to true on successful fetch
 			})
 			.addCase(fetchContacts.rejected, (state, action) => {
@@ -143,7 +234,9 @@ const addressBookSlice = createSlice({
 			})
 			.addCase(addContact.fulfilled, (state, action) => {
 				state.loading = false;
+				console.log("Adding contact to Redux store:", action.payload);
 				state.contacts.push(action.payload);
+				console.log("Updated contacts array:", state.contacts);
 			})
 			.addCase(addContact.rejected, (state, action) => {
 				state.loading = false;

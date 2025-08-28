@@ -54,9 +54,13 @@ const themeSlice = createSlice({
 		},
 		updateSettings: (state, action: PayloadAction<Partial<UserSettings>>) => {
 			state.settings = { ...state.settings, ...action.payload };
-			// Save to localStorage
+			// Save to localStorage, but exclude budget-related data since they should be fetched from DB
 			if (typeof window !== "undefined") {
-				localStorage.setItem("userSettings", JSON.stringify(state.settings));
+				const settingsToSave = { ...state.settings };
+				// Remove budget-related data from localStorage persistence
+				delete (settingsToSave as any).holidayChoices;
+				delete (settingsToSave as any).giftBudgetLimit;
+				localStorage.setItem("userSettings", JSON.stringify(settingsToSave));
 			}
 		},
 		initializeTheme: (state) => {
@@ -71,7 +75,10 @@ const themeSlice = createSlice({
 				if (savedSettings) {
 					try {
 						const parsedSettings = JSON.parse(savedSettings);
-						state.settings = { ...state.settings, ...parsedSettings };
+						// Don't load budget-related data from localStorage - they should come from DB
+						const { holidayChoices, giftBudgetLimit, ...settingsToLoad } =
+							parsedSettings;
+						state.settings = { ...state.settings, ...settingsToLoad };
 					} catch (error) {
 						console.error("Error parsing saved settings:", error);
 					}
@@ -79,9 +86,37 @@ const themeSlice = createSlice({
 			}
 			state.initialized = true;
 		},
+		// Add a new action to clear cached data when user logs out or changes
+		clearCachedData: (state) => {
+			if (typeof window !== "undefined") {
+				// Clear budget-related data from localStorage
+				const savedSettings = localStorage.getItem("userSettings");
+				if (savedSettings) {
+					try {
+						const parsedSettings = JSON.parse(savedSettings);
+						const { holidayChoices, giftBudgetLimit, ...settingsToKeep } =
+							parsedSettings;
+						localStorage.setItem(
+							"userSettings",
+							JSON.stringify(settingsToKeep)
+						);
+					} catch (error) {
+						console.error("Error clearing cached budget data:", error);
+					}
+				}
+			}
+			// Reset budget-related data in state
+			state.settings.holidayChoices = [];
+			state.settings.giftBudgetLimit = 0;
+		},
 	},
 });
 
-export const { toggleTheme, setTheme, updateSettings, initializeTheme } =
-	themeSlice.actions;
+export const {
+	toggleTheme,
+	setTheme,
+	updateSettings,
+	initializeTheme,
+	clearCachedData,
+} = themeSlice.actions;
 export default themeSlice.reducer;

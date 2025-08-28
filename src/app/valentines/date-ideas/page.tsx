@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchValentinesTasks,
-	addValentinesTask,
-	updateValentinesTask,
-	deleteValentinesTask,
-	toggleValentinesTaskCompletion,
-	setSelectedValentinesTask,
-} from "@/store/slices/valentines/valentinesTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -20,57 +13,76 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import DateTrackerCard from "@/components/cards/DateTrackerCard";
 import DateIdeaCard from "@/components/cards/DateIdeaCard";
+import { useDateIdeasMutations } from "@/hooks/useDateIdeasMutations";
 
 export default function ValentinesDateIdeasPage() {
 	const dispatch = useAppDispatch();
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new date ideas mutations hook
+	const {
+		holidayId,
+		auth0User,
+		dateIdeas,
+		loading,
+		error,
+		initialized,
+		createDateIdeas,
+		updateDateIdeas,
+		editDateIdeas,
+		deleteDateIdeas,
+		updateDateIdeasState,
+		editDateIdeasState,
+		deleteDateIdeasState,
+	} = useDateIdeasMutations();
 
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showFormModal, setShowFormModal] = useState(false);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 	const [sortBy, setSortBy] = useState("title");
 
-	const allTasks = useAppSelector((state) => state.valentinesTasks.tasks);
-	const loading = useAppSelector((state) => state.valentinesTasks.loading);
-	const selectedTask = useAppSelector(
-		(state) => state.valentinesTasks.selectedTask
-	);
-
-	// Filter tasks for Date Ideas category
-	const tasks = allTasks.filter((task) => task.category === "Date Ideas");
-
 	useEffect(() => {
-		dispatch(fetchValentinesTasks());
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
 	}, [dispatch]);
 
-	const handleFormSubmit = (values: Record<string, any>) => {
-		if (editingTask) {
-			// Update existing task
-			const updatedTask = {
-				...editingTask,
-				title: values.title,
-				description: values.description || "",
-				priority: values.priority as "low" | "medium" | "high",
-				dueDate: values.dueDate || "",
-				notes: values.notes || "",
-			};
-			dispatch(updateValentinesTask(updatedTask));
-			setEditingTask(null);
-		} else {
-			// Add new task
-			const newTaskData = {
-				title: values.title,
-				description: values.description || "",
-				priority: values.priority as "low" | "medium" | "high",
-				category: "Date Ideas" as const,
-				dueDate: values.dueDate || "",
-				notes: values.notes || "",
-				isCompleted: false,
-			};
-			dispatch(addValentinesTask(newTaskData));
+	const handleFormSubmit = async (values: Record<string, any>) => {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			if (editingTask) {
+				// Update existing task
+				await editDateIdeas({
+					holidayId,
+					taskId: editingTask.id,
+					payload: {
+						title: values.title,
+						description: values.description || undefined,
+						priority: values.priority as "low" | "medium" | "high",
+						category: "Date Ideas",
+						dueDate: values.dueDate || undefined,
+						notes: values.notes || undefined,
+					},
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} else {
+				// Add new task
+				const payload = {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					category: "Date Ideas",
+					dueDate: values.dueDate || undefined,
+					notes: values.notes || undefined,
+					isCompleted: false,
+				};
+				await createDateIdeas({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowFormModal(false);
+		} catch (error) {
+			console.error("Error saving date idea:", error);
 		}
-		setShowFormModal(false);
 	};
 
 	const handleEditTask = (task: any) => {
@@ -78,26 +90,36 @@ export default function ValentinesDateIdeasPage() {
 		setShowFormModal(true);
 	};
 
-	const handleDeleteTask = (taskId: string) => {
-		setTaskToDelete(taskId);
-		setShowDeleteModal(true);
-	};
+	const handleDeleteTask = async (taskId: string) => {
+		if (!holidayId || !auth0User) return;
 
-	const confirmDelete = async () => {
-		if (taskToDelete) {
-			await dispatch(deleteValentinesTask(taskToDelete));
-			setTaskToDelete(null);
+		try {
+			await deleteDateIdeas({
+				holidayId,
+				taskId,
+				auth0User,
+			}).unwrap();
+		} catch (error) {
+			console.error("Error deleting date idea:", error);
 		}
-		setShowDeleteModal(false);
-	};
-
-	const cancelDelete = () => {
-		setTaskToDelete(null);
-		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
-		await dispatch(toggleValentinesTaskCompletion(taskId));
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const task = dateIdeas.find((t: any) => t.id === taskId);
+			if (task) {
+				await updateDateIdeas({
+					holidayId,
+					taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating date idea:", error);
+		}
 	};
 
 	const openAddForm = () => {
@@ -110,12 +132,16 @@ export default function ValentinesDateIdeasPage() {
 		setEditingTask(null);
 	};
 
-	const sortedTasks = [...tasks].sort((a, b) => {
+	const sortedTasks = [...dateIdeas].sort((a: any, b: any) => {
 		switch (sortBy) {
 			case "title":
 				return a.title.localeCompare(b.title);
 			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				const priorityOrder: { [key: string]: number } = {
+					high: 3,
+					medium: 2,
+					low: 1,
+				};
 				return priorityOrder[b.priority] - priorityOrder[a.priority];
 			case "dueDate":
 				if (!a.dueDate && !b.dueDate) return 0;
@@ -129,8 +155,8 @@ export default function ValentinesDateIdeasPage() {
 		}
 	});
 
-	const completedTasks = tasks.filter((task) => task.isCompleted);
-	const incompleteTasks = tasks.filter((task) => !task.isCompleted);
+	const completedTasks = dateIdeas.filter((task: any) => task.isCompleted);
+	const incompleteTasks = dateIdeas.filter((task: any) => !task.isCompleted);
 
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
@@ -155,11 +181,6 @@ export default function ValentinesDateIdeasPage() {
 	);
 	const deleteConfig = getDeleteConfig("tasks");
 
-	// Get the task name for delete confirmation
-	const taskToDeleteName = taskToDelete
-		? tasks.find((task) => task.id === taskToDelete)?.title
-		: undefined;
-
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
@@ -169,18 +190,19 @@ export default function ValentinesDateIdeasPage() {
 				description="Keep track of your date ideas!"
 				holidayColor="pink-500"
 				sortTitle="Sort Date Ideas"
+				error={error ? "API Error" : undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				{/* Summary Stats */}
 				<DateTrackerCard
-					totalIdeas={tasks.length}
+					totalIdeas={dateIdeas.length}
 					completedIdeas={completedTasks.length}
 					highPriorityIdeas={
-						tasks.filter((task) => task.priority === "high").length
+						dateIdeas.filter((task: any) => task.priority === "high").length
 					}
 					dueSoonIdeas={
-						tasks.filter((task) => {
+						dateIdeas.filter((task: any) => {
 							if (!task.dueDate) return false;
 							const dueDate = new Date(task.dueDate);
 							const now = new Date();
@@ -275,21 +297,6 @@ export default function ValentinesDateIdeasPage() {
 				cancelText={formConfig.cancelText}
 				cardClassName={formConfig.cardClassName}
 				submitButtonColor={formConfig.submitButtonColor}
-			/>
-
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				title="Delete Date Idea?"
-				message="Are you sure you want to delete this date idea? This action cannot be undone."
-				itemName={taskToDeleteName}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={loading}
-				cardClassName="card card-cards"
-				confirmText={deleteConfig.confirmText}
-				cancelText={deleteConfig.cancelText}
-				confirmButtonColor={deleteConfig.confirmButtonColor}
 			/>
 
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">

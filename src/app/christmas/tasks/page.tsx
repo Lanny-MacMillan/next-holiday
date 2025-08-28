@@ -34,13 +34,6 @@ export default function TasksPage() {
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
 
 	useEffect(() => {
 		// Fetch tasks when component mounts if not already initialized
@@ -79,7 +72,7 @@ export default function TasksPage() {
 	}
 
 	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
+		dispatch(deleteTask(taskId));
 	}
 
 	function handleEditTask(task: Task) {
@@ -97,17 +90,6 @@ export default function TasksPage() {
 
 	function handleCloseEdit() {
 		setEditingTask(null);
-	}
-
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
-		}
-	}
-
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
 	}
 
 	function sortTasks(tasksToSort: Task[]): Task[] {
@@ -193,6 +175,7 @@ export default function TasksPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+							disableInternalModal={true}
 						/>
 					)}
 					// cardClassName="card-tasks"
@@ -216,6 +199,7 @@ export default function TasksPage() {
 								accentColor: "#22c55e", // Green for Christmas
 							}}
 							borderColor="rgb(var(--color-green-500))" // Green border for Christmas
+							disableInternalModal={true}
 						/>
 					)}
 					// cardClassName="card-tasks"
@@ -242,15 +226,6 @@ export default function TasksPage() {
 				task={editingTask}
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
-				loading={loading}
-			/>
-
-			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("tasks")}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
 				loading={loading}
 			/>
 

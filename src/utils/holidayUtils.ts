@@ -90,6 +90,48 @@ export function getHolidayAccentColor(pathname: string): string {
 	return colors.accent;
 }
 
+/**
+ * Get holiday ID from route pathname and holiday preferences
+ */
+export function getHolidayIdFromRoute(
+	pathname: string,
+	holidayPreferences: Array<{ holiday: string; holidayId: string }>
+): string | null {
+	// Extract holiday name from pathname
+	const holidayName = pathname.split("/")[1]; // e.g., "/christmas/gift-list" -> "christmas"
+
+	if (!holidayName) return null;
+
+	// Map route names to holiday names
+	const routeToHolidayMap: Record<string, string> = {
+		christmas: "Christmas",
+		hanukkah: "Hanukkah",
+		thanksgiving: "Thanksgiving",
+		easter: "Easter",
+		valentines: "Valentine's Day",
+		birthday: "Birthday",
+		"mothers-day": "Mother's Day",
+		"fathers-day": "Father's Day",
+		halloween: "Halloween",
+		"new-year": "New Year",
+		kwanzaa: "Kwanzaa",
+		"fourth-of-july": "Fourth of July",
+		graduation: "Graduation",
+		"baby-shower": "Baby Shower",
+		anniversary: "Anniversary",
+	};
+
+	const holidayNameFromRoute = routeToHolidayMap[holidayName];
+	if (!holidayNameFromRoute) return null;
+
+	// Find the holiday preference
+	const preference = holidayPreferences.find(
+		(pref) => pref.holiday === holidayNameFromRoute
+	);
+
+	return preference?.holidayId || null;
+}
+
 // Function to calculate countdown time for a holiday
 export const getHolidayCountdownTime = (
 	holidayName: string,

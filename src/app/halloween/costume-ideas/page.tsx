@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchHalloweenTasks,
-	addHalloweenTask,
-	updateHalloweenTask,
-	deleteHalloweenTask,
-	toggleHalloweenTaskCompletion,
-	HalloweenTask,
-} from "@/store/slices/halloween/halloweenTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";
@@ -20,7 +13,7 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { FormField } from "@/components/modals/FormModal";
+import { useCostumeIdeasMutations } from "@/hooks/useCostumeIdeasMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -60,7 +53,7 @@ const costumeFormConfig = {
 			type: "date" as const,
 			placeholder: "Due Date",
 		},
-	] as FormField[],
+	] as any[],
 	submitText: "Add Costume Task",
 	cancelText: "Cancel",
 	cardClassName: "card card-tasks",
@@ -96,14 +89,30 @@ const defaultCostumeTasks = [
 
 export default function HalloweenCostumeIdeasPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.halloweenTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new costume ideas mutations hook
+	const {
+		holidayId,
+		auth0User,
+		costumeIdeas,
+		loading,
+		error,
+		initialized,
+		createCostumeIdeas,
+		updateCostumeIdeas,
+		editCostumeIdeas,
+		deleteCostumeIdeas,
+		createCostumeIdeasState,
+		updateCostumeIdeasState,
+		editCostumeIdeasState,
+		deleteCostumeIdeasState,
+	} = useCostumeIdeasMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<HalloweenTask | null>(null);
+	const [editingTask, setEditingTask] = useState<any>(null);
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		taskId: string | null;
@@ -114,43 +123,53 @@ export default function HalloweenCostumeIdeasPage() {
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchHalloweenTasks());
-		}
-	}, [dispatch, initialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	useEffect(() => {
-		const costumeTasks = tasks.filter(
-			(task: HalloweenTask) => task.category === "Costume Ideas"
-		);
-		if (costumeTasks.length === 0) {
+		if (costumeIdeas.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [tasks]);
+	}, [costumeIdeas, initialized]);
 
-	function handleAddTask(formValues: Record<string, any>) {
-		if (!formValues.title?.trim()) return;
+	const handleAddTask = async (formValues: Record<string, any>) => {
+		if (!formValues.title?.trim() || !holidayId || !auth0User) return;
 
-		const newTask: Omit<HalloweenTask, "id" | "createdAt" | "updatedAt"> = {
-			title: formValues.title,
-			description: formValues.description || undefined,
-			priority: formValues.priority as "low" | "medium" | "high",
-			assignedTo: formValues.assignedTo || undefined,
-			category: "Costume Ideas",
-			dueDate: formValues.dueDate || undefined,
-			isCompleted: false,
-		};
+		try {
+			const payload = {
+				title: formValues.title,
+				description: formValues.description || undefined,
+				priority: formValues.priority as "low" | "medium" | "high",
+				assignedTo: formValues.assignedTo || undefined,
+				category: "Costume Ideas",
+				dueDate: formValues.dueDate || undefined,
+				isCompleted: false,
+			};
 
-		dispatch(addHalloweenTask(newTask));
-		setShowForm(false);
-	}
+			await createCostumeIdeas({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating costume task:", error);
+		}
+	};
 
-	function addDefaultCostumeTasks() {
-		defaultCostumeTasks.forEach((task) => {
-			dispatch(addHalloweenTask({ ...task, isCompleted: false }));
-		});
-		setShowDefaultTasks(false);
-	}
+	const addDefaultCostumeTasks = async () => {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultCostumeTasks) {
+				const payload = {
+					...task,
+					isCompleted: false,
+				};
+				await createCostumeIdeas({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default costume tasks:", error);
+		}
+	};
 
 	function openForm() {
 		setShowForm(true);
@@ -160,43 +179,79 @@ export default function HalloweenCostumeIdeasPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleHalloweenTaskCompletion(taskId));
-	}
+	const handleToggleTask = async (taskId: string) => {
+		if (!holidayId || !auth0User) return;
 
-	function handleDeleteTask(taskId: string) {
-		setDeleteConfirm({ show: true, taskId });
-	}
-
-	function handleEditTask(task: HalloweenTask) {
-		setEditingTask(task);
-	}
-
-	function handleSaveEdit(
-		updatedTask: Omit<HalloweenTask, "id" | "createdAt" | "updatedAt">
-	) {
-		if (editingTask) {
-			dispatch(updateHalloweenTask({ ...editingTask, ...updatedTask }));
-			setEditingTask(null);
+		try {
+			const task = costumeIdeas.find((t: any) => t.id === taskId);
+			if (task) {
+				await updateCostumeIdeas({
+					holidayId,
+					taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating costume task:", error);
 		}
-	}
+	};
+
+	const handleDeleteTask = (taskId: string) => {
+		setDeleteConfirm({ show: true, taskId });
+	};
+
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+	};
+
+	const handleSaveEdit = async (updatedTask: any) => {
+		if (editingTask && holidayId && auth0User) {
+			try {
+				await editCostumeIdeas({
+					holidayId,
+					taskId: editingTask.id,
+					payload: {
+						title: updatedTask.title,
+						description: updatedTask.description || undefined,
+						priority: updatedTask.priority as "low" | "medium" | "high",
+						assignedTo: updatedTask.assignedTo || undefined,
+						category: "Costume Ideas",
+						dueDate: updatedTask.dueDate || undefined,
+					},
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} catch (error) {
+				console.error("Error updating costume task:", error);
+			}
+		}
+	};
 
 	function handleCloseEdit() {
 		setEditingTask(null);
 	}
 
-	function confirmDelete() {
-		if (deleteConfirm.taskId) {
-			dispatch(deleteHalloweenTask(deleteConfirm.taskId));
-			setDeleteConfirm({ show: false, taskId: null });
+	const confirmDelete = async () => {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteCostumeIdeas({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting costume task:", error);
+			}
 		}
-	}
+	};
 
 	function cancelDelete() {
 		setDeleteConfirm({ show: false, taskId: null });
 	}
 
-	function sortTasks(tasksToSort: HalloweenTask[]): HalloweenTask[] {
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
 				return [...tasksToSort].sort((a, b) => {
@@ -240,16 +295,9 @@ export default function HalloweenCostumeIdeasPage() {
 		);
 	}
 
-	const costumeTasks = tasks.filter(
-		(task: HalloweenTask) => task.category === "Costume Ideas"
-	);
-	const sortedTasks = sortTasks(costumeTasks);
-	const incompleteTasks = sortedTasks.filter(
-		(task: HalloweenTask) => !task.isCompleted
-	);
-	const completedTasks = sortedTasks.filter(
-		(task: HalloweenTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(costumeIdeas);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
 	return (
 		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -300,7 +348,7 @@ export default function HalloweenCostumeIdeasPage() {
 					isCompleted={false}
 					emptyMessage="No costume ideas yet. Add your first costume task!"
 					completedMessage="No costume ideas yet. Add your first costume task!"
-					renderItem={(task: HalloweenTask) => (
+					renderItem={(task: any) => (
 						<ToDoCard
 							key={task.id}
 							task={task}
@@ -322,7 +370,7 @@ export default function HalloweenCostumeIdeasPage() {
 					isCompleted={true}
 					emptyMessage="No completed costume tasks yet."
 					completedMessage="No completed costume tasks yet."
-					renderItem={(task: HalloweenTask) => (
+					renderItem={(task: any) => (
 						<ToDoCard
 							key={task.id}
 							task={task}
@@ -347,8 +395,12 @@ export default function HalloweenCostumeIdeasPage() {
 				fields={costumeFormConfig.fields}
 				onSubmit={handleAddTask}
 				onClose={closeForm}
-				loading={loading}
-				submitText={loading ? "Adding..." : costumeFormConfig.submitText}
+				loading={createCostumeIdeasState.isLoading}
+				submitText={
+					createCostumeIdeasState.isLoading
+						? "Adding..."
+						: costumeFormConfig.submitText
+				}
 				cancelText={costumeFormConfig.cancelText}
 				cardClassName="card"
 				submitButtonColor={costumeFormConfig.submitButtonColor}
@@ -360,7 +412,7 @@ export default function HalloweenCostumeIdeasPage() {
 				task={editingTask}
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
-				loading={loading}
+				loading={editCostumeIdeasState.isLoading}
 			/>
 
 			{/* Delete Confirmation Modal */}
@@ -369,7 +421,7 @@ export default function HalloweenCostumeIdeasPage() {
 				{...getDeleteConfig("tasks")}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={loading}
+				loading={deleteCostumeIdeasState.isLoading}
 				cardClassName="card"
 				confirmText="Delete"
 				cancelText="Cancel"

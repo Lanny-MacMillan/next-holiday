@@ -106,3 +106,43 @@ export async function getUserByAuth0Sub(
 		return null;
 	}
 }
+
+/**
+ * Assert that a user has access to a holiday through their account membership
+ * Returns a 403 response if access is denied, null if access is granted
+ */
+export async function assertHolidayAccess(
+	holidayId: string,
+	userId: string
+): Promise<Response | null> {
+	try {
+		const holiday = await prisma.holiday.findFirst({
+			where: {
+				id: holidayId,
+				account: {
+					members: {
+						some: {
+							userId: userId,
+						},
+					},
+				},
+			},
+			select: { id: true },
+		});
+
+		if (!holiday) {
+			return new Response(
+				JSON.stringify({ success: false, error: "Forbidden" }),
+				{ status: 403 }
+			);
+		}
+
+		return null; // Access granted
+	} catch (error) {
+		console.error("Error checking holiday access:", error);
+		return new Response(
+			JSON.stringify({ success: false, error: "Internal server error" }),
+			{ status: 500 }
+		);
+	}
+}

@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchBabyShowerTasks,
-	addBabyShowerTask,
-	updateBabyShowerTask,
-	deleteBabyShowerTask,
-	toggleBabyShowerTaskCompletion,
-} from "@/store/slices/baby-shower/babyShowerTasksSlice";
+import { useBabyShowerGamesMutations } from "@/hooks/useBabyShowerGamesMutations";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -19,13 +12,21 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
 
 export default function BabyShowerGamesPage() {
-	const dispatch = useAppDispatch();
-	const tasks = useAppSelector((state) => state.babyShowerTasks.tasks);
-	const error = useAppSelector((state) => state.babyShowerTasks.error);
-	const loading = useAppSelector((state) => state.babyShowerTasks.loading);
+	const {
+		holidayId,
+		auth0User,
+		babyShowerGames,
+		loading,
+		error,
+		initialized,
+		createBabyShowerGames,
+		updateBabyShowerGames,
+		editBabyShowerGames,
+		deleteBabyShowerGames,
+	} = useBabyShowerGamesMutations();
 
 	// Filter tasks for Games category
-	const gameTasks = tasks.filter((task) => task.category === "Games");
+	const gameTasks = babyShowerGames.filter((task) => task.category === "Games");
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -73,26 +74,33 @@ export default function BabyShowerGamesPage() {
 
 	const sortedGameTasks = sortTasks(gameTasks, sortBy);
 
-	useEffect(() => {
-		dispatch(fetchBabyShowerTasks());
-	}, [dispatch]);
-
 	const handleSubmit = async (values: Record<string, any>) => {
-		if (editingTask) {
-			await dispatch(updateBabyShowerTask({ ...editingTask, ...values }));
-			setEditingTask(null);
-		} else {
-			await dispatch(
-				addBabyShowerTask({
-					...values,
-					isCompleted: false,
-					category: "Games",
-					title: values.title || "",
-					priority: values.priority || "medium",
-				})
-			);
+		try {
+			if (editingTask) {
+				await editBabyShowerGames({
+					holidayId: holidayId || "",
+					taskId: editingTask.id,
+					payload: values,
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} else {
+				await createBabyShowerGames({
+					holidayId: holidayId || "",
+					payload: {
+						...values,
+						isCompleted: false,
+						category: "Games",
+						title: values.title || "",
+						priority: values.priority || "medium",
+					},
+					auth0User,
+				}).unwrap();
+			}
+			setShowAddForm(false);
+		} catch (error) {
+			console.error("Error saving game:", error);
 		}
-		setShowAddForm(false);
 	};
 
 	const handleEdit = (task: any) => {
@@ -104,7 +112,7 @@ export default function BabyShowerGamesPage() {
 		// Handle both task object and task ID
 		const task =
 			typeof taskOrId === "string"
-				? tasks.find((t) => t.id === taskOrId)
+				? gameTasks.find((t) => t.id === taskOrId)
 				: taskOrId;
 
 		if (task) {
@@ -115,14 +123,34 @@ export default function BabyShowerGamesPage() {
 
 	const confirmDelete = async () => {
 		if (taskToDelete) {
-			await dispatch(deleteBabyShowerTask(taskToDelete.id));
-			setTaskToDelete(null);
+			try {
+				await deleteBabyShowerGames({
+					holidayId: holidayId || "",
+					taskId: taskToDelete.id,
+					auth0User,
+				}).unwrap();
+				setTaskToDelete(null);
+			} catch (error) {
+				console.error("Error deleting game:", error);
+			}
 		}
 		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
-		await dispatch(toggleBabyShowerTaskCompletion(taskId));
+		try {
+			const task = gameTasks.find((t) => t.id === taskId);
+			if (task) {
+				await updateBabyShowerGames({
+					holidayId: holidayId || "",
+					taskId: taskId,
+					isCompleted: !task.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating game completion:", error);
+		}
 	};
 
 	const handleSortChange = (sortOption: string) => {
@@ -138,7 +166,7 @@ export default function BabyShowerGamesPage() {
 				sortTitle="Sort Games"
 				description="Plan your baby shower games with style!"
 				holidayColor="cyan-500"
-				error={error}
+				error={error ? "An error occurred while loading games" : undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">

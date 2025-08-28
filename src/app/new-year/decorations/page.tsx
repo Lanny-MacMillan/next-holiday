@@ -2,216 +2,251 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchNewYearTasks,
-	addNewYearTask,
-	updateNewYearTask,
-	deleteNewYearTask,
-	toggleNewYearTaskCompletion,
-	NewYearTask,
-} from "@/store/slices/new-year/newYearTasksSlice";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
-import EditTaskModal from "@/components/modals/EditTaskModal";
 import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
+import { DecorationsListItem } from "@/components/cards/decorations";
+import { useDecorationMutations } from "@/hooks/useDecorationMutations";
 
-type SortOption = "priority" | "dueDate" | "title" | "none";
+type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
+
+const defaultDecorationTasks = [
+	{
+		title: "Set up New Year countdown display",
+		description: "Prepare countdown decorations",
+		category: "Decorations",
+		priority: "high",
+	},
+	{
+		title: "Hang New Year banners",
+		description: "Display New Year-themed banners",
+		category: "Decorations",
+		priority: "medium",
+	},
+	{
+		title: "Arrange New Year centerpiece",
+		description: "Create a festive centerpiece",
+		category: "Decorations",
+		priority: "medium",
+	},
+	{
+		title: "Set up party decorations",
+		description: "Prepare party decorations and balloons",
+		category: "Decorations",
+		priority: "high",
+	},
+];
 
 export default function NewYearDecorationsPage() {
 	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.newYearTasks
-	);
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Use the new decoration mutations hook
+	const {
+		holidayId,
+		auth0User,
+		decorations,
+		loading,
+		error,
+		initialized,
+		createDecoration,
+		updateDecoration,
+		editDecoration,
+		deleteDecoration,
+		updateDecorationState,
+		editDecorationState,
+		deleteDecorationState,
+	} = useDecorationMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
+	const [deleteConfirm, setDeleteConfirm] = useState<{
+		show: boolean;
+		taskId: string | null;
+	}>({
+		show: false,
+		taskId: null,
+	});
+	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [showFormModal, setShowFormModal] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [selectedTask, setSelectedTask] = useState<NewYearTask | null>(null);
-	const [taskToDelete, setTaskToDelete] = useState<NewYearTask | null>(null);
+	const [editingTask, setEditingTask] = useState<any>(null);
+	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
-		if (!initialized) {
-			dispatch(fetchNewYearTasks());
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
+
+	// Check if default decoration tasks exist
+	useEffect(() => {
+		if (decorations.length === 0 && initialized) {
+			setShowDefaultTasks(true);
 		}
-	}, [dispatch, initialized]);
+	}, [decorations, initialized]);
 
-	// Filter tasks by "Decorations" category
-	const decorations = tasks.filter(
-		(task: NewYearTask) => task.category === "Decorations"
-	);
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !auth0User) return;
 
-	function handleAddTask(values: Record<string, any>) {
-		const newTask: Omit<NewYearTask, "id" | "createdAt" | "updatedAt"> = {
-			title: values.title,
-			description: values.description || undefined,
-			isCompleted: false,
-			priority: values.priority || "medium",
-			category: "Decorations",
-			dueDate: values.dueDate || undefined,
-			notes: values.notes || undefined,
-		};
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Decorations",
+				dueDate: values.dueDate || undefined,
+				isCompleted: false,
+			};
 
-		dispatch(addNewYearTask(newTask));
-		setShowFormModal(false);
-	}
-
-	function handleEditTask(values: Record<string, any>) {
-		if (!selectedTask) return;
-
-		const updatedTask: NewYearTask = {
-			...selectedTask,
-			title: values.title,
-			description: values.description || undefined,
-			isCompleted: values.isCompleted || false,
-			priority: values.priority || "medium",
-			category: "Decorations",
-			dueDate: values.dueDate || undefined,
-			notes: values.notes || undefined,
-			updatedAt: new Date().toISOString(),
-		};
-
-		dispatch(updateNewYearTask(updatedTask));
-		setShowEditModal(false);
-		setSelectedTask(null);
-	}
-
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleNewYearTaskCompletion(taskId));
-	}
-
-	function handleDeleteTask(task: NewYearTask) {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
-	}
-
-	function confirmDelete() {
-		if (taskToDelete) {
-			dispatch(deleteNewYearTask(taskToDelete.id));
-			setShowDeleteModal(false);
-			setTaskToDelete(null);
+			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Error creating decoration:", error);
 		}
 	}
 
-	function handleEditTaskClick(task: NewYearTask) {
-		setSelectedTask(task);
+	async function addDefaultDecorationTasks() {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			for (const task of defaultDecorationTasks) {
+				const payload = {
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					assignedTo: undefined,
+					category: task.category,
+					dueDate: undefined,
+					isCompleted: false,
+				};
+				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			}
+			setShowDefaultTasks(false);
+		} catch (error) {
+			console.error("Error adding default decoration tasks:", error);
+		}
+	}
+
+	function openForm() {
+		setShowForm(true);
+	}
+
+	function closeForm() {
+		setShowForm(false);
+	}
+
+	async function handleToggleTask(taskId: string) {
+		if (!holidayId || !auth0User) return;
+
+		try {
+			const decoration = decorations.find((d: any) => d.id === taskId);
+			if (decoration) {
+				await updateDecoration({
+					holidayId,
+					taskId,
+					isCompleted: !decoration.isCompleted,
+					auth0User,
+				}).unwrap();
+			}
+		} catch (error) {
+			console.error("Error updating decoration:", error);
+		}
+	}
+
+	function handleDeleteTask(taskId: string) {
+		setDeleteConfirm({ show: true, taskId });
+	}
+
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
 		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !holidayId || !auth0User) return;
+
+		try {
+			await editDecoration({
+				holidayId,
+				taskId: editingTask.id,
+				payload: {
+					title: values.title,
+					description: values.description || undefined,
+					priority: values.priority as "low" | "medium" | "high",
+					assignedTo: values.assignedTo || undefined,
+					category: "Decorations",
+					dueDate: values.dueDate || undefined,
+				},
+				auth0User,
+			}).unwrap();
+			setShowEditModal(false);
+			setEditingTask(null);
+		} catch (error) {
+			console.error("Error editing decoration:", error);
+		}
 	}
 
-	function sortTasks(tasksToSort: NewYearTask[]): NewYearTask[] {
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	async function confirmDelete() {
+		if (deleteConfirm.taskId && holidayId && auth0User) {
+			try {
+				await deleteDecoration({
+					holidayId,
+					taskId: deleteConfirm.taskId,
+					auth0User,
+				}).unwrap();
+				setDeleteConfirm({ show: false, taskId: null });
+			} catch (error) {
+				console.error("Error deleting decoration:", error);
+			}
+		}
+	}
+
+	function cancelDelete() {
+		setDeleteConfirm({ show: false, taskId: null });
+	}
+
+	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
 				const priorityOrder = { high: 3, medium: 2, low: 1 };
 				return [...tasksToSort].sort(
 					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
 				);
-			case "dueDate":
+			case "dateDue":
 				return [...tasksToSort].sort((a, b) => {
 					if (!a.dueDate && !b.dueDate) return 0;
 					if (!a.dueDate) return 1;
 					if (!b.dueDate) return -1;
 					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
 				});
-			case "title":
-				return [...tasksToSort].sort((a, b) => a.title.localeCompare(b.title));
+			case "assignedTo":
+				return [...tasksToSort].sort((a, b) =>
+					(a.assignedTo || "").localeCompare(b.assignedTo || "")
+				);
+			case "category":
+				return [...tasksToSort].sort((a, b) =>
+					(a.category || "").localeCompare(b.category || "")
+				);
 			default:
 				return tasksToSort;
 		}
 	}
 
-	const formFields = [
-		{
-			id: "title",
-			type: "text" as const,
-			label: "Decoration Title",
-			placeholder: "Enter decoration title",
-			required: true,
-		},
-		{
-			id: "description",
-			type: "textarea" as const,
-			label: "Description",
-			placeholder: "Enter description",
-			rows: 3,
-		},
-		{
-			id: "priority",
-			type: "select" as const,
-			label: "Priority",
-			options: [
-				{ value: "low", label: "Low" },
-				{ value: "medium", label: "Medium" },
-				{ value: "high", label: "High" },
-			],
-		},
-		{
-			id: "dueDate",
-			type: "date" as const,
-			label: "Due Date",
-		},
-		{
-			id: "notes",
-			type: "textarea" as const,
-			label: "Notes",
-			placeholder: "Enter additional notes",
-			rows: 2,
-		},
-	];
-
-	const editFormFields = [
-		{
-			id: "title",
-			type: "text" as const,
-			label: "Decoration Title",
-			placeholder: "Enter decoration title",
-			required: true,
-		},
-		{
-			id: "description",
-			type: "textarea" as const,
-			label: "Description",
-			placeholder: "Enter description",
-			rows: 3,
-		},
-		{
-			id: "priority",
-			type: "select" as const,
-			label: "Priority",
-			options: [
-				{ value: "low", label: "Low" },
-				{ value: "medium", label: "Medium" },
-				{ value: "high", label: "High" },
-			],
-		},
-		{
-			id: "dueDate",
-			type: "date" as const,
-			label: "Due Date",
-		},
-		{
-			id: "notes",
-			type: "textarea" as const,
-			label: "Notes",
-			placeholder: "Enter additional notes",
-			rows: 2,
-		},
-		{
-			id: "isCompleted",
-			type: "checkbox" as const,
-			label: "Mark as completed",
-		},
-	];
-
 	if (loading && !initialized) {
 		return (
-			<div className="min-h-screen new-year-gradient flex items-center justify-center">
+			<div className="min-h-screen new-year-tasks-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">
 						Loading decorations...
 					</p>
@@ -220,148 +255,209 @@ export default function NewYearDecorationsPage() {
 		);
 	}
 
-	const sortedDecorations = sortTasks(decorations);
-	const incompleteDecorations = sortedDecorations.filter(
-		(task: NewYearTask) => !task.isCompleted
-	);
-	const completedDecorations = sortedDecorations.filter(
-		(task: NewYearTask) => task.isCompleted
-	);
+	const sortedTasks = sortTasks(decorations);
+	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
-	const renderTaskItem = (task: NewYearTask) => {
-		// Convert NewYearTask to Task type for ToDoCard
-		const taskForCard = {
-			...task,
-			category: task.category || "Decorations",
-		};
-
-		return (
-			<ToDoCard
-				key={task.id}
-				task={taskForCard as any}
-				onToggleComplete={handleToggleTask}
-				onDelete={(taskId: string) => handleDeleteTask(task)}
-				onEdit={(taskForEdit: any) => handleEditTaskClick(task)}
-				theme={{
-					accentColor: "#f59e0b",
-					hoverColor: "hover:bg-amber-50 dark:hover:bg-amber-900/20",
-				}}
-				borderColor="#f59e0b"
-				gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
-			/>
-		);
-	};
+	const renderTaskItem = (task: any) => (
+		<DecorationsListItem
+			key={task.id}
+			task={task}
+			onToggleTask={handleToggleTask}
+			onDeleteTask={handleDeleteTask}
+			onEditTask={handleEditTask}
+			loading={loading || updateDecorationState.isLoading}
+			holidayColor="new-year-tasks-gradient"
+		/>
+	);
 
 	return (
-		<div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen new-year-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
 				title="Decorations"
 				backHref="/new-year"
 				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort decorations"
-				description="Keep track of all your Decorations!"
-				holidayColor="yellow-500"
-				error={error}
+				sortTitle="Sort tasks"
+				description="Keep track of New Year decorations!"
+				holidayColor="purple-500"
+				error={error ? "API Error" : undefined}
 			/>
-
 			<main className="w-full max-w-4xl flex flex-col gap-6">
-				<AddButton
-					title="Decoration"
-					onClick={() => setShowFormModal(true)}
-					color="yellow"
-				/>
+				{/* Default Tasks Prompt */}
+				{showDefaultTasks && (
+					<div className="card card-tasks rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700">
+						<h3 className="text-lg font-semibold text-purple-800 dark:text-purple-200 mb-2">
+							✨ Set Up New Year Decorations
+						</h3>
+						<p className="text-purple-700 dark:text-purple-300 text-sm mb-3">
+							Would you like to add common New Year decoration tasks?
+						</p>
+						<div className="flex gap-2">
+							<button
+								onClick={addDefaultDecorationTasks}
+								className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors text-sm"
+							>
+								Add Default Tasks
+							</button>
+							<button
+								onClick={() => setShowDefaultTasks(false)}
+								className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
+							>
+								Skip
+							</button>
+						</div>
+					</div>
+				)}
+
+				<AddButton title="Decoration Task" onClick={openForm} color="purple" />
+				<div className="flex items-center justify-center">
+					{sortBy !== "none" && (
+						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
+							{sortBy === "priority" && "Sorted by Priority"}
+							{sortBy === "dateDue" && "Sorted by Date Due"}
+							{sortBy === "assignedTo" && "Sorted by Assigned To"}
+							{sortBy === "category" && "Sorted by Category"}
+						</div>
+					)}
+				</div>
 
 				<TaskSection
 					title="Incomplete"
-					items={incompleteDecorations}
+					items={incompleteTasks}
 					isCompleted={false}
-					emptyMessage="All decorations completed! 🎉"
+					emptyMessage="All decorations complete! ✨"
 					completedMessage=""
 					renderItem={renderTaskItem}
+					cardClassName="card-tasks"
 				/>
 
 				<TaskSection
 					title="Completed"
-					items={completedDecorations}
+					items={completedTasks}
 					isCompleted={true}
-					emptyMessage="No completed decorations yet."
-					completedMessage="No completed decorations yet."
+					emptyMessage="No completed tasks yet."
+					completedMessage="No completed tasks yet."
 					renderItem={renderTaskItem}
-				/>
-
-				{/* Sort Modal */}
-				<SortModal
-					isOpen={showSortModal}
-					onClose={() => setShowSortModal(false)}
-					sortBy={sortBy}
-					onSortChange={(sortOption: string) =>
-						setSortBy(sortOption as SortOption)
-					}
-					sortOptions={[
-						{ value: "none", label: "No Sorting" },
-						{ value: "priority", label: "Sort by Priority" },
-						{ value: "dueDate", label: "Sort by Due Date" },
-						{ value: "title", label: "Sort by Title" },
-					]}
-					title="Sort Decorations"
-				/>
-
-				{/* Form Modal for Adding */}
-				<FormModal
-					isOpen={showFormModal}
-					title="Add New Decoration"
-					fields={formFields}
-					onSubmit={handleAddTask}
-					onClose={() => setShowFormModal(false)}
-					submitText="Add Decoration"
-					submitButtonColor="#f59e0b"
-				/>
-
-				{/* Form Modal for Editing */}
-				<FormModal
-					isOpen={showEditModal}
-					title="Edit Decoration"
-					fields={editFormFields}
-					initialValues={
-						selectedTask
-							? {
-									title: selectedTask.title,
-									description: selectedTask.description || "",
-									priority: selectedTask.priority,
-									dueDate: selectedTask.dueDate || "",
-									notes: selectedTask.notes || "",
-									isCompleted: selectedTask.isCompleted,
-							  }
-							: {}
-					}
-					onSubmit={handleEditTask}
-					onClose={() => {
-						setShowEditModal(false);
-						setSelectedTask(null);
-					}}
-					submitText="Save Changes"
-					submitButtonColor="#f59e0b"
-				/>
-
-				{/* Delete Modal */}
-				<DeleteModal
-					isOpen={showDeleteModal}
-					title="Delete Decoration"
-					message="Are you sure you want to delete this decoration? This action cannot be undone."
-					itemName={taskToDelete?.title}
-					onConfirm={confirmDelete}
-					onCancel={() => {
-						setShowDeleteModal(false);
-						setTaskToDelete(null);
-					}}
-					confirmText="Delete"
-					confirmButtonColor="#ef4444"
+					cardClassName="card-tasks"
 				/>
 			</main>
 
-			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-				&copy; {new Date().getFullYear()} Next Holiday
-			</footer>
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showForm}
+				title="Add New Decoration Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: "",
+					description: "",
+					priority: "medium",
+					assignedTo: "",
+					dueDate: "",
+				}}
+				onSubmit={handleAddTask}
+				onClose={closeForm}
+				loading={loading}
+				submitText="Add Task"
+				cardClassName="card-tasks"
+			/>
+
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Decoration Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: editingTask?.title || "",
+					description: editingTask?.description || "",
+					priority: editingTask?.priority || "medium",
+					assignedTo: editingTask?.assignedTo || "",
+					dueDate: editingTask?.dueDate || "",
+				}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={editDecorationState.isLoading}
+				submitText="Update Task"
+				cardClassName="card-tasks"
+			/>
+
+			{/* Delete Confirmation Modal */}
+			<DeleteModal
+				isOpen={deleteConfirm.show}
+				onCancel={cancelDelete}
+				onConfirm={confirmDelete}
+				loading={deleteDecorationState.isLoading}
+				cardClassName="card-tasks"
+				title="Confirm Delete"
+				message="Are you sure you want to delete this task? This action cannot be undone."
+			/>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "priority", label: "Priority" },
+					{ value: "dateDue", label: "Date Due" },
+					{ value: "assignedTo", label: "Assigned To" },
+					{ value: "category", label: "Category" },
+				]}
+				title="Sort Tasks"
+			/>
 		</div>
 	);
 }

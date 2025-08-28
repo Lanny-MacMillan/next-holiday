@@ -220,6 +220,7 @@ model Contact {
   @@index([accountId])
   @@index([name])
   @@index([email])
+  @@unique([accountId, email])
 }
 
 // Generic and holiday-specific tasks with priorities and assignments

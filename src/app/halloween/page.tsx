@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchHalloweenTasks } from "@/store/slices/halloween/halloweenTasksSlice";
-import { fetchHalloweenBudgetItems } from "@/store/slices/halloween/halloweenBudgetSlice";
-import { fetchHalloweenGifts } from "@/store/slices/halloween/halloweenGiftListSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useGetGiftsQuery, useGetTasksQuery } from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
@@ -16,6 +15,7 @@ const subsections = [
 		href: "/halloween/trick-or-treat-prep",
 		sliceKey: "tasks",
 		category: "Trick-or-Treat Prep",
+		type: "task",
 	},
 	{
 		name: "Costume Ideas",
@@ -23,6 +23,7 @@ const subsections = [
 		href: "/halloween/costume-ideas",
 		sliceKey: "tasks",
 		category: "Costume Ideas",
+		type: "task",
 	},
 	{
 		name: "Decorations Checklist",
@@ -30,25 +31,37 @@ const subsections = [
 		href: "/halloween/decorations",
 		sliceKey: "tasks",
 		category: "Decorations Checklist",
+		type: "task",
 	},
 ];
 
 export default function HalloweenPage() {
-	const dispatch = useAppDispatch();
-
-	const tasks = useAppSelector((state: any) => state.halloweenTasks.tasks);
-	const budgetItems = useAppSelector(
-		(state: any) => state.halloweenBudget.budgetItems
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
-	const gifts = useAppSelector((state: any) => state.halloweenGiftList.gifts);
 
-	useEffect(() => {
-		dispatch(fetchHalloweenTasks());
-		dispatch(fetchHalloweenBudgetItems());
-		dispatch(fetchHalloweenGifts());
-	}, [dispatch]);
+	// Get holiday ID for Halloween
+	const holidayId = getHolidayIdFromRoute("/halloween", holidayPreferences);
 
-	function getProgressData(sliceKey: string, category?: string) {
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: tasks = [] } = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+
+	function getProgressData(
+		sliceKey: string,
+		category?: string
+	): {
+		total: number;
+		completed: number;
+		progress: number;
+	} {
 		let total = 0;
 		let completed = 0;
 
@@ -62,25 +75,9 @@ export default function HalloweenPage() {
 					(task: any) => task.isCompleted
 				).length;
 				break;
-			case "budget":
-				// Include both budget items and gift list items for total spending tracking
-				const filteredBudgetItems = category
-					? budgetItems.filter((item: any) => item.category === category)
-					: budgetItems;
-				const filteredGifts = category
-					? gifts.filter((gift: any) => gift.category === category)
-					: gifts;
-
-				// Count budget items (expenses)
-				const budgetExpenses = filteredBudgetItems.filter(
-					(item: any) => item.isExpense
-				).length;
-
-				// Count gift items (all gifts are expenses)
-				const giftExpenses = filteredGifts.length;
-
-				total = filteredBudgetItems.length + filteredGifts.length;
-				completed = budgetExpenses + giftExpenses;
+			case "giftList":
+				total = gifts.length;
+				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
 			default:
 				total = 0;
@@ -109,12 +106,11 @@ export default function HalloweenPage() {
 								accentColor: "#eab308",
 							}}
 							gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
-							gamified={true}
 						/>
 					</li>
 
 					{subsections.map((section) => {
-						const { total, completed } = getProgressData(
+						const { total, completed, progress } = getProgressData(
 							section.sliceKey,
 							section.category
 						);
@@ -140,6 +136,9 @@ export default function HalloweenPage() {
 					})}
 				</ul>
 			</main>
+			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
+				&copy; {new Date().getFullYear()} Next Holiday
+			</footer>
 		</div>
 	);
 }

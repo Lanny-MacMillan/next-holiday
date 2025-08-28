@@ -34,7 +34,7 @@ export const HOLIDAY_GIFT_LIST_CONFIG: Record<string, HolidayGiftListConfig> = {
 		displayText: "Gift List",
 	},
 	"New Year": {
-		sliceName: "newYearGiftList",
+		sliceName: "gifts", // Now using RTK Query
 		displayText: "Supplies List",
 	},
 	"Mother's Day": {

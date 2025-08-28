@@ -5,11 +5,19 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchFourthOfJulyTasks } from "@/store/slices/fourth-of-july/fourthOfJulyTasksSlice";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
+import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
 import CountdownWithInvite from "@/components/common/CountdownWithInvite";
 import SharedIndicator from "@/components/common/SharedIndicator";
 
 const fourthOfJulySubsections = [
+	{
+		name: "Supplies List",
+		description: "Track all your Fourth of July supplies",
+		href: "/fourth-of-july/supplies-list",
+		sliceKey: "gifts",
+		type: "gift-list",
+	},
 	{
 		name: "Event Planning",
 		description: "Plan your Fourth of July celebrations",
@@ -55,6 +63,11 @@ export default function FourthOfJulyPage() {
 					(task: any) => task.isCompleted
 				).length;
 				break;
+			case "gifts":
+				// For supplies list, we'll show 0 progress since it's handled by RTK Query
+				total = 0;
+				completed = 0;
+				break;
 			default:
 				total = 0;
 				completed = 0;
@@ -77,6 +90,23 @@ export default function FourthOfJulyPage() {
 							section.sliceKey,
 							section.category
 						);
+
+						// Use GiftListCard for gift list sections
+						if (section.type === "gift-list") {
+							return (
+								<li key={section.name}>
+									<GiftListCard
+										holiday="Fourth of July"
+										href={section.href}
+										theme={{
+											primaryColor: "#dc2626", // Red for Fourth of July
+											accentColor: "#dc2626", // Red accent
+										}}
+										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+									/>
+								</li>
+							);
+						}
 
 						// Use GuestListCard for guest list section
 						if (section.sliceKey === "addressBook") {
