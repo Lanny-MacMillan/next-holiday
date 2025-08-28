@@ -1,54 +1,66 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchEasterGifts } from "@/store/slices/easter/easterGiftListSlice";
-import { fetchEasterTasks } from "@/store/slices/easter/easterTasksSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetEventsQuery,
+	useGetDecorationsQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Basket List",
 		description: "Track your Easter basket items",
 		href: "/easter/basket-list",
-		sliceKey: "easterGiftList",
+		sliceKey: "giftList",
 		category: "Basket List",
+		type: "gift-list",
 	},
 	{
 		name: "Event Planning",
 		description: "Plan your Easter events and celebrations",
 		href: "/easter/events",
-		sliceKey: "tasks",
-		category: "Events",
+		sliceKey: "events",
+		type: "task",
 	},
 	{
 		name: "Decorations Checklist",
 		description: "Stay on top of your Easter decorations",
 		href: "/easter/decorations",
-		sliceKey: "tasks",
-		category: "Decorations",
+		sliceKey: "decorations",
+		type: "task",
 	},
 ];
 
 export default function EasterPage() {
-	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
 
-	const gifts = useAppSelector((state: any) => state.easterGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.easterTasks.tasks);
+	// Get holiday ID for Easter
+	const holidayId = getHolidayIdFromRoute("/easter", holidayPreferences);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		// The DataInitializer component should handle this, but we'll keep this as a fallback
-		dispatch(fetchEasterGifts());
-		dispatch(fetchEasterTasks());
-	}, [dispatch]);
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: events = [] } = useGetEventsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: decorations = [] } = useGetDecorationsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
-	function getProgressData(
-		sliceKey: string,
-		category?: string
-	): {
+	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -58,18 +70,17 @@ export default function EasterPage() {
 
 		switch (sliceKey) {
 			case "giftList":
-			case "easterGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				// Filter tasks by category if provided
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
+			case "events":
+				total = events.length;
+				completed = events.filter((event: any) => event.isCompleted).length;
+				break;
+			case "decorations":
+				total = decorations.length;
+				completed = decorations.filter(
+					(decoration: any) => decoration.isCompleted
 				).length;
 				break;
 			default:
@@ -92,15 +103,11 @@ export default function EasterPage() {
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey,
-							section.category
+							section.sliceKey
 						);
 
 						// Use GiftListCard for gift list sections
-						if (
-							section.sliceKey === "giftList" ||
-							section.sliceKey === "easterGiftList"
-						) {
+						if (section.type === "gift-list") {
 							return (
 								<li key={section.name}>
 									<GiftListCard

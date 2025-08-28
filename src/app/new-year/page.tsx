@@ -2,7 +2,12 @@
 
 import { useAppSelector } from "@/store/hooks";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useGetGiftsQuery, useGetTasksQuery } from "@/store/api";
+import {
+	useGetGiftsQuery,
+	useGetResolutionsQuery,
+	useGetEventsQuery,
+	useGetDecorationsQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
@@ -13,9 +18,8 @@ const subsections = [
 		name: "Resolution Tracker",
 		description: "Track your New Year resolutions and goals",
 		href: "/new-year/resolution-tracker",
-		sliceKey: "tasks",
+		sliceKey: "resolutions",
 		type: "task",
-		category: "Resolutions",
 	},
 	{
 		name: "Supplies List",
@@ -28,17 +32,15 @@ const subsections = [
 		name: "Events",
 		description: "Plan your New Year events and celebrations",
 		href: "/new-year/events",
-		sliceKey: "tasks",
+		sliceKey: "events",
 		type: "task",
-		category: "Events",
 	},
 	{
 		name: "Decorations Checklist",
 		description: "Stay on top of your New Year decorations",
 		href: "/new-year/decorations",
-		sliceKey: "tasks",
+		sliceKey: "decorations",
 		type: "task",
-		category: "Decorations",
 	},
 ];
 
@@ -56,15 +58,20 @@ export default function NewYearPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
+	const { data: resolutions = [] } = useGetResolutionsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: events = [] } = useGetEventsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: decorations = [] } = useGetDecorationsQuery(
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
 
-	function getProgressData(
-		sliceKey: string,
-		category?: string
-	): {
+	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -77,14 +84,20 @@ export default function NewYearPage() {
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				// Filter tasks by category if provided
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
+			case "resolutions":
+				total = resolutions.length;
+				completed = resolutions.filter(
+					(resolution: any) => resolution.isCompleted
+				).length;
+				break;
+			case "events":
+				total = events.length;
+				completed = events.filter((event: any) => event.isCompleted).length;
+				break;
+			case "decorations":
+				total = decorations.length;
+				completed = decorations.filter(
+					(decoration: any) => decoration.isCompleted
 				).length;
 				break;
 			default:
@@ -107,8 +120,7 @@ export default function NewYearPage() {
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey,
-							section.category
+							section.sliceKey
 						);
 
 						// Determine which card component to use based on type

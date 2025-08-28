@@ -42,9 +42,14 @@ export default function ChristmasPage() {
 	const holidayPreferences = useAppSelector(
 		(state: any) => state.home.data?.holidayPreferences || []
 	);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
 
-	// Get holiday ID for Christmas
-	const holidayId = getHolidayIdFromRoute("/christmas", holidayPreferences);
+	// Get holiday ID for Christmas - only resolve if home data is initialized
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/christmas", holidayPreferences)
+		: null;
 
 	// Use RTK Query to fetch data
 	const { data: gifts = [] } = useGetGiftsQuery(
@@ -59,9 +64,6 @@ export default function ChristmasPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-
-	// DataInitializer component handles data fetching
-	// No need to fetch here as it's already handled globally
 
 	function getProgressData(sliceKey: string): {
 		total: number;

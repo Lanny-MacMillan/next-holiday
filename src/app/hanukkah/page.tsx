@@ -5,7 +5,9 @@ import { useAuth0 } from "@auth0/auth0-react";
 import {
 	useGetGiftsQuery,
 	useGetCardsQuery,
-	useGetTasksQuery,
+	useGetEventsQuery,
+	useGetCandleLightingQuery,
+	useGetDecorationsQuery,
 } from "@/store/api";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
@@ -25,25 +27,22 @@ const subsections = [
 		name: "Candle Lighting Tracker",
 		description: "Track the lighting of 9 candles over 8 days",
 		href: "/hanukkah/candle-lighting",
-		sliceKey: "tasks",
+		sliceKey: "candleLighting",
 		type: "task",
-		category: "Candle Lighting",
 	},
 	{
 		name: "Events",
 		description: "Plan your Hanukkah events and celebrations",
 		href: "/hanukkah/events",
-		sliceKey: "tasks",
+		sliceKey: "events",
 		type: "task",
-		category: "Events",
 	},
 	{
 		name: "Decorations Checklist",
 		description: "Stay on top of your Hanukkah decorations",
 		href: "/hanukkah/decorations",
-		sliceKey: "tasks",
+		sliceKey: "decorations",
 		type: "task",
-		category: "Decorations",
 	},
 ];
 
@@ -65,18 +64,20 @@ export default function HanukkahPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
+	const { data: events = [] } = useGetEventsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: candleLighting = [] } = useGetCandleLightingQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: decorations = [] } = useGetDecorationsQuery(
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
 
-	// DataInitializer component handles data fetching
-	// No need to fetch here as it's already handled globally
-
-	function getProgressData(
-		sliceKey: string,
-		category?: string
-	): {
+	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -93,14 +94,20 @@ export default function HanukkahPage() {
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				// Filter tasks by category if provided
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
+			case "events":
+				total = events.length;
+				completed = events.filter((event: any) => event.isCompleted).length;
+				break;
+			case "candleLighting":
+				total = candleLighting.length;
+				completed = candleLighting.filter(
+					(candle: any) => candle.isCompleted
+				).length;
+				break;
+			case "decorations":
+				total = decorations.length;
+				completed = decorations.filter(
+					(decoration: any) => decoration.isCompleted
 				).length;
 				break;
 			default:
@@ -123,8 +130,7 @@ export default function HanukkahPage() {
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey,
-							section.category
+							section.sliceKey
 						);
 
 						// Determine which card component to use based on type

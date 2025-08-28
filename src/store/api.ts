@@ -482,6 +482,79 @@ export const api = createApi({
 				{ type: "Tasks", id: holidayId },
 			],
 		}),
+		updateTask: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; updates: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, updates, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...updates },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+		}),
+		deleteTask: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+		}),
+		toggleTaskCompletion: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+		}),
 		createHanukkahTask: builder.mutation<
 			any,
 			{ holidayId: string; payload: any; auth0User?: any }
@@ -2550,6 +2623,9 @@ export const api = createApi({
 
 export const {
 	useCreateTaskMutation,
+	useUpdateTaskMutation,
+	useDeleteTaskMutation,
+	useToggleTaskCompletionMutation,
 	useCreateGiftMutation,
 	useCreateCardMutation,
 	useCreateGuestMutation,

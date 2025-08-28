@@ -1,26 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchBirthdayCards } from "@/store/slices/birthday/birthdayCardsSlice";
-import { fetchBirthdayGifts } from "@/store/slices/birthday/birthdayGiftListSlice";
-import { fetchBirthdayTasks } from "@/store/slices/birthday/birthdayTasksSlice";
-import { fetchBirthdayContacts } from "@/store/slices/birthday/birthdayAddressBookSlice";
-import { fetchBirthdayGuests } from "@/store/slices/birthday/birthdayGuestListSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import {
+	useGetGiftsQuery,
+	useGetCardsQuery,
+	useGetPartyPlanningQuery,
+	useGetGuestListQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import PartyPlanningCard from "@/components/cards/holiday-task/PartyPlanningCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Gift List",
 		description: "Track birthday gift ideas",
 		href: "/birthday/gift-list",
-		sliceKey: "birthdayGiftList",
+		sliceKey: "giftList",
 		category: "Gifts",
 		type: "gift-list",
 	},
@@ -28,16 +28,15 @@ const subsections = [
 		name: "Guest List",
 		description: "Track your birthday guests",
 		href: "/birthday/guest-list",
-		sliceKey: "birthdayGuestList",
+		sliceKey: "guestList",
 		type: "guest-list",
 	},
 	{
 		name: "Party Planning",
 		description: "Plan birthday parties and celebrations",
 		href: "/birthday/party-planning",
-		sliceKey: "tasks",
+		sliceKey: "partyPlanning",
 		type: "task",
-		category: "Events",
 	},
 	{
 		name: "Cards List",
@@ -49,24 +48,31 @@ const subsections = [
 ];
 
 export default function BirthdayPage() {
-	const dispatch = useAppDispatch();
-
-	const cards = useAppSelector((state: any) => state.birthdayCards.cards);
-	const gifts = useAppSelector((state: any) => state.birthdayGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.birthdayTasks.tasks);
-	const contacts = useAppSelector(
-		(state: any) => state.birthdayAddressBook.contacts
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
-	const guests = useAppSelector((state: any) => state.birthdayGuestList.guests);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		dispatch(fetchBirthdayCards());
-		dispatch(fetchBirthdayGifts());
-		dispatch(fetchBirthdayTasks());
-		dispatch(fetchBirthdayContacts());
-		dispatch(fetchBirthdayGuests());
-	}, [dispatch]);
+	// Get holiday ID for Birthday
+	const holidayId = getHolidayIdFromRoute("/birthday", holidayPreferences);
+
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: cards = [] } = useGetCardsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: partyPlanning = [] } = useGetPartyPlanningQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: guests = [] } = useGetGuestListQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(sliceKey: string): {
 		total: number;
@@ -82,19 +88,16 @@ export default function BirthdayPage() {
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
 			case "giftList":
-			case "birthdayGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				total = tasks.length;
-				completed = tasks.filter((task: any) => task.isCompleted).length;
+			case "partyPlanning":
+				total = partyPlanning.length;
+				completed = partyPlanning.filter(
+					(planning: any) => planning.isCompleted
+				).length;
 				break;
-			case "addressBook":
-				total = contacts.length;
-				completed = 0; // Address book doesn't have completion status
-				break;
-			case "birthdayGuestList":
+			case "guestList":
 				total = guests.length;
 				completed = guests.filter((guest: any) => guest.isCompleted).length;
 				break;
