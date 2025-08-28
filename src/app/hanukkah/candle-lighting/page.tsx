@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
@@ -11,52 +10,107 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import { useHanukkahTasksMutations } from "@/hooks/useHanukkahTasksMutations";
-import { fetchHanukkahTasks } from "@/store/slices/hanukkah/hanukkahTasksSlice";
+import { useCandleLightingMutations } from "@/hooks/useCandleLightingMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
+
+const defaultCandleTasks = [
+	{
+		title: "Light 1st Candle",
+		description: "First night of Hanukkah - Light the shamash and first candle",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 2nd Candle",
+		description: "Second night of Hanukkah - Light the shamash and two candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 3rd Candle",
+		description:
+			"Third night of Hanukkah - Light the shamash and three candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 4th Candle",
+		description:
+			"Fourth night of Hanukkah - Light the shamash and four candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 5th Candle",
+		description: "Fifth night of Hanukkah - Light the shamash and five candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 6th Candle",
+		description: "Sixth night of Hanukkah - Light the shamash and six candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 7th Candle",
+		description:
+			"Seventh night of Hanukkah - Light the shamash and seven candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+	{
+		title: "Light 8th Candle",
+		description:
+			"Eighth night of Hanukkah - Light the shamash and eight candles",
+		category: "Candle Lighting",
+		priority: "high" as const,
+	},
+];
 
 export default function CandleLightingPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-	// Use the new Hanukkah tasks mutations hook
+	// Use the new candle lighting mutations hook
 	const {
 		holidayId,
 		auth0User,
-		hanukkahTasks,
+		candleLighting,
 		loading,
 		error,
 		initialized,
-		createHanukkahTask,
-		updateHanukkahTask,
-		editHanukkahTask,
-		deleteHanukkahTask,
-		createHanukkahTaskState,
-		updateHanukkahTaskState,
-		editHanukkahTaskState,
-		deleteHanukkahTaskState,
-	} = useHanukkahTasksMutations();
+		createCandleLighting,
+		updateCandleLighting,
+		editCandleLighting,
+		deleteCandleLighting,
+		createCandleLightingState,
+		updateCandleLightingState,
+		editCandleLightingState,
+		deleteCandleLightingState,
+	} = useCandleLightingMutations();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showForm, setShowForm] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
+	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
+	// Check if default candle tasks exist
 	useEffect(() => {
-		// Initialize Hanukkah tasks if not already initialized
-		if (!initialized) {
-			dispatch(fetchHanukkahTasks());
+		if (candleLighting.length === 0 && initialized) {
+			setShowDefaultTasks(true);
 		}
-	}, [dispatch, initialized]);
+	}, [candleLighting, initialized]);
 
-	function handleAddTask(values: Record<string, any>) {
+	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
 		if (!holidayId || !auth0User) return;
 
@@ -70,8 +124,24 @@ export default function CandleLightingPage() {
 			isCompleted: false,
 		};
 
-		createHanukkahTask({ holidayId, payload, auth0User });
+		await createCandleLighting({ holidayId, payload, auth0User });
 		setShowForm(false);
+	}
+
+	async function addDefaultCandleTasks() {
+		for (const task of defaultCandleTasks) {
+			const payload = {
+				title: task.title,
+				description: task.description,
+				priority: task.priority,
+				assignedTo: undefined,
+				category: task.category,
+				dueDate: undefined,
+				isCompleted: false,
+			};
+			await createCandleLighting({ holidayId, payload, auth0User });
+		}
+		setShowDefaultTasks(false);
 	}
 
 	function openForm() {
@@ -82,21 +152,24 @@ export default function CandleLightingPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
+	async function handleToggleTask(taskId: string) {
 		if (!holidayId || !auth0User) return;
 
-		updateHanukkahTask({
-			holidayId,
-			taskId,
-			isCompleted: true, // This will toggle in the slice
-			auth0User,
-		});
+		const task = candleLighting.find((t: any) => t.id === taskId);
+		if (task) {
+			await updateCandleLighting({
+				holidayId,
+				taskId,
+				isCompleted: !task.isCompleted,
+				auth0User,
+			});
+		}
 	}
 
-	function handleDeleteTask(taskId: string) {
+	async function handleDeleteTask(taskId: string) {
 		if (!holidayId || !auth0User) return;
 
-		deleteHanukkahTask({
+		await deleteCandleLighting({
 			holidayId,
 			taskId,
 			auth0User,
@@ -108,10 +181,10 @@ export default function CandleLightingPage() {
 		setShowEditModal(true);
 	};
 
-	function handleEditTaskSubmit(values: Record<string, any>) {
+	async function handleEditTaskSubmit(values: Record<string, any>) {
 		if (!editingTask || !holidayId || !auth0User) return;
 
-		editHanukkahTask({
+		await editCandleLighting({
 			holidayId,
 			taskId: editingTask.id,
 			payload: {
@@ -177,7 +250,7 @@ export default function CandleLightingPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(hanukkahTasks);
+	const sortedTasks = sortTasks(candleLighting);
 	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
@@ -193,6 +266,33 @@ export default function CandleLightingPage() {
 				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
+				{/* Default Tasks Prompt */}
+				{showDefaultTasks && (
+					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+						<h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+							🕯️ Set Up Hanukkah Candle Lighting
+						</h3>
+						<p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
+							Would you like to add the 8 nights of Hanukkah candle lighting
+							tasks?
+						</p>
+						<div className="flex gap-2">
+							<button
+								onClick={addDefaultCandleTasks}
+								className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
+							>
+								Add Default Tasks
+							</button>
+							<button
+								onClick={() => setShowDefaultTasks(false)}
+								className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
+							>
+								Skip
+							</button>
+						</div>
+					</div>
+				)}
+
 				<AddButton
 					title="Candle Lighting Task"
 					onClick={openForm}
@@ -338,7 +438,7 @@ export default function CandleLightingPage() {
 				}}
 				onSubmit={handleEditTaskSubmit}
 				onClose={closeEditModal}
-				loading={editHanukkahTaskState.isLoading}
+				loading={editCandleLightingState.isLoading}
 				submitText="Update Task"
 				cardClassName="card-tasks"
 			/>

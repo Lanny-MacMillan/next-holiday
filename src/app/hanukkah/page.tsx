@@ -25,7 +25,7 @@ const subsections = [
 	},
 	{
 		name: "Candle Lighting Tracker",
-		description: "Track the lighting of 9 candles over 8 days",
+		description: "Track the lighting of candles over the 8 days",
 		href: "/hanukkah/candle-lighting",
 		sliceKey: "candleLighting",
 		type: "task",
