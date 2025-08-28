@@ -64,6 +64,7 @@ export default function FormModal({
 }: FormModalProps) {
 	const [formValues, setFormValues] = useState<Record<string, any>>({});
 	const [showAddressBookInternal, setShowAddressBookInternal] = useState(false);
+	const [showAddressBookMessage, setShowAddressBookMessage] = useState(false);
 
 	const handleAddressBookSelect = (contact: any) => {
 		// Build full address from contact details
@@ -86,6 +87,7 @@ export default function FormModal({
 			phone: contact.phone || "",
 		}));
 		setShowAddressBookInternal(false);
+		setShowAddressBookMessage(false); // Hide message when selecting from address book
 	};
 
 	useEffect(() => {
@@ -141,6 +143,7 @@ export default function FormModal({
 	const handleClose = () => {
 		setFormValues({});
 		setShowAddressBookInternal(false);
+		setShowAddressBookMessage(false);
 		onClose();
 	};
 
@@ -158,6 +161,21 @@ export default function FormModal({
 			...prev,
 			[fieldId]: processedValue,
 		}));
+
+		// Show address book message when user types in name field and address book is enabled
+		if (
+			(fieldId === "name" || fieldId === "recipient") &&
+			showAddressBook &&
+			value.trim()
+		) {
+			setShowAddressBookMessage(true);
+		} else if (
+			(fieldId === "name" || fieldId === "recipient") &&
+			showAddressBook &&
+			!value.trim()
+		) {
+			setShowAddressBookMessage(false);
+		}
 	};
 
 	const renderField = (field: FormField) => {
@@ -272,6 +290,21 @@ export default function FormModal({
 								(field.id === "recipient" || field.id === "name") &&
 								showAddressBook
 							) && renderField(field)}
+
+							{/* Address Book Message - shows when user types in name field */}
+							{(field.id === "recipient" || field.id === "name") &&
+								showAddressBookMessage &&
+								showAddressBook && (
+									<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-2 mt-2">
+										<div className="text-xs text-blue-700 dark:text-blue-300 flex items-start">
+											<span className="mr-1">ℹ️</span>
+											<span>
+												This guest will be automatically added to your address
+												book.
+											</span>
+										</div>
+									</div>
+								)}
 
 							{/* Address Book Dropdown - positioned right after recipient/name field */}
 							{(field.id === "recipient" || field.id === "name") &&
