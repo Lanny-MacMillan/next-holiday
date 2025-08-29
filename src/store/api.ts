@@ -54,6 +54,28 @@ export const api = createApi({
 				{ type: "Gifts", id: holidayId },
 			],
 		}),
+		// Query to get all gifts for a user across all holidays
+		getAllGifts: builder.query<any[], { auth0User?: any }>({
+			query: ({ auth0User }) => ({
+				url: `gifts`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result) => [
+				{ type: "Gifts", id: "LIST" },
+			],
+		}),
 		getCards: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
 				url: `holidays/${holidayId}/cards`,
@@ -75,6 +97,28 @@ export const api = createApi({
 				{ type: "Cards", id: holidayId },
 			],
 		}),
+		// Query to get all cards for a user across all holidays
+		getAllCards: builder.query<any[], { auth0User?: any }>({
+			query: ({ auth0User }) => ({
+				url: `cards`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result) => [
+				{ type: "Cards", id: "LIST" },
+			],
+		}),
 		getTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
 				url: `holidays/${holidayId}/tasks`,
@@ -94,6 +138,28 @@ export const api = createApi({
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
+			],
+		}),
+		// Query to get all tasks for a user across all holidays
+		getAllTasks: builder.query<any[], { auth0User?: any }>({
+			query: ({ auth0User }) => ({
+				url: `tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result) => [
+				{ type: "Tasks", id: "LIST" },
 			],
 		}),
 		getHanukkahTasks: builder.query<
@@ -2823,8 +2889,11 @@ export const {
 	useDeleteGuestMutation,
 	useCardOperationMutation,
 	useGetGiftsQuery,
+	useGetAllGiftsQuery,
 	useGetCardsQuery,
+	useGetAllCardsQuery,
 	useGetTasksQuery,
+	useGetAllTasksQuery,
 	useGetGuestListQuery,
 	useGetDecorationsQuery,
 	useGetEventsQuery,
