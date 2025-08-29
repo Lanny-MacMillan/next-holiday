@@ -481,6 +481,40 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
 			],
+			// Optimistic update for create task
+			async onQueryStarted(
+				{ holidayId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Generate a temporary ID for the optimistic update
+				const tempId = `temp-${Date.now()}`;
+				const optimisticTask = {
+					id: tempId,
+					...payload,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+
+				// Optimistically add the task to the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								draft.unshift(optimisticTask);
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the create fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		updateTask: builder.mutation<
 			any,
@@ -504,6 +538,40 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
 			],
+			// Optimistic update for update task
+			async onQueryStarted(
+				{ holidayId, taskId, updates, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the task in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const taskIndex = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (taskIndex !== -1) {
+									draft[taskIndex] = {
+										...draft[taskIndex],
+										...updates,
+										updatedAt: new Date().toISOString(),
+									};
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the update fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		deleteTask: builder.mutation<
 			any,
@@ -526,6 +594,36 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
 			],
+			// Optimistic update for delete task
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically remove the task from the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const taskIndex = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (taskIndex !== -1) {
+									draft.splice(taskIndex, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the delete fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		toggleTaskCompletion: builder.mutation<
 			any,
@@ -554,6 +652,43 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
 			],
+			// Optimistic update for toggle task completion
+			async onQueryStarted(
+				{ holidayId, taskId, isCompleted, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the task completion status in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const taskIndex = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (taskIndex !== -1) {
+									draft[taskIndex] = {
+										...draft[taskIndex],
+										isCompleted,
+										completedDate: isCompleted
+											? new Date().toISOString()
+											: null,
+										updatedAt: new Date().toISOString(),
+									};
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the toggle fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		createHanukkahTask: builder.mutation<
 			any,
