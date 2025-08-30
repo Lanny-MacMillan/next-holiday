@@ -4,7 +4,10 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { initializeTheme, clearCachedData } from "@/store/slices/themeSlice";
-import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
+import {
+	getCurrentUserPreferences,
+	updateUserPreferences,
+} from "@/store/slices/userPreferencesSlice";
 import AuthWrapper from "./auth/AuthWrapper";
 import Header from "./common/Header";
 import Login from "./auth/Login";
@@ -30,6 +33,13 @@ export default function AppContent({ children }: AppContentProps) {
 			dispatch(initializeTheme());
 		}
 	}, [dispatch, initialized]);
+
+	// Load user preferences when authenticated
+	useEffect(() => {
+		if (isAuthenticated && auth0User?.sub && !preferencesInitialized) {
+			dispatch(getCurrentUserPreferences(auth0User.sub));
+		}
+	}, [isAuthenticated, auth0User?.sub, preferencesInitialized, dispatch]);
 
 	// Clear cached data when user logs in to prevent seeing stale holiday preferences
 	useEffect(() => {

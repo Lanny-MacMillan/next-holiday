@@ -3,6 +3,7 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
+import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
@@ -10,6 +11,7 @@ export default function SettingsPage() {
 	const { user } = useAuth0();
 	const dispatch = useAppDispatch();
 	const { settings } = useAppSelector((state: any) => state.theme);
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
 	const [localSettings, setLocalSettings] = useState(settings);
 	const [imageError, setImageError] = useState(false);
 
@@ -17,6 +19,28 @@ export default function SettingsPage() {
 	useEffect(() => {
 		setImageError(false);
 	}, [user?.picture]);
+
+	// Update local settings when preferences are loaded
+	useEffect(() => {
+		if (preferences) {
+			setLocalSettings({
+				...localSettings,
+				theme: preferences.theme || settings.theme,
+				displayMode: preferences.displayMode || settings.displayMode,
+				notifications: {
+					reminders:
+						preferences.reminderNotifications ??
+						settings.notifications.reminders,
+					shippingAlerts:
+						preferences.pushNotifications ??
+						settings.notifications.shippingAlerts,
+					upcomingEvents:
+						preferences.holidayCountdownAlerts ??
+						settings.notifications.upcomingEvents,
+				},
+			});
+		}
+	}, [preferences]);
 
 	function getInitials(name: string): string {
 		const words = name
@@ -30,7 +54,7 @@ export default function SettingsPage() {
 		).toUpperCase();
 	}
 
-	const handleSettingChange = (key: string, value: any) => {
+	const handleSettingChange = async (key: string, value: any) => {
 		const newSettings = { ...localSettings };
 
 		if (key.includes(".")) {
@@ -42,11 +66,54 @@ export default function SettingsPage() {
 
 		setLocalSettings(newSettings);
 		dispatch(updateSettings(newSettings));
+
+		// Update database preferences
+		if (user?.sub && preferences) {
+			try {
+				let preferencesData: any = {};
+
+				if (key === "theme") {
+					preferencesData.theme = value;
+				} else if (key === "displayMode") {
+					preferencesData.displayMode = value;
+				} else if (key === "notifications.reminders") {
+					preferencesData.reminderNotifications = value;
+				} else if (key === "notifications.shippingAlerts") {
+					preferencesData.pushNotifications = value;
+				} else if (key === "notifications.upcomingEvents") {
+					preferencesData.holidayCountdownAlerts = value;
+				}
+
+				if (Object.keys(preferencesData).length > 0) {
+					await dispatch(
+						updateUserPreferences({
+							preferencesData,
+							auth0Sub: user.sub,
+						})
+					).unwrap();
+				}
+			} catch (error) {
+				console.error("Failed to update preferences in database:", error);
+			}
+		}
 	};
 
 	const handleSave = () => {
 		dispatch(updateSettings(localSettings));
 	};
+
+	// Use preferences from database if available, otherwise fall back to local settings
+	const currentTheme = preferences?.theme || localSettings.theme;
+	const currentDisplayMode =
+		preferences?.displayMode || localSettings.displayMode;
+	const currentReminders =
+		preferences?.reminderNotifications ?? localSettings.notifications.reminders;
+	const currentShippingAlerts =
+		preferences?.pushNotifications ??
+		localSettings.notifications.shippingAlerts;
+	const currentUpcomingEvents =
+		preferences?.holidayCountdownAlerts ??
+		localSettings.notifications.upcomingEvents;
 
 	return (
 		<div className="min-h-screen christmas-settings-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -151,16 +218,47 @@ export default function SettingsPage() {
 								onClick={() =>
 									handleSettingChange(
 										"theme",
-										localSettings.theme === "light" ? "dark" : "light"
+										currentTheme === "light" ? "dark" : "light"
 									)
 								}
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-									localSettings.theme === "dark" ? "bg-blue-600" : "bg-gray-400"
+									currentTheme === "dark" ? "bg-blue-600" : "bg-gray-400"
 								}`}
 							>
 								<span
 									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-										localSettings.theme === "dark"
+										currentTheme === "dark" ? "translate-x-6" : "translate-x-1"
+									}`}
+								/>
+							</button>
+						</div>
+						<div className="flex items-center justify-between">
+							<div>
+								<label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+									Display Mode
+								</label>
+								<p className="text-xs text-gray-800 dark:text-gray-400">
+									Choose between professional and gamified card styles
+								</p>
+							</div>
+							<button
+								onClick={() =>
+									handleSettingChange(
+										"displayMode",
+										currentDisplayMode === "professional"
+											? "gamified"
+											: "professional"
+									)
+								}
+								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+									currentDisplayMode === "gamified"
+										? "bg-blue-600"
+										: "bg-gray-400"
+								}`}
+							>
+								<span
+									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+										currentDisplayMode === "gamified"
 											? "translate-x-6"
 											: "translate-x-1"
 									}`}
@@ -314,20 +412,16 @@ export default function SettingsPage() {
 								onClick={() =>
 									handleSettingChange(
 										"notifications.reminders",
-										!localSettings.notifications.reminders
+										!currentReminders
 									)
 								}
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-									localSettings.notifications.reminders
-										? "bg-blue-600"
-										: "bg-gray-400"
+									currentReminders ? "bg-blue-600" : "bg-gray-400"
 								}`}
 							>
 								<span
 									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-										localSettings.notifications.reminders
-											? "translate-x-6"
-											: "translate-x-1"
+										currentReminders ? "translate-x-6" : "translate-x-1"
 									}`}
 								/>
 							</button>
@@ -345,20 +439,16 @@ export default function SettingsPage() {
 								onClick={() =>
 									handleSettingChange(
 										"notifications.shippingAlerts",
-										!localSettings.notifications.shippingAlerts
+										!currentShippingAlerts
 									)
 								}
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-									localSettings.notifications.shippingAlerts
-										? "bg-blue-600"
-										: "bg-gray-400"
+									currentShippingAlerts ? "bg-blue-600" : "bg-gray-400"
 								}`}
 							>
 								<span
 									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-										localSettings.notifications.shippingAlerts
-											? "translate-x-6"
-											: "translate-x-1"
+										currentShippingAlerts ? "translate-x-6" : "translate-x-1"
 									}`}
 								/>
 							</button>
@@ -376,20 +466,16 @@ export default function SettingsPage() {
 								onClick={() =>
 									handleSettingChange(
 										"notifications.upcomingEvents",
-										!localSettings.notifications.upcomingEvents
+										!currentUpcomingEvents
 									)
 								}
 								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-									localSettings.notifications.upcomingEvents
-										? "bg-blue-600"
-										: "bg-gray-400"
+									currentUpcomingEvents ? "bg-blue-600" : "bg-gray-400"
 								}`}
 							>
 								<span
 									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-										localSettings.notifications.upcomingEvents
-											? "translate-x-6"
-											: "translate-x-1"
+										currentUpcomingEvents ? "translate-x-6" : "translate-x-1"
 									}`}
 								/>
 							</button>

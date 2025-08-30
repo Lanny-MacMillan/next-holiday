@@ -48,7 +48,7 @@ export function useBudgetInfo(
 	}
 
 	// Use the new centralized budget hook if holidayId is provided
-	const { budget, loading, error } = queryHolidayId 
+	const { budget, loading, error } = queryHolidayId
 		? useHolidayBudget({ holidayId: queryHolidayId })
 		: { budget: null, loading: false, error: null };
 
@@ -152,7 +152,10 @@ export function BudgetDisplay({
 	const budgetInfo = useBudgetInfo(holiday, holidayId);
 	const pathname = usePathname();
 	const { settings } = useAppSelector((state: any) => state.theme);
-	const isGamified = settings.displayMode === "gamified";
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
+	const isGamified =
+		preferences?.displayMode === "gamified" ||
+		settings.displayMode === "gamified";
 
 	if (budgetInfo.budgetLimit === 0) {
 		return null; // Don't show if no budget is set

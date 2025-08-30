@@ -43,10 +43,14 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
 	gamified = false,
 	gamifiedBackgroundColor,
 }) => {
-	// Get display mode from Redux settings (fallback to prop)
+	// Get display mode from Redux settings and user preferences (fallback to prop)
 	const { settings } = useAppSelector((state: any) => state.theme);
-	const isGamifiedMode = gamified || settings.displayMode === "gamified";
-	const isDarkMode = settings.theme === "dark";
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
+	const isGamifiedMode =
+		gamified ||
+		preferences?.displayMode === "gamified" ||
+		settings.displayMode === "gamified";
+	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
 	const accentColor = theme.accentColor;
 	const hoverColor =
