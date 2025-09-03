@@ -6,15 +6,12 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import {
 	fetchInboxInvites,
+	fetchOutgoingInvites,
 	acceptInvite,
 	declineInvite,
 } from "@/store/slices/invitesSlice";
 import { addShare, updateShareInState } from "@/store/slices/sharesSlice";
-import {
-	selectPendingInvites,
-	selectOutgoingInvites,
-	Invite,
-} from "@/store/slices/invitesSlice";
+import { Invite } from "@/store/slices/invitesSlice";
 import { migrateHolidayDataToShare } from "@/utils/shareMigration";
 
 interface AlertsBellProps {
@@ -30,51 +27,60 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	// Get invites from Redux state - simplified approach
 	const allInvites = useAppSelector((state) => state.invites.invites);
 
-	// Filter pending invites directly from allInvites
-	const pendingInvites = allInvites.filter(
-		(invite: any) =>
+	// Separate filtering functions for clarity
+	const filterInboxInvites = (invite: any) => {
+		return (
 			invite.status === "pending" &&
 			(invite.toEmail === user?.email || invite.toUserId === user?.sub)
-	);
+		);
+	};
 
-	const outgoingInvites = useAppSelector((state) =>
-		user?.sub ? selectOutgoingInvites(state, user.sub) : []
-	);
+	const filterOutgoingInvites = (invite: any) => {
+		return (
+			invite.fromUser?.email === user?.email && invite.status === "pending"
+		);
+	};
+
+	const filterAllOutgoingInvites = (invite: any) => {
+		return invite.fromUser?.email === user?.email;
+	};
+
+	// Apply filters
+	const pendingInvites = allInvites.filter(filterInboxInvites);
+	const outgoingInvites = allInvites.filter(filterOutgoingInvites);
+	const allOutgoingInvites = allInvites.filter(filterAllOutgoingInvites);
 
 	const pendingCount = pendingInvites.length;
-	console.log("pendingInvites");
-	// Debug logging to track data flow
-	console.log("🔔 AlertsBell Component Debug:", {
-		userSub: user?.sub,
-		userEmail: user?.email,
-		pendingInvites,
-		pendingCount,
-		pendingInvitesLength: pendingInvites.length,
-		showBadge: pendingCount > 0,
-		allInvites: useAppSelector((state) => state.invites.invites),
-		invitesState: useAppSelector((state) => state.invites),
+
+	// Debug logging
+	console.log("🔍 AlertsBell Debug:");
+	console.log("  - user.email:", user?.email);
+	console.log("  - user.sub:", user?.sub);
+	console.log("  - allInvites count:", allInvites.length);
+	console.log("  - allInvites:", allInvites);
+	console.log("  - pendingInvites count:", pendingInvites.length);
+	console.log("  - outgoingInvites count:", outgoingInvites.length);
+	console.log("  - allOutgoingInvites count:", allOutgoingInvites.length);
+
+	// Detailed invite structure logging
+	allInvites.forEach((invite: any, index: number) => {
+		console.log(`  📧 Invite ${index + 1}:`, {
+			id: invite.id,
+			status: invite.status,
+			toEmail: invite.toEmail,
+			toUserId: invite.toUserId,
+			fromUser: invite.fromUser,
+			fromUserId: invite.fromUserId,
+			holidayKey: invite.holidayKey,
+			message: invite.message,
+		});
 	});
 
-	// Additional timing debug
-	console.log("⏰ Timing Debug:", {
-		pendingInvitesType: typeof pendingInvites,
-		pendingInvitesIsArray: Array.isArray(pendingInvites),
-		pendingInvitesLengthDirect: pendingInvites?.length,
-		pendingCountDirect: pendingCount,
-		selectorResult:
-			user?.sub && user?.email
-				? selectPendingInvites(
-						useAppSelector((state) => state),
-						user.sub,
-						user.email
-				  )
-				: [],
-	});
-
-	// Fetch inbox invites when component mounts
+	// Fetch invites when component mounts
 	useEffect(() => {
 		if (user?.sub) {
 			dispatch(fetchInboxInvites(user.sub));
+			dispatch(fetchOutgoingInvites(user.sub));
 		}
 	}, [user?.sub, dispatch]);
 
@@ -219,7 +225,7 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 											: "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
 									}`}
 								>
-									Outgoing ({outgoingInvites.length})
+									Outgoing ({allOutgoingInvites.length})
 								</button>
 							</div>
 
@@ -277,7 +283,9 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									<div className="space-y-3">
 										{outgoingInvites.length === 0 ? (
 											<p className="text-gray-500 dark:text-gray-400 text-center py-4">
-												No outgoing invites
+												{allOutgoingInvites.length === 0
+													? "No outgoing invites"
+													: "No pending outgoing invites"}
 											</p>
 										) : (
 											outgoingInvites.map((invite: Invite) => (

@@ -63,15 +63,18 @@ export async function GET(request: NextRequest) {
 	try {
 		const { searchParams } = new URL(request.url);
 		const inbox = searchParams.get("inbox");
+		const outgoing = searchParams.get("outgoing");
 		const userId = searchParams.get("userId");
 
 		if (inbox === "1" && userId) {
-			// First, try to find the user by Auth0 sub to get their email
+			// First, try to find the user by Auth0 sub to get their internal user ID
+			let internalUserId: string | null = null;
 			let userEmail: string | null = null;
 			try {
 				const user = await prisma.user.findUnique({
 					where: { auth0Sub: userId },
 				});
+				internalUserId = user?.id || null;
 				userEmail = user?.email || null;
 			} catch (error) {
 				console.log(
@@ -79,11 +82,11 @@ export async function GET(request: NextRequest) {
 				);
 			}
 
-			// Search for invites by userId OR email
+			// Search for invites by internal userId OR email
 			const invites = await prisma.invite.findMany({
 				where: {
 					OR: [
-						{ toUserId: userId },
+						...(internalUserId ? [{ toUserId: internalUserId }] : []),
 						{ toEmail: userId },
 						...(userEmail ? [{ toEmail: userEmail }] : []),
 					],
@@ -101,13 +104,50 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json(invites);
 		}
 
+		if (outgoing === "1" && userId) {
+			// First, try to find the user by Auth0 sub to get their internal user ID
+			let internalUserId: string | null = null;
+			try {
+				const user = await prisma.user.findUnique({
+					where: { auth0Sub: userId },
+				});
+				internalUserId = user?.id || null;
+			} catch (error) {
+				console.log(
+					"Could not find user by Auth0 sub, continuing with userId search"
+				);
+			}
+
+			if (!internalUserId) {
+				return NextResponse.json({ error: "User not found" }, { status: 404 });
+			}
+
+			// Search for outgoing invites by internal userId
+			const invites = await prisma.invite.findMany({
+				where: {
+					fromUserId: internalUserId,
+				},
+				include: {
+					fromUser: {
+						select: {
+							name: true,
+							email: true,
+						},
+					},
+				},
+			});
+			return NextResponse.json(invites);
+		}
+
 		if (userId) {
-			// First, try to find the user by Auth0 sub to get their email
+			// First, try to find the user by Auth0 sub to get their internal user ID
+			let internalUserId: string | null = null;
 			let userEmail: string | null = null;
 			try {
 				const user = await prisma.user.findUnique({
 					where: { auth0Sub: userId },
 				});
+				internalUserId = user?.id || null;
 				userEmail = user?.email || null;
 			} catch (error) {
 				console.log(
@@ -115,12 +155,12 @@ export async function GET(request: NextRequest) {
 				);
 			}
 
-			// Search for invites by userId OR email
+			// Search for invites by internal userId OR email
 			const invites = await prisma.invite.findMany({
 				where: {
 					OR: [
-						{ fromUserId: userId },
-						{ toUserId: userId },
+						...(internalUserId ? [{ fromUserId: internalUserId }] : []),
+						...(internalUserId ? [{ toUserId: internalUserId }] : []),
 						{ toEmail: userId },
 						...(userEmail ? [{ toEmail: userEmail }] : []),
 					],

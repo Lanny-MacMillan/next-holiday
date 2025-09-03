@@ -71,6 +71,19 @@ export const fetchInboxInvites = createAsyncThunk(
 	}
 );
 
+export const fetchOutgoingInvites = createAsyncThunk(
+	"invites/fetchOutgoingInvites",
+	async (userId: string) => {
+		const response = await fetch(`/api/invites?outgoing=1&userId=${userId}`);
+
+		if (!response.ok) {
+			throw new Error("Failed to fetch outgoing invites");
+		}
+
+		return await response.json();
+	}
+);
+
 export const createInvite = createAsyncThunk(
 	"invites/createInvite",
 	async (
@@ -180,17 +193,35 @@ const invitesSlice = createSlice({
 				state.loading = false;
 				// Merge new invites with existing ones, avoiding duplicates
 				const newInvites = action.payload;
-				const existingIds = new Set(
-					state.invites.map((invite) => invite.inviteId)
-				);
+				const existingIds = new Set(state.invites.map((invite) => invite.id));
 				const uniqueNewInvites = newInvites.filter(
-					(invite: Invite) => !existingIds.has(invite.inviteId)
+					(invite: Invite) => !existingIds.has(invite.id)
 				);
 				state.invites = [...state.invites, ...uniqueNewInvites];
 			})
 			.addCase(fetchInboxInvites.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to fetch inbox invites";
+			})
+			// Fetch outgoing invites
+			.addCase(fetchOutgoingInvites.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(fetchOutgoingInvites.fulfilled, (state, action) => {
+				state.loading = false;
+				// Merge new invites with existing ones, avoiding duplicates
+				const newInvites = action.payload;
+				const existingIds = new Set(state.invites.map((invite) => invite.id));
+				const uniqueNewInvites = newInvites.filter(
+					(invite: Invite) => !existingIds.has(invite.id)
+				);
+				state.invites = [...state.invites, ...uniqueNewInvites];
+			})
+			.addCase(fetchOutgoingInvites.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to fetch outgoing invites";
 			})
 			// Create invite
 			.addCase(createInvite.pending, (state) => {
