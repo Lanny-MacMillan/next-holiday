@@ -61,7 +61,7 @@ export default function InviteButton({
 			// Create invite
 			await dispatch(
 				createInvite({
-					shareId: currentShare.shareId,
+					shareId: currentShare.id || currentShare.shareId, // Handle both field names
 					fromUserId: user.sub,
 					toEmail: values.email,
 					holidayKey,

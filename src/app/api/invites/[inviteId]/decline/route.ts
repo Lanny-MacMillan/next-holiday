@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { inviteRepository } from "@/utils/mockDb";
+import { PrismaClient } from "@/generated/prisma";
+
+const prisma = new PrismaClient();
 
 export async function POST(
 	request: NextRequest,
@@ -8,8 +10,32 @@ export async function POST(
 	try {
 		const { inviteId } = params;
 
-		const invite = await inviteRepository.decline(inviteId);
-		return NextResponse.json(invite);
+		// Find the invite
+		const invite = await prisma.invite.findUnique({
+			where: { id: inviteId },
+		});
+
+		if (!invite) {
+			return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+		}
+
+		if (invite.status !== "pending") {
+			return NextResponse.json(
+				{ error: "Invite is not pending" },
+				{ status: 400 }
+			);
+		}
+
+		// Update invite status to declined
+		const updatedInvite = await prisma.invite.update({
+			where: { id: inviteId },
+			data: {
+				status: "declined",
+				respondedAt: new Date(),
+			},
+		});
+
+		return NextResponse.json(updatedInvite);
 	} catch (error) {
 		console.error("Error declining invite:", error);
 		return NextResponse.json(
