@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { shareRepository } from "@/utils/mockDb";
+import { PrismaClient } from "@/generated/prisma";
+
+const prisma = new PrismaClient();
 
 export async function POST(
 	request: NextRequest,
@@ -17,8 +19,44 @@ export async function POST(
 			);
 		}
 
-		const share = await shareRepository.addMember(shareId, userId);
-		return NextResponse.json(share);
+		// Find the share
+		const share = await prisma.share.findUnique({
+			where: { id: shareId },
+		});
+
+		if (!share) {
+			return NextResponse.json({ error: "Share not found" }, { status: 404 });
+		}
+
+		// Check if user is already a member
+		const existingMember = await prisma.shareMember.findUnique({
+			where: {
+				shareId_userId: {
+					shareId,
+					userId
+				}
+			}
+		});
+
+		if (existingMember) {
+			return NextResponse.json(share);
+		}
+
+		// Add user to share members
+		await prisma.shareMember.create({
+			data: {
+				shareId,
+				userId,
+			}
+		});
+
+		// Get updated share with members
+		const updatedShare = await prisma.share.findUnique({
+			where: { id: shareId },
+			include: { members: true }
+		});
+
+		return NextResponse.json(updatedShare);
 	} catch (error) {
 		console.error("Error adding member to share:", error);
 		return NextResponse.json(

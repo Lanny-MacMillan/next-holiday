@@ -6,7 +6,7 @@ import {
 } from "@reduxjs/toolkit";
 
 export interface Invite {
-	inviteId: string;
+	id: string;
 	shareId: string;
 	fromUserId: string;
 	toUserId?: string;
@@ -16,6 +16,10 @@ export interface Invite {
 	message?: string;
 	createdAt: string;
 	respondedAt?: string;
+	fromUser?: {
+		name: string;
+		email: string;
+	};
 }
 
 interface InvitesState {
@@ -61,6 +65,19 @@ export const fetchInboxInvites = createAsyncThunk(
 
 		if (!response.ok) {
 			throw new Error("Failed to fetch inbox invites");
+		}
+
+		return await response.json();
+	}
+);
+
+export const fetchOutgoingInvites = createAsyncThunk(
+	"invites/fetchOutgoingInvites",
+	async (userId: string) => {
+		const response = await fetch(`/api/invites?outgoing=1&userId=${userId}`);
+
+		if (!response.ok) {
+			throw new Error("Failed to fetch outgoing invites");
 		}
 
 		return await response.json();
@@ -176,17 +193,35 @@ const invitesSlice = createSlice({
 				state.loading = false;
 				// Merge new invites with existing ones, avoiding duplicates
 				const newInvites = action.payload;
-				const existingIds = new Set(
-					state.invites.map((invite) => invite.inviteId)
-				);
+				const existingIds = new Set(state.invites.map((invite) => invite.id));
 				const uniqueNewInvites = newInvites.filter(
-					(invite: Invite) => !existingIds.has(invite.inviteId)
+					(invite: Invite) => !existingIds.has(invite.id)
 				);
 				state.invites = [...state.invites, ...uniqueNewInvites];
 			})
 			.addCase(fetchInboxInvites.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to fetch inbox invites";
+			})
+			// Fetch outgoing invites
+			.addCase(fetchOutgoingInvites.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(fetchOutgoingInvites.fulfilled, (state, action) => {
+				state.loading = false;
+				// Merge new invites with existing ones, avoiding duplicates
+				const newInvites = action.payload;
+				const existingIds = new Set(state.invites.map((invite) => invite.id));
+				const uniqueNewInvites = newInvites.filter(
+					(invite: Invite) => !existingIds.has(invite.id)
+				);
+				state.invites = [...state.invites, ...uniqueNewInvites];
+			})
+			.addCase(fetchOutgoingInvites.rejected, (state, action) => {
+				state.loading = false;
+				state.error =
+					action.error.message || "Failed to fetch outgoing invites";
 			})
 			// Create invite
 			.addCase(createInvite.pending, (state) => {
@@ -246,14 +281,39 @@ export default invitesSlice.reducer;
 
 // Selectors
 export const selectPendingInvites = createSelector(
-	(state: any, userId: string) => state.invites.invites,
-	(userId: string) => userId,
-	(invites, userId) =>
-		invites.filter(
-			(invite: Invite) =>
-				(invite.toUserId === userId || invite.toEmail === userId) &&
-				invite.status === "pending"
-		)
+	(state: any, userId: string, userEmail?: string) => state.invites.invites,
+	(userId: string, userEmail?: string) => ({ userId, userEmail }),
+	(invites, { userId, userEmail }) => {
+		console.log("🔍 Selector Debug:", {
+			invites,
+			userId,
+			userEmail,
+			inviteCount: invites.length,
+		});
+
+		const filtered = invites.filter((invite: Invite) => {
+			const matches =
+				(invite.toUserId === userId ||
+					invite.toEmail === userId ||
+					(userEmail && invite.toEmail === userEmail)) &&
+				invite.status === "pending";
+
+			console.log("🔍 Invite Filter:", {
+				inviteId: invite.inviteId,
+				inviteToUserId: invite.toUserId,
+				inviteToEmail: invite.toEmail,
+				inviteStatus: invite.status,
+				userId,
+				userEmail,
+				matches,
+			});
+
+			return matches;
+		});
+
+		console.log("🔍 Selector Result:", filtered);
+		return filtered;
+	}
 );
 
 export const selectOutgoingInvites = createSelector(

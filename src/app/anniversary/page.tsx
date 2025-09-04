@@ -1,21 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchAnniversaryGifts } from "@/store/slices/anniversary/anniversaryGiftListSlice";
-import { fetchAnniversaryTasks } from "@/store/slices/anniversary/anniversaryTasksSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useGetGiftsQuery, useGetDateIdeasQuery } from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import CountdownWithInvite from "@/components/common/CountdownWithInvite";
-import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
 		name: "Gift Ideas",
 		description: "Track anniversary gift ideas",
 		href: "/anniversary/gift-list",
-		sliceKey: "anniversaryGiftList",
+		sliceKey: "giftList",
 		category: "Gifts",
 		type: "gift-list",
 	},
@@ -23,23 +21,29 @@ const subsections = [
 		name: "Date Ideas",
 		description: "Plan special anniversary dates",
 		href: "/anniversary/date-ideas",
-		sliceKey: "tasks",
+		sliceKey: "dateIdeas",
 		type: "task",
-		category: "Planning",
 	},
 ];
 
 export default function AnniversaryPage() {
-	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
+	);
 
-	const gifts = useAppSelector((state: any) => state.anniversaryGiftList.gifts);
-	const tasks = useAppSelector((state: any) => state.anniversaryTasks.tasks);
+	// Get holiday ID for Anniversary
+	const holidayId = getHolidayIdFromRoute("/anniversary", holidayPreferences);
 
-	useEffect(() => {
-		// Fetch all data when component mounts if not already initialized
-		dispatch(fetchAnniversaryGifts());
-		dispatch(fetchAnniversaryTasks());
-	}, [dispatch]);
+	// Use RTK Query to fetch data
+	const { data: gifts = [] } = useGetGiftsQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: dateIdeas = [] } = useGetDateIdeasQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
 
 	function getProgressData(sliceKey: string): {
 		total: number;
@@ -51,13 +55,12 @@ export default function AnniversaryPage() {
 
 		switch (sliceKey) {
 			case "giftList":
-			case "anniversaryGiftList":
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				total = tasks.length;
-				completed = tasks.filter((task: any) => task.isCompleted).length;
+			case "dateIdeas":
+				total = dateIdeas.length;
+				completed = dateIdeas.filter((idea: any) => idea.isCompleted).length;
 				break;
 			default:
 				total = 0;

@@ -125,9 +125,16 @@ export function getHolidayIdFromRoute(
 	if (!holidayNameFromRoute) return null;
 
 	// Find the holiday preference
-	const preference = holidayPreferences.find(
+	let preference = holidayPreferences.find(
 		(pref) => pref.holiday === holidayNameFromRoute
 	);
+
+	// If not found, try with the route name (for cases where holidayType is stored as route name)
+	if (!preference) {
+		preference = holidayPreferences.find(
+			(pref) => pref.holiday === holidayName
+		);
+	}
 
 	return preference?.holidayId || null;
 }

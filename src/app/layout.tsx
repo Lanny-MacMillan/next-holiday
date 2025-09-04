@@ -4,6 +4,7 @@ import "./globals.css";
 import { ReduxProvider } from "@/store/provider";
 import Auth0ProviderWrapper from "@/components/auth/Auth0Provider";
 import AppContent from "@/components/AppContent";
+import { installFetchTracer } from "@/lib/traceFetch";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +18,11 @@ export default function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
+	// Install fetch tracer on client side
+	if (typeof window !== "undefined") {
+		installFetchTracer();
+	}
+
 	return (
 		<html lang="en">
 			<head>

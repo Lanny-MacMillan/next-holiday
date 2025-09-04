@@ -279,7 +279,7 @@ export default function NewYearDecorationsPage() {
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort tasks"
 				description="Keep track of New Year decorations!"
-				holidayColor="purple-500"
+				holidayColor="amber-600"
 				error={error ? "API Error" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -309,7 +309,7 @@ export default function NewYearDecorationsPage() {
 					</div>
 				)}
 
-				<AddButton title="Decoration Task" onClick={openForm} color="purple" />
+				<AddButton title="Decoration Task" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

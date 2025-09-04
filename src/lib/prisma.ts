@@ -1,4 +1,5 @@
 import { PrismaClient } from "../generated/prisma";
+import { installPrismaTracer } from "./tracePrisma";
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined;
@@ -22,7 +23,15 @@ export const prisma =
 		}),
 	});
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Install Prisma tracer in development
+if (process.env.NODE_ENV !== "production") {
+	try {
+		installPrismaTracer(prisma);
+	} catch (error) {
+		console.warn("[trace] Failed to install Prisma tracer:", error);
+	}
+	globalForPrisma.prisma = prisma;
+}
 
 // Graceful shutdown
 process.on("beforeExit", async () => {

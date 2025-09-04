@@ -4,7 +4,7 @@ import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
 	useGetGiftsQuery,
 	useGetCardsQuery,
-	useGetTasksQuery,
+	useGetEventsQuery,
 } from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -30,9 +30,8 @@ const fathersDaySubsections = [
 		name: "Event Planning",
 		description: "Plan Father's Day celebrations",
 		href: "/fathers-day/events",
-		sliceKey: "tasks",
+		sliceKey: "events",
 		type: "task",
-		category: "Events",
 	},
 ];
 
@@ -48,12 +47,12 @@ export default function FathersDayPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
+	const { data: events = [] } = useGetEventsQuery(
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
 
-	function getProgressData(sliceKey: string, category?: string) {
+	function getProgressData(sliceKey: string) {
 		let total = 0;
 		let completed = 0;
 
@@ -66,14 +65,9 @@ export default function FathersDayPage() {
 				total = cards.length;
 				completed = cards.filter((card: any) => card.isCompleted).length;
 				break;
-			case "tasks":
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
-				).length;
+			case "events":
+				total = events.length;
+				completed = events.filter((event: any) => event.isCompleted).length;
 				break;
 			default:
 				total = 0;
@@ -93,10 +87,7 @@ export default function FathersDayPage() {
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<ul className="flex flex-col gap-4">
 					{fathersDaySubsections.map((section) => {
-						const { total, completed } = getProgressData(
-							section.sliceKey,
-							section.category
-						);
+						const { total, completed } = getProgressData(section.sliceKey);
 
 						// Use GiftListCard for gift list sections
 						if (section.type === "gift") {

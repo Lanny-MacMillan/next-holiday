@@ -6,7 +6,8 @@ import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
 	useGetGiftsQuery,
 	useGetCardsQuery,
-	useGetTasksQuery,
+	useGetDateIdeasQuery,
+	useGetReservationsQuery,
 } from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -25,8 +26,7 @@ const subsections = [
 		name: "Date Ideas",
 		description: "Plan romantic activities and dates",
 		href: "/valentines/date-ideas",
-		sliceKey: "tasks",
-		category: "Date Ideas",
+		sliceKey: "dateIdeas",
 		type: "task",
 	},
 	{
@@ -41,8 +41,7 @@ const subsections = [
 		name: "Reservations Tracker",
 		description: "Track restaurant and activity reservations",
 		href: "/valentines/reservations",
-		sliceKey: "tasks",
-		category: "Reservations",
+		sliceKey: "reservations",
 		type: "task",
 	},
 ];
@@ -60,15 +59,16 @@ export default function ValentinesPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
+	const { data: dateIdeas = [] } = useGetDateIdeasQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: reservations = [] } = useGetReservationsQuery(
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
 
-	function getProgressData(
-		sliceKey: string,
-		category?: string
-	): {
+	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -85,14 +85,14 @@ export default function ValentinesPage() {
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				// Filter tasks by category if provided
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
+			case "dateIdeas":
+				total = dateIdeas.length;
+				completed = dateIdeas.filter((idea: any) => idea.isCompleted).length;
+				break;
+			case "reservations":
+				total = reservations.length;
+				completed = reservations.filter(
+					(reservation: any) => reservation.isCompleted
 				).length;
 				break;
 			default:
@@ -115,8 +115,7 @@ export default function ValentinesPage() {
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey,
-							section.category
+							section.sliceKey
 						);
 
 						// Determine which card component to use based on type

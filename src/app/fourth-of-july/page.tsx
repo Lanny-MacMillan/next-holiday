@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchFourthOfJulyTasks } from "@/store/slices/fourth-of-july/fourthOfJulyTasksSlice";
+import { useFourthOfJulyTasksMutations } from "@/hooks/useFourthOfJulyTasksMutations";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
@@ -41,13 +39,34 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-	const dispatch = useAppDispatch();
+	const { tasks, loading, error, holidayId } = useFourthOfJulyTasksMutations();
 
-	const tasks = useAppSelector((state: any) => state.fourthOfJulyTasks.tasks);
-
-	useEffect(() => {
-		dispatch(fetchFourthOfJulyTasks());
-	}, [dispatch]);
+	// Show message if holiday doesn't exist
+	if (!holidayId) {
+		return (
+			<div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+				<HolidayHeader
+					holidayName="🎆 Fourth of July"
+					description="Celebrate independence and freedom!"
+				/>
+				<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
+					<div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+						<h3 className="text-lg font-semibold text-red-800 mb-2">
+							Fourth of July Holiday Not Set Up
+						</h3>
+						<p className="text-red-700 mb-4">
+							To use Fourth of July features, you need to add Fourth of July to
+							your holiday preferences first.
+						</p>
+						<p className="text-red-600 text-sm">
+							Please go to your home page and add Fourth of July to your holiday
+							list.
+						</p>
+					</div>
+				</main>
+			</div>
+		);
+	}
 
 	function getProgressData(sliceKey: string, category?: string) {
 		let total = 0;

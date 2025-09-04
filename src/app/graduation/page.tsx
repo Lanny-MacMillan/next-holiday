@@ -2,16 +2,13 @@
 
 import { useAppSelector } from "@/store/hooks";
 import { useAuth0 } from "@auth0/auth0-react";
-import {
-	useGetGiftsQuery,
-	useGetCardsQuery,
-	useGetTasksQuery,
-} from "@/store/api";
+import { useGetGiftsQuery, useGetCardsQuery } from "@/store/api";
+import { useGraduationTasksMutations } from "@/hooks/useGraduationTasksMutations";
+import { useEventMutations } from "@/hooks/useEventMutations";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
-import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 const subsections = [
 	{
@@ -48,12 +45,12 @@ const subsections = [
 
 export default function GraduationPage() {
 	const { user: auth0User } = useAuth0();
-	const holidayPreferences = useAppSelector(
-		(state: any) => state.home.data?.holidayPreferences || []
-	);
 
-	// Get holiday ID for Graduation
-	const holidayId = getHolidayIdFromRoute("/graduation", holidayPreferences);
+	// Use the graduation tasks mutations hook
+	const { tasks, loading, error, holidayId } = useGraduationTasksMutations();
+
+	// Use the event mutations hook for Event Planning section
+	const { events } = useEventMutations();
 
 	// Use RTK Query to fetch data
 	const { data: gifts = [] } = useGetGiftsQuery(
@@ -64,12 +61,11 @@ export default function GraduationPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
 
-	function getProgressData(sliceKey: string): {
+	function getProgressData(
+		sliceKey: string,
+		category?: string
+	): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -87,8 +83,19 @@ export default function GraduationPage() {
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
 			case "tasks":
-				total = tasks.length;
-				completed = tasks.filter((task: any) => task.isCompleted).length;
+				// For Event Planning, use events data instead of tasks
+				if (category === "Events") {
+					total = events.length;
+					completed = events.filter((event: any) => event.isCompleted).length;
+				} else {
+					const filteredTasks = category
+						? tasks.filter((task: any) => task.category === category)
+						: tasks;
+					total = filteredTasks.length;
+					completed = filteredTasks.filter(
+						(task: any) => task.isCompleted
+					).length;
+				}
 				break;
 			case "guestList":
 				// Guest list doesn't have completion status, so we'll show total count
@@ -115,7 +122,8 @@ export default function GraduationPage() {
 				<ul className="flex flex-col gap-4">
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey
+							section.sliceKey,
+							section.category
 						);
 
 						// Determine which card component to use based on type

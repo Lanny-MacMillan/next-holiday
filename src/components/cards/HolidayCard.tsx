@@ -160,10 +160,14 @@ export default function HolidayCard({
 	holidayId,
 	countdownTimer,
 }: HolidayCardProps) {
-	// Get display mode from Redux settings (fallback to prop)
+	// Get display mode from Redux settings and user preferences (fallback to prop)
 	const { settings } = useAppSelector((state: any) => state.theme);
-	const isGamifiedMode = gamified || settings.displayMode === "gamified";
-	const isDarkMode = settings.theme === "dark";
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
+	const isGamifiedMode =
+		gamified ||
+		preferences?.displayMode === "gamified" ||
+		settings.displayMode === "gamified";
+	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
 	const incompleteItems = totalItems - completedItems;
 
@@ -315,10 +319,10 @@ export default function HolidayCard({
 					} as React.CSSProperties
 				}
 			>
-				<div className="relative w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 flex-shrink-0">
+				<div className="relative w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex-shrink-0">
 					<>
 						{/* Holiday SVG Icon */}
-						<div className="absolute top-0 left-0 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 flex items-center justify-center">
+						<div className="absolute inset-0 flex items-center justify-center">
 							{(() => {
 								const HolidayIconComponent = getHolidaySvgIcon(id);
 								return (
@@ -331,28 +335,25 @@ export default function HolidayCard({
 							})()}
 						</div>
 						{/* Progress circle overlay */}
-						<svg
-							className="absolute top-0 left-0 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16"
-							viewBox="0 0 64 64"
-						>
+						<svg className="absolute inset-0 w-full h-full" viewBox="0 0 80 80">
 							<circle
-								cx="32"
-								cy="32"
-								r="28"
+								cx="40"
+								cy="40"
+								r="36"
 								fill="none"
 								stroke="#e5e7eb"
 								strokeWidth="6"
 								className="dark:stroke-gray-600"
 							/>
 							<circle
-								cx="32"
-								cy="32"
-								r="28"
+								cx="40"
+								cy="40"
+								r="36"
 								fill="none"
 								stroke={color.light}
 								strokeWidth="6"
-								strokeDasharray={2 * Math.PI * 28}
-								strokeDashoffset={2 * Math.PI * 28 * (1 - progress)}
+								strokeDasharray={2 * Math.PI * 36}
+								strokeDashoffset={2 * Math.PI * 36 * (1 - progress)}
 								strokeLinecap="round"
 								style={{ transition: "stroke-dashoffset 0.5s" }}
 								className={`dark:stroke-${color.dark}`}
@@ -397,8 +398,11 @@ export default function HolidayCard({
 					</div>
 					<div className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
 						<div
-							className={`${color.progress} h-2 rounded-full transition-all`}
-							style={{ width: `${progress * 100}%` }}
+							className="h-2 rounded-full transition-all"
+							style={{
+								width: `${Math.max(progress * 100, 0)}%`,
+								backgroundColor: color.light,
+							}}
 						/>
 					</div>
 					<div className="flex justify-between items-center mt-1">

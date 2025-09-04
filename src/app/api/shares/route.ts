@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { shareRepository } from "@/utils/mockDb";
+import { PrismaClient } from "@/generated/prisma";
+
+const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
 	try {
@@ -13,17 +15,50 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		// First, find the holiday by holidayType (holidayKey)
+		const holiday = await prisma.holiday.findFirst({
+			where: { holidayType: holidayKey },
+		});
+
+		if (!holiday) {
+			return NextResponse.json({ error: "Holiday not found" }, { status: 404 });
+		}
+
 		// Check if share already exists for this holiday
-		const existingShare = await shareRepository.findByHolidayKey(holidayKey);
+		const existingShare = await prisma.share.findFirst({
+			where: { holidayId: holiday.id },
+		});
+
 		if (existingShare) {
 			return NextResponse.json(existingShare);
 		}
 
-		// Create new share
-		const share = await shareRepository.create({
-			holidayKey,
-			ownerUserId,
-			memberUserIds: [ownerUserId], // Owner is automatically a member
+		// Look up the actual user ID from the Auth0 sub
+		const ownerUser = await prisma.user.findUnique({
+			where: { auth0Sub: ownerUserId },
+		});
+
+		if (!ownerUser) {
+			return NextResponse.json(
+				{ error: "Owner user not found" },
+				{ status: 404 }
+			);
+		}
+
+		// Create new share using the internal user ID
+		const share = await prisma.share.create({
+			data: {
+				holidayId: holiday.id,
+				ownerUserId: ownerUser.id, // Use internal user ID, not Auth0 sub
+			},
+		});
+
+		// Add owner as first member using the internal user ID
+		await prisma.shareMember.create({
+			data: {
+				shareId: share.id,
+				userId: ownerUser.id, // Use internal user ID, not Auth0 sub
+			},
 		});
 
 		return NextResponse.json(share);
@@ -43,17 +78,34 @@ export async function GET(request: NextRequest) {
 		const userId = searchParams.get("userId");
 
 		if (holidayKey) {
-			const share = await shareRepository.findByHolidayKey(holidayKey);
+			// Find holiday by holidayType, then find share
+			const holiday = await prisma.holiday.findFirst({
+				where: { holidayType: holidayKey },
+			});
+
+			if (!holiday) {
+				return NextResponse.json(null);
+			}
+
+			const share = await prisma.share.findFirst({
+				where: { holidayId: holiday.id },
+			});
+
 			if (!share) {
 				return NextResponse.json(null);
 			}
+
 			return NextResponse.json(share);
 		}
 
 		if (userId) {
-			// For now, return all shares where user is owner or member
-			// In a real implementation, you'd have a method to find shares by user
-			return NextResponse.json([]);
+			// Find all shares where user is owner or member
+			const shares = await prisma.share.findMany({
+				where: {
+					OR: [{ ownerUserId: userId }, { members: { some: { userId } } }],
+				},
+			});
+			return NextResponse.json(shares);
 		}
 
 		return NextResponse.json(

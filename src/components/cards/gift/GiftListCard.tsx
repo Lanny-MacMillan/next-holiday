@@ -186,10 +186,13 @@ export default function GiftListCard({
 		backgroundColor: themeBackgroundColor = "white",
 	} = theme;
 
-	// Get display mode from Redux settings
+	// Get display mode from Redux settings and user preferences
 	const { settings } = useAppSelector((state: any) => state.theme);
-	const isGamifiedMode = settings.displayMode === "gamified";
-	const isDarkMode = settings.theme === "dark";
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
+	const isGamifiedMode =
+		preferences?.displayMode === "gamified" ||
+		settings.displayMode === "gamified";
+	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
 	// Use holiday-specific data if holiday prop is provided, otherwise use passed props
 	const holidayData = holiday ? useGiftListCardData(holiday, holidayId) : null;

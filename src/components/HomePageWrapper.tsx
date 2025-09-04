@@ -57,7 +57,7 @@ export default function HomePageWrapper() {
 		}
 
 		fetchHomeData();
-	}, [isAuthenticated, auth0User]);
+	}, [isAuthenticated, auth0User, dispatch]);
 
 	// Show loading state while Auth0 is loading
 	if (isLoading) {

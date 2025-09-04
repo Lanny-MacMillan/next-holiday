@@ -1,15 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-	fetchFourthOfJulyTasks,
-	addFourthOfJulyTask,
-	updateFourthOfJulyTask,
-	deleteFourthOfJulyTask,
-	toggleFourthOfJulyTaskCompletion,
-} from "@/store/slices/fourth-of-july/fourthOfJulyTasksSlice";
+import { useState } from "react";
+import { useFourthOfJulyTasksMutations } from "@/hooks/useFourthOfJulyTasksMutations";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -20,13 +13,54 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
 
 export default function FourthOfJulyEventsPage() {
-	const dispatch = useAppDispatch();
-	const tasks = useAppSelector((state) => state.fourthOfJulyTasks.tasks);
-	const error = useAppSelector((state) => state.fourthOfJulyTasks.error);
-	const loading = useAppSelector((state) => state.fourthOfJulyTasks.loading);
+	const {
+		tasks,
+		loading,
+		error,
+		createTask,
+		updateTask,
+		deleteTask,
+		toggleTaskCompletion,
+		getTasksByCategory,
+		holidayId,
+		auth0User,
+		createTaskState,
+		updateTaskState,
+		deleteTaskState,
+		toggleTaskCompletionState,
+	} = useFourthOfJulyTasksMutations();
+
+	// Show message if holiday doesn't exist
+	if (!holidayId) {
+		return (
+			<div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+				<HolidayPageHeader
+					title="Fourth of July Events"
+					backHref="/fourth-of-july"
+					description="Keep track of your Fourth of July events!"
+					holidayColor="bg-gradient-to-br from-red-400 to-red-600"
+				/>
+				<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
+					<div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+						<h3 className="text-lg font-semibold text-red-800 mb-2">
+							Fourth of July Holiday Not Set Up
+						</h3>
+						<p className="text-red-700 mb-4">
+							To use Fourth of July features, you need to add Fourth of July to
+							your holiday preferences first.
+						</p>
+						<p className="text-red-600 text-sm">
+							Please go to your home page and add Fourth of July to your holiday
+							list.
+						</p>
+					</div>
+				</main>
+			</div>
+		);
+	}
 
 	// Filter tasks for Events category
-	const eventTasks = tasks.filter((task) => task.category === "Events");
+	const eventTasks = getTasksByCategory("Events");
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -74,24 +108,33 @@ export default function FourthOfJulyEventsPage() {
 
 	const sortedEventTasks = sortTasks(eventTasks, sortBy);
 
-	useEffect(() => {
-		dispatch(fetchFourthOfJulyTasks());
-	}, [dispatch]);
-
 	const handleSubmit = async (values: Record<string, any>) => {
 		if (editingTask) {
-			await dispatch(updateFourthOfJulyTask({ ...editingTask, ...values }));
+			await updateTask({
+				holidayId,
+				taskId: editingTask.id,
+				updates: {
+					title: values.title || "",
+					description: values.description || "",
+					priority: values.priority || "medium",
+					dueDate: values.dueDate || "",
+					notes: values.notes || "",
+				},
+				auth0User,
+			});
 			setEditingTask(null);
 		} else {
-			await dispatch(
-				addFourthOfJulyTask({
+			await createTask({
+				holidayId,
+				payload: {
 					...values,
 					isCompleted: false,
 					category: "Events",
 					title: values.title || "",
 					priority: values.priority || "medium",
-				})
-			);
+				},
+				auth0User,
+			});
 		}
 		setShowAddForm(false);
 	};
@@ -111,14 +154,26 @@ export default function FourthOfJulyEventsPage() {
 
 	const confirmDelete = async () => {
 		if (taskToDelete) {
-			await dispatch(deleteFourthOfJulyTask(taskToDelete.id));
+			await deleteTask({
+				holidayId,
+				taskId: taskToDelete.id,
+				auth0User,
+			});
 			setTaskToDelete(null);
 		}
 		setShowDeleteModal(false);
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
-		await dispatch(toggleFourthOfJulyTaskCompletion(taskId));
+		const task = tasks.find((t) => t.id === taskId);
+		if (task) {
+			await toggleTaskCompletion({
+				holidayId,
+				taskId: task.id,
+				isCompleted: !task.isCompleted,
+				auth0User,
+			});
+		}
 	};
 
 	const handleSortChange = (sortOption: string) => {
@@ -134,7 +189,7 @@ export default function FourthOfJulyEventsPage() {
 				sortTitle="Sort Events"
 				description="Keep track of your Fourth of July events!"
 				holidayColor="bg-gradient-to-br from-red-400 to-red-600"
-				error={error}
+				error={error ? "Failed to load events" : undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
@@ -156,7 +211,8 @@ export default function FourthOfJulyEventsPage() {
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
-							loading={loading}
+							onEditTask={handleEdit}
+							loading={loading || toggleTaskCompletionState.isLoading}
 							themeColor="red"
 							holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
@@ -175,7 +231,8 @@ export default function FourthOfJulyEventsPage() {
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
-							loading={loading}
+							onEditTask={handleEdit}
+							loading={loading || toggleTaskCompletionState.isLoading}
 							themeColor="red"
 							holidayColor="bg-gradient-to-br from-red-400 to-red-600"
 						/>
@@ -246,7 +303,9 @@ export default function FourthOfJulyEventsPage() {
 					setShowAddForm(false);
 					setEditingTask(null);
 				}}
-				loading={loading}
+				loading={
+					editingTask ? updateTaskState.isLoading : createTaskState.isLoading
+				}
 				submitText={editingTask ? "Update Event" : "Add Event"}
 				cardClassName="card-events-fourth-of-july"
 				submitButtonColor="#dc2626"
@@ -262,7 +321,7 @@ export default function FourthOfJulyEventsPage() {
 					setShowDeleteModal(false);
 					setTaskToDelete(null);
 				}}
-				loading={loading}
+				loading={deleteTaskState.isLoading}
 				cardClassName="card-events-fourth-of-july"
 				confirmButtonColor="#dc2626"
 			/>

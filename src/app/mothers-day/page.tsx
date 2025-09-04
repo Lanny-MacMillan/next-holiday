@@ -6,7 +6,7 @@ import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
 	useGetGiftsQuery,
 	useGetCardsQuery,
-	useGetTasksQuery,
+	useGetEventsQuery,
 } from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
@@ -32,8 +32,7 @@ const mothersDaySubsections = [
 		name: "Event Planning",
 		description: "Plan Mother's Day celebrations",
 		href: "/mothers-day/events",
-		sliceKey: "tasks",
-		category: "Events",
+		sliceKey: "events",
 		type: "task",
 	},
 ];
@@ -51,15 +50,12 @@ export default function MothersDayPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
+	const { data: events = [] } = useGetEventsQuery(
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
 
-	function getProgressData(
-		sliceKey: string,
-		category?: string
-	): {
+	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -76,14 +72,9 @@ export default function MothersDayPage() {
 				total = gifts.length;
 				completed = gifts.filter((gift: any) => gift.isCompleted).length;
 				break;
-			case "tasks":
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
-				).length;
+			case "events":
+				total = events.length;
+				completed = events.filter((event: any) => event.isCompleted).length;
 				break;
 			default:
 				total = 0;
@@ -104,8 +95,7 @@ export default function MothersDayPage() {
 				<ul className="flex flex-col gap-4">
 					{mothersDaySubsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey,
-							section.category
+							section.sliceKey
 						);
 
 						// Determine which card component to use based on type

@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useState } from "react";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
-	fetchTasks,
-	addTask,
-	updateTask,
-	deleteTask,
-	toggleTaskCompletion,
-	Task,
-} from "@/store/slices/tasksSlice";
+	useGetTasksQuery,
+	useCreateTaskMutation,
+	useUpdateTaskMutation,
+	useDeleteTaskMutation,
+	useToggleTaskCompletionMutation,
+} from "@/store/api";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";
@@ -18,45 +17,80 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import FormModal from "@/components/modals/FormModal";
-import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
+interface Task {
+	id: string;
+	title: string;
+	description?: string;
+	priority: "low" | "medium" | "high";
+	isCompleted: boolean;
+	completedDate?: string;
+	dueDate?: string;
+	category?: string;
+	assignedTo?: string;
+	shareId?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export default function TasksPage() {
-	const dispatch = useAppDispatch();
-	const { tasks, loading, error, initialized } = useAppSelector(
-		(state: any) => state.tasks
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(
+		(state: any) => state.home.data?.holidayPreferences || []
 	);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
+	);
+
+	// Get holiday ID for Christmas - only resolve if home data is initialized
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/christmas", holidayPreferences)
+		: null;
+
+	// Use RTK Query hooks
+	const {
+		data: tasks = [],
+		isLoading,
+		error,
+	} = useGetTasksQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const [createTask, { isLoading: isAdding }] = useCreateTaskMutation();
+	const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
+	const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
+	const [toggleTaskCompletion, { isLoading: isToggling }] =
+		useToggleTaskCompletionMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-	useEffect(() => {
-		// Fetch tasks when component mounts if not already initialized
-		if (!initialized) {
-			dispatch(fetchTasks());
+	async function handleAddTask(formValues: Record<string, any>) {
+		if (!formValues.title?.trim() || !holidayId || !auth0User) return;
+
+		try {
+			const newTask = {
+				title: formValues.title,
+				description: formValues.description || undefined,
+				priority: formValues.priority as "low" | "medium" | "high",
+				assignedTo: formValues.assignedTo || undefined,
+				category: formValues.category || "Tasks",
+				dueDate: formValues.dueDate || undefined,
+				isCompleted: false,
+				holidayId,
+			};
+
+			await createTask({ holidayId, payload: newTask, auth0User }).unwrap();
+			setShowForm(false);
+		} catch (error) {
+			console.error("Failed to add task:", error);
 		}
-	}, [dispatch, initialized]);
-
-	function handleAddTask(formValues: Record<string, any>) {
-		if (!formValues.title?.trim()) return;
-
-		const newTask: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
-			title: formValues.title,
-			description: formValues.description || undefined,
-			priority: formValues.priority as "low" | "medium" | "high",
-			assignedTo: formValues.assignedTo || undefined,
-			category: formValues.category || undefined,
-			dueDate: formValues.dueDate || undefined,
-			isCompleted: false,
-		};
-
-		dispatch(addTask(newTask));
-		setShowForm(false);
 	}
 
 	function openForm() {
@@ -67,24 +101,59 @@ export default function TasksPage() {
 		setShowForm(false);
 	}
 
-	function handleToggleTask(taskId: string) {
-		dispatch(toggleTaskCompletion(taskId));
+	async function handleToggleTask(taskId: string) {
+		if (!auth0User) return;
+
+		try {
+			// Find the current task to get its completion status
+			const currentTask = tasks.find((task: Task) => task.id === taskId);
+			if (!currentTask) {
+				console.error("Task not found:", taskId);
+				return;
+			}
+
+			// Toggle the completion status
+			const newCompletionStatus = !currentTask.isCompleted;
+			await toggleTaskCompletion({ 
+				holidayId, 
+				taskId, 
+				isCompleted: newCompletionStatus, 
+				auth0User 
+			}).unwrap();
+		} catch (error) {
+			console.error("Failed to toggle task:", error);
+		}
 	}
 
-	function handleDeleteTask(taskId: string) {
-		dispatch(deleteTask(taskId));
+	async function handleDeleteTask(taskId: string) {
+		if (!auth0User) return;
+
+		try {
+			await deleteTask({ holidayId, taskId, auth0User }).unwrap();
+		} catch (error) {
+			console.error("Failed to delete task:", error);
+		}
 	}
 
 	function handleEditTask(task: Task) {
 		setEditingTask(task);
 	}
 
-	function handleSaveEdit(
+	async function handleSaveEdit(
 		updatedTask: Omit<Task, "id" | "createdAt" | "updatedAt">
 	) {
-		if (editingTask) {
-			dispatch(updateTask({ ...editingTask, ...updatedTask }));
-			setEditingTask(null);
+		if (editingTask && auth0User) {
+			try {
+				await updateTask({
+					holidayId,
+					taskId: editingTask.id,
+					updates: updatedTask,
+					auth0User,
+				}).unwrap();
+				setEditingTask(null);
+			} catch (error) {
+				console.error("Failed to update task:", error);
+			}
 		}
 	}
 
@@ -119,7 +188,7 @@ export default function TasksPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	if (isLoading && !homeInitialized) {
 		return (
 			<div className="min-h-screen christmas-tasks-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -134,6 +203,8 @@ export default function TasksPage() {
 	const incompleteTasks = sortedTasks.filter((task: Task) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: Task) => task.isCompleted);
 
+	const loading = isAdding || isUpdating || isDeleting || isToggling;
+
 	return (
 		<div className="min-h-screen christmas-tasks-gradient  flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
@@ -143,7 +214,7 @@ export default function TasksPage() {
 				sortTitle="Sort tasks"
 				description="Add tasks to your holiday to-do list"
 				holidayColor="red-500"
-				error={error}
+				error={error ? "Failed to load tasks" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Task" onClick={openForm} color="green" />

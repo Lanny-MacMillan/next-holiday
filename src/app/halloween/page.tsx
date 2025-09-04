@@ -2,7 +2,12 @@
 
 import { useAppSelector } from "@/store/hooks";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useGetGiftsQuery, useGetTasksQuery } from "@/store/api";
+import {
+	useGetGiftsQuery,
+	useGetCostumeIdeasQuery,
+	useGetTrickOrTreatPrepQuery,
+	useGetDecorationsQuery,
+} from "@/store/api";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
@@ -13,24 +18,21 @@ const subsections = [
 		name: "Trick-or-Treat Prep",
 		description: "List of things needed for trick-or-treating",
 		href: "/halloween/trick-or-treat-prep",
-		sliceKey: "tasks",
-		category: "Trick-or-Treat Prep",
+		sliceKey: "trickOrTreatPrep",
 		type: "task",
 	},
 	{
 		name: "Costume Ideas",
 		description: "List of possible costume ideas and who they may be for",
 		href: "/halloween/costume-ideas",
-		sliceKey: "tasks",
-		category: "Costume Ideas",
+		sliceKey: "costumeIdeas",
 		type: "task",
 	},
 	{
 		name: "Decorations Checklist",
 		description: "Stay on top of your Halloween decorations",
 		href: "/halloween/decorations",
-		sliceKey: "tasks",
-		category: "Decorations Checklist",
+		sliceKey: "decorations",
 		type: "task",
 	},
 ];
@@ -49,15 +51,20 @@ export default function HalloweenPage() {
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
-	const { data: tasks = [] } = useGetTasksQuery(
+	const { data: costumeIdeas = [] } = useGetCostumeIdeasQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: trickOrTreatPrep = [] } = useGetTrickOrTreatPrepQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User }
+	);
+	const { data: decorations = [] } = useGetDecorationsQuery(
 		{ holidayId: holidayId || "", auth0User },
 		{ skip: !holidayId || !auth0User }
 	);
 
-	function getProgressData(
-		sliceKey: string,
-		category?: string
-	): {
+	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;
 		progress: number;
@@ -66,13 +73,22 @@ export default function HalloweenPage() {
 		let completed = 0;
 
 		switch (sliceKey) {
-			case "tasks":
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
+			case "costumeIdeas":
+				total = costumeIdeas.length;
+				completed = costumeIdeas.filter(
+					(costume: any) => costume.isCompleted
+				).length;
+				break;
+			case "trickOrTreatPrep":
+				total = trickOrTreatPrep.length;
+				completed = trickOrTreatPrep.filter(
+					(prep: any) => prep.isCompleted
+				).length;
+				break;
+			case "decorations":
+				total = decorations.length;
+				completed = decorations.filter(
+					(decoration: any) => decoration.isCompleted
 				).length;
 				break;
 			case "giftList":
@@ -111,8 +127,7 @@ export default function HalloweenPage() {
 
 					{subsections.map((section) => {
 						const { total, completed, progress } = getProgressData(
-							section.sliceKey,
-							section.category
+							section.sliceKey
 						);
 
 						return (

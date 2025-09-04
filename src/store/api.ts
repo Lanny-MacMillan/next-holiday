@@ -1,11 +1,18 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createTracedBaseQuery, isRTKTracingEnabled } from "@/lib/traceRTK";
+
+const baseQuery = fetchBaseQuery({
+	baseUrl: "/api",
+	credentials: "include",
+});
+
+const tracedBaseQuery = isRTKTracingEnabled()
+	? createTracedBaseQuery(baseQuery)
+	: baseQuery;
 
 export const api = createApi({
 	reducerPath: "api",
-	baseQuery: fetchBaseQuery({
-		baseUrl: "/api",
-		credentials: "include",
-	}),
+	baseQuery: tracedBaseQuery,
 	tagTypes: [
 		"Tasks",
 		"Gifts",
@@ -47,6 +54,28 @@ export const api = createApi({
 				{ type: "Gifts", id: holidayId },
 			],
 		}),
+		// Query to get all gifts for a user across all holidays
+		getAllGifts: builder.query<any[], { auth0User?: any }>({
+			query: ({ auth0User }) => ({
+				url: `gifts`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result) => [
+				{ type: "Gifts", id: "LIST" },
+			],
+		}),
 		getCards: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
 				url: `holidays/${holidayId}/cards`,
@@ -68,6 +97,28 @@ export const api = createApi({
 				{ type: "Cards", id: holidayId },
 			],
 		}),
+		// Query to get all cards for a user across all holidays
+		getAllCards: builder.query<any[], { auth0User?: any }>({
+			query: ({ auth0User }) => ({
+				url: `cards`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result) => [
+				{ type: "Cards", id: "LIST" },
+			],
+		}),
 		getTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
 				url: `holidays/${holidayId}/tasks`,
@@ -87,6 +138,28 @@ export const api = createApi({
 			},
 			providesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
+			],
+		}),
+		// Query to get all tasks for a user across all holidays
+		getAllTasks: builder.query<any[], { auth0User?: any }>({
+			query: ({ auth0User }) => ({
+				url: `tasks`,
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			transformResponse: (response: { success: boolean; data: any[] }) => {
+				return response.data || [];
+			},
+			providesTags: (result) => [
+				{ type: "Tasks", id: "LIST" },
 			],
 		}),
 		getHanukkahTasks: builder.query<
@@ -474,6 +547,214 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Tasks", id: holidayId },
 			],
+			// Optimistic update for create task
+			async onQueryStarted(
+				{ holidayId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Generate a temporary ID for the optimistic update
+				const tempId = `temp-${Date.now()}`;
+				const optimisticTask = {
+					id: tempId,
+					...payload,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+
+				// Optimistically add the task to the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								draft.unshift(optimisticTask);
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the create fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
+		}),
+		updateTask: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; updates: any; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, updates, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PATCH",
+				body: { taskId, ...updates },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+			// Optimistic update for update task
+			async onQueryStarted(
+				{ holidayId, taskId, updates, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the task in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const taskIndex = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (taskIndex !== -1) {
+									draft[taskIndex] = {
+										...draft[taskIndex],
+										...updates,
+										updatedAt: new Date().toISOString(),
+									};
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the update fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
+		}),
+		deleteTask: builder.mutation<
+			any,
+			{ holidayId: string; taskId: string; auth0User?: any }
+		>({
+			query: ({ holidayId, taskId, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
+				method: "DELETE",
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+			// Optimistic update for delete task
+			async onQueryStarted(
+				{ holidayId, taskId, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically remove the task from the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const taskIndex = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (taskIndex !== -1) {
+									draft.splice(taskIndex, 1);
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the delete fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
+		}),
+		toggleTaskCompletion: builder.mutation<
+			any,
+			{
+				holidayId: string;
+				taskId: string;
+				isCompleted: boolean;
+				auth0User?: any;
+			}
+		>({
+			query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
+				url: `holidays/${holidayId}/tasks`,
+				method: "PUT",
+				body: { taskId, isCompleted },
+				headers: auth0User
+					? {
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+					  }
+					: {},
+			}),
+			invalidatesTags: (result, error, { holidayId }) => [
+				{ type: "Tasks", id: holidayId },
+			],
+			// Optimistic update for toggle task completion
+			async onQueryStarted(
+				{ holidayId, taskId, isCompleted, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the task completion status in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getTasks",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const taskIndex = draft.findIndex(
+									(task: any) => task.id === taskId
+								);
+								if (taskIndex !== -1) {
+									draft[taskIndex] = {
+										...draft[taskIndex],
+										isCompleted,
+										completedDate: isCompleted
+											? new Date().toISOString()
+											: null,
+										updatedAt: new Date().toISOString(),
+									};
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the toggle fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		createHanukkahTask: builder.mutation<
 			any,
@@ -2543,6 +2824,9 @@ export const api = createApi({
 
 export const {
 	useCreateTaskMutation,
+	useUpdateTaskMutation,
+	useDeleteTaskMutation,
+	useToggleTaskCompletionMutation,
 	useCreateGiftMutation,
 	useCreateCardMutation,
 	useCreateGuestMutation,
@@ -2605,8 +2889,11 @@ export const {
 	useDeleteGuestMutation,
 	useCardOperationMutation,
 	useGetGiftsQuery,
+	useGetAllGiftsQuery,
 	useGetCardsQuery,
+	useGetAllCardsQuery,
 	useGetTasksQuery,
+	useGetAllTasksQuery,
 	useGetGuestListQuery,
 	useGetDecorationsQuery,
 	useGetEventsQuery,

@@ -6,15 +6,12 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import {
 	fetchInboxInvites,
+	fetchOutgoingInvites,
 	acceptInvite,
 	declineInvite,
 } from "@/store/slices/invitesSlice";
 import { addShare, updateShareInState } from "@/store/slices/sharesSlice";
-import {
-	selectPendingInvites,
-	selectOutgoingInvites,
-	Invite,
-} from "@/store/slices/invitesSlice";
+import { Invite } from "@/store/slices/invitesSlice";
 import { migrateHolidayDataToShare } from "@/utils/shareMigration";
 
 interface AlertsBellProps {
@@ -27,20 +24,63 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	const [showAlertsModal, setShowAlertsModal] = useState(false);
 	const [activeTab, setActiveTab] = useState<"inbox" | "outgoing">("inbox");
 
-	// Get invites from Redux state
-	const pendingInvites = useAppSelector((state) =>
-		user?.sub ? selectPendingInvites(state, user.sub) : []
-	);
-	const outgoingInvites = useAppSelector((state) =>
-		user?.sub ? selectOutgoingInvites(state, user.sub) : []
-	);
+	// Get invites from Redux state - simplified approach
+	const allInvites = useAppSelector((state) => state.invites.invites);
+
+	// Separate filtering functions for clarity
+	const filterInboxInvites = (invite: any) => {
+		return (
+			invite.status === "pending" &&
+			(invite.toEmail === user?.email || invite.toUserId === user?.sub)
+		);
+	};
+
+	const filterOutgoingInvites = (invite: any) => {
+		return (
+			invite.fromUser?.email === user?.email && invite.status === "pending"
+		);
+	};
+
+	const filterAllOutgoingInvites = (invite: any) => {
+		return invite.fromUser?.email === user?.email;
+	};
+
+	// Apply filters
+	const pendingInvites = allInvites.filter(filterInboxInvites);
+	const outgoingInvites = allInvites.filter(filterOutgoingInvites);
+	const allOutgoingInvites = allInvites.filter(filterAllOutgoingInvites);
 
 	const pendingCount = pendingInvites.length;
 
-	// Fetch inbox invites when component mounts
+	// Debug logging
+	console.log("🔍 AlertsBell Debug:");
+	console.log("  - user.email:", user?.email);
+	console.log("  - user.sub:", user?.sub);
+	console.log("  - allInvites count:", allInvites.length);
+	console.log("  - allInvites:", allInvites);
+	console.log("  - pendingInvites count:", pendingInvites.length);
+	console.log("  - outgoingInvites count:", outgoingInvites.length);
+	console.log("  - allOutgoingInvites count:", allOutgoingInvites.length);
+
+	// Detailed invite structure logging
+	allInvites.forEach((invite: any, index: number) => {
+		console.log(`  📧 Invite ${index + 1}:`, {
+			id: invite.id,
+			status: invite.status,
+			toEmail: invite.toEmail,
+			toUserId: invite.toUserId,
+			fromUser: invite.fromUser,
+			fromUserId: invite.fromUserId,
+			holidayKey: invite.holidayKey,
+			message: invite.message,
+		});
+	});
+
+	// Fetch invites when component mounts
 	useEffect(() => {
 		if (user?.sub) {
 			dispatch(fetchInboxInvites(user.sub));
+			dispatch(fetchOutgoingInvites(user.sub));
 		}
 	}, [user?.sub, dispatch]);
 
@@ -134,9 +174,9 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 				</svg>
 
 				{/* Badge for pending invites */}
-				{pendingCount > 0 && (
+				{pendingInvites.length > 0 && (
 					<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-						{pendingCount}
+						{pendingInvites.length}
 					</span>
 				)}
 			</button>
@@ -185,7 +225,7 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 											: "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
 									}`}
 								>
-									Outgoing ({outgoingInvites.length})
+									Outgoing ({allOutgoingInvites.length})
 								</button>
 							</div>
 
@@ -200,13 +240,16 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 										) : (
 											pendingInvites.map((invite: Invite) => (
 												<div
-													key={invite.inviteId}
+													key={invite.id}
 													className="border border-gray-200 dark:border-gray-700 rounded-lg p-3"
 												>
 													<div className="flex justify-between items-start mb-2">
 														<div className="flex-1">
 															<p className="text-sm font-medium text-gray-900 dark:text-white">
-																{invite.fromUserId} wants to share{" "}
+																{invite.fromUser?.name ||
+																	invite.fromUser?.email ||
+																	"Unknown User"}{" "}
+																wants to share{" "}
 																{getHolidayDisplayName(invite.holidayKey)}
 															</p>
 															{invite.message && (
@@ -218,18 +261,14 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 													</div>
 													<div className="flex space-x-2">
 														<button
-															onClick={() =>
-																handleAcceptInvite(invite.inviteId)
-															}
-															className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+															onClick={() => handleAcceptInvite(invite.id)}
+															className="px-3 py-1 text-xs rounded transition-all duration-200 font-medium invite-accept-btn"
 														>
 															Accept
 														</button>
 														<button
-															onClick={() =>
-																handleDeclineInvite(invite.inviteId)
-															}
-															className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+															onClick={() => handleDeclineInvite(invite.id)}
+															className="px-3 py-1 text-xs rounded transition-all duration-200 font-medium invite-decline-btn"
 														>
 															Decline
 														</button>
@@ -244,19 +283,21 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									<div className="space-y-3">
 										{outgoingInvites.length === 0 ? (
 											<p className="text-gray-500 dark:text-gray-400 text-center py-4">
-												No outgoing invites
+												{allOutgoingInvites.length === 0
+													? "No outgoing invites"
+													: "No pending outgoing invites"}
 											</p>
 										) : (
 											outgoingInvites.map((invite: Invite) => (
 												<div
-													key={invite.inviteId}
+													key={invite.id}
 													className="border border-gray-200 dark:border-gray-700 rounded-lg p-3"
 												>
 													<div className="flex justify-between items-start mb-2">
 														<div className="flex-1">
 															<p className="text-sm font-medium text-gray-900 dark:text-white">
-																Invite to {invite.toEmail || invite.toUserId}{" "}
-																for {getHolidayDisplayName(invite.holidayKey)}
+																Invite to {invite.toEmail || "User"} for{" "}
+																{getHolidayDisplayName(invite.holidayKey)}
 															</p>
 															{invite.message && (
 																<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
