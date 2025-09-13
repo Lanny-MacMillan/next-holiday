@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { useGuestMutations } from "@/hooks/useGuestMutations";
+import { useAuth0 } from "@auth0/auth0-react";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import GuestCardItem from "@/components/cards/guest/GuestCardItem";
@@ -20,12 +19,20 @@ import {
 	selectHomeInitialized,
 	selectHomeData,
 } from "@/store/selectors/home";
+import { selectGuestListsByHoliday } from "@/store/slices/homeSlice";
 import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import {
-	updateTaskInHomeData,
-	addTaskToHomeData,
-	removeTaskFromHomeData,
+	updateGuestInHomeData,
+	addGuestToHomeData,
+	removeGuestFromHomeData,
 } from "@/store/slices/homeSlice";
+import {
+	useCreateGuestMutation,
+	useUpdateGuestMutation,
+	useEditGuestMutation,
+	useDeleteGuestMutation,
+} from "@/store/api";
 
 interface Guest {
 	id: string;
@@ -43,37 +50,51 @@ interface Guest {
 
 export default function ThanksgivingGuestListPage() {
 	const dispatch = useAppDispatch();
-
-	// Use the guest mutations hook
-	const {
-		holidayId,
-		auth0User,
-		guests,
-		loading,
-		error,
-		initialized,
-		createGuest,
-		updateGuest,
-		editGuest,
-		deleteGuest,
-		createGuestState,
-		updateGuestState,
-		editGuestState,
-		deleteGuestState,
-	} = useGuestMutations();
-
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
-
-	// Get current Redux state for skip logic
-	const currentState = useAppSelector((state: any) => state);
+	const { user: auth0User } = useAuth0();
 
 	// Get home data and holiday data from Redux
 	const homeData = useAppSelector(selectHomeData);
 	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+
+	// Get holiday ID from route
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/thanksgiving", holidayPreferences)
+		: null;
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday data from Redux
 	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
-	// Note: Guests are not stored in home data, they use their own slice
-	// The useGuestMutations hook already handles Redux state updates
+	// Get guest lists from home data
+	const guestLists = useAppSelector(
+		holidayId ? selectGuestListsByHoliday(holidayId) : () => []
+	) as any[];
+
+	// Transform guest list data to match expected format
+	const guests = guestLists.map((guestList: any) => ({
+		id: guestList.id,
+		name: guestList.contact?.name || "Unknown",
+		email: guestList.contact?.email || undefined,
+		phone: guestList.contact?.phone || undefined,
+		address: guestList.contact?.streetAddress || undefined,
+		rsvpStatus: guestList.rsvpStatus || "pending",
+		numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
+		notes: guestList.notes || undefined,
+		isCompleted: guestList.rsvpStatus === "confirmed",
+		createdAt: guestList.createdAt,
+		updatedAt: guestList.updatedAt,
+	}));
+
+	// Use API mutations only for data persistence
+	const [createGuest, createGuestState] = useCreateGuestMutation();
+	const [updateGuest, updateGuestState] = useUpdateGuestMutation();
+	const [editGuest, editGuestState] = useEditGuestMutation();
+	const [deleteGuest, deleteGuestState] = useDeleteGuestMutation();
+
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -102,51 +123,106 @@ export default function ThanksgivingGuestListPage() {
 		if (!holidayId || !auth0User) return;
 
 		if (editingGuest) {
-			// Update existing guest
-			try {
-				const payload = {
+			// Update existing guest - optimistic update to Redux first, then persist to API
+			const updatedGuestList = {
+				...editingGuest,
+				contact: {
 					name: formValues.name,
 					email: formValues.email || undefined,
 					phone: formValues.phone || undefined,
-					address: formValues.address || undefined,
-					rsvpStatus: formValues.rsvpStatus as
-						| "pending"
-						| "confirmed"
-						| "declined",
-					notes: formValues.notes || undefined,
-				};
+					streetAddress: formValues.address || undefined,
+				},
+				rsvpStatus: formValues.rsvpStatus as
+					| "pending"
+					| "confirmed"
+					| "declined",
+				notes: formValues.notes || undefined,
+			};
 
+			// Update Redux immediately for responsive UI
+			dispatch(
+				updateGuestInHomeData({
+					holidayId,
+					guestId: editingGuest.id,
+					updates: updatedGuestList,
+				})
+			);
+
+			// Persist to API in background
+			try {
 				await editGuest({
 					holidayId,
 					guestId: editingGuest.id,
-					payload,
+					payload: {
+						name: formValues.name,
+						email: formValues.email || undefined,
+						phone: formValues.phone || undefined,
+						address: formValues.address || undefined,
+						rsvpStatus: formValues.rsvpStatus as
+							| "pending"
+							| "confirmed"
+							| "declined",
+						notes: formValues.notes || undefined,
+					},
 					auth0User,
 				}).unwrap();
-				setEditingGuest(null);
-				setShowForm(false);
 			} catch (error) {
-				console.error("Error editing guest:", error);
+				console.error("Failed to update guest:", error);
+				// Could implement rollback logic here if needed
 			}
+
+			setEditingGuest(null);
+			setShowForm(false);
 		} else {
-			// Add new guest
-			try {
-				const payload = {
+			// Add new guest - optimistic update to Redux first, then persist to API
+			const newGuestList = {
+				id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+				contact: {
 					name: formValues.name,
 					email: formValues.email || undefined,
 					phone: formValues.phone || undefined,
-					address: formValues.address || undefined,
-					rsvpStatus: formValues.rsvpStatus as
-						| "pending"
-						| "confirmed"
-						| "declined",
-					notes: formValues.notes || undefined,
-				};
+					streetAddress: formValues.address || undefined,
+				},
+				rsvpStatus: formValues.rsvpStatus as
+					| "pending"
+					| "confirmed"
+					| "declined",
+				notes: formValues.notes || undefined,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			};
 
-				await createGuest({ holidayId, payload, auth0User }).unwrap();
-				setShowForm(false);
+			// Update Redux immediately for responsive UI
+			dispatch(
+				addGuestToHomeData({
+					holidayId,
+					guest: newGuestList,
+				})
+			);
+
+			// Persist to API in background
+			try {
+				await createGuest({
+					holidayId,
+					payload: {
+						name: formValues.name,
+						email: formValues.email || undefined,
+						phone: formValues.phone || undefined,
+						address: formValues.address || undefined,
+						rsvpStatus: formValues.rsvpStatus as
+							| "pending"
+							| "confirmed"
+							| "declined",
+						notes: formValues.notes || undefined,
+					},
+					auth0User,
+				}).unwrap();
 			} catch (error) {
-				console.error("Error creating guest:", error);
+				console.error("Failed to create guest:", error);
+				// Could implement rollback logic here if needed
 			}
+
+			setShowForm(false);
 		}
 	}
 
@@ -162,20 +238,39 @@ export default function ThanksgivingGuestListPage() {
 	async function handleToggleGuest(guestId: string) {
 		if (!holidayId || !auth0User) return;
 
-		try {
-			const guest = guests.find((g: Guest) => g.id === guestId);
-			if (guest) {
-				// Toggle RSVP status: if confirmed, set to pending; if pending, set to confirmed
-				const newIsCompleted = guest.rsvpStatus !== "confirmed";
+		const guestList = guestLists.find((gl: any) => gl.id === guestId);
+		if (guestList) {
+			// Toggle RSVP status: if confirmed, set to pending; if pending, set to confirmed
+			const newRsvpStatus =
+				guestList.rsvpStatus === "confirmed" ? "pending" : "confirmed";
+
+			const updatedGuestList = {
+				...guestList,
+				rsvpStatus: newRsvpStatus,
+				updatedAt: new Date().toISOString(),
+			};
+
+			// Update Redux immediately for responsive UI
+			dispatch(
+				updateGuestInHomeData({
+					holidayId,
+					guestId: guestId,
+					updates: updatedGuestList,
+				})
+			);
+
+			// Persist to API in background
+			try {
 				await updateGuest({
 					holidayId,
 					guestId,
-					isCompleted: newIsCompleted,
+					isCompleted: true, // This will toggle the RSVP status
 					auth0User,
 				}).unwrap();
+			} catch (error) {
+				console.error("Failed to toggle guest:", error);
+				// Could implement rollback logic here if needed
 			}
-		} catch (error) {
-			console.error("Error updating guest:", error);
 		}
 	}
 
@@ -190,16 +285,27 @@ export default function ThanksgivingGuestListPage() {
 
 	async function confirmDelete() {
 		if (deleteConfirm.guestId && holidayId && auth0User) {
+			// Update Redux immediately for responsive UI
+			dispatch(
+				removeGuestFromHomeData({
+					holidayId,
+					guestId: deleteConfirm.guestId,
+				})
+			);
+
+			// Persist to API in background
 			try {
 				await deleteGuest({
 					holidayId,
 					guestId: deleteConfirm.guestId,
 					auth0User,
 				}).unwrap();
-				setDeleteConfirm({ show: false, guestId: null });
 			} catch (error) {
-				console.error("Error deleting guest:", error);
+				console.error("Failed to delete guest:", error);
+				// Could implement rollback logic here if needed
 			}
+
+			setDeleteConfirm({ show: false, guestId: null });
 		}
 	}
 
@@ -291,7 +397,7 @@ export default function ThanksgivingGuestListPage() {
 								setShowForm(true);
 							}}
 							onDelete={handleDeleteGuest}
-							loading={loading}
+							loading={updateGuestState.isLoading}
 							theme={{
 								accentColor: "#f97316", // Orange for Thanksgiving
 							}}
@@ -315,7 +421,7 @@ export default function ThanksgivingGuestListPage() {
 								setShowForm(true);
 							}}
 							onDelete={handleDeleteGuest}
-							loading={loading}
+							loading={updateGuestState.isLoading}
 							theme={{
 								accentColor: "#f97316", // Orange for Thanksgiving
 							}}
@@ -339,7 +445,7 @@ export default function ThanksgivingGuestListPage() {
 								setShowForm(true);
 							}}
 							onDelete={handleDeleteGuest}
-							loading={loading}
+							loading={updateGuestState.isLoading}
 							theme={{
 								accentColor: "#f97316", // Orange for Thanksgiving
 							}}
@@ -368,16 +474,10 @@ export default function ThanksgivingGuestListPage() {
 				}
 				onSubmit={handleAddGuest}
 				onClose={closeForm}
-				loading={editGuestState.isLoading || createGuestState.isLoading}
-				submitText={
-					editGuestState.isLoading || createGuestState.isLoading
-						? editingGuest
-							? "Updating..."
-							: "Adding..."
-						: editingGuest
-						? "Update Guest"
-						: "Add Guest"
+				loading={
+					editingGuest ? editGuestState.isLoading : createGuestState.isLoading
 				}
+				submitText={editingGuest ? "Update Guest" : "Add Guest"}
 				cancelText="Cancel"
 				cardClassName="card"
 				submitButtonColor="#f97316"

@@ -26,6 +26,8 @@ export interface HomeData {
 		events?: any[];
 		decorations?: any[];
 		kwanzaaPrinciples?: any[];
+		// Guest lists for events and parties
+		guestLists?: any[];
 	}> | null;
 	contacts: Array<{
 		id: string;

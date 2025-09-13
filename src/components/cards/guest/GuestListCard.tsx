@@ -5,6 +5,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useGetGuestListQuery } from "@/store/api";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import { getCardStyling } from "@/utils/cardShadows";
+import { selectGuestListsByHoliday } from "@/store/slices/homeSlice";
 
 interface GuestListCardProps {
 	holiday: string;
@@ -41,19 +42,28 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 		? getHolidayIdFromRoute(href, holidayPreferences)
 		: null;
 
-	// Use RTK Query to get guest list data
-	const { data: guestLists = [] } = useGetGuestListQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
+	// Get guest list data from home Redux store
+	const guestLists = useAppSelector(
+		holidayId ? selectGuestListsByHoliday(holidayId) : () => []
 	);
 
+	// Fallback to RTK Query if no data in home store (for backwards compatibility)
+	const { data: fallbackGuestLists = [] } = useGetGuestListQuery(
+		{ holidayId: holidayId || "", auth0User },
+		{ skip: !holidayId || !auth0User || guestLists.length > 0 }
+	);
+
+	// Use home store data if available, otherwise use RTK Query data
+	const finalGuestLists =
+		guestLists.length > 0 ? guestLists : fallbackGuestLists;
+
 	// Transform guest list data to match expected format
-	const guests = guestLists.map((guestList: any) => ({
+	const guests = finalGuestLists.map((guestList: any) => ({
 		id: guestList.id,
-		name: guestList.contact.name,
-		email: guestList.contact.email || undefined,
-		phone: guestList.contact.phone || undefined,
-		address: guestList.contact.streetAddress || undefined,
+		name: guestList.contact?.name || "Unknown",
+		email: guestList.contact?.email || undefined,
+		phone: guestList.contact?.phone || undefined,
+		address: guestList.contact?.streetAddress || undefined,
 		rsvpStatus: guestList.rsvpStatus || "pending",
 		numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
 		notes: guestList.notes || undefined,

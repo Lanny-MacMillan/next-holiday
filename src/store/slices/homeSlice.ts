@@ -368,6 +368,72 @@ const homeSlice = createSlice({
 				);
 			}
 		},
+		addGuestToHomeData: (
+			state,
+			action: PayloadAction<{
+				holidayId: string;
+				guest: any;
+			}>
+		) => {
+			if (!state.data?.holidayPreferences) return;
+
+			const { holidayId, guest } = action.payload;
+			const holidayPref = state.data.holidayPreferences.find(
+				(pref) => pref.holidayId === holidayId
+			);
+
+			if (holidayPref) {
+				if (!holidayPref.guestLists) holidayPref.guestLists = [];
+				holidayPref.guestLists.push(guest);
+			}
+		},
+		removeGuestFromHomeData: (
+			state,
+			action: PayloadAction<{
+				holidayId: string;
+				guestId: string;
+			}>
+		) => {
+			if (!state.data?.holidayPreferences) return;
+
+			const { holidayId, guestId } = action.payload;
+			const holidayPref = state.data.holidayPreferences.find(
+				(pref) => pref.holidayId === holidayId
+			);
+
+			if (holidayPref?.guestLists) {
+				holidayPref.guestLists = holidayPref.guestLists.filter(
+					(guest: any) => guest.id !== guestId
+				);
+			}
+		},
+		updateGuestInHomeData: (
+			state,
+			action: PayloadAction<{
+				holidayId: string;
+				guestId: string;
+				updates: any;
+			}>
+		) => {
+			if (!state.data?.holidayPreferences) return;
+
+			const { holidayId, guestId, updates } = action.payload;
+			const holidayPref = state.data.holidayPreferences.find(
+				(pref) => pref.holidayId === holidayId
+			);
+
+			if (holidayPref?.guestLists) {
+				const guestIndex = holidayPref.guestLists.findIndex(
+					(guest: any) => guest.id === guestId
+				);
+				if (guestIndex !== -1) {
+					holidayPref.guestLists[guestIndex] = {
+						...holidayPref.guestLists[guestIndex],
+						...updates,
+					};
+				}
+			}
+		},
 	},
 });
 
@@ -382,6 +448,15 @@ export const selectHomeLoading = (state: { home: HomeState }) =>
 export const selectHomeError = (state: { home: HomeState }) => state.home.error;
 export const selectHomeInitialized = (state: { home: HomeState }) =>
 	state.home.initialized;
+
+// Selector for guest lists by holiday ID
+export const selectGuestListsByHoliday =
+	(holidayId: string) => (state: { home: HomeState }) => {
+		const holidayPref = state.home.data?.holidayPreferences?.find(
+			(pref) => pref.holidayId === holidayId
+		);
+		return holidayPref?.guestLists || [];
+	};
 
 export const {
 	setHomeData,
@@ -403,5 +478,8 @@ export const {
 	updateDecorationInHomeData,
 	addCardToHomeData,
 	removeCardFromHomeData,
+	addGuestToHomeData,
+	removeGuestFromHomeData,
+	updateGuestInHomeData,
 } = homeSlice.actions;
 export default homeSlice.reducer;

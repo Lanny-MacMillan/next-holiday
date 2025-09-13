@@ -82,6 +82,11 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				gifts: true,
 				cards: true,
 				tasks: true,
+				guestLists: {
+					include: {
+						contact: true,
+					},
+				},
 			},
 			orderBy: {
 				holidayType: "asc",
@@ -112,6 +117,37 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				(task: any) => task.category === "Kwanzaa Principles"
 			);
 
+			// Transform guest lists to include contact information
+			const guestLists =
+				holiday.guestLists?.map((guestList: any) => ({
+					id: guestList.id,
+					holidayId: guestList.holidayId,
+					contactId: guestList.contactId,
+					rsvpStatus: guestList.rsvpStatus,
+					rsvpDate: guestList.rsvpDate?.toISOString(),
+					notes: guestList.notes,
+					createdBy: guestList.createdBy,
+					createdAt: guestList.createdAt.toISOString(),
+					updatedAt: guestList.updatedAt.toISOString(),
+					// Include contact information
+					contact: guestList.contact
+						? {
+								id: guestList.contact.id,
+								name: guestList.contact.name,
+								email: guestList.contact.email,
+								phone: guestList.contact.phone,
+								streetAddress: guestList.contact.streetAddress,
+								city: guestList.contact.city,
+								state: guestList.contact.state,
+								postalCode: guestList.contact.postalCode,
+								relationship: guestList.contact.relationship,
+								notes: guestList.contact.notes,
+								createdAt: guestList.contact.createdAt.toISOString(),
+								updatedAt: guestList.contact.updatedAt.toISOString(),
+						  }
+						: null,
+				})) || [];
+
 			return {
 				holiday: holiday.holidayType,
 				holidayId: holiday.id,
@@ -126,6 +162,8 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				events,
 				decorations,
 				kwanzaaPrinciples,
+				// Add guest lists
+				guestLists,
 			};
 		});
 
