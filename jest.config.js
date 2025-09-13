@@ -1,7 +1,7 @@
 // Add any custom config to be passed to Jest
 const customJestConfig = {
 	setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
-	testEnvironment: "node",
+	testEnvironment: "jsdom",
 	testMatch: ["**/__tests__/**/*.test.(ts|tsx|js)", "**/*.test.(ts|tsx|js)"],
 	collectCoverageFrom: [
 		"src/**/*.{ts,tsx}",
@@ -21,7 +21,6 @@ const customJestConfig = {
 	transformIgnorePatterns: ["node_modules/(?!(next)/)"],
 	// TypeScript configuration
 	preset: "ts-jest",
-	testEnvironment: "node",
 };
 
 module.exports = customJestConfig;

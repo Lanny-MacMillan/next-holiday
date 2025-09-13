@@ -13,16 +13,45 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
 import { useEventMutations } from "@/hooks/useEventMutations";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+	updateEventInHomeData,
+	addEventToHomeData,
+	removeEventFromHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 
 export default function EasterEventsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get Redux selectors
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday ID for Easter - try to resolve from home data, fallback to route-based resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/easter", holidayPreferences)
+		: getHolidayIdFromRoute("/easter", holidayPreferences); // Allow fallback for cold entry
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+
+	// Use Redux data first, fallback to RTK Query if needed
+	const events = holidayData?.events || [];
+
 	// Use the new event mutations hook
 	const {
 		holidayId,
 		auth0User,
-		events,
+		events: fallbackEvents,
 		loading,
 		error,
 		initialized,
@@ -34,6 +63,42 @@ export default function EasterEventsPage() {
 		editEventState,
 		deleteEventState,
 	} = useEventMutations();
+
+	// Use Redux data if available, otherwise use fallback from RTK Query
+	const finalEvents = events.length > 0 ? events : fallbackEvents;
+
+	// Helper function to update Redux state after event operations
+	const updateEventInRedux = (
+		eventData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!resolvedHolidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(
+					addEventToHomeData({ holidayId: resolvedHolidayId, event: eventData })
+				);
+				break;
+			case "update":
+				dispatch(
+					updateEventInHomeData({
+						holidayId: resolvedHolidayId,
+						eventId: eventData.id,
+						updates: eventData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeEventFromHomeData({
+						holidayId: resolvedHolidayId,
+						eventId: eventData.id,
+					})
+				);
+				break;
+		}
+	};
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -80,7 +145,7 @@ export default function EasterEventsPage() {
 		}
 	};
 
-	const sortedEventTasks = sortTasks(events, sortBy);
+	const sortedEventTasks = sortTasks(finalEvents, sortBy);
 
 	useEffect(() => {
 		// Always fetch contacts for address book functionality
@@ -88,12 +153,12 @@ export default function EasterEventsPage() {
 	}, [dispatch]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
-		if (!holidayId || !auth0User) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
 		try {
 			if (editingTask) {
-				await editEvent({
-					holidayId,
+				const updatedEvent = await editEvent({
+					holidayId: resolvedHolidayId,
 					taskId: editingTask.id,
 					payload: {
 						title: values.title,
@@ -105,6 +170,10 @@ export default function EasterEventsPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state immediately
+				updateEventInRedux(updatedEvent, "update");
+
 				setEditingTask(null);
 			} else {
 				const payload = {
@@ -116,7 +185,14 @@ export default function EasterEventsPage() {
 					dueDate: values.dueDate || undefined,
 					isCompleted: false,
 				};
-				await createEvent({ holidayId, payload, auth0User }).unwrap();
+				const newEvent = await createEvent({
+					holidayId: resolvedHolidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state immediately
+				updateEventInRedux(newEvent, "add");
 			}
 			setShowAddForm(false);
 		} catch (error) {
@@ -135,13 +211,17 @@ export default function EasterEventsPage() {
 	};
 
 	const confirmDelete = async () => {
-		if (taskToDelete && holidayId && auth0User) {
+		if (taskToDelete && resolvedHolidayId && auth0User) {
 			try {
 				await deleteEvent({
-					holidayId,
+					holidayId: resolvedHolidayId,
 					taskId: taskToDelete.id,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state immediately
+				updateEventInRedux(taskToDelete, "delete");
+
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting event:", error);
@@ -151,17 +231,23 @@ export default function EasterEventsPage() {
 	};
 
 	const handleToggleCompletion = async (taskId: string) => {
-		if (!holidayId || !auth0User) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
 		try {
-			const event = events.find((e: any) => e.id === taskId);
+			const event = finalEvents.find((e: any) => e.id === taskId);
 			if (event) {
 				await updateEvent({
-					holidayId,
+					holidayId: resolvedHolidayId,
 					taskId,
 					isCompleted: !event.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state immediately
+				updateEventInRedux(
+					{ ...event, isCompleted: !event.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating event:", error);
@@ -174,11 +260,11 @@ export default function EasterEventsPage() {
 	};
 
 	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!editingTask || !holidayId || !auth0User) return;
+		if (!editingTask || !resolvedHolidayId || !auth0User) return;
 
 		try {
-			await editEvent({
-				holidayId,
+			const updatedEvent = await editEvent({
+				holidayId: resolvedHolidayId,
 				taskId: editingTask.id,
 				payload: {
 					title: values.title,
@@ -190,6 +276,10 @@ export default function EasterEventsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state immediately
+			updateEventInRedux(updatedEvent, "update");
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {

@@ -74,25 +74,98 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			};
 		}
 
-		// Get holiday preferences for this account
+		// Get holiday preferences for this account with all related data
 		const holidays = await prisma.holiday.findMany({
 			where: { accountId: account.id },
 			include: {
 				budgets: true,
+				gifts: true,
+				cards: true,
+				tasks: true,
+				guestLists: {
+					include: {
+						contact: true,
+					},
+				},
 			},
 			orderBy: {
 				holidayType: "asc",
 			},
 		});
 
-		const holidayPreferences = holidays.map((holiday) => ({
-			holiday: holiday.holidayType,
-			holidayId: holiday.id,
-			budget: holiday.budgets[0]?.totalBudget
-				? parseFloat(holiday.budgets[0].totalBudget.toString())
-				: undefined,
-			countdownTimer: holiday.countdownTimer?.toISOString(),
-		}));
+		const holidayPreferences = holidays.map((holiday) => {
+			const allTasks = holiday.tasks || [];
+
+			// Debug: Log task categories for Kwanzaa
+			if (holiday.holidayType === "Kwanzaa") {
+				console.log(
+					"Kwanzaa tasks:",
+					allTasks.map((t: any) => ({
+						id: t.id,
+						title: t.title,
+						category: t.category,
+					}))
+				);
+			}
+
+			// Filter tasks by category for specific holiday types
+			const events = allTasks.filter((task: any) => task.category === "Events");
+			const decorations = allTasks.filter(
+				(task: any) => task.category === "Decorations"
+			);
+			const kwanzaaPrinciples = allTasks.filter(
+				(task: any) => task.category === "Kwanzaa Principles"
+			);
+
+			// Transform guest lists to include contact information
+			const guestLists =
+				holiday.guestLists?.map((guestList: any) => ({
+					id: guestList.id,
+					holidayId: guestList.holidayId,
+					contactId: guestList.contactId,
+					rsvpStatus: guestList.rsvpStatus,
+					rsvpDate: guestList.rsvpDate?.toISOString(),
+					notes: guestList.notes,
+					createdBy: guestList.createdBy,
+					createdAt: guestList.createdAt.toISOString(),
+					updatedAt: guestList.updatedAt.toISOString(),
+					// Include contact information
+					contact: guestList.contact
+						? {
+								id: guestList.contact.id,
+								name: guestList.contact.name,
+								email: guestList.contact.email,
+								phone: guestList.contact.phone,
+								streetAddress: guestList.contact.streetAddress,
+								city: guestList.contact.city,
+								state: guestList.contact.state,
+								postalCode: guestList.contact.postalCode,
+								relationship: guestList.contact.relationship,
+								notes: guestList.contact.notes,
+								createdAt: guestList.contact.createdAt.toISOString(),
+								updatedAt: guestList.contact.updatedAt.toISOString(),
+						  }
+						: null,
+				})) || [];
+
+			return {
+				holiday: holiday.holidayType,
+				holidayId: holiday.id,
+				budget: holiday.budgets[0]?.totalBudget
+					? parseFloat(holiday.budgets[0].totalBudget.toString())
+					: undefined,
+				countdownTimer: holiday.countdownTimer?.toISOString(),
+				gifts: holiday.gifts || [],
+				cards: holiday.cards || [],
+				tasks: allTasks,
+				// Add filtered task categories
+				events,
+				decorations,
+				kwanzaaPrinciples,
+				// Add guest lists
+				guestLists,
+			};
+		});
 
 		// Get contacts for this account
 		const contacts = await prisma.contact.findMany({

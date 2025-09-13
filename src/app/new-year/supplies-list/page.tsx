@@ -4,9 +4,20 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
-	useGetGiftsQuery,
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import {
+	addGiftToHomeData,
+	removeGiftFromHomeData,
+	updateGiftInHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	useCreateGiftMutation,
 	useUpdateGiftMutation,
 	useEditGiftMutation,
 	useDeleteGiftMutation,
@@ -18,41 +29,53 @@ import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
-
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
+import { useAuth0 } from "@auth0/auth0-react";
 
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function NewYearSuppliesListPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
-	const {
-		holidayId,
-		mutation,
-		isLoading: mutationLoading,
-		error: mutationError,
-		auth0User,
-	} = useFormModalMutation();
+	const { user: auth0User } = useAuth0();
 
-	// Fetch gifts using RTK Query
-	const {
-		data: gifts = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
 
-	// Update gift mutation
-	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+	// Get holiday ID for New Year
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/new-year", holidayPreferences)
+		: null;
 
-	// Edit and delete mutations
-	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
-	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+	// Get current Redux state for holiday data
+	const currentState = useAppSelector((state: any) => state);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Get gifts from Redux data
+	const gifts = holidayData?.gifts || [];
+
+	// Get mutations for CRUD operations
+	const [createGift, createGiftState] = useCreateGiftMutation();
+	const [updateGift, updateGiftState] = useUpdateGiftMutation();
+	const [editGift, editGiftState] = useEditGiftMutation();
+	const [deleteGift, deleteGiftState] = useDeleteGiftMutation();
+
+	// Loading and error states
+	const loading =
+		createGiftState.isLoading ||
+		updateGiftState.isLoading ||
+		editGiftState.isLoading ||
+		deleteGiftState.isLoading;
+	const error =
+		createGiftState.error ||
+		updateGiftState.error ||
+		editGiftState.error ||
+		deleteGiftState.error;
+	const initialized = homeInitialized;
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -60,12 +83,6 @@ export default function NewYearSuppliesListPage() {
 	const [showFormModal, setShowFormModal] = useState(false);
 	const [selectedGift, setSelectedGift] = useState<any>(null);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
-
-	// Get home data to check if contacts are available
-	const homeData = useAppSelector((state: any) => state.home.data);
-	const homeInitialized = useAppSelector(
-		(state: any) => state.home.initialized
-	);
 
 	useEffect(() => {
 		// Fetch contacts for address book functionality
@@ -77,11 +94,24 @@ export default function NewYearSuppliesListPage() {
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-		if (!holidayId || !mutation) return;
+		if (!holidayId || !auth0User) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const result = await createGift({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Add to Redux store immediately
+			dispatch(
+				addGiftToHomeData({
+					holidayId,
+					gift: result,
+				})
+			);
+
 			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating gift:", error);
@@ -105,7 +135,7 @@ export default function NewYearSuppliesListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!holidayId) return;
+		if (!holidayId || !auth0User) return;
 
 		try {
 			// Find the current gift to get its completion status
@@ -117,13 +147,23 @@ export default function NewYearSuppliesListPage() {
 
 			// Update the gift in the database
 			await updateGift({
-				holidayId: holidayId || "",
+				holidayId,
 				giftId,
 				isCompleted: newIsCompleted,
 				auth0User,
 			}).unwrap();
 
-			// The UI will automatically update due to RTK Query cache invalidation
+			// Update Redux store immediately
+			dispatch(
+				updateGiftInHomeData({
+					holidayId,
+					giftId,
+					updates: {
+						isCompleted: newIsCompleted,
+						completedDate: newIsCompleted ? new Date().toISOString() : null,
+					},
+				})
+			);
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
@@ -136,7 +176,7 @@ export default function NewYearSuppliesListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !holidayId) return;
+		if (!giftToDelete || !holidayId || !auth0User) return;
 
 		try {
 			await deleteGift({
@@ -144,6 +184,15 @@ export default function NewYearSuppliesListPage() {
 				giftId: giftToDelete.id,
 				auth0User,
 			}).unwrap();
+
+			// Remove from Redux store immediately
+			dispatch(
+				removeGiftFromHomeData({
+					holidayId,
+					giftId: giftToDelete.id,
+				})
+			);
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
@@ -162,16 +211,26 @@ export default function NewYearSuppliesListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+		if (!selectedGift || !holidayId || !auth0User) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await editGift({
+			const result = await editGift({
 				holidayId,
 				giftId: selectedGift.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux store immediately
+			dispatch(
+				updateGiftInHomeData({
+					holidayId,
+					giftId: selectedGift.id,
+					updates: result,
+				})
+			);
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {
@@ -204,7 +263,7 @@ export default function NewYearSuppliesListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	if (!initialized) {
 		return (
 			<div className="min-h-screen new-year-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -274,7 +333,7 @@ export default function NewYearSuppliesListPage() {
 										onToggle={() => handleToggleGift(gift.id)}
 										onEdit={() => handleEditGift(gift)}
 										onDelete={() => handleDeleteGift(gift)}
-										loading={updateLoading || deleteLoading}
+										loading={loading}
 										theme={{
 											accentColor: "#f59e0b",
 											hoverColor:
@@ -303,7 +362,7 @@ export default function NewYearSuppliesListPage() {
 										onToggle={() => handleToggleGift(gift.id)}
 										onEdit={() => handleEditGift(gift)}
 										onDelete={() => handleDeleteGift(gift)}
-										loading={updateLoading || deleteLoading}
+										loading={loading}
 										theme={{
 											accentColor: "#f59e0b",
 											hoverColor:
@@ -339,7 +398,7 @@ export default function NewYearSuppliesListPage() {
 							  }
 							: undefined
 					}
-					loading={mutationLoading || editLoading}
+					loading={loading}
 					submitText={selectedGift ? "Update Supply Item" : "Add Supply Item"}
 					cardClassName="card card-gifts"
 					submitButtonColor="#f59e0b"
@@ -375,7 +434,7 @@ export default function NewYearSuppliesListPage() {
 					onConfirm={confirmDelete}
 					title="Delete Supply Item"
 					message="Are you sure you want to delete this supply item? This action cannot be undone."
-					loading={deleteLoading}
+					loading={loading}
 				/>
 			</main>
 			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">

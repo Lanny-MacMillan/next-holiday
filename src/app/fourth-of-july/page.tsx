@@ -1,12 +1,22 @@
 "use client";
 
-import { useFourthOfJulyTasksMutations } from "@/hooks/useFourthOfJulyTasksMutations";
+import { useEffect } from "react";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import GuestListCard from "@/components/cards/guest/GuestListCard";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
 import CountdownWithInvite from "@/components/common/CountdownWithInvite";
 import SharedIndicator from "@/components/common/SharedIndicator";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 
 const fourthOfJulySubsections = [
 	{
@@ -27,7 +37,8 @@ const fourthOfJulySubsections = [
 		name: "Guest List",
 		description: "Manage your guest list",
 		href: "/fourth-of-july/guest-list",
-		sliceKey: "addressBook",
+		sliceKey: "guestList",
+		type: "guest-list",
 	},
 	{
 		name: "Decorations Checklist",
@@ -39,7 +50,25 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-	const { tasks, loading, error, holidayId } = useFourthOfJulyTasksMutations();
+	const { user: auth0User } = useAuth0();
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+
+	// Get holiday ID for Fourth of July - only resolve if home data is initialized
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/fourth-of-july", holidayPreferences)
+		: getHolidayIdFromRoute("/fourth-of-july", holidayPreferences); // Allow fallback for cold entry
+
+	// Get data from Redux home state first, fallback to RTK Query if needed
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Use only Redux data - no API calls on holiday pages
 
 	// Show message if holiday doesn't exist
 	if (!holidayId) {
@@ -68,22 +97,47 @@ export default function FourthOfJulyPage() {
 		);
 	}
 
-	function getProgressData(sliceKey: string, category?: string) {
+	function getProgressData(
+		sliceKey: string,
+		category?: string
+	): {
+		total: number;
+		completed: number;
+		progress: number;
+	} {
 		let total = 0;
 		let completed = 0;
 
+		// Use only Redux data - no fallback to API calls
+		if (!holidayData || !homeInitialized) {
+			return { total: 0, completed: 0, progress: 0 };
+		}
+
 		switch (sliceKey) {
 			case "tasks":
-				const filteredTasks = category
-					? tasks.filter((task: any) => task.category === category)
-					: tasks;
-				total = filteredTasks.length;
-				completed = filteredTasks.filter(
-					(task: any) => task.isCompleted
-				).length;
+				// Filter tasks by category
+				if (holidayData.tasks) {
+					const filteredTasks = category
+						? holidayData.tasks.filter(
+								(task: any) => task.category === category
+						  )
+						: holidayData.tasks;
+					total = filteredTasks.length;
+					completed = filteredTasks.filter(
+						(task: any) => task.isCompleted
+					).length;
+				}
 				break;
 			case "gifts":
-				// For supplies list, we'll show 0 progress since it's handled by RTK Query
+				if (holidayData.gifts) {
+					total = holidayData.gifts.length;
+					completed = holidayData.gifts.filter(
+						(gift: any) => gift.isCompleted
+					).length;
+				}
+				break;
+			case "guestList":
+				// Guest list doesn't have completion status, so we'll show total count
 				total = 0;
 				completed = 0;
 				break;
@@ -95,6 +149,32 @@ export default function FourthOfJulyPage() {
 		const progress = total > 0 ? completed / total : 0;
 		return { total, completed, progress };
 	}
+
+	// Debug: Log all available data
+	useEffect(() => {
+		// Log the full home data structure
+		if (homeData) {
+			console.log("homeData.holidayPreferences:", homeData.holidayPreferences);
+			if (homeData.holidayPreferences) {
+				homeData.holidayPreferences.forEach((pref: any, index: number) => {
+					console.log(`holidayPreferences[${index}]:`, pref);
+					console.log(
+						`holidayPreferences[${index}].holidayId:`,
+						pref.holidayId
+					);
+					console.log(`holidayPreferences[${index}].gifts:`, pref.gifts);
+					console.log(`holidayPreferences[${index}].tasks:`, pref.tasks);
+				});
+			}
+		}
+		console.log("=== FOURTH OF JULY MAIN PAGE DEBUG ===");
+		console.log("holidayId:", holidayId);
+		console.log("homeInitialized:", homeInitialized);
+		console.log("holidayData:", holidayData);
+		console.log("holidayData.gifts:", holidayData?.gifts);
+		console.log("holidayData.tasks:", holidayData?.tasks);
+		console.log("=== END DEBUG ===");
+	}, [holidayId, holidayData, homeInitialized, homeData]);
 
 	return (
 		<div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -112,11 +192,47 @@ export default function FourthOfJulyPage() {
 
 						// Use GiftListCard for gift list sections
 						if (section.type === "gift-list") {
+							// Calculate budget data from Redux
+							const budgetLimit = holidayData?.budget || 0;
+							const gifts = holidayData?.gifts || [];
+
+							// Calculate spent amount from completed gifts
+							const totalSpent = gifts.reduce((sum: number, gift: any) => {
+								const price = parseFloat(gift.price) || 0;
+								return gift.isCompleted ? sum + price : sum;
+							}, 0);
+
+							// Calculate total planned (all gifts with prices)
+							const totalPlanned = gifts.reduce((sum: number, gift: any) => {
+								return sum + (parseFloat(gift.price) || 0);
+							}, 0);
+
+							const remaining = budgetLimit - totalSpent;
+							const budgetPercentage =
+								budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
+
+							const getBudgetStatus = () => {
+								if (budgetPercentage >= 80) return "Budget nearly exhausted";
+								if (budgetPercentage >= 60) return "Moderate budget remaining";
+								return "Plenty of budget left";
+							};
+
 							return (
 								<li key={section.name}>
 									<GiftListCard
 										holiday="Fourth of July"
 										href={section.href}
+										budget={{
+											spent: totalSpent,
+											planned: totalPlanned,
+											total: budgetLimit,
+											remaining,
+											percentage: budgetPercentage,
+										}}
+										giftList={{
+											totalItems: total,
+											completedItems: completed,
+										}}
 										theme={{
 											primaryColor: "#dc2626", // Red for Fourth of July
 											accentColor: "#dc2626", // Red accent
@@ -128,7 +244,7 @@ export default function FourthOfJulyPage() {
 						}
 
 						// Use GuestListCard for guest list section
-						if (section.sliceKey === "addressBook") {
+						if (section.sliceKey === "guestList") {
 							return (
 								<li key={section.name}>
 									<GuestListCard

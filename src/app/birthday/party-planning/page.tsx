@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -35,6 +46,45 @@ export default function BirthdayPartyPlanningPage() {
 		editPartyPlanningState,
 		deletePartyPlanningState,
 	} = usePartyPlanningMutations();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -103,7 +153,7 @@ export default function BirthdayPartyPlanningPage() {
 
 		try {
 			if (editingTask) {
-				await editPartyPlanning({
+				const result = await editPartyPlanning({
 					holidayId,
 					taskId: editingTask.id,
 					payload: {
@@ -116,6 +166,10 @@ export default function BirthdayPartyPlanningPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "update");
+
 				setEditingTask(null);
 			} else {
 				const payload = {
@@ -127,7 +181,14 @@ export default function BirthdayPartyPlanningPage() {
 					dueDate: values.dueDate || undefined,
 					isCompleted: false,
 				};
-				await createPartyPlanning({ holidayId, payload, auth0User }).unwrap();
+				const result = await createPartyPlanning({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowAddForm(false);
 		} catch (error) {
@@ -161,6 +222,10 @@ export default function BirthdayPartyPlanningPage() {
 					taskId: taskToDelete.id,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux({ id: taskToDelete.id }, "delete");
+
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting party planning task:", error);
@@ -181,6 +246,12 @@ export default function BirthdayPartyPlanningPage() {
 					isCompleted: !task.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(
+					{ id: taskId, isCompleted: !task.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating party planning task:", error);

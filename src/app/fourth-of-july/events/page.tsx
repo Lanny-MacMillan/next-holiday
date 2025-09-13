@@ -1,7 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import { useFourthOfJulyTasksMutations } from "@/hooks/useFourthOfJulyTasksMutations";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
@@ -13,22 +25,75 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
 
 export default function FourthOfJulyEventsPage() {
+	const dispatch = useAppDispatch();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+
 	const {
-		tasks,
-		loading,
-		error,
+		holidayId,
+		auth0User,
 		createTask,
 		updateTask,
 		deleteTask,
 		toggleTaskCompletion,
-		getTasksByCategory,
-		holidayId,
-		auth0User,
 		createTaskState,
 		updateTaskState,
 		deleteTaskState,
 		toggleTaskCompletionState,
 	} = useFourthOfJulyTasksMutations();
+
+	// Get holiday data from Redux
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
+	// Events are stored in tasks with category "Events" for consistency with main page
+	const allTasks = holidayData?.tasks || [];
+	const tasks = allTasks.filter((task: any) => task.category === "Events");
+	const loading = !homeInitialized;
+	const error = null;
+	const initialized = homeInitialized;
+
+	// Filter tasks for Events category
+	const getTasksByCategory = (category: string) => {
+		return allTasks.filter((task: any) => task.category === category);
+	};
 
 	// Show message if holiday doesn't exist
 	if (!holidayId) {
@@ -110,7 +175,7 @@ export default function FourthOfJulyEventsPage() {
 
 	const handleSubmit = async (values: Record<string, any>) => {
 		if (editingTask) {
-			await updateTask({
+			const result = await updateTask({
 				holidayId,
 				taskId: editingTask.id,
 				updates: {
@@ -122,9 +187,12 @@ export default function FourthOfJulyEventsPage() {
 				},
 				auth0User,
 			});
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: editingTask.id, ...values }, "update");
 			setEditingTask(null);
 		} else {
-			await createTask({
+			const result = await createTask({
 				holidayId,
 				payload: {
 					...values,
@@ -135,6 +203,9 @@ export default function FourthOfJulyEventsPage() {
 				},
 				auth0User,
 			});
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
 		}
 		setShowAddForm(false);
 	};
@@ -159,6 +230,9 @@ export default function FourthOfJulyEventsPage() {
 				taskId: taskToDelete.id,
 				auth0User,
 			});
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: taskToDelete.id }, "delete");
 			setTaskToDelete(null);
 		}
 		setShowDeleteModal(false);
@@ -173,12 +247,30 @@ export default function FourthOfJulyEventsPage() {
 				isCompleted: !task.isCompleted,
 				auth0User,
 			});
+
+			// Update Redux state directly
+			updateTaskInRedux(
+				{ id: taskId, isCompleted: !task.isCompleted },
+				"update"
+			);
 		}
 	};
 
 	const handleSortChange = (sortOption: string) => {
 		setSortBy(sortOption);
 	};
+
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
+		return (
+			<div className="min-h-screen fourth-of-july-gradient flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+					<p className="text-gray-600 dark:text-gray-300">Loading events...</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">

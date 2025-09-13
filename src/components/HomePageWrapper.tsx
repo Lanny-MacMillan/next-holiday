@@ -4,6 +4,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { setHomeData as setHomeDataAction } from "@/store/slices/homeSlice";
+import { setMany as setBudgets } from "@/store/slices/budgetsSlice";
 import HomeContent from "@/components/HomeContent";
 import UserSetupHandler from "@/components/UserSetupHandler";
 import { HomeData } from "@/types/home";
@@ -44,10 +45,113 @@ export default function HomePageWrapper() {
 				}
 
 				const result = await response.json();
+				console.log("HomePageWrapper API response:", result);
 				const data = result.data;
+				console.log("HomePageWrapper extracted data:", data);
 				setHomeData(data);
 				// Also dispatch to Redux store for access throughout the app
 				dispatch(setHomeDataAction(data));
+
+				// Also populate budgets slice with budget data from home data
+				if (data?.holidayPreferences?.length) {
+					const budgets = data.holidayPreferences
+						.filter((pref: any) => pref.budget !== undefined)
+						.map((pref: any) => ({
+							holidayId: pref.holidayId,
+							targetAmount: pref.budget,
+							spentAmount: 0, // TODO: Calculate from gifts/tasks
+							updatedAt: new Date().toISOString(),
+						}));
+
+					if (budgets.length > 0) {
+						dispatch(setBudgets(budgets));
+					}
+				}
+
+				// Prefill RTK Query cache with home data to prevent duplicate fetches
+				if (data?.holidayPreferences?.length) {
+					// Import the API slice to access util methods
+					const { api } = await import("@/store/api");
+
+					// Extract all gifts, cards, and tasks from home data
+					// This ensures RTK Query hooks resolve from cache without firing network requests
+					const allGifts = data.holidayPreferences.flatMap(
+						(pref: any) => pref.gifts || []
+					);
+					const allCards = data.holidayPreferences.flatMap(
+						(pref: any) => pref.cards || []
+					);
+					const allTasks = data.holidayPreferences.flatMap(
+						(pref: any) => pref.tasks || []
+					);
+
+					// Upsert into RTK Query cache for each endpoint
+					dispatch(
+						api.util.upsertQueryData("getAllGifts", { auth0User }, allGifts)
+					);
+					dispatch(
+						api.util.upsertQueryData("getAllCards", { auth0User }, allCards)
+					);
+					dispatch(
+						api.util.upsertQueryData("getAllTasks", { auth0User }, allTasks)
+					);
+
+					// Also upsert per-holiday data to prevent individual holiday page fetches
+					data.holidayPreferences.forEach((pref: any) => {
+						if (pref.holidayId) {
+							dispatch(
+								api.util.upsertQueryData(
+									"getGifts",
+									{ holidayId: pref.holidayId, auth0User },
+									pref.gifts || []
+								)
+							);
+							dispatch(
+								api.util.upsertQueryData(
+									"getCards",
+									{ holidayId: pref.holidayId, auth0User },
+									pref.cards || []
+								)
+							);
+							dispatch(
+								api.util.upsertQueryData(
+									"getTasks",
+									{ holidayId: pref.holidayId, auth0User },
+									pref.tasks || []
+								)
+							);
+
+							// Cache filtered task categories
+							if (pref.events) {
+								dispatch(
+									api.util.upsertQueryData(
+										"getEvents",
+										{ holidayId: pref.holidayId, auth0User },
+										pref.events
+									)
+								);
+							}
+							if (pref.decorations) {
+								dispatch(
+									api.util.upsertQueryData(
+										"getDecorations",
+										{ holidayId: pref.holidayId, auth0User },
+										pref.decorations
+									)
+								);
+							}
+							if (pref.kwanzaaPrinciples) {
+								dispatch(
+									api.util.upsertQueryData(
+										"getKwanzaaPrinciples",
+										{ holidayId: pref.holidayId, auth0User },
+										pref.kwanzaaPrinciples
+									)
+								);
+							}
+						}
+					});
+				}
 			} catch (err) {
 				console.error("Error fetching home data:", err);
 				setError("Failed to load page data");

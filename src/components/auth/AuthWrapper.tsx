@@ -9,6 +9,10 @@ import {
 	checkUserInDb,
 	addUserToDb,
 } from "@/store/slices/userSlice";
+import { clearHomeData } from "@/store/slices/homeSlice";
+import { clearCachedData } from "@/store/slices/themeSlice";
+import { clearPreferences } from "@/store/slices/userPreferencesSlice";
+import { api } from "@/store/api";
 import { ReactNode } from "react";
 
 interface AuthWrapperProps {
@@ -55,10 +59,31 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 				})
 			);
 		} else if (!isAuthenticated && reduxUser) {
-			// User logged out - clear from Redux
+			// User logged out - clear all user data and caches for multi-tenant safety
 			dispatch(clearUser());
+			dispatch(clearHomeData());
+			dispatch(clearCachedData());
+			dispatch(clearPreferences());
+			// Clear RTK Query cache to prevent cross-tenant data leakage
+			dispatch(api.util.resetApiState());
 		}
 	}, [isAuthenticated, user, reduxUser, dispatch]);
+
+	// Handle user switching (different user logs in)
+	useEffect(() => {
+		if (isAuthenticated && user && reduxUser && user.sub !== reduxUser.sub) {
+			// Different user logged in - clear all data and caches
+			console.log("User switched, clearing all data:", {
+				oldSub: reduxUser.sub,
+				newSub: user.sub,
+			});
+			dispatch(clearUser());
+			dispatch(clearHomeData());
+			dispatch(clearCachedData());
+			dispatch(clearPreferences());
+			dispatch(api.util.resetApiState());
+		}
+	}, [user?.sub, reduxUser?.sub, isAuthenticated, dispatch]);
 
 	if (isLoading) {
 		return (

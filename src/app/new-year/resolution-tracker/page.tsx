@@ -3,6 +3,24 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import {
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+	updateTaskInHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	useCreateResolutionsMutation,
+	useUpdateResolutionsMutation,
+	useEditResolutionsMutation,
+	useDeleteResolutionsMutation,
+} from "@/store/api";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -12,29 +30,64 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import DateTrackerCard from "@/components/cards/DateTrackerCard";
 import DateIdeaCard from "@/components/cards/DateIdeaCard";
-import { useResolutionsMutations } from "@/hooks/useResolutionsMutations";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export default function NewYearResolutionTrackerPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
 
-	// Use the new resolutions mutations hook
-	const {
-		holidayId,
-		auth0User,
-		resolutions,
-		loading,
-		error,
-		initialized,
-		createResolutions,
-		updateResolutions,
-		editResolutions,
-		deleteResolutions,
-		createResolutionsState,
-		updateResolutionsState,
-		editResolutionsState,
-		deleteResolutionsState,
-	} = useResolutionsMutations();
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get holiday ID for New Year
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/new-year", holidayPreferences)
+		: null;
+
+	// Get current Redux state for holiday data
+	const currentState = useAppSelector((state: any) => state);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Get resolutions from Redux data (tasks with category "Resolutions")
+	const resolutions =
+		holidayData?.tasks?.filter(
+			(task: any) => task.category === "Resolutions"
+		) || [];
+
+	// Debug logging
+	useEffect(() => {
+		console.log("=== Resolution Tracker Debug ===");
+		console.log("holidayId:", holidayId);
+		console.log("holidayData:", holidayData);
+		console.log("holidayData?.tasks:", holidayData?.tasks);
+		console.log("resolutions:", resolutions);
+		console.log("=== End Resolution Tracker Debug ===");
+	}, [holidayId, holidayData, resolutions]);
+
+	// Get mutations for CRUD operations
+	const [createResolutions, createResolutionsState] =
+		useCreateResolutionsMutation();
+	const [updateResolutions, updateResolutionsState] =
+		useUpdateResolutionsMutation();
+	const [editResolutions, editResolutionsState] = useEditResolutionsMutation();
+	const [deleteResolutions, deleteResolutionsState] =
+		useDeleteResolutionsMutation();
+
+	// Loading and error states
+	const loading =
+		createResolutionsState.isLoading ||
+		updateResolutionsState.isLoading ||
+		editResolutionsState.isLoading ||
+		deleteResolutionsState.isLoading;
+	const error =
+		createResolutionsState.error ||
+		updateResolutionsState.error ||
+		editResolutionsState.error ||
+		deleteResolutionsState.error;
+	const initialized = homeInitialized;
 
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -54,7 +107,7 @@ export default function NewYearResolutionTrackerPage() {
 		try {
 			if (editingTask) {
 				// Update existing task
-				await editResolutions({
+				const result = await editResolutions({
 					holidayId,
 					taskId: editingTask.id,
 					payload: {
@@ -67,6 +120,22 @@ export default function NewYearResolutionTrackerPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux store immediately
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: editingTask.id,
+						updates: {
+							title: values.title,
+							description: values.description || undefined,
+							priority: values.priority as "low" | "medium" | "high",
+							category: "Resolutions",
+							dueDate: values.dueDate || undefined,
+							notes: values.notes || undefined,
+						},
+					})
+				);
 				setEditingTask(null);
 			} else {
 				// Add new task
@@ -79,7 +148,19 @@ export default function NewYearResolutionTrackerPage() {
 					notes: values.notes || undefined,
 					isCompleted: false,
 				};
-				await createResolutions({ holidayId, payload, auth0User }).unwrap();
+				const result = await createResolutions({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Add to Redux store immediately
+				dispatch(
+					addTaskToHomeData({
+						holidayId,
+						task: result,
+					})
+				);
 			}
 			setShowFormModal(false);
 		} catch (error) {
@@ -109,6 +190,15 @@ export default function NewYearResolutionTrackerPage() {
 				taskId: deleteConfirm.id,
 				auth0User,
 			}).unwrap();
+
+			// Remove from Redux store immediately
+			dispatch(
+				removeTaskFromHomeData({
+					holidayId,
+					taskId: deleteConfirm.id,
+				})
+			);
+
 			setShowDeleteModal(false);
 			setDeleteConfirm(null);
 		} catch (error) {
@@ -133,6 +223,20 @@ export default function NewYearResolutionTrackerPage() {
 					isCompleted: !task.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux store immediately
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId,
+						updates: {
+							isCompleted: !task.isCompleted,
+							completedDate: !task.isCompleted
+								? new Date().toISOString()
+								: null,
+						},
+					})
+				);
 			}
 		} catch (error) {
 			console.error("Error updating resolution:", error);

@@ -1,17 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { useAuth0 } from "@auth0/auth0-react";
-import {
-	useGetGiftsQuery,
-	useGetCostumeIdeasQuery,
-	useGetTrickOrTreatPrepQuery,
-	useGetDecorationsQuery,
-} from "@/store/api";
+import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import GiftListCard from "@/components/cards/gift/GiftListCard";
 import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 
 const subsections = [
 	{
@@ -39,30 +41,24 @@ const subsections = [
 
 export default function HalloweenPage() {
 	const { user: auth0User } = useAuth0();
-	const holidayPreferences = useAppSelector(
-		(state: any) => state.home.data?.holidayPreferences || []
-	);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
 
-	// Get holiday ID for Halloween
-	const holidayId = getHolidayIdFromRoute("/halloween", holidayPreferences);
+	// Get holiday ID for Halloween - only resolve if home data is initialized
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/halloween", holidayPreferences)
+		: getHolidayIdFromRoute("/halloween", holidayPreferences); // Allow fallback for cold entry
 
-	// Use RTK Query to fetch data
-	const { data: gifts = [] } = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
-	const { data: costumeIdeas = [] } = useGetCostumeIdeasQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
-	const { data: trickOrTreatPrep = [] } = useGetTrickOrTreatPrepQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
-	const { data: decorations = [] } = useGetDecorationsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get data from Redux home state first, fallback to RTK Query if needed
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Use only Redux data - no API calls on holiday pages
 
 	function getProgressData(sliceKey: string): {
 		total: number;
@@ -72,28 +68,49 @@ export default function HalloweenPage() {
 		let total = 0;
 		let completed = 0;
 
+		// Use only Redux data - no fallback to API calls
+		if (!holidayData || !homeInitialized) {
+			return { total: 0, completed: 0, progress: 0 };
+		}
+
 		switch (sliceKey) {
 			case "costumeIdeas":
-				total = costumeIdeas.length;
-				completed = costumeIdeas.filter(
-					(costume: any) => costume.isCompleted
-				).length;
+				// Filter tasks by category for costume ideas
+				if (holidayData.tasks) {
+					const costumeTasks = holidayData.tasks.filter(
+						(task: any) => task.category === "Costume Ideas"
+					);
+					total = costumeTasks.length;
+					completed = costumeTasks.filter(
+						(task: any) => task.isCompleted
+					).length;
+				}
 				break;
 			case "trickOrTreatPrep":
-				total = trickOrTreatPrep.length;
-				completed = trickOrTreatPrep.filter(
-					(prep: any) => prep.isCompleted
-				).length;
+				// Filter tasks by category for trick or treat prep
+				if (holidayData.tasks) {
+					const prepTasks = holidayData.tasks.filter(
+						(task: any) => task.category === "Trick or Treat Prep"
+					);
+					total = prepTasks.length;
+					completed = prepTasks.filter((task: any) => task.isCompleted).length;
+				}
 				break;
 			case "decorations":
-				total = decorations.length;
-				completed = decorations.filter(
-					(decoration: any) => decoration.isCompleted
-				).length;
+				if (holidayData.decorations) {
+					total = holidayData.decorations.length;
+					completed = holidayData.decorations.filter(
+						(decoration: any) => decoration.isCompleted
+					).length;
+				}
 				break;
 			case "giftList":
-				total = gifts.length;
-				completed = gifts.filter((gift: any) => gift.isCompleted).length;
+				if (holidayData.gifts) {
+					total = holidayData.gifts.length;
+					completed = holidayData.gifts.filter(
+						(gift: any) => gift.isCompleted
+					).length;
+				}
 				break;
 			default:
 				total = 0;
@@ -103,6 +120,37 @@ export default function HalloweenPage() {
 		const progress = total > 0 ? completed / total : 0;
 		return { total, completed, progress };
 	}
+
+	// Debug: Log all available data
+	useEffect(() => {
+		// Log the full home data structure
+		if (homeData) {
+			console.log("homeData.holidayPreferences:", homeData.holidayPreferences);
+			if (homeData.holidayPreferences) {
+				homeData.holidayPreferences.forEach((pref: any, index: number) => {
+					console.log(`holidayPreferences[${index}]:`, pref);
+					console.log(
+						`holidayPreferences[${index}].holidayId:`,
+						pref.holidayId
+					);
+					console.log(`holidayPreferences[${index}].gifts:`, pref.gifts);
+					console.log(`holidayPreferences[${index}].tasks:`, pref.tasks);
+					console.log(
+						`holidayPreferences[${index}].decorations:`,
+						pref.decorations
+					);
+				});
+			}
+		}
+		console.log("=== HALLOWEEN MAIN PAGE DEBUG ===");
+		console.log("holidayId:", holidayId);
+		console.log("homeInitialized:", homeInitialized);
+		console.log("holidayData:", holidayData);
+		console.log("holidayData.gifts:", holidayData?.gifts);
+		console.log("holidayData.tasks:", holidayData?.tasks);
+		console.log("holidayData.decorations:", holidayData?.decorations);
+		console.log("=== END DEBUG ===");
+	}, [holidayId, holidayData, homeInitialized, homeData]);
 
 	return (
 		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -117,6 +165,39 @@ export default function HalloweenPage() {
 						<GiftListCard
 							holiday="Halloween"
 							href="/halloween/gift-list"
+							budget={{
+								spent:
+									holidayData?.gifts?.reduce((sum: number, gift: any) => {
+										const price = parseFloat(gift.price) || 0;
+										return gift.isCompleted ? sum + price : sum;
+									}, 0) || 0,
+								planned:
+									holidayData?.gifts?.reduce((sum: number, gift: any) => {
+										return sum + (parseFloat(gift.price) || 0);
+									}, 0) || 0,
+								total: holidayData?.budget || 0,
+								remaining:
+									(holidayData?.budget || 0) -
+									(holidayData?.gifts?.reduce((sum: number, gift: any) => {
+										const price = parseFloat(gift.price) || 0;
+										return gift.isCompleted ? sum + price : sum;
+									}, 0) || 0),
+								percentage:
+									holidayData?.budget > 0
+										? ((holidayData?.gifts?.reduce((sum: number, gift: any) => {
+												const price = parseFloat(gift.price) || 0;
+												return gift.isCompleted ? sum + price : sum;
+										  }, 0) || 0) /
+												holidayData.budget) *
+										  100
+										: 0,
+							}}
+							giftList={{
+								totalItems: holidayData?.gifts?.length || 0,
+								completedItems:
+									holidayData?.gifts?.filter((gift: any) => gift.isCompleted)
+										.length || 0,
+							}}
 							theme={{
 								primaryColor: "#f97316", // Orange for Halloween
 								accentColor: "#eab308",

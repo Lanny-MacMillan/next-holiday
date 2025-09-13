@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateDecorationInHomeData,
+	addDecorationToHomeData,
+	removeDecorationFromHomeData,
+} from "@/store/slices/homeSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";
@@ -45,11 +56,15 @@ export default function HalloweenDecorationsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const currentState = useAppSelector((state: any) => state);
+
 	// Use the new decoration mutations hook
 	const {
 		holidayId,
 		auth0User,
-		decorations,
 		loading,
 		error,
 		initialized,
@@ -61,6 +76,45 @@ export default function HalloweenDecorationsPage() {
 		editDecorationState,
 		deleteDecorationState,
 	} = useDecorationMutations();
+
+	// Get holiday data from Redux
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after decoration operations
+	const updateDecorationInRedux = (
+		decorationData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(
+					addDecorationToHomeData({ holidayId, decoration: decorationData })
+				);
+				break;
+			case "update":
+				dispatch(
+					updateDecorationInHomeData({
+						holidayId,
+						decorationId: decorationData.id,
+						updates: decorationData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeDecorationFromHomeData({
+						holidayId,
+						decorationId: decorationData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Get decorations from Redux data
+	const decorations = holidayData?.decorations || [];
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -77,16 +131,19 @@ export default function HalloweenDecorationsPage() {
 	const [editingTask, setEditingTask] = useState<any>(null);
 
 	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
+		}
+	}, [dispatch, homeInitialized]);
 
 	// Check if default decoration tasks exist
 	useEffect(() => {
-		if (decorations.length === 0 && initialized) {
+		if (decorations.length === 0 && homeInitialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [decorations, initialized]);
+	}, [decorations, homeInitialized]);
 
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
@@ -103,7 +160,15 @@ export default function HalloweenDecorationsPage() {
 				isCompleted: false,
 			};
 
-			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			const result = await createDecoration({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateDecorationInRedux(result, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating decoration:", error);
@@ -124,7 +189,14 @@ export default function HalloweenDecorationsPage() {
 					dueDate: undefined,
 					isCompleted: false,
 				};
-				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+				const result = await createDecoration({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateDecorationInRedux(result, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -146,12 +218,19 @@ export default function HalloweenDecorationsPage() {
 		try {
 			const decoration = decorations.find((d: any) => d.id === taskId);
 			if (decoration) {
+				const newIsCompleted = !decoration.isCompleted;
 				await updateDecoration({
 					holidayId,
 					taskId,
-					isCompleted: !decoration.isCompleted,
+					isCompleted: newIsCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateDecorationInRedux(
+					{ id: taskId, isCompleted: newIsCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating decoration:", error);
@@ -171,7 +250,7 @@ export default function HalloweenDecorationsPage() {
 		if (!editingTask || !holidayId || !auth0User) return;
 
 		try {
-			await editDecoration({
+			const result = await editDecoration({
 				holidayId,
 				taskId: editingTask.id,
 				payload: {
@@ -184,6 +263,10 @@ export default function HalloweenDecorationsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateDecorationInRedux(result, "update");
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -204,6 +287,10 @@ export default function HalloweenDecorationsPage() {
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateDecorationInRedux({ id: deleteConfirm.taskId }, "delete");
+
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting decoration:", error);
@@ -242,7 +329,8 @@ export default function HalloweenDecorationsPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen halloween-tasks-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -280,7 +368,7 @@ export default function HalloweenDecorationsPage() {
 				sortTitle="Sort tasks"
 				description="Keep track of Halloween decorations!"
 				holidayColor="orange-500"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}

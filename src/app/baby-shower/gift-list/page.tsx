@@ -1,12 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	addGiftToHomeData,
+	updateGiftInHomeData,
+	removeGiftFromHomeData,
+} from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
-	useGetGiftsQuery,
 	useUpdateGiftMutation,
 	useEditGiftMutation,
 	useDeleteGiftMutation,
@@ -36,16 +46,45 @@ export default function BabyShowerGiftListPage() {
 		auth0User,
 	} = useFormModalMutation();
 
-	// Fetch gifts using RTK Query
-	const {
-		data: gifts = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after gift operations
+	const updateGiftInRedux = (
+		giftData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				break;
+			case "update":
+				dispatch(
+					updateGiftInHomeData({
+						holidayId,
+						giftId: giftData.id,
+						updates: giftData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(removeGiftFromHomeData({ holidayId, giftId: giftData.id }));
+				break;
+		}
+	};
+
+	// Use Redux data instead of RTK Query
+	const gifts = holidayData?.gifts || [];
+	const loading = !homeInitialized;
+	const error = null;
+	const initialized = homeInitialized;
 
 	// Update gift mutation
 	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
@@ -61,12 +100,6 @@ export default function BabyShowerGiftListPage() {
 	const [selectedGift, setSelectedGift] = useState<any>(null);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-	// Get home data to check if contacts are available
-	const homeData = useAppSelector((state: any) => state.home.data);
-	const homeInitialized = useAppSelector(
-		(state: any) => state.home.initialized
-	);
-
 	useEffect(() => {
 		// Fetch contacts for address book functionality
 		// Only fetch if home data is initialized (which contains contacts)
@@ -81,7 +114,11 @@ export default function BabyShowerGiftListPage() {
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly for optimistic updates
+			updateGiftInRedux(result, "add");
+
 			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating gift:", error);
@@ -108,12 +145,15 @@ export default function BabyShowerGiftListPage() {
 		if (!holidayId) return;
 
 		try {
-			// Find the current gift to get its completion status
+			// Find the current gift to get its completion status from Redux data
 			const currentGift = gifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
+
+			// Optimistically update Redux state first
+			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 
 			// Update the gift in the database
 			await updateGift({
@@ -122,8 +162,6 @@ export default function BabyShowerGiftListPage() {
 				isCompleted: newIsCompleted,
 				auth0User,
 			}).unwrap();
-
-			// The UI will automatically update due to RTK Query cache invalidation
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
@@ -139,6 +177,9 @@ export default function BabyShowerGiftListPage() {
 		if (!giftToDelete || !holidayId) return;
 
 		try {
+			// Optimistically update Redux state first
+			updateGiftInRedux(giftToDelete, "delete");
+
 			await deleteGift({
 				holidayId,
 				giftId: giftToDelete.id,
@@ -166,12 +207,16 @@ export default function BabyShowerGiftListPage() {
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await editGift({
+			const result = await editGift({
 				holidayId,
 				giftId: selectedGift.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly for optimistic updates
+			updateGiftInRedux(result, "update");
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {

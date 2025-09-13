@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateEventInHomeData,
+	addEventToHomeData,
+	removeEventFromHomeData,
+} from "@/store/slices/homeSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -21,10 +32,6 @@ export default function FathersDayEventsPage() {
 	const {
 		holidayId,
 		auth0User,
-		events,
-		loading,
-		error,
-		initialized,
 		createEvent,
 		updateEvent,
 		editEvent,
@@ -33,6 +40,51 @@ export default function FathersDayEventsPage() {
 		editEventState,
 		deleteEventState,
 	} = useEventMutations();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after event operations
+	const updateEventInRedux = (
+		eventData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addEventToHomeData({ holidayId, event: eventData }));
+				break;
+			case "update":
+				dispatch(
+					updateEventInHomeData({
+						holidayId,
+						eventId: eventData.id,
+						updates: eventData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeEventFromHomeData({
+						holidayId,
+						eventId: eventData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
+	const events =
+		holidayData && homeInitialized && holidayData.events
+			? holidayData.events
+			: [];
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -82,9 +134,12 @@ export default function FathersDayEventsPage() {
 	const sortedEventTasks = sortTasks(events, sortBy);
 
 	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
+		}
+	}, [dispatch, homeInitialized]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
 		if (!holidayId || !auth0User) return;
@@ -99,7 +154,15 @@ export default function FathersDayEventsPage() {
 				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			const result = await createEvent({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateEventInRedux(result, "add");
+
 			setShowAddForm(false);
 		} catch (error) {
 			console.error("Error handling event:", error);
@@ -115,7 +178,7 @@ export default function FathersDayEventsPage() {
 		if (!editingTask || !holidayId || !auth0User) return;
 
 		try {
-			await editEvent({
+			const result = await editEvent({
 				holidayId,
 				taskId: editingTask.id,
 				payload: {
@@ -128,6 +191,10 @@ export default function FathersDayEventsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateEventInRedux(result, "update");
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -156,6 +223,10 @@ export default function FathersDayEventsPage() {
 					taskId: taskToDelete.id,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateEventInRedux({ id: taskToDelete.id }, "delete");
+
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting event:", error);
@@ -176,6 +247,12 @@ export default function FathersDayEventsPage() {
 					isCompleted: !event.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateEventInRedux(
+					{ id: taskId, isCompleted: !event.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating event:", error);
@@ -195,7 +272,7 @@ export default function FathersDayEventsPage() {
 				sortTitle="Sort Events"
 				description="Keep track of your Father's Day events!"
 				holidayColor="blue-500"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
@@ -218,7 +295,7 @@ export default function FathersDayEventsPage() {
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
-							loading={loading || updateEventState.isLoading}
+							loading={updateEventState.isLoading}
 							themeColor="blue"
 							holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
@@ -238,7 +315,7 @@ export default function FathersDayEventsPage() {
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
-							loading={loading || updateEventState.isLoading}
+							loading={updateEventState.isLoading}
 							themeColor="blue"
 							holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
 						/>
@@ -295,7 +372,7 @@ export default function FathersDayEventsPage() {
 				onClose={() => {
 					setShowAddForm(false);
 				}}
-				loading={loading}
+				loading={false}
 				submitText="Add Event"
 				cardClassName="card-events-fathers-day"
 			/>

@@ -21,6 +21,7 @@ export default function DataInitializer() {
 	const { initialized: contactsInitialized } = useAppSelector(
 		(state) => state.addressBook
 	);
+	const homeData = useAppSelector((state: any) => state.home.data);
 
 	useEffect(() => {
 		// Fetch all data if not already initialized
@@ -33,7 +34,8 @@ export default function DataInitializer() {
 		if (!tasksInitialized) {
 			dispatch(fetchTasks());
 		}
-		if (!contactsInitialized) {
+		// Only fetch contacts if not initialized AND not available in home data
+		if (!contactsInitialized && !homeData?.contacts?.length) {
 			dispatch(fetchContacts());
 		}
 	}, [
@@ -42,6 +44,7 @@ export default function DataInitializer() {
 		giftsInitialized,
 		tasksInitialized,
 		contactsInitialized,
+		homeData?.contacts?.length,
 	]);
 
 	// This component doesn't render anything

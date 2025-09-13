@@ -16,6 +16,9 @@ export interface GiftListCardProps {
 		spent: number;
 		total: number;
 		currency?: string;
+		planned?: number;
+		remaining?: number;
+		percentage?: number;
 	};
 	giftList?: {
 		totalItems: number;
@@ -195,11 +198,38 @@ export default function GiftListCard({
 	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
 	// Use holiday-specific data if holiday prop is provided, otherwise use passed props
-	const holidayData = holiday ? useGiftListCardData(holiday, holidayId) : null;
+	// Prioritize props over hook data to avoid API calls
+	// Only call the hook if we don't have the required props
+	const holidayData =
+		holiday && (!budget || !giftList)
+			? useGiftListCardData(holiday, holidayId)
+			: null;
 
-	const finalBudget = holidayData?.budget || budget;
-	const finalGiftList = holidayData?.giftList || giftList;
-	const finalBudgetStatus = holidayData?.budgetStatus;
+	const finalBudget = budget || holidayData?.budget;
+	const finalGiftList = giftList || holidayData?.giftList;
+
+	// Calculate budget status if not provided by holidayData
+	const finalBudgetStatus =
+		holidayData?.budgetStatus ||
+		(finalBudget
+			? (() => {
+					const budgetPercentage =
+						finalBudget.total > 0
+							? (finalBudget.spent / finalBudget.total) * 100
+							: 0;
+					if (budgetPercentage >= 80) return "Budget nearly exhausted";
+					if (budgetPercentage >= 60) return "Moderate budget remaining";
+					return "Plenty of budget left";
+			  })()
+			: "No budget set");
+
+	// Debug: Log what data the GiftListCard is receiving
+	console.log("=== GiftListCard DEBUG ===");
+	console.log("holiday:", holiday);
+	console.log("giftList prop:", giftList);
+	console.log("holidayData:", holidayData);
+	console.log("finalGiftList:", finalGiftList);
+	console.log("=== END GiftListCard DEBUG ===");
 
 	// Use holiday prop for display name, fallback to holidayName, then default
 	const displayHolidayName = holiday || holidayName || "Holiday";
@@ -214,11 +244,18 @@ export default function GiftListCard({
 	const budgetPercentage =
 		holidayData?.budget?.percentage ??
 		(finalBudget.total > 0 ? (finalBudget.spent / finalBudget.total) * 100 : 0);
+	// Calculate percentage from props first, then fallback to holidayData
 	const giftListPercentage =
-		holidayData?.giftList?.percentage ??
-		(finalGiftList.totalItems > 0
+		finalGiftList.totalItems > 0
 			? (finalGiftList.completedItems / finalGiftList.totalItems) * 100
-			: 0);
+			: 0;
+
+	// Debug: Log percentage calculation
+	console.log("=== GIFT LIST PERCENTAGE DEBUG ===");
+	console.log("finalGiftList.totalItems:", finalGiftList.totalItems);
+	console.log("finalGiftList.completedItems:", finalGiftList.completedItems);
+	console.log("giftListPercentage:", giftListPercentage);
+	console.log("=== END PERCENTAGE DEBUG ===");
 	console.log("holiday", holiday);
 
 	// Generate href if not provided

@@ -1,10 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	updateCardInHomeData,
+	addCardToHomeData,
+	removeCardFromHomeData,
+} from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import { useGetCardsQuery } from "@/store/api";
 import { transformCardPayload } from "@/utils/formTransformers";
 import FormModal from "@/components/modals/FormModal";
 import AddButton from "@/components/common/AddButton";
@@ -29,15 +39,44 @@ export default function ValentinesCardsPage() {
 		deleteCard,
 	} = useFormModalMutation();
 
-	// Fetch cards using RTK Query
-	const {
-		data: cards = [],
-		isLoading: loading,
-		error: cardsError,
-	} = useGetCardsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after card operations
+	const updateCardInRedux = (
+		cardData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addCardToHomeData({ holidayId, card: cardData }));
+				break;
+			case "update":
+				dispatch(
+					updateCardInHomeData({
+						holidayId,
+						cardId: cardData.id,
+						updates: cardData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeCardFromHomeData({
+						holidayId,
+						cardId: cardData.id,
+					})
+				);
+				break;
+		}
+	};
 
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -58,7 +97,11 @@ export default function ValentinesCardsPage() {
 
 		try {
 			const payload = transformCardPayload(values, contacts);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly
+			updateCardInRedux(result, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating card:", error);
@@ -75,7 +118,7 @@ export default function ValentinesCardsPage() {
 	}
 
 	const handleDeleteCard = async (cardId: string) => {
-		const card = cards.find((c) => c.id === cardId);
+		const card = displayCards.find((c) => c.id === cardId);
 		setCardToDelete(card);
 		setShowDeleteModal(true);
 	};
@@ -105,6 +148,10 @@ export default function ValentinesCardsPage() {
 					address: cardToDelete.address || "",
 				};
 				await mutation({ holidayId, payload, auth0User }).unwrap();
+
+				// Update Redux state directly
+				updateCardInRedux({ id: cardToDelete.id }, "delete");
+
 				setShowDeleteModal(false);
 				setCardToDelete(null);
 			} catch (error) {
@@ -121,7 +168,15 @@ export default function ValentinesCardsPage() {
 					id: cardToEdit.id,
 					action: "update",
 				};
-				await mutation({ holidayId, payload, auth0User }).unwrap();
+				const result = await mutation({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateCardInRedux(result, "update");
+
 				setShowEditModal(false);
 				setCardToEdit(null);
 			} catch (error) {
@@ -133,7 +188,7 @@ export default function ValentinesCardsPage() {
 	const handleToggleCompletion = async (cardId: string) => {
 		if (mutation && holidayId) {
 			try {
-				const card = cards.find((c) => c.id === cardId);
+				const card = displayCards.find((c) => c.id === cardId);
 				if (card) {
 					const payload = {
 						id: cardId,
@@ -144,6 +199,12 @@ export default function ValentinesCardsPage() {
 						address: card.address,
 					};
 					await mutation({ holidayId, payload, auth0User }).unwrap();
+
+					// Update Redux state directly
+					updateCardInRedux(
+						{ id: cardId, isCompleted: !card.isCompleted },
+						"update"
+					);
 				}
 			} catch (error) {
 				console.error("Error toggling card completion:", error);
@@ -151,7 +212,13 @@ export default function ValentinesCardsPage() {
 		}
 	};
 
-	const sortedCards = [...cards].sort((a, b) => {
+	// Use only Redux data - no fallback to API calls
+	const displayCards =
+		holidayData && homeInitialized && holidayData.cards
+			? holidayData.cards
+			: [];
+
+	const sortedCards = [...displayCards].sort((a, b) => {
 		switch (sortBy) {
 			case "recipient":
 				return a.recipient.localeCompare(b.recipient);
@@ -164,8 +231,8 @@ export default function ValentinesCardsPage() {
 		}
 	});
 
-	const completedCards = cards.filter((card) => card.isCompleted);
-	const incompleteCards = cards.filter((card) => !card.isCompleted);
+	const completedCards = displayCards.filter((card) => card.isCompleted);
+	const incompleteCards = displayCards.filter((card) => !card.isCompleted);
 
 	// Form fields configuration for cards
 	const formFields = [
@@ -201,14 +268,14 @@ export default function ValentinesCardsPage() {
 				onSortClick={() => setShowSortModal(true)}
 				description="Keep track of your cards!"
 				holidayColor="pink-500"
-				error={mutationError ? "API Error" : undefined}
+				error={undefined}
 				sortTitle="Sort Cards"
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
 				<MailCardStatus
-					totalCards={cards.length}
+					totalCards={displayCards.length}
 					completedCards={completedCards.length}
 					incompleteCards={incompleteCards.length}
 					holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
@@ -217,16 +284,12 @@ export default function ValentinesCardsPage() {
 				<AddButton title="Card" onClick={openForm} color="pink" />
 
 				{/* Card List */}
-				{loading ? (
+				{!homeInitialized ? (
 					<div className="text-center py-8">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto"></div>
 						<p className="text-gray-600 dark:text-gray-400 mt-2">
 							Loading cards...
 						</p>
-					</div>
-				) : cardsError ? (
-					<div className="text-center text-red-500 py-8">
-						<p>Error loading cards: {cardsError.toString()}</p>
 					</div>
 				) : sortedCards.length === 0 ? (
 					<div className="text-center py-8">

@@ -2,6 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -45,14 +56,18 @@ export default function FourthOfJulyDecorationsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+
 	// Use the new decoration mutations hook
 	const {
 		holidayId,
 		auth0User,
-		decorations,
-		loading,
-		error,
-		initialized,
 		createDecoration,
 		updateDecoration,
 		editDecoration,
@@ -61,6 +76,50 @@ export default function FourthOfJulyDecorationsPage() {
 		editDecorationState,
 		deleteDecorationState,
 	} = useDecorationMutations();
+
+	// Get holiday data from Redux
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
+	// Decorations are stored in tasks with category "Decorations" for consistency with main page
+	const allTasks = holidayData?.tasks || [];
+	const decorations = allTasks.filter(
+		(task: any) => task.category === "Decorations"
+	);
+	const loading = !homeInitialized;
+	const error = null;
+	const initialized = homeInitialized;
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -103,7 +162,14 @@ export default function FourthOfJulyDecorationsPage() {
 				isCompleted: false,
 			};
 
-			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			const result = await createDecoration({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating decoration:", error);
@@ -124,7 +190,14 @@ export default function FourthOfJulyDecorationsPage() {
 					dueDate: undefined,
 					isCompleted: false,
 				};
-				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+				const result = await createDecoration({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -152,6 +225,12 @@ export default function FourthOfJulyDecorationsPage() {
 					isCompleted: !decoration.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(
+					{ id: taskId, isCompleted: !decoration.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating decoration:", error);
@@ -171,7 +250,7 @@ export default function FourthOfJulyDecorationsPage() {
 		if (!editingTask || !holidayId || !auth0User) return;
 
 		try {
-			await editDecoration({
+			const result = await editDecoration({
 				holidayId,
 				taskId: editingTask.id,
 				payload: {
@@ -184,6 +263,9 @@ export default function FourthOfJulyDecorationsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "update");
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -204,6 +286,9 @@ export default function FourthOfJulyDecorationsPage() {
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux({ id: deleteConfirm.taskId }, "delete");
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting decoration:", error);
@@ -242,7 +327,8 @@ export default function FourthOfJulyDecorationsPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen fourth-of-july-tasks-gradient flex items-center justify-center">
 				<div className="text-center">

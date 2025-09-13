@@ -19,6 +19,15 @@ export interface HomeData {
 		holidayId: string;
 		budget?: number;
 		countdownTimer?: string;
+		gifts?: any[];
+		cards?: any[];
+		tasks?: any[];
+		// Filtered task categories for specific holidays
+		events?: any[];
+		decorations?: any[];
+		kwanzaaPrinciples?: any[];
+		// Guest lists for events and parties
+		guestLists?: any[];
 	}> | null;
 	contacts: Array<{
 		id: string;

@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";
@@ -91,11 +102,15 @@ export default function HalloweenCostumeIdeasPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const currentState = useAppSelector((state: any) => state);
+
 	// Use the new costume ideas mutations hook
 	const {
 		holidayId,
 		auth0User,
-		costumeIdeas,
 		loading,
 		error,
 		initialized,
@@ -108,6 +123,46 @@ export default function HalloweenCostumeIdeasPage() {
 		editCostumeIdeasState,
 		deleteCostumeIdeasState,
 	} = useCostumeIdeasMutations();
+
+	// Get holiday data from Redux
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Get costume ideas from Redux data (filtered by category)
+	const costumeIdeas =
+		holidayData?.tasks?.filter(
+			(task: any) => task.category === "Costume Ideas"
+		) || [];
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
@@ -123,15 +178,18 @@ export default function HalloweenCostumeIdeasPage() {
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
 	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
+		}
+	}, [dispatch, homeInitialized]);
 
 	useEffect(() => {
-		if (costumeIdeas.length === 0 && initialized) {
+		if (costumeIdeas.length === 0 && homeInitialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [costumeIdeas, initialized]);
+	}, [costumeIdeas, homeInitialized]);
 
 	const handleAddTask = async (formValues: Record<string, any>) => {
 		if (!formValues.title?.trim() || !holidayId || !auth0User) return;
@@ -147,7 +205,15 @@ export default function HalloweenCostumeIdeasPage() {
 				isCompleted: false,
 			};
 
-			await createCostumeIdeas({ holidayId, payload, auth0User }).unwrap();
+			const result = await createCostumeIdeas({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating costume task:", error);
@@ -163,7 +229,14 @@ export default function HalloweenCostumeIdeasPage() {
 					...task,
 					isCompleted: false,
 				};
-				await createCostumeIdeas({ holidayId, payload, auth0User }).unwrap();
+				const result = await createCostumeIdeas({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -185,12 +258,19 @@ export default function HalloweenCostumeIdeasPage() {
 		try {
 			const task = costumeIdeas.find((t: any) => t.id === taskId);
 			if (task) {
+				const newIsCompleted = !task.isCompleted;
 				await updateCostumeIdeas({
 					holidayId,
 					taskId,
-					isCompleted: !task.isCompleted,
+					isCompleted: newIsCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(
+					{ id: taskId, isCompleted: newIsCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating costume task:", error);
@@ -208,7 +288,7 @@ export default function HalloweenCostumeIdeasPage() {
 	const handleSaveEdit = async (updatedTask: any) => {
 		if (editingTask && holidayId && auth0User) {
 			try {
-				await editCostumeIdeas({
+				const result = await editCostumeIdeas({
 					holidayId,
 					taskId: editingTask.id,
 					payload: {
@@ -221,6 +301,10 @@ export default function HalloweenCostumeIdeasPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "update");
+
 				setEditingTask(null);
 			} catch (error) {
 				console.error("Error updating costume task:", error);
@@ -240,6 +324,10 @@ export default function HalloweenCostumeIdeasPage() {
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux({ id: deleteConfirm.taskId }, "delete");
+
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting costume task:", error);
@@ -284,7 +372,8 @@ export default function HalloweenCostumeIdeasPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen halloween-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -308,7 +397,7 @@ export default function HalloweenCostumeIdeasPage() {
 				sortTitle="Sort tasks"
 				description="Keep track of costume ideas!"
 				holidayColor="orange-500"
-				error={error}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Modal */}
