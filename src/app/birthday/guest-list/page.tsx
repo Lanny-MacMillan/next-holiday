@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { useGuestMutations } from "@/hooks/useGuestMutations";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import SortModal from "@/components/modals/SortModal";
 import GuestCardItem from "@/components/cards/guest/GuestCardItem";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
@@ -52,6 +58,17 @@ export default function BirthdayGuestListPage() {
 	} = useGuestMutations();
 
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Note: Guests are not stored in home data, they use their own slice
+	// The useGuestMutations hook already handles Redux state updates
 
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -207,7 +224,8 @@ export default function BirthdayGuestListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen birthday-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -238,7 +256,7 @@ export default function BirthdayGuestListPage() {
 				sortTitle="Sort guests"
 				description="Keep track of your Birthday guests!"
 				holidayColor="pink-600"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<ReservationsTracker

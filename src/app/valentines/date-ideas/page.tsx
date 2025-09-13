@@ -4,6 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -36,6 +47,45 @@ export default function ValentinesDateIdeasPage() {
 		deleteDateIdeasState,
 	} = useDateIdeasMutations();
 
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
+
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showFormModal, setShowFormModal] = useState(false);
@@ -52,7 +102,7 @@ export default function ValentinesDateIdeasPage() {
 		try {
 			if (editingTask) {
 				// Update existing task
-				await editDateIdeas({
+				const result = await editDateIdeas({
 					holidayId,
 					taskId: editingTask.id,
 					payload: {
@@ -65,6 +115,9 @@ export default function ValentinesDateIdeasPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "update");
 				setEditingTask(null);
 			} else {
 				// Add new task
@@ -77,7 +130,14 @@ export default function ValentinesDateIdeasPage() {
 					notes: values.notes || undefined,
 					isCompleted: false,
 				};
-				await createDateIdeas({ holidayId, payload, auth0User }).unwrap();
+				const result = await createDateIdeas({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowFormModal(false);
 		} catch (error) {
@@ -99,6 +159,9 @@ export default function ValentinesDateIdeasPage() {
 				taskId,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: taskId }, "delete");
 		} catch (error) {
 			console.error("Error deleting date idea:", error);
 		}
@@ -108,7 +171,7 @@ export default function ValentinesDateIdeasPage() {
 		if (!holidayId || !auth0User) return;
 
 		try {
-			const task = dateIdeas.find((t: any) => t.id === taskId);
+			const task = displayDateIdeas.find((t: any) => t.id === taskId);
 			if (task) {
 				await updateDateIdeas({
 					holidayId,
@@ -116,6 +179,12 @@ export default function ValentinesDateIdeasPage() {
 					isCompleted: !task.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(
+					{ id: taskId, isCompleted: !task.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating date idea:", error);
@@ -132,7 +201,13 @@ export default function ValentinesDateIdeasPage() {
 		setEditingTask(null);
 	};
 
-	const sortedTasks = [...dateIdeas].sort((a: any, b: any) => {
+	// Use only Redux data - no fallback to API calls
+	const displayDateIdeas =
+		holidayData && homeInitialized && holidayData.tasks
+			? holidayData.tasks.filter((task: any) => task.category === "Date Ideas")
+			: [];
+
+	const sortedTasks = [...displayDateIdeas].sort((a: any, b: any) => {
 		switch (sortBy) {
 			case "title":
 				return a.title.localeCompare(b.title);
@@ -155,8 +230,12 @@ export default function ValentinesDateIdeasPage() {
 		}
 	});
 
-	const completedTasks = dateIdeas.filter((task: any) => task.isCompleted);
-	const incompleteTasks = dateIdeas.filter((task: any) => !task.isCompleted);
+	const completedTasks = displayDateIdeas.filter(
+		(task: any) => task.isCompleted
+	);
+	const incompleteTasks = displayDateIdeas.filter(
+		(task: any) => !task.isCompleted
+	);
 
 	const getPriorityColor = (priority: string) => {
 		switch (priority) {
@@ -190,19 +269,20 @@ export default function ValentinesDateIdeasPage() {
 				description="Keep track of your date ideas!"
 				holidayColor="pink-500"
 				sortTitle="Sort Date Ideas"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				{/* Summary Stats */}
 				<DateTrackerCard
-					totalIdeas={dateIdeas.length}
+					totalIdeas={displayDateIdeas.length}
 					completedIdeas={completedTasks.length}
 					highPriorityIdeas={
-						dateIdeas.filter((task: any) => task.priority === "high").length
+						displayDateIdeas.filter((task: any) => task.priority === "high")
+							.length
 					}
 					dueSoonIdeas={
-						dateIdeas.filter((task: any) => {
+						displayDateIdeas.filter((task: any) => {
 							if (!task.dueDate) return false;
 							const dueDate = new Date(task.dueDate);
 							const now = new Date();
@@ -224,7 +304,7 @@ export default function ValentinesDateIdeasPage() {
 
 				{/* Task List */}
 				<div className="space-y-4">
-					{loading ? (
+					{!homeInitialized ? (
 						<div className="text-center py-8">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto"></div>
 							<p className="text-gray-600 dark:text-gray-400 mt-2">

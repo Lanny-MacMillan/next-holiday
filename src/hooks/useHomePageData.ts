@@ -1,38 +1,25 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppSelector } from "@/store/hooks";
-import {
-	useGetAllCardsQuery,
-	useGetAllGiftsQuery,
-	useGetAllTasksQuery,
-} from "@/store/api";
 
 export function useHomePageData(homeData?: any) {
 	const { user: auth0User } = useAuth0();
-	const holidayPreferences = useAppSelector(
-		(state: any) => state.home.data?.holidayPreferences || []
-	);
+	// Use holidayPreferences from homeData prop instead of Redux store
+	const holidayPreferences = homeData?.holidayPreferences || [];
 	const homeInitialized = useAppSelector(
 		(state: any) => state.home.initialized
 	);
 
-	// Only fetch data if home is initialized
-	const shouldFetch = homeInitialized && auth0User;
-
-	// Fetch all data for all holidays
-	const { data: allCards = [], isLoading: cardsLoading } = useGetAllCardsQuery(
-		{ auth0User },
-		{ skip: !shouldFetch }
-	);
-
-	const { data: allGifts = [], isLoading: giftsLoading } = useGetAllGiftsQuery(
-		{ auth0User },
-		{ skip: !shouldFetch }
-	);
-
-	const { data: allTasks = [], isLoading: tasksLoading } = useGetAllTasksQuery(
-		{ auth0User },
-		{ skip: !shouldFetch }
-	);
+	// Use data from homeData prop instead of making additional API calls
+	// Extract all gifts, cards, and tasks from the homeData
+	const allGifts =
+		homeData?.holidayPreferences?.flatMap((pref: any) => pref.gifts || []) ||
+		[];
+	const allCards =
+		homeData?.holidayPreferences?.flatMap((pref: any) => pref.cards || []) ||
+		[];
+	const allTasks =
+		homeData?.holidayPreferences?.flatMap((pref: any) => pref.tasks || []) ||
+		[];
 
 	// Contacts are fetched as part of home data
 	const contacts = homeData?.contacts || [];
@@ -149,8 +136,7 @@ export function useHomePageData(homeData?: any) {
 		return baseState;
 	};
 
-	const isLoading =
-		cardsLoading || giftsLoading || tasksLoading || contactsLoading;
+	const isLoading = contactsLoading;
 
 	return {
 		allCards,

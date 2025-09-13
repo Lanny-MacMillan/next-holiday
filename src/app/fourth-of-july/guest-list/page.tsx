@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useGuestMutations } from "@/hooks/useGuestMutations";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
@@ -33,6 +39,14 @@ interface Guest {
 export default function FourthOfJulyGuestListPage() {
 	const dispatch = useAppDispatch();
 
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+
 	// Use the guest mutations hook
 	const {
 		holidayId,
@@ -50,6 +64,12 @@ export default function FourthOfJulyGuestListPage() {
 		editGuestState,
 		deleteGuestState,
 	} = useGuestMutations();
+
+	// Get holiday data from Redux
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Note: Guests are not stored in home data, they use their own slice
+	// The useGuestMutations hook already handles Redux state updates
 
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
@@ -120,7 +140,11 @@ export default function FourthOfJulyGuestListPage() {
 					notes: formValues.notes || undefined,
 				};
 
-				await createGuest({ holidayId, payload, auth0User }).unwrap();
+				await createGuest({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
 				setShowForm(false);
 			} catch (error) {
 				console.error("Error creating guest:", error);
@@ -174,6 +198,7 @@ export default function FourthOfJulyGuestListPage() {
 					guestId: deleteConfirm.guestId,
 					auth0User,
 				}).unwrap();
+
 				setDeleteConfirm({ show: false, guestId: null });
 			} catch (error) {
 				console.error("Error deleting guest:", error);
@@ -193,10 +218,6 @@ export default function FourthOfJulyGuestListPage() {
 				return [...guestsToSort].sort((a, b) =>
 					a.rsvpStatus.localeCompare(b.rsvpStatus)
 				);
-			case "numberOfGuests":
-				return [...guestsToSort].sort(
-					(a, b) => b.numberOfGuests - a.numberOfGuests
-				);
 			case "date-created":
 				return [...guestsToSort].sort(
 					(a, b) =>
@@ -207,7 +228,8 @@ export default function FourthOfJulyGuestListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen fourth-of-july-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -252,7 +274,6 @@ export default function FourthOfJulyGuestListPage() {
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
 							{sortBy === "name" && "Sorted by Name"}
 							{sortBy === "rsvpStatus" && "Sorted by RSVP Status"}
-							{sortBy === "numberOfGuests" && "Sorted by Number of Guests"}
 							{sortBy === "date-created" && "Sorted by Date Created"}
 						</div>
 					)}
@@ -344,9 +365,6 @@ export default function FourthOfJulyGuestListPage() {
 								phone: editingGuest.phone || "",
 								address: editingGuest.address || "",
 								rsvpStatus: editingGuest.rsvpStatus,
-								numberOfGuests: editingGuest.numberOfGuests.toString(),
-								dietaryRestrictions: editingGuest.dietaryRestrictions || "",
-								bringingDish: editingGuest.bringingDish || "",
 								notes: editingGuest.notes || "",
 						  }
 						: {}
@@ -392,7 +410,6 @@ export default function FourthOfJulyGuestListPage() {
 					{ value: "none", label: "None" },
 					{ value: "name", label: "Name" },
 					{ value: "rsvpStatus", label: "RSVP Status" },
-					{ value: "numberOfGuests", label: "Number of Guests" },
 					{ value: "date-created", label: "Date Created" },
 				]}
 				title="Sort Guests"

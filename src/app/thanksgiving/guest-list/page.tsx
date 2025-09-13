@@ -15,6 +15,17 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 
 interface Guest {
 	id: string;
@@ -52,6 +63,17 @@ export default function ThanksgivingGuestListPage() {
 	} = useGuestMutations();
 
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Note: Guests are not stored in home data, they use their own slice
+	// The useGuestMutations hook already handles Redux state updates
 
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -203,7 +225,8 @@ export default function ThanksgivingGuestListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen thanksgiving-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -234,7 +257,7 @@ export default function ThanksgivingGuestListPage() {
 				sortTitle="Sort guests"
 				description="Keep track of your Thanksgiving guests!"
 				holidayColor="amber-600"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<ReservationsTracker

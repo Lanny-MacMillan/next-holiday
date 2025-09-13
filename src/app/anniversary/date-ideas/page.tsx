@@ -3,6 +3,18 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -18,14 +30,56 @@ export default function AnniversaryDateIdeasPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+
+	// Get holiday ID for Anniversary
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/anniversary", holidayPreferences)
+		: getHolidayIdFromRoute("/anniversary", holidayPreferences);
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
+
 	// Use the new date ideas mutations hook
 	const {
-		holidayId,
 		auth0User,
-		dateIdeas,
-		loading,
-		error,
-		initialized,
 		createDateIdeas,
 		updateDateIdeas,
 		editDateIdeas,
@@ -35,6 +89,12 @@ export default function AnniversaryDateIdeasPage() {
 		editDateIdeasState,
 		deleteDateIdeasState,
 	} = useDateIdeasMutations();
+
+	// Use only Redux data - no GET API calls on holiday pages
+	const dateIdeas =
+		holidayData && homeInitialized && holidayData.tasks
+			? holidayData.tasks.filter((task: any) => task.category === "Date Ideas")
+			: [];
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -103,7 +163,7 @@ export default function AnniversaryDateIdeasPage() {
 
 		try {
 			if (editingTask) {
-				await editDateIdeas({
+				const result = await editDateIdeas({
 					holidayId,
 					taskId: editingTask.id,
 					payload: {
@@ -116,6 +176,9 @@ export default function AnniversaryDateIdeasPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "update");
 				setEditingTask(null);
 			} else {
 				const payload = {
@@ -127,7 +190,14 @@ export default function AnniversaryDateIdeasPage() {
 					dueDate: values.dueDate || undefined,
 					isCompleted: false,
 				};
-				await createDateIdeas({ holidayId, payload, auth0User }).unwrap();
+				const result = await createDateIdeas({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowAddForm(false);
 		} catch (error) {
@@ -153,6 +223,9 @@ export default function AnniversaryDateIdeasPage() {
 					taskId: taskToDelete.id,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux({ id: taskToDelete.id }, "delete");
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting date idea:", error);
@@ -167,10 +240,18 @@ export default function AnniversaryDateIdeasPage() {
 		try {
 			const task = dateIdeas.find((t: any) => t.id === taskId);
 			if (task) {
+				const newIsCompleted = !task.isCompleted;
+
+				// Update Redux state directly
+				updateTaskInRedux(
+					{ id: taskId, isCompleted: newIsCompleted },
+					"update"
+				);
+
 				await updateDateIdeas({
 					holidayId,
 					taskId,
-					isCompleted: !task.isCompleted,
+					isCompleted: newIsCompleted,
 					auth0User,
 				}).unwrap();
 			}
@@ -183,6 +264,28 @@ export default function AnniversaryDateIdeasPage() {
 		setSortBy(sortOption);
 	};
 
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
+		return (
+			<div className="min-h-screen anniversary-gradient flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+					<p className="text-gray-600 dark:text-gray-300">
+						Loading date ideas...
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Debug: Log date ideas data
+	useEffect(() => {
+		console.log("Anniversary date ideas - holidayId:", holidayId);
+		console.log("Anniversary date ideas - holidayData:", holidayData);
+		console.log("Anniversary date ideas - homeInitialized:", homeInitialized);
+		console.log("Anniversary date ideas - dateIdeas:", dateIdeas);
+	}, [holidayId, holidayData, homeInitialized, dateIdeas]);
+
 	return (
 		<div className="min-h-screen anniversary-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
@@ -192,7 +295,7 @@ export default function AnniversaryDateIdeasPage() {
 				sortTitle="Sort Date Ideas"
 				description="Plan your anniversary date ideas with style!"
 				holidayColor="pink-500"
-				error={error ? "An error occurred" : undefined}
+				error={undefined}
 			/>
 
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">

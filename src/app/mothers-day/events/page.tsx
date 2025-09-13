@@ -13,6 +13,13 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
 import { useEventMutations } from "@/hooks/useEventMutations";
+import {
+	updateEventInHomeData,
+	addEventToHomeData,
+	removeEventFromHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { selectHomeData, selectHomeInitialized } from "@/store/selectors/home";
 
 export default function MothersDayEventsPage() {
 	const dispatch = useAppDispatch();
@@ -22,10 +29,6 @@ export default function MothersDayEventsPage() {
 	const {
 		holidayId,
 		auth0User,
-		events,
-		loading,
-		error,
-		initialized,
 		createEvent,
 		updateEvent,
 		editEvent,
@@ -34,6 +37,47 @@ export default function MothersDayEventsPage() {
 		editEventState,
 		deleteEventState,
 	} = useEventMutations();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after event operations
+	const updateEventInRedux = (
+		eventData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addEventToHomeData({ holidayId, event: eventData }));
+				break;
+			case "update":
+				dispatch(
+					updateEventInHomeData({
+						holidayId,
+						eventId: eventData.id,
+						updates: eventData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeEventFromHomeData({
+						holidayId,
+						eventId: eventData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -80,12 +124,26 @@ export default function MothersDayEventsPage() {
 		}
 	};
 
-	const sortedEventTasks = sortTasks(events, sortBy);
+	// Use only Redux data - no fallback to API calls
+	const displayEvents =
+		holidayData && homeInitialized && holidayData.events
+			? holidayData.events
+			: [];
+
+	const sortedEventTasks = sortTasks(displayEvents, sortBy);
 
 	useEffect(() => {
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
 	}, [dispatch]);
+
+	// Debug: Log event data
+	useEffect(() => {
+		console.log("Mother's Day events - holidayId:", holidayId);
+		console.log("Mother's Day events - holidayData:", holidayData);
+		console.log("Mother's Day events - homeInitialized:", homeInitialized);
+		console.log("Mother's Day events - displayEvents:", holidayData?.events);
+	}, [holidayId, holidayData, homeInitialized]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
 		if (!holidayId || !auth0User) return;
@@ -100,8 +158,15 @@ export default function MothersDayEventsPage() {
 				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			const result = await createEvent({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
 			setShowAddForm(false);
+
+			// Update Redux state directly
+			updateEventInRedux(result, "add");
 		} catch (error) {
 			console.error("Error handling event:", error);
 		}
@@ -116,7 +181,7 @@ export default function MothersDayEventsPage() {
 		if (!editingTask || !holidayId || !auth0User) return;
 
 		try {
-			await editEvent({
+			const result = await editEvent({
 				holidayId,
 				taskId: editingTask.id,
 				payload: {
@@ -131,6 +196,9 @@ export default function MothersDayEventsPage() {
 			}).unwrap();
 			setShowEditModal(false);
 			setEditingTask(null);
+
+			// Update Redux state directly
+			updateEventInRedux(result, "update");
 		} catch (error) {
 			console.error("Error editing event:", error);
 		}
@@ -142,7 +210,7 @@ export default function MothersDayEventsPage() {
 	}
 
 	const handleDelete = (taskId: string) => {
-		const task = events.find((e: any) => e.id === taskId);
+		const task = displayEvents.find((e: any) => e.id === taskId);
 		if (task) {
 			setTaskToDelete(task);
 			setShowDeleteModal(true);
@@ -158,6 +226,9 @@ export default function MothersDayEventsPage() {
 					auth0User,
 				}).unwrap();
 				setTaskToDelete(null);
+
+				// Update Redux state directly
+				updateEventInRedux({ id: taskToDelete.id }, "delete");
 			} catch (error) {
 				console.error("Error deleting event:", error);
 			}
@@ -169,7 +240,7 @@ export default function MothersDayEventsPage() {
 		if (!holidayId || !auth0User) return;
 
 		try {
-			const event = events.find((e: any) => e.id === taskId);
+			const event = displayEvents.find((e: any) => e.id === taskId);
 			if (event) {
 				await updateEvent({
 					holidayId,
@@ -177,6 +248,12 @@ export default function MothersDayEventsPage() {
 					isCompleted: !event.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateEventInRedux(
+					{ id: taskId, isCompleted: !event.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating event:", error);
@@ -192,7 +269,6 @@ export default function MothersDayEventsPage() {
 			<HolidayPageHeader
 				title="Mother's Day Events"
 				backHref="/mothers-day"
-				error={error ? "API Error" : undefined}
 				onSortClick={() => setShowSortModal(true)}
 				description="Keep track of your Mother's Day events!"
 				holidayColor="pink-500"
@@ -219,7 +295,7 @@ export default function MothersDayEventsPage() {
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
-							loading={loading}
+							loading={false}
 							themeColor="pink"
 							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 						/>
@@ -239,7 +315,7 @@ export default function MothersDayEventsPage() {
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
-							loading={loading}
+							loading={false}
 							themeColor="pink"
 							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
 						/>
@@ -296,7 +372,7 @@ export default function MothersDayEventsPage() {
 				onClose={() => {
 					setShowAddForm(false);
 				}}
-				loading={loading}
+				loading={false}
 				submitText="Add Event"
 				cardClassName="card-events-mothers-day"
 			/>

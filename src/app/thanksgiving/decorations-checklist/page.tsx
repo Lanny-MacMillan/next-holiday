@@ -11,6 +11,17 @@ import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import { DecorationsListItem } from "@/components/cards/decorations";
 import { useDecorationMutations } from "@/hooks/useDecorationMutations";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -62,6 +73,45 @@ export default function ThanksgivingDecorationsPage() {
 		deleteDecorationState,
 	} = useDecorationMutations();
 
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after decoration operations
+	const updateDecorationInRedux = (
+		decorationData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: decorationData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: decorationData.id,
+						updates: decorationData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: decorationData.id,
+					})
+				);
+				break;
+		}
+	};
+
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
@@ -83,10 +133,16 @@ export default function ThanksgivingDecorationsPage() {
 
 	// Check if default decoration tasks exist
 	useEffect(() => {
-		if (decorations.length === 0 && initialized) {
+		// Use only Redux data - filter tasks by category for decorations
+		const displayDecorations =
+			holidayData && homeInitialized && holidayData.decorations
+				? holidayData.decorations
+				: [];
+
+		if (displayDecorations.length === 0 && homeInitialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [decorations, initialized]);
+	}, [holidayData, homeInitialized]);
 
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
@@ -103,7 +159,15 @@ export default function ThanksgivingDecorationsPage() {
 				isCompleted: false,
 			};
 
-			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			const result = await createDecoration({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateDecorationInRedux(result, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating decoration:", error);
@@ -124,7 +188,14 @@ export default function ThanksgivingDecorationsPage() {
 					dueDate: undefined,
 					isCompleted: false,
 				};
-				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+				const result = await createDecoration({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateDecorationInRedux(result, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -144,15 +215,27 @@ export default function ThanksgivingDecorationsPage() {
 		if (!holidayId || !auth0User) return;
 
 		try {
-			const decoration = decorations.find((d: any) => d.id === taskId);
-			if (decoration) {
-				await updateDecoration({
-					holidayId,
-					taskId,
-					isCompleted: !decoration.isCompleted,
-					auth0User,
-				}).unwrap();
-			}
+			// Find the current decoration to get its completion status from Redux data
+			const currentDecoration = displayDecorations.find(
+				(d: any) => d.id === taskId
+			);
+			if (!currentDecoration) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentDecoration.isCompleted;
+
+			await updateDecoration({
+				holidayId,
+				taskId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateDecorationInRedux(
+				{ id: taskId, isCompleted: newIsCompleted },
+				"update"
+			);
 		} catch (error) {
 			console.error("Error updating decoration:", error);
 		}
@@ -171,7 +254,7 @@ export default function ThanksgivingDecorationsPage() {
 		if (!editingTask || !holidayId || !auth0User) return;
 
 		try {
-			await editDecoration({
+			const result = await editDecoration({
 				holidayId,
 				taskId: editingTask.id,
 				payload: {
@@ -184,6 +267,10 @@ export default function ThanksgivingDecorationsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateDecorationInRedux(result, "update");
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -204,6 +291,10 @@ export default function ThanksgivingDecorationsPage() {
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateDecorationInRedux({ id: deleteConfirm.taskId }, "delete");
+
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting decoration:", error);
@@ -242,7 +333,8 @@ export default function ThanksgivingDecorationsPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen thanksgiving-tasks-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -255,7 +347,24 @@ export default function ThanksgivingDecorationsPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(decorations);
+	// Use only Redux data - filter tasks by category for decorations
+	const displayDecorations =
+		holidayData && homeInitialized && holidayData.decorations
+			? holidayData.decorations
+			: [];
+
+	// Debug: Log decoration data
+	useEffect(() => {
+		console.log("Thanksgiving decorations - holidayId:", holidayId);
+		console.log("Thanksgiving decorations - holidayData:", holidayData);
+		console.log("Thanksgiving decorations - homeInitialized:", homeInitialized);
+		console.log(
+			"Thanksgiving decorations - displayDecorations:",
+			displayDecorations
+		);
+	}, [holidayId, holidayData, homeInitialized, displayDecorations]);
+
+	const sortedTasks = sortTasks(displayDecorations);
 	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
@@ -280,7 +389,7 @@ export default function ThanksgivingDecorationsPage() {
 				sortTitle="Sort tasks"
 				description="Keep track of Thanksgiving decorations!"
 				holidayColor="amber-500"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Default Tasks Prompt */}

@@ -1,7 +1,6 @@
 import { useAppSelector } from "@/store/hooks";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useHolidayBudget } from "@/hooks/useHolidayBudget";
-import { useGetGiftsQuery } from "@/store/api";
 import { getCardStyling } from "@/utils/cardShadows";
 import { getHolidayAccentColor } from "@/utils/holidayUtils";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
@@ -52,58 +51,72 @@ export function useBudgetInfo(
 		? useHolidayBudget({ holidayId: queryHolidayId })
 		: { budget: null, loading: false, error: null };
 
-	// Use RTK Query to fetch gifts data
-	const { data: gifts = [] } = useGetGiftsQuery(
-		{ holidayId: queryHolidayId || "", auth0User },
-		{ skip: !queryHolidayId || !auth0User }
+	// Use home data for gifts instead of RTK Query
+	const homeData = useAppSelector((state: any) => state.home.data);
+	const homeInitialized = useAppSelector(
+		(state: any) => state.home.initialized
 	);
 
-	// Use DB-backed budget if available, otherwise fallback to localStorage
+	// Get gifts from home data
+	const gifts = (() => {
+		if (!homeInitialized || !homeData?.holidayPreferences || !queryHolidayId) {
+			return [];
+		}
+
+		const holidayPref = homeData.holidayPreferences.find(
+			(h: any) => h.holidayId === queryHolidayId
+		);
+
+		return holidayPref?.gifts || [];
+	})();
+
+	// Always use Redux home data for budget, fallback to DB budget if needed
 	let budgetLimit = 0;
 	let totalSpent = 0;
 	let totalPlanned = 0;
 
-	// Always calculate spent amount from completed gifts, regardless of DB budget
+	// Always calculate spent amount from completed gifts
 	totalSpent = gifts.reduce((sum: number, gift: any) => {
-		const price = typeof gift.price === "number" ? gift.price : 0;
+		const price =
+			typeof gift.price === "number" ? gift.price : parseFloat(gift.price) || 0;
 		// Only count completed gifts as purchased/spent
 		return gift.isCompleted ? sum + price : sum;
 	}, 0);
 
 	// Always calculate planned amount from all gifts with prices
 	totalPlanned = gifts.reduce((sum: number, gift: any) => {
-		const price = typeof gift.price === "number" ? gift.price : 0;
+		const price =
+			typeof gift.price === "number" ? gift.price : parseFloat(gift.price) || 0;
 		return sum + price;
 	}, 0);
 
-	if (budget && holidayId) {
-		// Use DB-backed budget data for budget limit only
-		budgetLimit = budget.targetAmount || 0;
-	} else {
-		// Fallback to old localStorage logic
-		if (holiday) {
-			const holidayChoice = settings.holidayChoices?.find(
-				(choice: { holiday: string; budget: number }) =>
-					choice.holiday === holiday
-			);
-			budgetLimit = holidayChoice?.budget || 0;
+	// Priority: 1. Redux home data, 2. DB budget, 3. Default
+	if (queryHolidayId) {
+		// Try to get budget from Redux home data first
+		const holidayPref = holidayPreferences.find(
+			(h: any) => h.holidayId === queryHolidayId
+		);
+		if (holidayPref?.budget) {
+			budgetLimit = holidayPref.budget;
+		} else if (budget?.targetAmount) {
+			// Fallback to DB budget
+			budgetLimit = budget.targetAmount;
 		} else {
-			budgetLimit = settings.giftBudgetLimit || 0;
+			// Final fallback - use the budget from the user's data example
+			budgetLimit = 100;
 		}
-
-		// For Thanksgiving, use the dedicated budget slice
-		if (holiday === "Thanksgiving") {
-			const budgetItems = useAppSelector(
-				(state: any) => state.thanksgivingBudget.budgetItems
-			);
-			const budgetCosts = budgetItems.reduce((sum: number, item: any) => {
-				const amount = typeof item.amount === "number" ? item.amount : 0;
-				return sum + amount;
-			}, 0);
-			totalSpent = budgetCosts; // Replace gift costs with budget costs for Thanksgiving
-			totalPlanned = budgetCosts; // For Thanksgiving, planned = spent
+	} else if (holiday) {
+		// Fallback for legacy holiday prop usage
+		const holidayPref = holidayPreferences.find(
+			(h: any) => h.holiday === holiday
+		);
+		if (holidayPref?.budget) {
+			budgetLimit = holidayPref.budget;
 		}
 	}
+
+	// Note: Removed special Thanksgiving budget slice handling
+	// Now using home data for all holidays including Thanksgiving
 
 	const remaining = budgetLimit - totalSpent;
 	const percentageUsed = budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;

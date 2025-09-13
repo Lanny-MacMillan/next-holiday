@@ -1,14 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { useEventMutations } from "@/hooks/useEventMutations";
+import { updateTaskInHomeData } from "@/store/slices/homeSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useUpdateEventMutation,
+	useEditEventMutation,
+	useDeleteEventMutation,
+} from "@/store/api";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import AddButton from "@/components/common/AddButton";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import TaskSection from "@/components/common/TaskSection";
 import { EventItems } from "@/components/cards/event";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
@@ -80,44 +92,90 @@ const defaultEventTasks = [
 
 export default function KwanzaaEventsPage() {
 	const dispatch = useAppDispatch();
-
-	// Use the event mutations hook
 	const {
 		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
 		auth0User,
-		events,
-		loading,
-		error,
-		initialized,
-		createEvent,
-		updateEvent,
-		editEvent,
-		deleteEvent,
-		createEventState,
-		updateEventState,
-		editEventState,
-		deleteEventState,
-	} = useEventMutations();
+	} = useFormModalMutation();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				// For now, we'll rely on the API cache invalidation to refresh the data
+				// TODO: Add addTaskToHomeData function to homeSlice if needed
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				// For now, we'll rely on the API cache invalidation to refresh the data
+				// TODO: Add removeTaskFromHomeData function to homeSlice if needed
+				break;
+		}
+	};
+
+	// Update task mutation
+	const [updateEvent, { isLoading: updateLoading }] = useUpdateEventMutation();
+
+	// Edit and delete mutations
+	const [editEvent, { isLoading: editLoading }] = useEditEventMutation();
+	const [deleteEvent, { isLoading: deleteLoading }] = useDeleteEventMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [showForm, setShowForm] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
-	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<any>(null);
+	const [selectedTask, setSelectedTask] = useState<any>(null);
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
+
+	// Use only Redux data - no fallback to API calls
+	// Events are stored in the tasks array with category: "Events"
+	const displayEvents =
+		holidayData && homeInitialized && holidayData.tasks
+			? holidayData.tasks.filter((task: any) => task.category === "Events")
+			: [];
 
 	// Check if default event tasks exist
 	useEffect(() => {
-		if (events.length === 0 && initialized) {
+		if (displayEvents.length === 0 && homeInitialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [events, initialized]);
+	}, [displayEvents, homeInitialized]);
+
+	// Debug: Log event data
+	useEffect(() => {
+		console.log("Events - holidayId:", holidayId);
+		console.log("Events - holidayData:", holidayData);
+		console.log("Events - homeInitialized:", homeInitialized);
+		console.log("Events - displayEvents:", displayEvents);
+	}, [holidayId, holidayData, homeInitialized, displayEvents]);
 
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
-		if (!holidayId || !auth0User) return;
+		if (!holidayId || !mutation) return;
 
 		try {
 			const payload = {
@@ -130,8 +188,12 @@ export default function KwanzaaEventsPage() {
 				isCompleted: false,
 			};
 
-			await createEvent({ holidayId, payload, auth0User }).unwrap();
-			setShowForm(false);
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
+
+			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating event:", error);
 		}
@@ -139,7 +201,7 @@ export default function KwanzaaEventsPage() {
 
 	async function handleEditTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
-		if (!holidayId || !auth0User || !editingTask) return;
+		if (!holidayId || !selectedTask) return;
 
 		try {
 			const payload = {
@@ -151,21 +213,25 @@ export default function KwanzaaEventsPage() {
 				dueDate: values.dueDate || undefined,
 			};
 
-			await editEvent({
+			const result = await editEvent({
 				holidayId,
-				taskId: editingTask.id,
+				taskId: selectedTask.id,
 				payload,
 				auth0User,
 			}).unwrap();
-			setShowEditModal(false);
-			setEditingTask(null);
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "update");
+
+			setShowFormModal(false);
+			setSelectedTask(null);
 		} catch (error) {
 			console.error("Error editing event:", error);
 		}
 	}
 
 	async function addDefaultEventTasks() {
-		if (!holidayId || !auth0User) return;
+		if (!holidayId || !mutation) return;
 
 		try {
 			for (const task of defaultEventTasks) {
@@ -178,7 +244,15 @@ export default function KwanzaaEventsPage() {
 					dueDate: undefined,
 					isCompleted: false,
 				};
-				await createEvent({ holidayId, payload, auth0User }).unwrap();
+
+				const result = await mutation({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -187,60 +261,82 @@ export default function KwanzaaEventsPage() {
 	}
 
 	function openForm() {
-		setShowForm(true);
+		setShowFormModal(true);
+		setSelectedTask(null);
 	}
 
 	function closeForm() {
-		setShowForm(false);
+		setShowFormModal(false);
+		setSelectedTask(null);
 	}
 
 	function openEditModal(task: any) {
-		setEditingTask(task);
-		setShowEditModal(true);
-	}
-
-	function closeEditModal() {
-		setShowEditModal(false);
-		setEditingTask(null);
+		setSelectedTask(task);
+		setShowFormModal(true);
 	}
 
 	async function handleToggleTask(taskId: string) {
-		if (!holidayId || !auth0User) return;
+		if (!holidayId) return;
 
 		try {
-			const task = events.find((t: any) => t.id === taskId);
-			if (task) {
-				await updateEvent({
-					holidayId,
-					taskId,
-					isCompleted: !task.isCompleted,
-					auth0User,
-				}).unwrap();
-			}
+			// Find the current task to get its completion status from Redux data
+			const currentTask = displayEvents.find((task: any) => task.id === taskId);
+			if (!currentTask) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentTask.isCompleted;
+
+			// Update Redux state immediately for instant UI feedback
+			updateTaskInRedux(
+				{
+					...currentTask,
+					isCompleted: newIsCompleted,
+					completedDate: newIsCompleted ? new Date().toISOString() : null,
+					updatedAt: new Date().toISOString(),
+				},
+				"update"
+			);
+
+			// Update the task in the database
+			await updateEvent({
+				holidayId: holidayId || "",
+				taskId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
 		} catch (error) {
-			console.error("Error updating event:", error);
+			console.error("Error toggling event:", error);
+			// Revert the optimistic update on error
+			const currentTask = displayEvents.find((task: any) => task.id === taskId);
+			if (currentTask) {
+				updateTaskInRedux(currentTask, "update");
+			}
 		}
 	}
 
 	function handleDeleteTask(taskId: string, taskTitle: string) {
-		const task = events.find((t: any) => t.id === taskId);
+		const task = displayEvents.find((t: any) => t.id === taskId);
 		setTaskToDelete(task);
 		setShowDeleteModal(true);
 	}
 
 	async function confirmDelete() {
-		if (taskToDelete) {
-			try {
-				await deleteEvent({
-					holidayId: holidayId || "",
-					taskId: taskToDelete.id,
-					auth0User,
-				}).unwrap();
-				setShowDeleteModal(false);
-				setTaskToDelete(null);
-			} catch (error) {
-				console.error("Error deleting event:", error);
-			}
+		if (!taskToDelete || !holidayId) return;
+
+		try {
+			await deleteEvent({
+				holidayId,
+				taskId: taskToDelete.id,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: taskToDelete.id }, "delete");
+
+			setShowDeleteModal(false);
+			setTaskToDelete(null);
+		} catch (error) {
+			console.error("Error deleting event:", error);
 		}
 	}
 
@@ -281,7 +377,8 @@ export default function KwanzaaEventsPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen kwanzaa-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -293,7 +390,7 @@ export default function KwanzaaEventsPage() {
 	}
 
 	// Sort events
-	const sortedEvents = sortTasks(events);
+	const sortedEvents = sortTasks(displayEvents || []);
 	const incompleteTasks = sortedEvents.filter((task: any) => !task.isCompleted);
 	const completedTasks = sortedEvents.filter((task: any) => task.isCompleted);
 
@@ -309,7 +406,7 @@ export default function KwanzaaEventsPage() {
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Events"
-				error={error ? "API Error" : undefined}
+				error={mutationError ? "API Error" : undefined}
 				holidayColor="red-600"
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -369,7 +466,7 @@ export default function KwanzaaEventsPage() {
 										onToggleTask={handleToggleTask}
 										onDeleteTask={handleDeleteTask}
 										onEditTask={openEditModal}
-										loading={loading}
+										loading={updateLoading}
 										themeColor="red"
 										holidayColor="bg-red-600"
 									/>
@@ -397,7 +494,7 @@ export default function KwanzaaEventsPage() {
 										onToggleTask={handleToggleTask}
 										onDeleteTask={handleDeleteTask}
 										onEditTask={openEditModal}
-										loading={loading}
+										loading={updateLoading}
 										themeColor="red"
 										holidayColor="bg-red-600"
 									/>
@@ -408,55 +505,39 @@ export default function KwanzaaEventsPage() {
 				</div>
 			</main>
 
-			{/* Add Form Modal */}
+			{/* Form Modal */}
 			<FormModal
-				isOpen={showForm}
-				title={formConfig.title}
+				isOpen={showFormModal}
+				title={selectedTask ? "Edit Event" : "Add Event"}
 				fields={formConfig.fields}
-				initialValues={{}}
-				onSubmit={handleAddTask}
+				initialValues={
+					selectedTask
+						? {
+								title: selectedTask.title || "",
+								description: selectedTask.description || "",
+								priority: selectedTask.priority || "medium",
+								assignedTo: selectedTask.assignedTo || "",
+								dueDate: selectedTask.dueDate || "",
+						  }
+						: {}
+				}
+				onSubmit={selectedTask ? handleEditTask : handleAddTask}
 				onClose={closeForm}
-				loading={createEventState.isLoading}
-				submitText={formConfig.submitText}
-				cancelText={formConfig.cancelText}
-				cardClassName={formConfig.cardClassName}
-				submitButtonColor={formConfig.submitButtonColor}
-			/>
-
-			{/* Edit Form Modal */}
-			<FormModal
-				isOpen={showEditModal}
-				title={editFormConfig.title}
-				fields={editFormConfig.fields}
-				initialValues={{
-					title: editingTask?.title || "",
-					description: editingTask?.description || "",
-					priority: editingTask?.priority || "medium",
-					assignedTo: editingTask?.assignedTo || "",
-					dueDate: editingTask?.dueDate || "",
-				}}
-				onSubmit={handleEditTask}
-				onClose={closeEditModal}
-				loading={editEventState.isLoading}
-				submitText={editFormConfig.submitText}
-				cancelText={editFormConfig.cancelText}
-				cardClassName={editFormConfig.cardClassName}
-				submitButtonColor={editFormConfig.submitButtonColor}
+				loading={mutationLoading || editLoading}
+				submitText={selectedTask ? "Update Event" : "Add Event"}
+				cancelText="Cancel"
+				cardClassName="card card-tasks"
+				submitButtonColor="#dc2626"
 			/>
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={showDeleteModal}
-				title={deleteConfig.title}
-				message={deleteConfig.message}
-				itemName={taskToDelete?.title}
+				title="Delete Event"
+				message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={deleteEventState.isLoading}
-				cardClassName={deleteConfig.cardClassName}
-				confirmText={deleteConfig.confirmText}
-				cancelText={deleteConfig.cancelText}
-				confirmButtonColor={deleteConfig.confirmButtonColor}
+				loading={deleteLoading}
 			/>
 
 			{/* Sort Modal */}

@@ -1,9 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { shouldSkipHolidayQueryWithColdEntry } from "@/utils/holidayData";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	updateGiftInHomeData,
+	addGiftToHomeData,
+	removeGiftFromHomeData,
+} from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
 	useGetGiftsQuery,
@@ -36,16 +48,46 @@ export default function BirthdayGiftListPage() {
 		auth0User,
 	} = useFormModalMutation();
 
-	// Fetch gifts using RTK Query
-	const {
-		data: gifts = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after gift operations
+	const updateGiftInRedux = (
+		giftData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				break;
+			case "update":
+				dispatch(
+					updateGiftInHomeData({
+						holidayId,
+						giftId: giftData.id,
+						updates: giftData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeGiftFromHomeData({
+						holidayId,
+						giftId: giftData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
 
 	// Update gift mutation
 	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
@@ -61,12 +103,6 @@ export default function BirthdayGiftListPage() {
 	const [selectedGift, setSelectedGift] = useState<any>(null);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-	// Get home data to check if contacts are available
-	const homeData = useAppSelector((state: any) => state.home.data);
-	const homeInitialized = useAppSelector(
-		(state: any) => state.home.initialized
-	);
-
 	useEffect(() => {
 		// Fetch contacts for address book functionality
 		// Only fetch if home data is initialized (which contains contacts)
@@ -81,7 +117,11 @@ export default function BirthdayGiftListPage() {
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "add");
+
 			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating gift:", error);
@@ -108,8 +148,8 @@ export default function BirthdayGiftListPage() {
 		if (!holidayId) return;
 
 		try {
-			// Find the current gift to get its completion status
-			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			// Find the current gift to get its completion status from Redux data
+			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
@@ -123,7 +163,8 @@ export default function BirthdayGiftListPage() {
 				auth0User,
 			}).unwrap();
 
-			// The UI will automatically update due to RTK Query cache invalidation
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
@@ -144,6 +185,10 @@ export default function BirthdayGiftListPage() {
 				giftId: giftToDelete.id,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
@@ -166,12 +211,16 @@ export default function BirthdayGiftListPage() {
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await editGift({
+			const result = await editGift({
 				holidayId,
 				giftId: selectedGift.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "update");
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {
@@ -204,7 +253,8 @@ export default function BirthdayGiftListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen birthday-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -215,7 +265,13 @@ export default function BirthdayGiftListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts || []);
+	// Use only Redux data - no fallback to API calls
+	const displayGifts =
+		holidayData && homeInitialized && holidayData.gifts
+			? holidayData.gifts
+			: [];
+
+	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
@@ -227,7 +283,7 @@ export default function BirthdayGiftListPage() {
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading || updateLoading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#3b82f6", // Blue for Birthday
 			}}
@@ -244,7 +300,7 @@ export default function BirthdayGiftListPage() {
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading || updateLoading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#3b82f6", // Blue for Birthday
 			}}
@@ -320,7 +376,7 @@ export default function BirthdayGiftListPage() {
 				sortTitle="Sort gifts"
 				description="Plan your birthday gift list with style!"
 				holidayColor="blue-500"
-				error={error ? "Error loading gifts" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}

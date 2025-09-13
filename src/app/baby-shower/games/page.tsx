@@ -2,6 +2,19 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 import { useBabyShowerGamesMutations } from "@/hooks/useBabyShowerGamesMutations";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
@@ -12,6 +25,11 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
 
 export default function BabyShowerGamesPage() {
+	const dispatch = useAppDispatch();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
 	const {
 		holidayId,
 		auth0User,
@@ -25,8 +43,40 @@ export default function BabyShowerGamesPage() {
 		deleteBabyShowerGames,
 	} = useBabyShowerGamesMutations();
 
-	// Filter tasks for Games category
-	const gameTasks = babyShowerGames.filter((task) => task.category === "Games");
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(removeTaskFromHomeData({ holidayId, taskId: taskData.id }));
+				break;
+		}
+	};
+
+	// Use Redux data for tasks instead of the hook's data
+	const allTasks = holidayData?.tasks || [];
+	const gameTasks = allTasks.filter((task) => task.category === "Games");
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -77,15 +127,19 @@ export default function BabyShowerGamesPage() {
 	const handleSubmit = async (values: Record<string, any>) => {
 		try {
 			if (editingTask) {
-				await editBabyShowerGames({
+				const result = await editBabyShowerGames({
 					holidayId: holidayId || "",
 					taskId: editingTask.id,
 					payload: values,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly for optimistic updates
+				updateTaskInRedux(result, "update");
+
 				setEditingTask(null);
 			} else {
-				await createBabyShowerGames({
+				const result = await createBabyShowerGames({
 					holidayId: holidayId || "",
 					payload: {
 						...values,
@@ -96,6 +150,9 @@ export default function BabyShowerGamesPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly for optimistic updates
+				updateTaskInRedux(result, "add");
 			}
 			setShowAddForm(false);
 		} catch (error) {
@@ -124,6 +181,9 @@ export default function BabyShowerGamesPage() {
 	const confirmDelete = async () => {
 		if (taskToDelete) {
 			try {
+				// Optimistically update Redux state first
+				updateTaskInRedux(taskToDelete, "delete");
+
 				await deleteBabyShowerGames({
 					holidayId: holidayId || "",
 					taskId: taskToDelete.id,
@@ -141,10 +201,18 @@ export default function BabyShowerGamesPage() {
 		try {
 			const task = gameTasks.find((t) => t.id === taskId);
 			if (task) {
+				const newIsCompleted = !task.isCompleted;
+
+				// Optimistically update Redux state first
+				updateTaskInRedux(
+					{ id: taskId, isCompleted: newIsCompleted },
+					"update"
+				);
+
 				await updateBabyShowerGames({
 					holidayId: holidayId || "",
 					taskId: taskId,
-					isCompleted: !task.isCompleted,
+					isCompleted: newIsCompleted,
 					auth0User,
 				}).unwrap();
 			}

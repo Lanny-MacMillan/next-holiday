@@ -150,6 +150,15 @@ export default function GiftCardItem({
 									For: {gift.recipient}
 								</div>
 							)}
+							{gift.price && (
+								<div
+									className={`text-xs sm:text-sm text-white opacity-90 ${
+										isCompleted ? "line-through opacity-60" : ""
+									}`}
+								>
+									${gift.price}
+								</div>
+							)}
 							{gift.description && (
 								<div
 									className={`text-xs text-white opacity-90 mt-1 ${
@@ -244,6 +253,17 @@ export default function GiftCardItem({
 						}`}
 					>
 						For: {gift.recipient}
+					</div>
+				)}
+				{gift.price && (
+					<div
+						className={`text-xs ${
+							isCompleted
+								? "text-gray-400 dark:text-gray-500 line-through"
+								: "text-gray-500 dark:text-gray-400"
+						}`}
+					>
+						${gift.price}
 					</div>
 				)}
 				{gift.description && (

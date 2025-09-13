@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	updateGiftInHomeData,
+	addGiftToHomeData,
+	removeGiftFromHomeData,
+} from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
-	useGetGiftsQuery,
 	useUpdateGiftMutation,
 	useEditGiftMutation,
 	useDeleteGiftMutation,
@@ -36,25 +46,46 @@ export default function GraduationGiftListPage() {
 		auth0User,
 	} = useFormModalMutation();
 
-	// Get holiday ID for Graduation
-	const holidayPreferences = useAppSelector(
-		(state: any) => state.home.data?.holidayPreferences || []
-	);
-	const graduationHolidayId = getHolidayIdFromRoute(
-		"/graduation",
-		holidayPreferences
-	);
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
 
-	// Fetch gifts using RTK Query
-	const {
-		data: gifts = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetGiftsQuery(
-		{ holidayId: graduationHolidayId || "", auth0User },
-		{ skip: !graduationHolidayId || !auth0User }
-	);
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after gift operations
+	const updateGiftInRedux = (
+		giftData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				break;
+			case "update":
+				dispatch(
+					updateGiftInHomeData({
+						holidayId,
+						giftId: giftData.id,
+						updates: giftData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeGiftFromHomeData({
+						holidayId,
+						giftId: giftData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
 
 	// Update gift mutation
 	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
@@ -70,12 +101,6 @@ export default function GraduationGiftListPage() {
 	const [selectedGift, setSelectedGift] = useState<any>(null);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-	// Get home data to check if contacts are available
-	const homeData = useAppSelector((state: any) => state.home.data);
-	const homeInitialized = useAppSelector(
-		(state: any) => state.home.initialized
-	);
-
 	useEffect(() => {
 		// Fetch contacts for address book functionality
 		// Only fetch if home data is initialized (which contains contacts)
@@ -86,15 +111,19 @@ export default function GraduationGiftListPage() {
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-		if (!graduationHolidayId || !mutation) return;
+		if (!holidayId || !mutation) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await mutation({
-				holidayId: graduationHolidayId,
+			const result = await mutation({
+				holidayId,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "add");
+
 			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating gift:", error);
@@ -118,11 +147,11 @@ export default function GraduationGiftListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!graduationHolidayId) return;
+		if (!holidayId) return;
 
 		try {
-			// Find the current gift to get its completion status
-			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			// Find the current gift to get its completion status from Redux data
+			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
@@ -130,13 +159,14 @@ export default function GraduationGiftListPage() {
 
 			// Update the gift in the database
 			await updateGift({
-				holidayId: graduationHolidayId || "",
+				holidayId: holidayId || "",
 				giftId,
 				isCompleted: newIsCompleted,
 				auth0User,
 			}).unwrap();
 
-			// The UI will automatically update due to RTK Query cache invalidation
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
@@ -149,14 +179,18 @@ export default function GraduationGiftListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !graduationHolidayId) return;
+		if (!giftToDelete || !holidayId) return;
 
 		try {
 			await deleteGift({
-				holidayId: graduationHolidayId,
+				holidayId,
 				giftId: giftToDelete.id,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
@@ -175,16 +209,20 @@ export default function GraduationGiftListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !graduationHolidayId) return;
+		if (!selectedGift || !holidayId) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await editGift({
-				holidayId: graduationHolidayId,
+			const result = await editGift({
+				holidayId,
 				giftId: selectedGift.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "update");
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {
@@ -217,7 +255,8 @@ export default function GraduationGiftListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen graduation-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -228,7 +267,13 @@ export default function GraduationGiftListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts || []);
+	// Use only Redux data - no fallback to API calls
+	const displayGifts =
+		holidayData && homeInitialized && holidayData.gifts
+			? holidayData.gifts
+			: [];
+
+	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
@@ -240,7 +285,7 @@ export default function GraduationGiftListPage() {
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#8b5cf6", // Purple for Graduation
 			}}
@@ -257,7 +302,7 @@ export default function GraduationGiftListPage() {
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#8b5cf6", // Purple for Graduation
 			}}
@@ -333,14 +378,14 @@ export default function GraduationGiftListPage() {
 				sortTitle="Sort gifts"
 				description="Plan your graduation gift list with style!"
 				holidayColor="purple-500"
-				error={error ? "Error loading gifts" : undefined}
+				error={mutationError ? "Error loading gifts" : undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay
 					holiday="Graduation"
 					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-					holidayId={graduationHolidayId || undefined}
+					holidayId={holidayId || undefined}
 				/>
 
 				<AddButton title="Gift" onClick={openForm} color="purple" />

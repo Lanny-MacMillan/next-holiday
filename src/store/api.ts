@@ -72,9 +72,7 @@ export const api = createApi({
 			transformResponse: (response: { success: boolean; data: any[] }) => {
 				return response.data || [];
 			},
-			providesTags: (result) => [
-				{ type: "Gifts", id: "LIST" },
-			],
+			providesTags: (result) => [{ type: "Gifts", id: "LIST" }],
 		}),
 		getCards: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
@@ -115,9 +113,7 @@ export const api = createApi({
 			transformResponse: (response: { success: boolean; data: any[] }) => {
 				return response.data || [];
 			},
-			providesTags: (result) => [
-				{ type: "Cards", id: "LIST" },
-			],
+			providesTags: (result) => [{ type: "Cards", id: "LIST" }],
 		}),
 		getTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
@@ -158,9 +154,7 @@ export const api = createApi({
 			transformResponse: (response: { success: boolean; data: any[] }) => {
 				return response.data || [];
 			},
-			providesTags: (result) => [
-				{ type: "Tasks", id: "LIST" },
-			],
+			providesTags: (result) => [{ type: "Tasks", id: "LIST" }],
 		}),
 		getHanukkahTasks: builder.query<
 			any[],
@@ -801,6 +795,40 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Gifts", id: holidayId },
 			],
+			// Optimistic update for create gift
+			async onQueryStarted(
+				{ holidayId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Generate a temporary ID for the optimistic update
+				const tempId = `temp-${Date.now()}`;
+				const optimisticGift = {
+					id: tempId,
+					...payload,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+
+				// Optimistically add the gift to the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getGifts",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								draft.unshift(optimisticGift);
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the create fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		createCard: builder.mutation<
 			any,
@@ -1108,6 +1136,41 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Decorations", id: holidayId },
 			],
+			// Optimistic update for create decoration
+			async onQueryStarted(
+				{ holidayId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Generate a temporary ID for the optimistic update
+				const tempId = `temp-${Date.now()}`;
+				const optimisticDecoration = {
+					id: tempId,
+					...payload,
+					category: "Decorations",
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+
+				// Optimistically add the decoration to the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getDecorations",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								draft.unshift(optimisticDecoration);
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the create fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		createEvent: builder.mutation<
 			any,
@@ -1131,6 +1194,41 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Events", id: holidayId },
 			],
+			// Optimistic update for create event
+			async onQueryStarted(
+				{ holidayId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Generate a temporary ID for the optimistic update
+				const tempId = `temp-${Date.now()}`;
+				const optimisticEvent = {
+					id: tempId,
+					...payload,
+					category: "Events",
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+
+				// Optimistically add the event to the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getEvents",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								draft.unshift(optimisticEvent);
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the create fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		createCandleLighting: builder.mutation<
 			any,
@@ -1389,6 +1487,38 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Gifts", id: holidayId },
 			],
+			// Optimistic update for update gift
+			async onQueryStarted(
+				{ holidayId, giftId, isCompleted, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the gift in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getGifts",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const gift = draft.find((g: any) => g.id === giftId);
+								if (gift) {
+									gift.isCompleted = isCompleted;
+									gift.completedDate = isCompleted
+										? new Date().toISOString()
+										: null;
+									gift.updatedAt = new Date().toISOString();
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the update fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		editGift: builder.mutation<
 			any,
@@ -1412,6 +1542,35 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Gifts", id: holidayId },
 			],
+			// Optimistic update for edit gift
+			async onQueryStarted(
+				{ holidayId, giftId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the gift in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getGifts",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const gift = draft.find((g: any) => g.id === giftId);
+								if (gift) {
+									Object.assign(gift, payload);
+									gift.updatedAt = new Date().toISOString();
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the edit fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		deleteGift: builder.mutation<
 			any,
@@ -1509,6 +1668,38 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Decorations", id: holidayId },
 			],
+			// Optimistic update for update decoration
+			async onQueryStarted(
+				{ holidayId, taskId, isCompleted, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the decoration in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getDecorations",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const decoration = draft.find((d: any) => d.id === taskId);
+								if (decoration) {
+									decoration.isCompleted = isCompleted;
+									decoration.completedDate = isCompleted
+										? new Date().toISOString()
+										: null;
+									decoration.updatedAt = new Date().toISOString();
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the update fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		editDecoration: builder.mutation<
 			any,
@@ -1532,6 +1723,35 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Decorations", id: holidayId },
 			],
+			// Optimistic update for edit decoration
+			async onQueryStarted(
+				{ holidayId, taskId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the decoration in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getDecorations",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const decoration = draft.find((d: any) => d.id === taskId);
+								if (decoration) {
+									Object.assign(decoration, payload);
+									decoration.updatedAt = new Date().toISOString();
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the edit fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		deleteDecoration: builder.mutation<
 			any,
@@ -1628,6 +1848,38 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Events", id: holidayId },
 			],
+			// Optimistic update for update event
+			async onQueryStarted(
+				{ holidayId, taskId, isCompleted, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the event in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getEvents",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const event = draft.find((e: any) => e.id === taskId);
+								if (event) {
+									event.isCompleted = isCompleted;
+									event.completedDate = isCompleted
+										? new Date().toISOString()
+										: null;
+									event.updatedAt = new Date().toISOString();
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the update fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		editEvent: builder.mutation<
 			any,
@@ -1651,6 +1903,35 @@ export const api = createApi({
 			invalidatesTags: (result, error, { holidayId }) => [
 				{ type: "Events", id: holidayId },
 			],
+			// Optimistic update for edit event
+			async onQueryStarted(
+				{ holidayId, taskId, payload, auth0User },
+				{ dispatch, queryFulfilled }
+			) {
+				// Optimistically update the event in the cache
+				const patchResult = dispatch(
+					api.util.updateQueryData(
+						"getEvents",
+						{ holidayId, auth0User },
+						(draft) => {
+							if (draft) {
+								const event = draft.find((e: any) => e.id === taskId);
+								if (event) {
+									Object.assign(event, payload);
+									event.updatedAt = new Date().toISOString();
+								}
+							}
+						}
+					)
+				);
+
+				try {
+					await queryFulfilled;
+				} catch (error) {
+					// If the edit fails, revert the optimistic update
+					patchResult.undo();
+				}
+			},
 		}),
 		deleteEvent: builder.mutation<
 			any,

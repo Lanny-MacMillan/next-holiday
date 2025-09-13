@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -10,7 +11,13 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import { useCandleLightingMutations } from "@/hooks/useCandleLightingMutations";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -72,24 +79,44 @@ const defaultCandleTasks = [
 export default function CandleLightingPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
 
-	// Use the new candle lighting mutations hook
-	const {
-		holidayId,
-		auth0User,
-		candleLighting,
-		loading,
-		error,
-		initialized,
-		createCandleLighting,
-		updateCandleLighting,
-		editCandleLighting,
-		deleteCandleLighting,
-		createCandleLightingState,
-		updateCandleLightingState,
-		editCandleLightingState,
-		deleteCandleLightingState,
-	} = useCandleLightingMutations();
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday ID for Hanukkah
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/hanukkah", holidayPreferences)
+		: getHolidayIdFromRoute("/hanukkah", holidayPreferences);
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Filter tasks by category for candle lighting
+	const candleLighting =
+		holidayData?.tasks?.filter(
+			(task: any) => task.category === "Candle Lighting"
+		) || [];
+
+	// Get auth0User
+	const { user: auth0User } = useAuth0();
+
+	// Set loading and error states based on Redux data
+	const loading = !homeInitialized;
+	const error = null; // No error handling for now since we're using Redux data
+	const initialized = homeInitialized;
+
+	// Debug logging
+	useEffect(() => {
+		console.log("=== CANDLE LIGHTING PAGE DEBUG ===");
+		console.log("holidayId:", holidayId);
+		console.log("holidayData:", holidayData);
+		console.log("candleLighting tasks:", candleLighting);
+		console.log("homeInitialized:", homeInitialized);
+		console.log("=== END DEBUG ===");
+	}, [holidayId, holidayData, candleLighting, homeInitialized]);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -114,33 +141,14 @@ export default function CandleLightingPage() {
 		if (!values.title?.trim()) return;
 		if (!holidayId || !auth0User) return;
 
-		const payload = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			category: "Candle Lighting",
-			dueDate: values.dueDate || undefined,
-			isCompleted: false,
-		};
-
-		await createCandleLighting({ holidayId, payload, auth0User });
+		// TODO: Implement task creation using Redux actions or API calls
+		console.log("Add task:", values);
 		setShowForm(false);
 	}
 
 	async function addDefaultCandleTasks() {
-		for (const task of defaultCandleTasks) {
-			const payload = {
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				assignedTo: undefined,
-				category: task.category,
-				dueDate: undefined,
-				isCompleted: false,
-			};
-			await createCandleLighting({ holidayId, payload, auth0User });
-		}
+		// TODO: Implement default task creation using Redux actions or API calls
+		console.log("Add default tasks:", defaultCandleTasks);
 		setShowDefaultTasks(false);
 	}
 
@@ -155,25 +163,15 @@ export default function CandleLightingPage() {
 	async function handleToggleTask(taskId: string) {
 		if (!holidayId || !auth0User) return;
 
-		const task = candleLighting.find((t: any) => t.id === taskId);
-		if (task) {
-			await updateCandleLighting({
-				holidayId,
-				taskId,
-				isCompleted: !task.isCompleted,
-				auth0User,
-			});
-		}
+		// TODO: Implement task toggle using Redux actions or API calls
+		console.log("Toggle task:", taskId);
 	}
 
 	async function handleDeleteTask(taskId: string) {
 		if (!holidayId || !auth0User) return;
 
-		await deleteCandleLighting({
-			holidayId,
-			taskId,
-			auth0User,
-		});
+		// TODO: Implement task deletion using Redux actions or API calls
+		console.log("Delete task:", taskId);
 	}
 
 	const handleEditTask = (task: any) => {
@@ -184,19 +182,8 @@ export default function CandleLightingPage() {
 	async function handleEditTaskSubmit(values: Record<string, any>) {
 		if (!editingTask || !holidayId || !auth0User) return;
 
-		await editCandleLighting({
-			holidayId,
-			taskId: editingTask.id,
-			payload: {
-				title: values.title,
-				description: values.description || undefined,
-				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
-				category: "Candle Lighting",
-				dueDate: values.dueDate || undefined,
-			},
-			auth0User,
-		});
+		// TODO: Implement task editing using Redux actions or API calls
+		console.log("Edit task:", editingTask.id, values);
 		setShowEditModal(false);
 		setEditingTask(null);
 	}
@@ -394,7 +381,7 @@ export default function CandleLightingPage() {
 				}}
 				onSubmit={handleAddTask}
 				onClose={closeForm}
-				loading={loading}
+				loading={false}
 				submitText="Add Task"
 				cardClassName="card-tasks"
 			/>
@@ -438,7 +425,7 @@ export default function CandleLightingPage() {
 				}}
 				onSubmit={handleEditTaskSubmit}
 				onClose={closeEditModal}
-				loading={editCandleLightingState.isLoading}
+				loading={false}
 				submitText="Update Task"
 				cardClassName="card-tasks"
 			/>

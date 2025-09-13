@@ -3,6 +3,24 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import {
+	addEventToHomeData,
+	removeEventFromHomeData,
+	updateEventInHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	useCreateEventMutation,
+	useUpdateEventMutation,
+	useEditEventMutation,
+	useDeleteEventMutation,
+} from "@/store/api";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -11,7 +29,7 @@ import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
-import { useEventMutations } from "@/hooks/useEventMutations";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const defaultEventTasks = [
 	{
@@ -55,24 +73,53 @@ const defaultEventTasks = [
 export default function NewYearEventsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
 
-	// Use the new event mutations hook
-	const {
-		holidayId,
-		auth0User,
-		events,
-		loading,
-		error,
-		initialized,
-		createEvent,
-		updateEvent,
-		editEvent,
-		deleteEvent,
-		createEventState,
-		updateEventState,
-		editEventState,
-		deleteEventState,
-	} = useEventMutations();
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get holiday ID for New Year
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/new-year", holidayPreferences)
+		: null;
+
+	// Get current Redux state for holiday data
+	const currentState = useAppSelector((state: any) => state);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Get events from Redux data
+	const events = holidayData?.events || [];
+
+	// Debug logging
+	useEffect(() => {
+		console.log("=== Events Debug ===");
+		console.log("holidayId:", holidayId);
+		console.log("holidayData:", holidayData);
+		console.log("holidayData?.events:", holidayData?.events);
+		console.log("events:", events);
+		console.log("=== End Events Debug ===");
+	}, [holidayId, holidayData, events]);
+
+	// Get mutations for CRUD operations
+	const [createEvent, createEventState] = useCreateEventMutation();
+	const [updateEvent, updateEventState] = useUpdateEventMutation();
+	const [editEvent, editEventState] = useEditEventMutation();
+	const [deleteEvent, deleteEventState] = useDeleteEventMutation();
+
+	// Loading and error states
+	const loading =
+		createEventState.isLoading ||
+		updateEventState.isLoading ||
+		editEventState.isLoading ||
+		deleteEventState.isLoading;
+	const error =
+		createEventState.error ||
+		updateEventState.error ||
+		editEventState.error ||
+		deleteEventState.error;
+	const initialized = homeInitialized;
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -172,7 +219,20 @@ export default function NewYearEventsPage() {
 				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			const result = await createEvent({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Add to Redux store immediately
+			dispatch(
+				addEventToHomeData({
+					holidayId,
+					event: result,
+				})
+			);
+
 			setShowAddForm(false);
 		} catch (error) {
 			console.error("Error handling event:", error);
@@ -196,12 +256,22 @@ export default function NewYearEventsPage() {
 				category: "Events",
 				dueDate: values.dueDate || undefined,
 			};
-			await editEvent({
+			const result = await editEvent({
 				holidayId,
 				taskId: editingTask.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux store immediately
+			dispatch(
+				updateEventInHomeData({
+					holidayId,
+					eventId: editingTask.id,
+					updates: result,
+				})
+			);
+
 			setEditingTask(null);
 			setShowEditModal(false);
 		} catch (error) {
@@ -225,6 +295,15 @@ export default function NewYearEventsPage() {
 					taskId: taskToDelete.id,
 					auth0User,
 				}).unwrap();
+
+				// Remove from Redux store immediately
+				dispatch(
+					removeEventFromHomeData({
+						holidayId,
+						eventId: taskToDelete.id,
+					})
+				);
+
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting event:", error);
@@ -245,6 +324,20 @@ export default function NewYearEventsPage() {
 					isCompleted: !event.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux store immediately
+				dispatch(
+					updateEventInHomeData({
+						holidayId,
+						eventId: taskId,
+						updates: {
+							isCompleted: !event.isCompleted,
+							completedDate: !event.isCompleted
+								? new Date().toISOString()
+								: null,
+						},
+					})
+				);
 			}
 		} catch (error) {
 			console.error("Error updating event:", error);
@@ -257,7 +350,7 @@ export default function NewYearEventsPage() {
 	};
 
 	// Loading state
-	if (loading && !initialized) {
+	if (!initialized) {
 		return (
 			<div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 				<HolidayPageHeader

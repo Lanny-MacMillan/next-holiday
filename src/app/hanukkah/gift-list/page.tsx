@@ -1,8 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { shouldSkipHolidayQueryWithColdEntry } from "@/utils/holidayData";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	addGiftToHomeData,
+	updateGiftInHomeData,
+	removeGiftFromHomeData,
+} from "@/store/slices/homeSlice";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
@@ -25,6 +38,15 @@ type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 export default function HanukkahGiftListPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	// Address book integration and optimistic updates added
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
 
 	const {
 		holidayId,
@@ -34,16 +56,40 @@ export default function HanukkahGiftListPage() {
 		auth0User,
 	} = useFormModalMutation();
 
-	// Fetch gifts using RTK Query
-	const {
-		data: gifts = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get holiday data from Redux
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after gift operations
+	const updateGiftInRedux = (
+		giftData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				break;
+			case "update":
+				dispatch(
+					updateGiftInHomeData({
+						holidayId,
+						giftId: giftData.id,
+						updates: giftData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(removeGiftFromHomeData({ holidayId, giftId: giftData.id }));
+				break;
+		}
+	};
+
+	// Use Redux data instead of RTK Query
+	const gifts = holidayData?.gifts || [];
+	const loading = !homeInitialized;
+	const error = null;
+	const initialized = homeInitialized;
 
 	// Update gift mutation
 	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
@@ -70,7 +116,11 @@ export default function HanukkahGiftListPage() {
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly for optimistic updates
+			updateGiftInRedux(result, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating gift:", error);
@@ -104,6 +154,9 @@ export default function HanukkahGiftListPage() {
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
 
+			// Optimistically update Redux state first
+			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
+
 			// Update the gift in the database
 			await updateGift({
 				holidayId: holidayId || "",
@@ -111,11 +164,16 @@ export default function HanukkahGiftListPage() {
 				isCompleted: newIsCompleted,
 				auth0User,
 			}).unwrap();
-
-			// The UI will automatically update due to RTK Query cache invalidation
 		} catch (error) {
 			console.error("Error toggling gift:", error);
-			// Handle error (could show a toast notification)
+			// Revert optimistic update on error
+			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			if (currentGift) {
+				updateGiftInRedux(
+					{ id: giftId, isCompleted: currentGift.isCompleted },
+					"update"
+				);
+			}
 		}
 	}
 
@@ -128,21 +186,60 @@ export default function HanukkahGiftListPage() {
 		if (!giftToDelete || !holidayId) return;
 
 		try {
+			// Optimistically update Redux state first
+			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+
 			await deleteGift({
 				holidayId,
 				giftId: giftToDelete.id,
 				auth0User,
 			}).unwrap();
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
 			console.error("Error deleting gift:", error);
+			// Revert optimistic update on error - re-add the gift
+			updateGiftInRedux(giftToDelete, "add");
 		}
 	}
 
 	function cancelDelete() {
 		setShowDeleteModal(false);
 		setGiftToDelete(null);
+	}
+
+	async function handleEditGift(gift: any) {
+		setSelectedGift(gift);
+		setShowForm(true);
+	}
+
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !holidayId) return;
+
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			const result = await editGift({
+				holidayId,
+				giftId: selectedGift.id,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly for optimistic updates
+			updateGiftInRedux(result, "update");
+
+			setShowForm(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		}
 	}
 
 	function sortGifts(giftsToSort: any[]): any[] {
@@ -176,12 +273,8 @@ export default function HanukkahGiftListPage() {
 	}
 
 	const sortedGifts = sortGifts(gifts);
-	const incompleteGifts = sortedGifts.filter(
-		(gift: HanukkahGift) => !gift.isCompleted
-	);
-	const completedGifts = sortedGifts.filter(
-		(gift: HanukkahGift) => gift.isCompleted
-	);
+	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
+	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
 	return (
 		<div className="min-h-screen hanukkah-gifts-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -222,7 +315,7 @@ export default function HanukkahGiftListPage() {
 							gift={gift}
 							isCompleted={false}
 							onToggle={handleToggleGift}
-							onEdit={() => {}} // TODO: Implement edit functionality
+							onEdit={handleEditGift}
 							onDelete={handleDeleteGift}
 							loading={loading || updateLoading}
 							theme={{
@@ -246,7 +339,7 @@ export default function HanukkahGiftListPage() {
 							gift={gift}
 							isCompleted={true}
 							onToggle={handleToggleGift}
-							onEdit={() => {}} // TODO: Implement edit functionality
+							onEdit={handleEditGift}
 							onDelete={handleDeleteGift}
 							loading={loading || updateLoading}
 							theme={{
@@ -262,7 +355,7 @@ export default function HanukkahGiftListPage() {
 			{/* Form Modal */}
 			<FormModal
 				isOpen={showForm}
-				title="Add New Gift"
+				title={selectedGift ? "Edit Gift" : "Add New Gift"}
 				fields={[
 					{
 						id: "recipient",
@@ -304,26 +397,40 @@ export default function HanukkahGiftListPage() {
 						rows: 2,
 					},
 				]}
-				initialValues={{
-					recipient: "",
-					giftName: "",
-					description: "",
-					price: "",
-					store: "",
-					product_link: "",
-					notes: "",
-				}}
-				onSubmit={handleAddGift}
+				initialValues={
+					selectedGift
+						? {
+								recipient: selectedGift.recipient || "",
+								giftName: selectedGift.name || "",
+								description: selectedGift.description || "",
+								price: selectedGift.price || "",
+								store: selectedGift.store || "",
+								product_link: selectedGift.product_link || "",
+								notes: selectedGift.notes || "",
+						  }
+						: {
+								recipient: "",
+								giftName: "",
+								description: "",
+								price: "",
+								store: "",
+								product_link: "",
+								notes: "",
+						  }
+				}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
 				onClose={closeForm}
-				loading={loading}
-				submitText="Add Gift"
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Gift" : "Add Gift"}
 				cardClassName="card-gifts"
+				showAddressBook={true}
+				contacts={contacts}
 			/>
 
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={showDeleteModal}
-				onClose={cancelDelete}
+				onCancel={cancelDelete}
 				onConfirm={confirmDelete}
 				title="Confirm Delete"
 				message="Are you sure you want to delete this gift? This action cannot be undone."

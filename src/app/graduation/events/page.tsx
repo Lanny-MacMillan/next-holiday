@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateEventInHomeData,
+	addEventToHomeData,
+	removeEventFromHomeData,
+} from "@/store/slices/homeSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -11,28 +22,70 @@ import { EventItems } from "@/components/cards/event";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import SortModal from "@/components/modals/SortModal";
-import { useEventMutations } from "@/hooks/useEventMutations";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import { useUpdateTaskMutation, useDeleteTaskMutation } from "@/store/api";
 
 export default function GraduationEventsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
-
-	// Use the new event mutations hook
 	const {
 		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
 		auth0User,
-		events,
-		loading,
-		error,
-		initialized,
-		createEvent,
-		updateEvent,
-		editEvent,
-		deleteEvent,
-		updateEventState,
-		editEventState,
-		deleteEventState,
-	} = useEventMutations();
+	} = useFormModalMutation();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Update task mutation
+	const [updateTask, { isLoading: updateLoading }] = useUpdateTaskMutation();
+
+	// Delete mutation
+	const [deleteTask, { isLoading: deleteLoading }] = useDeleteTaskMutation();
+
+	// Helper function to update Redux state after event operations
+	const updateEventInRedux = (
+		eventData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addEventToHomeData({ holidayId, event: eventData }));
+				break;
+			case "update":
+				dispatch(
+					updateEventInHomeData({
+						holidayId,
+						eventId: eventData.id,
+						updates: eventData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeEventFromHomeData({
+						holidayId,
+						eventId: eventData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Use only Redux data - no GET API calls on holiday pages
+	const displayEvents =
+		holidayData && homeInitialized && holidayData.events
+			? holidayData.events
+			: [];
 
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
@@ -82,15 +135,18 @@ export default function GraduationEventsPage() {
 		}
 	};
 
-	const sortedEventTasks = sortTasks(events, sortBy);
+	const sortedEventTasks = sortTasks(displayEvents, sortBy);
 
 	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
+		}
+	}, [dispatch, homeInitialized]);
 
 	const handleSubmit = async (values: Record<string, any>) => {
-		if (!holidayId || !auth0User) return;
+		if (!holidayId || !mutation) return;
 
 		try {
 			const payload = {
@@ -102,7 +158,15 @@ export default function GraduationEventsPage() {
 				dueDate: values.dueDate || undefined,
 				isCompleted: false,
 			};
-			await createEvent({ holidayId, payload, auth0User }).unwrap();
+			const result = await mutation({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateEventInRedux(result, "add");
+
 			setShowAddForm(false);
 		} catch (error) {
 			console.error("Error handling event:", error);
@@ -115,22 +179,30 @@ export default function GraduationEventsPage() {
 	};
 
 	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!editingTask || !holidayId || !auth0User) return;
+		if (!editingTask || !holidayId || !mutation) return;
 
 		try {
-			await editEvent({
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Events",
+				dueDate: values.dueDate || undefined,
+			};
+			const result = await mutation({
 				holidayId,
-				taskId: editingTask.id,
 				payload: {
-					title: values.title,
-					description: values.description || undefined,
-					priority: values.priority as "low" | "medium" | "high",
-					assignedTo: values.assignedTo || undefined,
-					category: "Events",
-					dueDate: values.dueDate || undefined,
+					...payload,
+					id: editingTask.id,
+					action: "update",
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateEventInRedux(result, "update");
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -144,7 +216,7 @@ export default function GraduationEventsPage() {
 	}
 
 	const handleDelete = (taskId: string) => {
-		const task = events.find((e: any) => e.id === taskId);
+		const task = displayEvents.find((e: any) => e.id === taskId);
 		if (task) {
 			setTaskToDelete(task);
 			setShowDeleteModal(true);
@@ -154,11 +226,15 @@ export default function GraduationEventsPage() {
 	const confirmDelete = async () => {
 		if (taskToDelete && holidayId && auth0User) {
 			try {
-				await deleteEvent({
+				await deleteTask({
 					holidayId,
 					taskId: taskToDelete.id,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateEventInRedux({ id: taskToDelete.id }, "delete");
+
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting event:", error);
@@ -171,14 +247,20 @@ export default function GraduationEventsPage() {
 		if (!holidayId || !auth0User) return;
 
 		try {
-			const event = events.find((e: any) => e.id === taskId);
+			const event = displayEvents.find((e: any) => e.id === taskId);
 			if (event) {
-				await updateEvent({
+				await updateTask({
 					holidayId,
 					taskId,
-					isCompleted: !event.isCompleted,
+					updates: { isCompleted: !event.isCompleted },
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateEventInRedux(
+					{ id: taskId, isCompleted: !event.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating event:", error);
@@ -198,7 +280,7 @@ export default function GraduationEventsPage() {
 				sortTitle="Sort Events"
 				description="Plan your graduation events with style!"
 				holidayColor="purple-500"
-				error={error ? "API Error" : undefined}
+				error={undefined}
 			/>
 
 			<main className="w-full max-w-4xl flex flex-col gap-6 mt-4">
@@ -221,7 +303,7 @@ export default function GraduationEventsPage() {
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
-							loading={loading || updateEventState.isLoading}
+							loading={updateLoading}
 							themeColor="purple"
 							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
@@ -241,7 +323,7 @@ export default function GraduationEventsPage() {
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
 							onEditTask={handleEditTask}
-							loading={loading || updateEventState.isLoading}
+							loading={updateLoading}
 							themeColor="purple"
 							holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
 						/>
@@ -298,7 +380,7 @@ export default function GraduationEventsPage() {
 				onClose={() => {
 					setShowAddForm(false);
 				}}
-				loading={loading}
+				loading={mutationLoading}
 				submitText="Add Event"
 				cardClassName="card-events-graduation"
 			/>
@@ -346,7 +428,7 @@ export default function GraduationEventsPage() {
 				}}
 				onSubmit={handleEditTaskSubmit}
 				onClose={closeEditModal}
-				loading={editEventState.isLoading}
+				loading={mutationLoading}
 				submitText="Update Event"
 				cardClassName="card-events-graduation"
 			/>
@@ -359,7 +441,7 @@ export default function GraduationEventsPage() {
 					setShowDeleteModal(false);
 					setTaskToDelete(null);
 				}}
-				loading={deleteEventState.isLoading}
+				loading={deleteLoading}
 				cardClassName="card-events-graduation"
 				title="Delete Event"
 				message="Are you sure you want to delete this event? This action cannot be undone."

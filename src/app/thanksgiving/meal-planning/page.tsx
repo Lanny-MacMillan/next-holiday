@@ -14,6 +14,17 @@ import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 import { useMealPlanningMutations } from "@/hooks/useMealPlanningMutations";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+} from "@/store/slices/homeSlice";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -38,6 +49,45 @@ export default function ThanksgivingMealPlanningPage() {
 		editMealPlanningState,
 		deleteMealPlanningState,
 	} = useMealPlanningMutations();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
@@ -70,7 +120,15 @@ export default function ThanksgivingMealPlanningPage() {
 				isCompleted: false,
 			};
 
-			await createMealPlanning({ holidayId, payload, auth0User }).unwrap();
+			const result = await createMealPlanning({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating meal planning task:", error);
@@ -81,15 +139,22 @@ export default function ThanksgivingMealPlanningPage() {
 		if (!holidayId || !auth0User) return;
 
 		try {
-			const task = mealPlanning.find((t: any) => t.id === taskId);
-			if (task) {
-				await updateMealPlanning({
-					holidayId,
-					taskId,
-					isCompleted: !task.isCompleted,
-					auth0User,
-				}).unwrap();
-			}
+			// Find the current task to get its completion status from Redux data
+			const currentTask = displayTasks.find((t: any) => t.id === taskId);
+			if (!currentTask) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentTask.isCompleted;
+
+			await updateMealPlanning({
+				holidayId,
+				taskId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: taskId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error updating meal planning task:", error);
 		}
@@ -114,7 +179,7 @@ export default function ThanksgivingMealPlanningPage() {
 	const handleSaveEdit = async (updatedTask: any) => {
 		if (editingTask && holidayId && auth0User) {
 			try {
-				await editMealPlanning({
+				const result = await editMealPlanning({
 					holidayId,
 					taskId: editingTask.id,
 					payload: {
@@ -127,6 +192,10 @@ export default function ThanksgivingMealPlanningPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "update");
+
 				setEditingTask(null);
 			} catch (error) {
 				console.error("Error updating meal planning task:", error);
@@ -146,6 +215,10 @@ export default function ThanksgivingMealPlanningPage() {
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux({ id: deleteConfirm.taskId }, "delete");
+
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting meal planning task:", error);
@@ -190,7 +263,8 @@ export default function ThanksgivingMealPlanningPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen thanksgiving-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -203,7 +277,26 @@ export default function ThanksgivingMealPlanningPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(mealPlanning);
+	// Use only Redux data - filter tasks by category for meal planning
+	const displayTasks =
+		holidayData && homeInitialized && holidayData.tasks
+			? holidayData.tasks.filter(
+					(task: any) => task.category === "Meal Planning"
+			  )
+			: [];
+
+	// Debug: Log task data
+	useEffect(() => {
+		console.log("Thanksgiving meal planning - holidayId:", holidayId);
+		console.log("Thanksgiving meal planning - holidayData:", holidayData);
+		console.log(
+			"Thanksgiving meal planning - homeInitialized:",
+			homeInitialized
+		);
+		console.log("Thanksgiving meal planning - displayTasks:", displayTasks);
+	}, [holidayId, holidayData, homeInitialized, displayTasks]);
+
+	const sortedTasks = sortTasks(displayTasks);
 	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
@@ -216,7 +309,7 @@ export default function ThanksgivingMealPlanningPage() {
 				sortTitle="Sort tasks"
 				description="Keep track of your Thanksgiving meal planning!"
 				holidayColor="amber-600"
-				error={error ? "An error occurred" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<AddButton title="Task" onClick={openForm} holidayColor="amber" />

@@ -11,6 +11,16 @@ import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import { DecorationsListItem } from "@/components/cards/decorations";
 import { useDecorationMutations } from "@/hooks/useDecorationMutations";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+	updateDecorationInHomeData,
+	addDecorationToHomeData,
+	removeDecorationFromHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -45,11 +55,30 @@ export default function EasterDecorationsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get Redux selectors
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday ID for Easter - try to resolve from home data, fallback to route-based resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/easter", holidayPreferences)
+		: getHolidayIdFromRoute("/easter", holidayPreferences); // Allow fallback for cold entry
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+
+	// Use Redux data first, fallback to RTK Query if needed
+	const decorations = holidayData?.decorations || [];
+
 	// Use the new decoration mutations hook
 	const {
 		holidayId,
 		auth0User,
-		decorations,
+		decorations: fallbackDecorations,
 		loading,
 		error,
 		initialized,
@@ -61,6 +90,46 @@ export default function EasterDecorationsPage() {
 		editDecorationState,
 		deleteDecorationState,
 	} = useDecorationMutations();
+
+	// Use Redux data if available, otherwise use fallback from RTK Query
+	const finalDecorations =
+		decorations.length > 0 ? decorations : fallbackDecorations;
+
+	// Helper function to update Redux state after decoration operations
+	const updateDecorationInRedux = (
+		decorationData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!resolvedHolidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(
+					addDecorationToHomeData({
+						holidayId: resolvedHolidayId,
+						decoration: decorationData,
+					})
+				);
+				break;
+			case "update":
+				dispatch(
+					updateDecorationInHomeData({
+						holidayId: resolvedHolidayId,
+						decorationId: decorationData.id,
+						updates: decorationData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeDecorationFromHomeData({
+						holidayId: resolvedHolidayId,
+						decorationId: decorationData.id,
+					})
+				);
+				break;
+		}
+	};
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -83,14 +152,14 @@ export default function EasterDecorationsPage() {
 
 	// Check if default decoration tasks exist
 	useEffect(() => {
-		if (decorations.length === 0 && initialized) {
+		if (finalDecorations.length === 0 && initialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [decorations, initialized]);
+	}, [finalDecorations, initialized]);
 
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
-		if (!holidayId || !auth0User) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
 		try {
 			const payload = {
@@ -103,7 +172,15 @@ export default function EasterDecorationsPage() {
 				isCompleted: false,
 			};
 
-			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			const newDecoration = await createDecoration({
+				holidayId: resolvedHolidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state immediately
+			updateDecorationInRedux(newDecoration, "add");
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating decoration:", error);
@@ -111,7 +188,7 @@ export default function EasterDecorationsPage() {
 	}
 
 	async function addDefaultDecorationTasks() {
-		if (!holidayId || !auth0User) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
 		try {
 			for (const task of defaultDecorationTasks) {
@@ -124,7 +201,14 @@ export default function EasterDecorationsPage() {
 					dueDate: undefined,
 					isCompleted: false,
 				};
-				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+				const newDecoration = await createDecoration({
+					holidayId: resolvedHolidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state immediately
+				updateDecorationInRedux(newDecoration, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -141,17 +225,23 @@ export default function EasterDecorationsPage() {
 	}
 
 	async function handleToggleTask(taskId: string) {
-		if (!holidayId || !auth0User) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
 		try {
-			const decoration = decorations.find((d: any) => d.id === taskId);
+			const decoration = finalDecorations.find((d: any) => d.id === taskId);
 			if (decoration) {
 				await updateDecoration({
-					holidayId,
+					holidayId: resolvedHolidayId,
 					taskId,
 					isCompleted: !decoration.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state immediately
+				updateDecorationInRedux(
+					{ ...decoration, isCompleted: !decoration.isCompleted },
+					"update"
+				);
 			}
 		} catch (error) {
 			console.error("Error updating decoration:", error);
@@ -168,11 +258,11 @@ export default function EasterDecorationsPage() {
 	};
 
 	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!editingTask || !holidayId || !auth0User) return;
+		if (!editingTask || !resolvedHolidayId || !auth0User) return;
 
 		try {
-			await editDecoration({
-				holidayId,
+			const updatedDecoration = await editDecoration({
+				holidayId: resolvedHolidayId,
 				taskId: editingTask.id,
 				payload: {
 					title: values.title,
@@ -184,6 +274,10 @@ export default function EasterDecorationsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state immediately
+			updateDecorationInRedux(updatedDecoration, "update");
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -197,13 +291,23 @@ export default function EasterDecorationsPage() {
 	}
 
 	async function confirmDelete() {
-		if (deleteConfirm.taskId && holidayId && auth0User) {
+		if (deleteConfirm.taskId && resolvedHolidayId && auth0User) {
 			try {
+				const decorationToDelete = finalDecorations.find(
+					(d: any) => d.id === deleteConfirm.taskId
+				);
+
 				await deleteDecoration({
-					holidayId,
+					holidayId: resolvedHolidayId,
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state immediately
+				if (decorationToDelete) {
+					updateDecorationInRedux(decorationToDelete, "delete");
+				}
+
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting decoration:", error);
@@ -220,7 +324,9 @@ export default function EasterDecorationsPage() {
 			case "priority":
 				const priorityOrder = { high: 3, medium: 2, low: 1 };
 				return [...tasksToSort].sort(
-					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+					(a, b) =>
+						(priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
+						(priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
 				);
 			case "dateDue":
 				return [...tasksToSort].sort((a, b) => {
@@ -255,7 +361,7 @@ export default function EasterDecorationsPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(decorations);
+	const sortedTasks = sortTasks(finalDecorations);
 	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 

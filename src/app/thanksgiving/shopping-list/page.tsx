@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
-	useGetGiftsQuery,
 	useUpdateGiftMutation,
 	useEditGiftMutation,
 	useDeleteGiftMutation,
@@ -17,6 +16,17 @@ import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	updateGiftInHomeData,
+	addGiftToHomeData,
+	removeGiftFromHomeData,
+} from "@/store/slices/homeSlice";
 
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
@@ -25,6 +35,7 @@ import TaskSection from "@/components/common/TaskSection";
 type SortOption = "recipient" | "store" | "price-high" | "price-low" | "none";
 
 export default function ThanksgivingShoppingListPage() {
+	const dispatch = useAppDispatch();
 	const {
 		holidayId,
 		mutation,
@@ -33,16 +44,44 @@ export default function ThanksgivingShoppingListPage() {
 		auth0User,
 	} = useFormModalMutation();
 
-	// Fetch gifts using RTK Query
-	const {
-		data: gifts = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after gift operations
+	const updateGiftInRedux = (
+		giftData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				break;
+			case "update":
+				dispatch(
+					updateGiftInHomeData({
+						holidayId,
+						giftId: giftData.id,
+						updates: giftData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeGiftFromHomeData({
+						holidayId,
+						giftId: giftData.id,
+					})
+				);
+				break;
+		}
+	};
 
 	// Update gift mutation
 	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
@@ -64,7 +103,11 @@ export default function ThanksgivingShoppingListPage() {
 
 		try {
 			const payload = transformThanksgivingShoppingPayload(values);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "add");
+
 			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating shopping item:", error);
@@ -86,8 +129,8 @@ export default function ThanksgivingShoppingListPage() {
 		if (!holidayId) return;
 
 		try {
-			// Find the current gift to get its completion status
-			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			// Find the current gift to get its completion status from Redux data
+			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
@@ -101,7 +144,8 @@ export default function ThanksgivingShoppingListPage() {
 				auth0User,
 			}).unwrap();
 
-			// The UI will automatically update due to RTK Query cache invalidation
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling shopping item:", error);
 			// Handle error (could show a toast notification)
@@ -122,6 +166,10 @@ export default function ThanksgivingShoppingListPage() {
 				giftId: giftToDelete.id,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
@@ -144,12 +192,16 @@ export default function ThanksgivingShoppingListPage() {
 
 		try {
 			const payload = transformThanksgivingShoppingPayload(values);
-			await editGift({
+			const result = await editGift({
 				holidayId,
 				giftId: selectedGift.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "update");
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {
@@ -177,7 +229,8 @@ export default function ThanksgivingShoppingListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen thanksgiving-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -190,7 +243,24 @@ export default function ThanksgivingShoppingListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts || []);
+	// Use only Redux data - no fallback to API calls
+	const displayGifts =
+		holidayData && homeInitialized && holidayData.gifts
+			? holidayData.gifts
+			: [];
+
+	// Debug: Log gift data
+	useEffect(() => {
+		console.log("Thanksgiving shopping list - holidayId:", holidayId);
+		console.log("Thanksgiving shopping list - holidayData:", holidayData);
+		console.log(
+			"Thanksgiving shopping list - homeInitialized:",
+			homeInitialized
+		);
+		console.log("Thanksgiving shopping list - displayGifts:", displayGifts);
+	}, [holidayId, holidayData, homeInitialized, displayGifts]);
+
+	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
@@ -202,7 +272,7 @@ export default function ThanksgivingShoppingListPage() {
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading || updateLoading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#d97706", // Amber for Thanksgiving
 			}}
@@ -219,7 +289,7 @@ export default function ThanksgivingShoppingListPage() {
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading || updateLoading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#d97706", // Amber for Thanksgiving
 			}}
@@ -288,7 +358,7 @@ export default function ThanksgivingShoppingListPage() {
 				sortTitle="Sort shopping items"
 				description="Keep track of your Thanksgiving shopping items!"
 				holidayColor="amber-500"
-				error={error ? "Error loading shopping items" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}

@@ -3,6 +3,24 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import {
+	addDecorationToHomeData,
+	removeDecorationFromHomeData,
+	updateDecorationInHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import {
+	useCreateDecorationMutation,
+	useUpdateDecorationMutation,
+	useEditDecorationMutation,
+	useDeleteDecorationMutation,
+} from "@/store/api";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";
@@ -10,7 +28,7 @@ import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
 import { DecorationsListItem } from "@/components/cards/decorations";
-import { useDecorationMutations } from "@/hooks/useDecorationMutations";
+import { useAuth0 } from "@auth0/auth0-react";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -44,23 +62,56 @@ const defaultDecorationTasks = [
 export default function NewYearDecorationsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
 
-	// Use the new decoration mutations hook
-	const {
-		holidayId,
-		auth0User,
-		decorations,
-		loading,
-		error,
-		initialized,
-		createDecoration,
-		updateDecoration,
-		editDecoration,
-		deleteDecoration,
-		updateDecorationState,
-		editDecorationState,
-		deleteDecorationState,
-	} = useDecorationMutations();
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get holiday ID for New Year
+	const holidayId = homeInitialized
+		? getHolidayIdFromRoute("/new-year", holidayPreferences)
+		: null;
+
+	// Get current Redux state for holiday data
+	const currentState = useAppSelector((state: any) => state);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Get decorations from Redux data
+	const decorations = holidayData?.decorations || [];
+
+	// Debug logging
+	useEffect(() => {
+		console.log("=== Decorations Debug ===");
+		console.log("holidayId:", holidayId);
+		console.log("holidayData:", holidayData);
+		console.log("holidayData?.decorations:", holidayData?.decorations);
+		console.log("decorations:", decorations);
+		console.log("=== End Decorations Debug ===");
+	}, [holidayId, holidayData, decorations]);
+
+	// Get mutations for CRUD operations
+	const [createDecoration, createDecorationState] =
+		useCreateDecorationMutation();
+	const [updateDecoration, updateDecorationState] =
+		useUpdateDecorationMutation();
+	const [editDecoration, editDecorationState] = useEditDecorationMutation();
+	const [deleteDecoration, deleteDecorationState] =
+		useDeleteDecorationMutation();
+
+	// Loading and error states
+	const loading =
+		createDecorationState.isLoading ||
+		updateDecorationState.isLoading ||
+		editDecorationState.isLoading ||
+		deleteDecorationState.isLoading;
+	const error =
+		createDecorationState.error ||
+		updateDecorationState.error ||
+		editDecorationState.error ||
+		deleteDecorationState.error;
+	const initialized = homeInitialized;
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -103,7 +154,20 @@ export default function NewYearDecorationsPage() {
 				isCompleted: false,
 			};
 
-			await createDecoration({ holidayId, payload, auth0User }).unwrap();
+			const result = await createDecoration({
+				holidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Add to Redux store immediately
+			dispatch(
+				addDecorationToHomeData({
+					holidayId,
+					decoration: result,
+				})
+			);
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating decoration:", error);
@@ -152,6 +216,20 @@ export default function NewYearDecorationsPage() {
 					isCompleted: !decoration.isCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux store immediately
+				dispatch(
+					updateDecorationInHomeData({
+						holidayId,
+						decorationId: taskId,
+						updates: {
+							isCompleted: !decoration.isCompleted,
+							completedDate: !decoration.isCompleted
+								? new Date().toISOString()
+								: null,
+						},
+					})
+				);
 			}
 		} catch (error) {
 			console.error("Error updating decoration:", error);
@@ -171,7 +249,7 @@ export default function NewYearDecorationsPage() {
 		if (!editingTask || !holidayId || !auth0User) return;
 
 		try {
-			await editDecoration({
+			const result = await editDecoration({
 				holidayId,
 				taskId: editingTask.id,
 				payload: {
@@ -184,6 +262,16 @@ export default function NewYearDecorationsPage() {
 				},
 				auth0User,
 			}).unwrap();
+
+			// Update Redux store immediately
+			dispatch(
+				updateDecorationInHomeData({
+					holidayId,
+					decorationId: editingTask.id,
+					updates: result,
+				})
+			);
+
 			setShowEditModal(false);
 			setEditingTask(null);
 		} catch (error) {
@@ -204,6 +292,15 @@ export default function NewYearDecorationsPage() {
 					taskId: deleteConfirm.taskId,
 					auth0User,
 				}).unwrap();
+
+				// Remove from Redux store immediately
+				dispatch(
+					removeDecorationFromHomeData({
+						holidayId,
+						decorationId: deleteConfirm.taskId,
+					})
+				);
+
 				setDeleteConfirm({ show: false, taskId: null });
 			} catch (error) {
 				console.error("Error deleting decoration:", error);
@@ -242,7 +339,7 @@ export default function NewYearDecorationsPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	if (!initialized) {
 		return (
 			<div className="min-h-screen new-year-tasks-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -266,7 +363,7 @@ export default function NewYearDecorationsPage() {
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}
 			onEditTask={handleEditTask}
-			loading={loading || updateDecorationState.isLoading}
+			loading={loading}
 			holidayColor="new-year-tasks-gradient"
 		/>
 	);
@@ -425,7 +522,7 @@ export default function NewYearDecorationsPage() {
 				}}
 				onSubmit={handleEditTaskSubmit}
 				onClose={closeEditModal}
-				loading={editDecorationState.isLoading}
+				loading={loading}
 				submitText="Update Task"
 				cardClassName="card-tasks"
 			/>
@@ -435,7 +532,7 @@ export default function NewYearDecorationsPage() {
 				isOpen={deleteConfirm.show}
 				onCancel={cancelDelete}
 				onConfirm={confirmDelete}
-				loading={deleteDecorationState.isLoading}
+				loading={loading}
 				cardClassName="card-tasks"
 				title="Confirm Delete"
 				message="Are you sure you want to delete this task? This action cannot be undone."

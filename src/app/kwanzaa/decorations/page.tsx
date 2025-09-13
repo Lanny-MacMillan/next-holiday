@@ -1,14 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { useDecorationMutations } from "@/hooks/useDecorationMutations";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { updateTaskInHomeData } from "@/store/slices/homeSlice";
+import { useFormModalMutation } from "@/hooks/useFormModalMutation";
+import {
+	useUpdateDecorationMutation,
+	useEditDecorationMutation,
+	useDeleteDecorationMutation,
+} from "@/store/api";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import AddButton from "@/components/common/AddButton";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import { EventItems } from "@/components/cards/event";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
 
@@ -87,49 +99,93 @@ const defaultDecorationTasks = [
 
 export default function KwanzaaDecorationsPage() {
 	const dispatch = useAppDispatch();
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
-
-	// Use the decoration mutations hook
 	const {
 		holidayId,
+		mutation,
+		isLoading: mutationLoading,
+		error: mutationError,
 		auth0User,
-		decorations,
-		loading,
-		error,
-		initialized,
-		createDecoration,
-		updateDecoration,
-		editDecoration,
-		deleteDecoration,
-		updateDecorationState,
-		editDecorationState,
-		deleteDecorationState,
-	} = useDecorationMutations();
+	} = useFormModalMutation();
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!holidayId) return;
+
+		switch (operation) {
+			case "add":
+				// For now, we'll rely on the API cache invalidation to refresh the data
+				// TODO: Add addTaskToHomeData function to homeSlice if needed
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				// For now, we'll rely on the API cache invalidation to refresh the data
+				// TODO: Add removeTaskFromHomeData function to homeSlice if needed
+				break;
+		}
+	};
+
+	// Update task mutation
+	const [updateDecoration, { isLoading: updateLoading }] =
+		useUpdateDecorationMutation();
+
+	// Edit and delete mutations
+	const [editDecoration, { isLoading: editLoading }] =
+		useEditDecorationMutation();
+	const [deleteDecoration, { isLoading: deleteLoading }] =
+		useDeleteDecorationMutation();
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [showForm, setShowForm] = useState(false);
+	const [showFormModal, setShowFormModal] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
-	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<any>(null);
+	const [selectedTask, setSelectedTask] = useState<any>(null);
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
-	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+	// Use only Redux data - no fallback to API calls
+	// Decorations are stored in the tasks array with category: "Decorations"
+	const displayDecorations =
+		holidayData && homeInitialized && holidayData.tasks
+			? holidayData.tasks.filter((task: any) => task.category === "Decorations")
+			: [];
 
 	// Check if default decoration tasks exist
 	useEffect(() => {
-		if (decorations.length === 0 && initialized) {
+		if (displayDecorations.length === 0 && homeInitialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [decorations, initialized]);
+	}, [displayDecorations, homeInitialized]);
+
+	// Debug: Log decoration data
+	useEffect(() => {
+		console.log("Decorations - holidayId:", holidayId);
+		console.log("Decorations - holidayData:", holidayData);
+		console.log("Decorations - homeInitialized:", homeInitialized);
+		console.log("Decorations - displayDecorations:", displayDecorations);
+	}, [holidayId, holidayData, homeInitialized, displayDecorations]);
 
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
-		if (!holidayId || !auth0User) return;
+		if (!holidayId || !mutation) return;
 
 		try {
 			const payload = {
@@ -142,15 +198,19 @@ export default function KwanzaaDecorationsPage() {
 				isCompleted: false,
 			};
 
-			await createDecoration({ holidayId, payload, auth0User }).unwrap();
-			setShowForm(false);
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
+
+			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating decoration:", error);
 		}
 	}
 
 	async function addDefaultDecorationTasks() {
-		if (!holidayId || !auth0User) return;
+		if (!holidayId || !mutation) return;
 
 		try {
 			for (const task of defaultDecorationTasks) {
@@ -163,7 +223,15 @@ export default function KwanzaaDecorationsPage() {
 					dueDate: undefined,
 					isCompleted: false,
 				};
-				await createDecoration({ holidayId, payload, auth0User }).unwrap();
+
+				const result = await mutation({
+					holidayId,
+					payload,
+					auth0User,
+				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "add");
 			}
 			setShowDefaultTasks(false);
 		} catch (error) {
@@ -172,78 +240,123 @@ export default function KwanzaaDecorationsPage() {
 	}
 
 	function openForm() {
-		setShowForm(true);
+		setShowFormModal(true);
+		setSelectedTask(null);
 	}
 
 	function closeForm() {
-		setShowForm(false);
+		setShowFormModal(false);
+		setSelectedTask(null);
+	}
+
+	function openEditModal(task: any) {
+		setSelectedTask(task);
+		setShowFormModal(true);
 	}
 
 	async function handleToggleTask(taskId: string) {
-		if (!holidayId || !auth0User) return;
+		if (!holidayId) return;
 
 		try {
-			const decoration = decorations.find((d: any) => d.id === taskId);
-			if (decoration) {
-				await updateDecoration({
-					holidayId,
-					taskId,
-					isCompleted: !decoration.isCompleted,
-					auth0User,
-				}).unwrap();
-			}
+			// Find the current task to get its completion status from Redux data
+			const currentTask = displayDecorations.find(
+				(task: any) => task.id === taskId
+			);
+			if (!currentTask) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentTask.isCompleted;
+
+			// Update Redux state immediately for instant UI feedback
+			updateTaskInRedux(
+				{
+					...currentTask,
+					isCompleted: newIsCompleted,
+					completedDate: newIsCompleted ? new Date().toISOString() : null,
+					updatedAt: new Date().toISOString(),
+				},
+				"update"
+			);
+
+			// Update the task in the database
+			await updateDecoration({
+				holidayId: holidayId || "",
+				taskId,
+				isCompleted: newIsCompleted,
+				auth0User,
+			}).unwrap();
 		} catch (error) {
-			console.error("Error updating decoration:", error);
+			console.error("Error toggling decoration:", error);
+			// Revert the optimistic update on error
+			const currentTask = displayDecorations.find(
+				(task: any) => task.id === taskId
+			);
+			if (currentTask) {
+				updateTaskInRedux(currentTask, "update");
+			}
 		}
 	}
 
-	function handleDeleteTask(taskId: string) {
-		const task = decorations.find((d: any) => d.id === taskId);
+	async function handleEditTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!holidayId || !selectedTask) return;
+
+		try {
+			const payload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Decorations",
+				dueDate: values.dueDate || undefined,
+			};
+
+			const result = await editDecoration({
+				holidayId,
+				taskId: selectedTask.id,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "update");
+
+			setShowFormModal(false);
+			setSelectedTask(null);
+		} catch (error) {
+			console.error("Error editing decoration:", error);
+		}
+	}
+
+	function handleDeleteTask(taskId: string, taskTitle: string) {
+		const task = displayDecorations.find((t: any) => t.id === taskId);
 		setTaskToDelete(task);
 		setShowDeleteModal(true);
 	}
 
 	async function confirmDelete() {
-		if (taskToDelete) {
-			try {
-				await deleteDecoration({
-					holidayId: holidayId || "",
-					taskId: taskToDelete.id,
-					auth0User,
-				}).unwrap();
-				setShowDeleteModal(false);
-				setTaskToDelete(null);
-			} catch (error) {
-				console.error("Error deleting decoration:", error);
-			}
+		if (!taskToDelete || !holidayId) return;
+
+		try {
+			await deleteDecoration({
+				holidayId,
+				taskId: taskToDelete.id,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: taskToDelete.id }, "delete");
+
+			setShowDeleteModal(false);
+			setTaskToDelete(null);
+		} catch (error) {
+			console.error("Error deleting decoration:", error);
 		}
 	}
 
 	function cancelDelete() {
 		setShowDeleteModal(false);
 		setTaskToDelete(null);
-	}
-
-	const handleEditTask = (task: any) => {
-		setEditingTask(task);
-		setShowEditModal(true);
-	};
-
-	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!editingTask || !holidayId || !auth0User) return;
-
-		try {
-			await editDecoration({
-				holidayId,
-				taskId: editingTask.id,
-				payload: values,
-				auth0User,
-			}).unwrap();
-			setShowEditModal(false);
-			setEditingTask(null);
-		} catch (error) {
-			console.error("Error editing decoration:", error);
-		}
 	}
 
 	function sortTasks(tasksToSort: any[]): any[] {
@@ -278,11 +391,12 @@ export default function KwanzaaDecorationsPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen kwanzaa-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">
 						Loading decorations...
 					</p>
@@ -291,12 +405,18 @@ export default function KwanzaaDecorationsPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(decorations);
-	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
-	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+	// Sort decorations
+	const sortedDecorations = sortTasks(displayDecorations || []);
+	const incompleteTasks = sortedDecorations.filter(
+		(task: any) => !task.isCompleted
+	);
+	const completedTasks = sortedDecorations.filter(
+		(task: any) => task.isCompleted
+	);
 
 	// Get form configuration
-	const formConfig = getFormConfig("tasks", editingTask ? "edit" : "add");
+	const formConfig = getFormConfig("tasks", "add");
+	const editFormConfig = getFormConfig("tasks", "edit");
 	const deleteConfig = getDeleteConfig("tasks");
 
 	return (
@@ -306,7 +426,7 @@ export default function KwanzaaDecorationsPage() {
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort Decorations"
-				error={error ? "API Error" : undefined}
+				error={mutationError ? "API Error" : undefined}
 				holidayColor="red-600"
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
@@ -360,60 +480,16 @@ export default function KwanzaaDecorationsPage() {
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{incompleteTasks.map((task: any) => (
-									<li
+									<EventItems
 										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="text-gray-900 dark:text-white">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													{task.description}
-												</div>
-											)}
-											<div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-												<span
-													className={`px-2 py-1 rounded ${
-														task.priority === "high"
-															? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-															: task.priority === "medium"
-															? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-															: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-													}`}
-												>
-													{task.priority}
-												</span>
-												{task.assignedTo && (
-													<span>Assigned: {task.assignedTo}</span>
-												)}
-												{task.category && <span>{task.category}</span>}
-												{task.dueDate && (
-													<span>
-														Due: {new Date(task.dueDate).toLocaleDateString()}
-													</span>
-												)}
-											</div>
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
+										task={task}
+										onToggleTask={handleToggleTask}
+										onDeleteTask={handleDeleteTask}
+										onEditTask={openEditModal}
+										loading={updateLoading}
+										themeColor="red"
+										holidayColor="bg-red-600"
+									/>
 								))}
 							</ul>
 						)}
@@ -432,44 +508,16 @@ export default function KwanzaaDecorationsPage() {
 						) : (
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{completedTasks.map((task: any) => (
-									<li
+									<EventItems
 										key={task.id}
-										className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
-										onClick={() => handleToggleTask(task.id)}
-									>
-										<input
-											type="checkbox"
-											checked={task.isCompleted}
-											readOnly
-											className="mr-3 accent-blue-500"
-										/>
-										<div className="flex-1">
-											<div className="line-through text-gray-400 dark:text-gray-500">
-												{task.title}
-											</div>
-											{task.description && (
-												<div className="text-xs text-gray-400 dark:text-gray-500 line-through">
-													{task.description}
-												</div>
-											)}
-											{task.completedDate && (
-												<div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-													Completed:{" "}
-													{new Date(task.completedDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteTask(task.id);
-											}}
-											className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
-											disabled={loading}
-										>
-											Delete
-										</button>
-									</li>
+										task={task}
+										onToggleTask={handleToggleTask}
+										onDeleteTask={handleDeleteTask}
+										onEditTask={openEditModal}
+										loading={updateLoading}
+										themeColor="red"
+										holidayColor="bg-red-600"
+									/>
 								))}
 							</ul>
 						)}
@@ -478,96 +526,38 @@ export default function KwanzaaDecorationsPage() {
 			</main>
 
 			{/* Form Modal */}
-
-			{/* Form Modal */}
 			<FormModal
-				isOpen={showForm}
-				title={formConfig.title}
+				isOpen={showFormModal}
+				title={selectedTask ? "Edit Decoration" : "Add Decoration"}
 				fields={formConfig.fields}
 				initialValues={
-					editingTask
+					selectedTask
 						? {
-								title: editingTask.title || "",
-								description: editingTask.description || "",
-								priority: editingTask.priority || "medium",
-								assignedTo: editingTask.assignedTo || "",
-								dueDate: editingTask.dueDate || "",
+								title: selectedTask.title || "",
+								description: selectedTask.description || "",
+								priority: selectedTask.priority || "medium",
+								assignedTo: selectedTask.assignedTo || "",
+								dueDate: selectedTask.dueDate || "",
 						  }
 						: {}
 				}
-				onSubmit={editingTask ? handleEditTaskSubmit : handleAddTask}
+				onSubmit={selectedTask ? handleEditTask : handleAddTask}
 				onClose={closeForm}
-				loading={editDecorationState.isLoading}
-				submitText={formConfig.submitText}
-				cancelText={formConfig.cancelText}
-				cardClassName={formConfig.cardClassName}
-				submitButtonColor={formConfig.submitButtonColor}
-			/>
-
-			{/* Edit Modal */}
-			<FormModal
-				isOpen={showEditModal}
-				title="Edit Decoration Task"
-				fields={[
-					{
-						id: "title",
-						type: "text" as const,
-						placeholder: "Task Title*",
-						required: true,
-					},
-					{
-						id: "description",
-						type: "textarea" as const,
-						placeholder: "Description",
-						rows: 3,
-					},
-					{
-						id: "priority",
-						type: "select" as const,
-						placeholder: "Priority",
-						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
-						],
-					},
-					{
-						id: "assignedTo",
-						type: "text" as const,
-						placeholder: "Assigned To",
-					},
-					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
-				]}
-				initialValues={{
-					title: editingTask?.title || "",
-					description: editingTask?.description || "",
-					priority: editingTask?.priority || "medium",
-					assignedTo: editingTask?.assignedTo || "",
-					dueDate: editingTask?.dueDate || "",
-				}}
-				onSubmit={handleEditTaskSubmit}
-				onClose={() => {
-					setShowEditModal(false);
-					setEditingTask(null);
-				}}
-				loading={editDecorationState.isLoading}
-				submitText="Update Task"
+				loading={mutationLoading || editLoading}
+				submitText={selectedTask ? "Update Decoration" : "Add Decoration"}
+				cancelText="Cancel"
 				cardClassName="card card-tasks"
+				submitButtonColor="#dc2626"
 			/>
 
-			{/* Delete Modal */}
+			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={showDeleteModal}
-				title={deleteConfig.title}
-				message={deleteConfig.message}
-				itemName={taskToDelete?.title}
+				title="Delete Decoration"
+				message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={deleteDecorationState.isLoading}
-				cardClassName={deleteConfig.cardClassName}
-				confirmText={deleteConfig.confirmText}
-				cancelText={deleteConfig.cancelText}
-				confirmButtonColor={deleteConfig.confirmButtonColor}
+				loading={deleteLoading}
 			/>
 
 			{/* Sort Modal */}

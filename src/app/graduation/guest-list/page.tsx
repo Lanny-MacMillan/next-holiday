@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { useGuestMutations } from "@/hooks/useGuestMutations";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import SortModal from "@/components/modals/SortModal";
 import GuestCardItem from "@/components/cards/guest/GuestCardItem";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
@@ -53,6 +59,17 @@ export default function GraduationGuestListPage() {
 
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get home data and holiday data from Redux
+	const homeData = useAppSelector(selectHomeData);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+
+	// Note: Guests are not stored in home data, they use their own slice
+	// The useGuestMutations hook already handles Redux state updates
+
 	const [deleteConfirm, setDeleteConfirm] = useState<{
 		show: boolean;
 		guestId: string | null;
@@ -66,9 +83,12 @@ export default function GraduationGuestListPage() {
 	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+		// Fetch contacts for address book functionality
+		// Only fetch if home data is initialized (which contains contacts)
+		if (homeInitialized) {
+			dispatch(fetchContacts());
+		}
+	}, [dispatch, homeInitialized]);
 
 	async function handleAddGuest(formValues: Record<string, any>) {
 		if (
@@ -207,7 +227,8 @@ export default function GraduationGuestListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized or guests are loading
+	if (!homeInitialized || (loading && !initialized)) {
 		return (
 			<div className="min-h-screen graduation-gradient flex items-center justify-center">
 				<div className="text-center">

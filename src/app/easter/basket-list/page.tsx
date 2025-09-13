@@ -16,6 +16,16 @@ import SortModal from "@/components/modals/SortModal";
 import GiftCardItem from "@/components/cards/gift/GiftCardItem";
 import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+	updateGiftInHomeData,
+	addGiftToHomeData,
+	removeGiftFromHomeData,
+} from "@/store/slices/homeSlice";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
 
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import AddButton from "@/components/common/AddButton";
@@ -34,16 +44,40 @@ export default function EasterBasketListPage() {
 		auth0User,
 	} = useFormModalMutation();
 
-	// Fetch gifts using RTK Query
+	// Get Redux selectors
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for skip logic
+	const currentState = useAppSelector((state: any) => state);
+
+	// Get holiday ID for Easter - try to resolve from home data, fallback to route-based resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/easter", holidayPreferences)
+		: getHolidayIdFromRoute("/easter", holidayPreferences); // Allow fallback for cold entry
+
+	// Get holiday data from Redux if available
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+
+	// Use Redux data first, fallback to RTK Query if needed
+	const gifts = holidayData?.gifts || [];
+
+	// Fetch gifts using RTK Query as fallback (only when Redux data is not available)
 	const {
-		data: gifts = [],
+		data: fallbackGifts = [],
 		isLoading: loading,
 		error,
 		isSuccess: initialized,
 	} = useGetGiftsQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
+		{ holidayId: resolvedHolidayId || "", auth0User },
+		{
+			skip: !resolvedHolidayId || !auth0User || !!holidayData?.gifts, // Skip if we have Redux data
+		}
 	);
+
+	// Use Redux data if available, otherwise use fallback from RTK Query
+	const finalGifts = gifts.length > 0 ? gifts : fallbackGifts;
 
 	// Update gift mutation
 	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
@@ -52,6 +86,39 @@ export default function EasterBasketListPage() {
 	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
 	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
 
+	// Helper function to update Redux state after gift operations
+	const updateGiftInRedux = (
+		giftData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!resolvedHolidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(
+					addGiftToHomeData({ holidayId: resolvedHolidayId, gift: giftData })
+				);
+				break;
+			case "update":
+				dispatch(
+					updateGiftInHomeData({
+						holidayId: resolvedHolidayId,
+						giftId: giftData.id,
+						updates: giftData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeGiftFromHomeData({
+						holidayId: resolvedHolidayId,
+						giftId: giftData.id,
+					})
+				);
+				break;
+		}
+	};
+
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -59,11 +126,7 @@ export default function EasterBasketListPage() {
 	const [selectedGift, setSelectedGift] = useState<any>(null);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-	// Get home data to check if contacts are available
-	const homeData = useAppSelector((state: any) => state.home.data);
-	const homeInitialized = useAppSelector(
-		(state: any) => state.home.initialized
-	);
+	// Get home data to check if contacts are available (already declared above)
 
 	useEffect(() => {
 		// Fetch contacts for address book functionality
@@ -75,11 +138,19 @@ export default function EasterBasketListPage() {
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-		if (!holidayId || !mutation) return;
+		if (!resolvedHolidayId || !mutation) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await mutation({ holidayId, payload, auth0User }).unwrap();
+			const newGift = await mutation({
+				holidayId: resolvedHolidayId,
+				payload,
+				auth0User,
+			}).unwrap();
+
+			// Update Redux state immediately
+			updateGiftInRedux(newGift, "add");
+
 			setShowFormModal(false);
 		} catch (error) {
 			console.error("Error creating gift:", error);
@@ -103,11 +174,11 @@ export default function EasterBasketListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!holidayId) return;
+		if (!resolvedHolidayId) return;
 
 		try {
 			// Find the current gift to get its completion status
-			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			const currentGift = finalGifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
@@ -115,13 +186,17 @@ export default function EasterBasketListPage() {
 
 			// Update the gift in the database
 			await updateGift({
-				holidayId: holidayId || "",
+				holidayId: resolvedHolidayId,
 				giftId,
 				isCompleted: newIsCompleted,
 				auth0User,
 			}).unwrap();
 
-			// The UI will automatically update due to RTK Query cache invalidation
+			// Update Redux state immediately
+			updateGiftInRedux(
+				{ ...currentGift, isCompleted: newIsCompleted },
+				"update"
+			);
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
@@ -134,14 +209,18 @@ export default function EasterBasketListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !holidayId) return;
+		if (!giftToDelete || !resolvedHolidayId) return;
 
 		try {
 			await deleteGift({
-				holidayId,
+				holidayId: resolvedHolidayId,
 				giftId: giftToDelete.id,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state immediately
+			updateGiftInRedux(giftToDelete, "delete");
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
@@ -160,16 +239,20 @@ export default function EasterBasketListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+		if (!selectedGift || !resolvedHolidayId) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			await editGift({
-				holidayId,
+			const updatedGift = await editGift({
+				holidayId: resolvedHolidayId,
 				giftId: selectedGift.id,
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state immediately
+			updateGiftInRedux(updatedGift, "update");
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {
@@ -215,7 +298,7 @@ export default function EasterBasketListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts || []);
+	const sortedGifts = sortGifts(finalGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
@@ -327,7 +410,7 @@ export default function EasterBasketListPage() {
 				<BudgetDisplay
 					holiday="Easter"
 					holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-					holidayId={holidayId || undefined}
+					holidayId={resolvedHolidayId || undefined}
 				/>
 
 				<AddButton title="Basket Item" onClick={openForm} color="purple" />

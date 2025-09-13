@@ -74,25 +74,60 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			};
 		}
 
-		// Get holiday preferences for this account
+		// Get holiday preferences for this account with all related data
 		const holidays = await prisma.holiday.findMany({
 			where: { accountId: account.id },
 			include: {
 				budgets: true,
+				gifts: true,
+				cards: true,
+				tasks: true,
 			},
 			orderBy: {
 				holidayType: "asc",
 			},
 		});
 
-		const holidayPreferences = holidays.map((holiday) => ({
-			holiday: holiday.holidayType,
-			holidayId: holiday.id,
-			budget: holiday.budgets[0]?.totalBudget
-				? parseFloat(holiday.budgets[0].totalBudget.toString())
-				: undefined,
-			countdownTimer: holiday.countdownTimer?.toISOString(),
-		}));
+		const holidayPreferences = holidays.map((holiday) => {
+			const allTasks = holiday.tasks || [];
+
+			// Debug: Log task categories for Kwanzaa
+			if (holiday.holidayType === "Kwanzaa") {
+				console.log(
+					"Kwanzaa tasks:",
+					allTasks.map((t: any) => ({
+						id: t.id,
+						title: t.title,
+						category: t.category,
+					}))
+				);
+			}
+
+			// Filter tasks by category for specific holiday types
+			const events = allTasks.filter((task: any) => task.category === "Events");
+			const decorations = allTasks.filter(
+				(task: any) => task.category === "Decorations"
+			);
+			const kwanzaaPrinciples = allTasks.filter(
+				(task: any) => task.category === "Kwanzaa Principles"
+			);
+
+			return {
+				holiday: holiday.holidayType,
+				holidayId: holiday.id,
+				budget: holiday.budgets[0]?.totalBudget
+					? parseFloat(holiday.budgets[0].totalBudget.toString())
+					: undefined,
+				countdownTimer: holiday.countdownTimer?.toISOString(),
+				gifts: holiday.gifts || [],
+				cards: holiday.cards || [],
+				tasks: allTasks,
+				// Add filtered task categories
+				events,
+				decorations,
+				kwanzaaPrinciples,
+			};
+		});
 
 		// Get contacts for this account
 		const contacts = await prisma.contact.findMany({
