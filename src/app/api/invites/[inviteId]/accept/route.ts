@@ -5,15 +5,17 @@ const prisma = new PrismaClient();
 
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: { inviteId: string } }
+	{ params }: { params: Promise<{ inviteId: string }> }
 ) {
 	try {
-		const { inviteId } = params;
+		const { inviteId } = await params;
+		console.log("[accept] inviteId:", inviteId);
 
 		// Find the invite
 		const invite = await prisma.invite.findUnique({
 			where: { id: inviteId },
 		});
+		console.log("[accept] invite:", invite);
 
 		if (!invite) {
 			return NextResponse.json({ error: "Invite not found" }, { status: 404 });
@@ -34,24 +36,56 @@ export async function POST(
 				respondedAt: new Date(),
 			},
 		});
+		console.log("[accept] updatedInvite:", updatedInvite);
 
-		// Add user to share members
-		const userId = invite.toUserId || invite.toEmail;
-		if (userId) {
+		// Resolve the internal user ID to add as a share member
+		let resolvedUserId: string | null = invite.toUserId ?? null;
+		if (!resolvedUserId && invite.toEmail) {
+			const toUser = await prisma.user.findFirst({
+				where: {
+					OR: [{ email: invite.toEmail }, { auth0Sub: invite.toEmail }],
+				},
+				select: { id: true },
+			});
+			resolvedUserId = toUser?.id ?? null;
+		}
+		console.log("[accept] resolvedUserId:", resolvedUserId);
+
+		if (!resolvedUserId) {
+			return NextResponse.json(
+				{ error: "Invite target user not found" },
+				{ status: 400 }
+			);
+		}
+
+		// Avoid duplicate membership in share
+		const existingMember = await prisma.shareMember.findUnique({
+			where: {
+				shareId_userId: { shareId: invite.shareId, userId: resolvedUserId },
+			},
+		});
+		console.log("[accept] existing share member:", !!existingMember);
+
+		if (!existingMember) {
 			await prisma.shareMember.create({
 				data: {
 					shareId: invite.shareId,
-					userId: userId,
+					userId: resolvedUserId,
 					invitedBy: invite.fromUserId,
-				}
+				},
 			});
+			console.log("[accept] created ShareMember for", resolvedUserId);
 		}
 
 		// Get updated share
 		const share = await prisma.share.findUnique({
 			where: { id: invite.shareId },
-			include: { members: true }
+			include: { members: true },
 		});
+		console.log(
+			"[accept] final share members:",
+			share?.members?.map((m) => m.userId)
+		);
 
 		return NextResponse.json({ invite: updatedInvite, share });
 	} catch (error) {

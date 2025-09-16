@@ -30,9 +30,43 @@ export const api = createApi({
 		"KwanzaaPrinciples",
 		"Resolutions",
 		"Reservations",
+		"Holidays",
 	],
 	endpoints: (builder) => ({
 		// Query endpoints
+		getHolidays: builder.query<
+			any[],
+			{
+				scope?: "mine" | "shared" | "all";
+				accountId?: string;
+				holidayType?: string;
+				q?: string;
+				sortBy?: string;
+				sortOrder?: "asc" | "desc";
+				auth0User?: any;
+			} | void
+		>({
+			query: (args) => {
+				const scope = args?.scope ?? "all";
+				const auth0User = (args as any)?.auth0User;
+				return {
+					url: "/holidays",
+					params: { ...args, scope },
+					headers: auth0User
+						? {
+								"x-test-user": JSON.stringify({
+									sub: auth0User.sub,
+									email: auth0User.email,
+									name: auth0User.name,
+									picture: auth0User.picture,
+								}),
+						  }
+						: {},
+				};
+			},
+			transformResponse: (r: { success: boolean; data: any[] }) => r.data ?? [],
+			providesTags: (r) => [{ type: "Holidays", id: "LIST" }],
+		}),
 		getGifts: builder.query<any[], { holidayId: string; auth0User?: any }>({
 			query: ({ holidayId, auth0User }) => ({
 				url: `holidays/${holidayId}/gifts`,
@@ -3169,6 +3203,7 @@ export const {
 	useEditGuestMutation,
 	useDeleteGuestMutation,
 	useCardOperationMutation,
+	useGetHolidaysQuery,
 	useGetGiftsQuery,
 	useGetAllGiftsQuery,
 	useGetCardsQuery,

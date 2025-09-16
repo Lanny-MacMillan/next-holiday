@@ -7,11 +7,6 @@ import { requireAccountAccess } from "@/lib/rbac";
 import { toPlain } from "@/lib/json";
 import { dateOnlyToUTC, toDateOnlyString } from "@/lib/dates";
 import {
-	parsePagination,
-	createPaginationMeta,
-	createPaginatedResponse,
-} from "@/lib/pagination";
-import {
 	ok,
 	created,
 	badRequest,
@@ -60,103 +55,108 @@ const HolidayQuerySchema = z.object({
 	q: z.string().optional(),
 	sortBy: z.enum(["name", "startDate", "createdAt"]).optional(),
 	sortOrder: z.enum(["asc", "desc"]).optional(),
+	scope: z.enum(["mine", "shared", "all"]).default("all"),
 });
 
 // GET /api/holidays - List holidays
 export async function GET(request: NextRequest) {
 	try {
 		const user = await requireAuth(request);
-		const pagination = parsePagination(request);
 
 		// Parse and validate query parameters
 		const searchParams = request.nextUrl.searchParams;
 		const queryResult = HolidayQuerySchema.safeParse({
-			accountId: searchParams.get("accountId"),
-			holidayType: searchParams.get("holidayType"),
-			q: searchParams.get("q"),
-			sortBy: searchParams.get("sortBy"),
-			sortOrder: searchParams.get("sortOrder"),
+			accountId: searchParams.get("accountId") || undefined,
+			holidayType: searchParams.get("holidayType") || undefined,
+			q: searchParams.get("q") || undefined,
+			sortBy: searchParams.get("sortBy") || undefined,
+			sortOrder: searchParams.get("sortOrder") || undefined,
+			scope: searchParams.get("scope") || undefined,
 		});
 
 		if (!queryResult.success) {
 			return badRequest(queryResult.error.issues);
 		}
 
-		const { accountId, holidayType, q, sortBy, sortOrder } = queryResult.data;
+		const { accountId, holidayType, q, sortBy, sortOrder, scope } =
+			queryResult.data;
 
-		// Build where clause
-		const where = {
-			account: {
-				members: {
-					some: {
-						userId: user.id,
+		// Build base where clause: include
+		// 1) Holidays in any account the user belongs to, or
+		// 2) Holidays shared with the user via Share -> ShareMember
+		const tenantOrShareFilter = {
+			OR: [
+				{
+					account: {
+						members: {
+							some: {
+								userId: user.id,
+							},
+						},
 					},
 				},
-			},
+				{
+					shares: {
+						some: {
+							members: {
+								some: {
+									userId: user.id,
+								},
+							},
+						},
+					},
+				},
+			],
+		} as const;
+
+		const textFilter = q
+			? {
+					OR: [
+						{ name: { contains: q, mode: "insensitive" as const } },
+						{ description: { contains: q, mode: "insensitive" as const } },
+					],
+			  }
+			: {};
+
+		const whereBase = {
+			...tenantOrShareFilter,
 			...(accountId && { accountId }),
 			...(holidayType && { holidayType }),
-			...(q && {
-				OR: [
-					{ name: { contains: q, mode: "insensitive" as const } },
-					{ description: { contains: q, mode: "insensitive" as const } },
-				],
-			}),
+			...textFilter,
 		};
 
-		// Build order by clause
-		const orderBy = sortBy
-			? ({ [sortBy]: sortOrder || "asc" } as const)
-			: ({ startDate: "asc" } as const);
+		// Apply scope filtering
+		const where =
+			scope === "mine"
+				? { ...whereBase, createdBy: user.id }
+				: scope === "shared"
+				? { ...whereBase, createdBy: { not: user.id } }
+				: whereBase;
 
-		// Get holidays with pagination
-		const [holidays, total] = await Promise.all([
-			prisma.holiday.findMany({
-				where,
-				orderBy,
-				skip: pagination.offset,
-				take: pagination.limit,
-				include: {
-					account: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
-					creator: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-						},
-					},
-					_count: {
-						select: {
-							tasks: true,
-							gifts: true,
-							cards: true,
-							budgets: true,
-						},
-					},
-				},
-			}),
-			prisma.holiday.count({ where }),
-		]);
+		// Get holidays with simplified select and annotate visibility
+		const items = await prisma.holiday.findMany({
+			where,
+			orderBy: [{ createdAt: "desc" }],
+			distinct: ["id"],
+			select: {
+				id: true,
+				name: true,
+				holidayType: true,
+				accountId: true,
+				createdBy: true,
+				createdAt: true,
+				updatedAt: true,
+			},
+		});
 
-		// Transform date fields to strings for API response
-		const transformedHolidays = holidays.map((holiday) => ({
-			...holiday,
-			startDate: toDateOnlyString(holiday.startDate),
-			endDate: toDateOnlyString(holiday.endDate),
+		// Annotate visibility server-side
+		const data = items.map((h) => ({
+			...h,
+			_visibility: h.createdBy === user.id ? "mine" : "shared",
 		}));
 
-		const meta = createPaginationMeta(
-			pagination.page,
-			pagination.pageSize,
-			total
-		);
-		const response = createPaginatedResponse(transformedHolidays, meta);
-
-		return ok(toPlain(response));
+		// Return a plain array; ok() wraps as { success: true, data }
+		return ok(toPlain(data));
 	} catch (error) {
 		console.error("Error fetching holidays:", error);
 		return serverError("Failed to fetch holidays");

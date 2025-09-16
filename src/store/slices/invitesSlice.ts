@@ -156,7 +156,7 @@ const invitesSlice = createSlice({
 		},
 		updateInviteInState: (state, action: PayloadAction<Invite>) => {
 			const index = state.invites.findIndex(
-				(invite) => invite.inviteId === action.payload.inviteId
+				(invite) => invite.id === action.payload.id
 			);
 			if (index !== -1) {
 				state.invites[index] = action.payload;
@@ -164,7 +164,7 @@ const invitesSlice = createSlice({
 		},
 		removeInvite: (state, action: PayloadAction<string>) => {
 			state.invites = state.invites.filter(
-				(invite) => invite.inviteId !== action.payload
+				(invite) => invite.id !== action.payload
 			);
 		},
 	},
@@ -243,11 +243,13 @@ const invitesSlice = createSlice({
 			})
 			.addCase(acceptInvite.fulfilled, (state, action) => {
 				state.loading = false;
-				const index = state.invites.findIndex(
-					(invite) => invite.inviteId === action.payload.inviteId
-				);
-				if (index !== -1) {
-					state.invites[index] = action.payload;
+				// API returns { invite, share }
+				const acceptedInvite: Invite = action.payload.invite;
+				const idx = state.invites.findIndex((i) => i.id === acceptedInvite.id);
+				if (idx !== -1) {
+					state.invites[idx] = acceptedInvite;
+				} else {
+					state.invites.push(acceptedInvite);
 				}
 			})
 			.addCase(acceptInvite.rejected, (state, action) => {
@@ -261,11 +263,13 @@ const invitesSlice = createSlice({
 			})
 			.addCase(declineInvite.fulfilled, (state, action) => {
 				state.loading = false;
-				const index = state.invites.findIndex(
-					(invite) => invite.inviteId === action.payload.inviteId
-				);
-				if (index !== -1) {
-					state.invites[index] = action.payload;
+				// Decline endpoint returns the updated invite directly
+				const declinedInvite: Invite = action.payload;
+				const idx = state.invites.findIndex((i) => i.id === declinedInvite.id);
+				if (idx !== -1) {
+					state.invites[idx] = declinedInvite;
+				} else {
+					state.invites.push(declinedInvite);
 				}
 			})
 			.addCase(declineInvite.rejected, (state, action) => {

@@ -45,6 +45,8 @@ export default function Header() {
 		setIsMenuOpen(false);
 	};
 
+	// Removed Holidays menu item
+
 	const handleUpgrade = () => {
 		// TODO: Implement upgrade logic
 		console.log("Upgrade clicked");

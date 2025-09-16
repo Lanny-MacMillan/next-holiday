@@ -5,10 +5,10 @@ const prisma = new PrismaClient();
 
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: { inviteId: string } }
+	{ params }: { params: Promise<{ inviteId: string }> }
 ) {
 	try {
-		const { inviteId } = params;
+		const { inviteId } = await params;
 
 		// Find the invite
 		const invite = await prisma.invite.findUnique({

@@ -119,13 +119,28 @@ export async function assertHolidayAccess(
 		const holiday = await prisma.holiday.findFirst({
 			where: {
 				id: holidayId,
-				account: {
-					members: {
-						some: {
-							userId: userId,
+				OR: [
+					{
+						account: {
+							members: {
+								some: {
+									userId: userId,
+								},
+							},
 						},
 					},
-				},
+					{
+						shares: {
+							some: {
+								members: {
+									some: {
+										userId: userId,
+									},
+								},
+							},
+						},
+					},
+				],
 			},
 			select: { id: true },
 		});
