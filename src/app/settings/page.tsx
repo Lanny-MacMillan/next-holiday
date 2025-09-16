@@ -8,6 +8,7 @@ import { saveHolidayPreferences } from "@/store/slices/holidayPreferencesSlice";
 import { setHomeData } from "@/store/slices/homeSlice";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import HolidayDeleteConfirmationModal from "@/components/modals/HolidayDeleteConfirmationModal";
 
 export default function SettingsPage() {
 	const { user } = useAuth0();
@@ -20,6 +21,13 @@ export default function SettingsPage() {
 		[]
 	);
 	const [imageError, setImageError] = useState(false);
+
+	// Cascade delete modal state
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [holidayToDelete, setHolidayToDelete] = useState<{
+		name: string;
+		id: string;
+	} | null>(null);
 
 	// Reset image error when user changes
 	useEffect(() => {
@@ -148,6 +156,24 @@ export default function SettingsPage() {
 		isSelected: boolean,
 		budget: number = 500
 	) => {
+		// If deselecting a holiday, show cascade delete confirmation
+		if (!isSelected) {
+			// Find the holiday ID from the existing preferences
+			const existingPreference = localHolidayPreferences.find(
+				(p) => p.holiday === holiday
+			);
+
+			if (existingPreference?.holidayId) {
+				// Show cascade delete confirmation modal
+				setHolidayToDelete({
+					name: holiday,
+					id: existingPreference.holidayId,
+				});
+				setDeleteModalOpen(true);
+				return; // Don't proceed with normal deselection
+			}
+		}
+
 		let newPreferences = [...localHolidayPreferences];
 
 		if (isSelected) {
@@ -164,7 +190,7 @@ export default function SettingsPage() {
 				newPreferences.push({ holiday, budget });
 			}
 		} else {
-			// Remove holiday preference
+			// Remove holiday preference (this should only happen for holidays without holidayId)
 			newPreferences = newPreferences.filter((p) => p.holiday !== holiday);
 		}
 
@@ -211,6 +237,38 @@ export default function SettingsPage() {
 
 	const handleSave = () => {
 		dispatch(updateSettings(localSettings));
+	};
+
+	// Cascade delete modal handlers
+	const handleDeleteModalClose = () => {
+		setDeleteModalOpen(false);
+		setHolidayToDelete(null);
+	};
+
+	const handleDeleteConfirm = async () => {
+		// Remove the holiday from local preferences
+		const newPreferences = localHolidayPreferences.filter(
+			(p) => p.holiday !== holidayToDelete?.name
+		);
+		setLocalHolidayPreferences(newPreferences);
+
+		// Save to database
+		if (user?.sub && homeData?.account?.id) {
+			try {
+				await dispatch(
+					saveHolidayPreferences({
+						accountId: homeData.account.id,
+						preferences: newPreferences,
+						auth0User: user,
+					})
+				).unwrap();
+			} catch (error) {
+				console.error(
+					"Failed to save holiday preferences after deletion:",
+					error
+				);
+			}
+		}
 	};
 
 	// Use preferences from database if available, otherwise fall back to local settings
@@ -578,6 +636,18 @@ export default function SettingsPage() {
 					</button>
 				</div>
 			</main>
+
+			{/* Cascade Delete Confirmation Modal */}
+			{holidayToDelete && (
+				<HolidayDeleteConfirmationModal
+					isOpen={deleteModalOpen}
+					onClose={handleDeleteModalClose}
+					onConfirm={handleDeleteConfirm}
+					holidayName={holidayToDelete.name}
+					holidayId={holidayToDelete.id}
+					accountId={homeData?.account?.id || ""}
+				/>
+			)}
 		</div>
 	);
 }
