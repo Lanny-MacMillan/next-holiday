@@ -311,7 +311,7 @@ export default function HanukkahGiftListPage() {
 					completedMessage=""
 					renderItem={(gift: any) => (
 						<GiftCardItem
-							key={gift.id}
+							
 							gift={gift}
 							isCompleted={false}
 							onToggle={handleToggleGift}
@@ -335,7 +335,7 @@ export default function HanukkahGiftListPage() {
 					completedMessage="No completed gifts yet."
 					renderItem={(gift: any) => (
 						<GiftCardItem
-							key={gift.id}
+							
 							gift={gift}
 							isCompleted={true}
 							onToggle={handleToggleGift}

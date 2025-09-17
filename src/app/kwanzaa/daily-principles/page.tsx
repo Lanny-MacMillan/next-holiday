@@ -364,7 +364,7 @@ export default function DailyPrinciplesPage() {
 
 	const renderTaskItem = (task: any) => (
 		<div
-			key={task.id}
+			
 			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
 			onClick={() => handleToggleTask(task.id)}
 		>
@@ -427,7 +427,7 @@ export default function DailyPrinciplesPage() {
 
 	const renderCompletedTaskItem = (task: any) => (
 		<div
-			key={task.id}
+			
 			className="flex items-center px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 opacity-60"
 			onClick={() => handleToggleTask(task.id)}
 		>

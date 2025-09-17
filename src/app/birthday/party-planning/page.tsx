@@ -289,7 +289,6 @@ export default function BirthdayPartyPlanningPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
@@ -312,7 +311,6 @@ export default function BirthdayPartyPlanningPage() {
 					completedMessage="No completed party planning tasks yet."
 					renderItem={(task) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}

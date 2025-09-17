@@ -439,7 +439,7 @@ export default function HalloweenCostumeIdeasPage() {
 					completedMessage="No costume ideas yet. Add your first costume task!"
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -461,7 +461,7 @@ export default function HalloweenCostumeIdeasPage() {
 					completedMessage="No completed costume tasks yet."
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

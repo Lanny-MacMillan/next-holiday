@@ -354,7 +354,6 @@ export default function AnniversaryDateIdeasPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
@@ -373,7 +372,6 @@ export default function AnniversaryDateIdeasPage() {
 					completedMessage="No completed date ideas yet."
 					renderItem={(task) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}

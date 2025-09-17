@@ -252,7 +252,7 @@ export default function BabyShowerGamesPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}
@@ -271,7 +271,7 @@ export default function BabyShowerGamesPage() {
 					completedMessage="No completed games yet."
 					renderItem={(task) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleCompletion}
 							onDelete={handleDelete}

@@ -327,7 +327,7 @@ export default function NewYearSuppliesListPage() {
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{incompleteGifts.map((gift: any) => (
 									<GiftCardItem
-										key={gift.id}
+										
 										gift={gift}
 										isCompleted={gift.isCompleted}
 										onToggle={() => handleToggleGift(gift.id)}
@@ -356,7 +356,7 @@ export default function NewYearSuppliesListPage() {
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{completedGifts.map((gift: any) => (
 									<GiftCardItem
-										key={gift.id}
+										
 										gift={gift}
 										isCompleted={gift.isCompleted}
 										onToggle={() => handleToggleGift(gift.id)}

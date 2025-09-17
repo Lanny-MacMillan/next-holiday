@@ -313,7 +313,7 @@ export default function FourthOfJulySuppliesListPage() {
 					completedMessage=""
 					renderItem={(gift: any) => (
 						<GiftCardItem
-							key={gift.id}
+							
 							gift={gift}
 							isCompleted={false}
 							onToggle={handleToggleGift}
@@ -337,7 +337,7 @@ export default function FourthOfJulySuppliesListPage() {
 					completedMessage=""
 					renderItem={(gift: any) => (
 						<GiftCardItem
-							key={gift.id}
+							
 							gift={gift}
 							isCompleted={true}
 							onToggle={handleToggleGift}

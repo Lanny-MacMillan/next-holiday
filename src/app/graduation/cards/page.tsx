@@ -329,7 +329,7 @@ export default function GraduationCardsPage() {
 							completedMessage="All cards sent!"
 							renderItem={(card) => (
 								<MailCard
-									key={card.id}
+									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}
@@ -347,7 +347,7 @@ export default function GraduationCardsPage() {
 							completedMessage="No sent cards to display."
 							renderItem={(card) => (
 								<MailCard
-									key={card.id}
+									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}

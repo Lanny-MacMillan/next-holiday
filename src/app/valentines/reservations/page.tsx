@@ -410,7 +410,7 @@ export default function ValentinesReservationsPage() {
 							emptyMessage="No pending reservations"
 							completedMessage=""
 							renderItem={(task) => (
-								<li key={task.id} className="p-4">
+								<li  className="p-4">
 									<ReservationCard
 										id={task.id}
 										title={task.title}
@@ -434,7 +434,7 @@ export default function ValentinesReservationsPage() {
 							emptyMessage="No confirmed reservations"
 							completedMessage="No reservations confirmed!"
 							renderItem={(task) => (
-								<li key={task.id} className="p-4">
+								<li  className="p-4">
 									<ReservationCard
 										id={task.id}
 										title={task.title}

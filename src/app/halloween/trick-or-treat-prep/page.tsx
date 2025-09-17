@@ -381,7 +381,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 					completedMessage="No trick-or-treat prep tasks yet. Add your first task!"
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -403,7 +403,7 @@ export default function HalloweenTrickOrTreatPrepPage() {
 					completedMessage="No completed trick-or-treat prep tasks yet."
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

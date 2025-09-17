@@ -434,7 +434,7 @@ export default function NewYearEventsPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<EventItems
-							key={task.id}
+							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
@@ -477,7 +477,7 @@ export default function NewYearEventsPage() {
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
 						<EventItems
-							key={task.id}
+							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}

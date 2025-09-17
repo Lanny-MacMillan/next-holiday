@@ -317,7 +317,7 @@ export default function BirthdayCardsPage() {
 							completedMessage="All cards sent!"
 							renderItem={(card) => (
 								<MailCard
-									key={card.id}
+									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}
@@ -335,7 +335,7 @@ export default function BirthdayCardsPage() {
 							completedMessage="No sent cards to display."
 							renderItem={(card) => (
 								<MailCard
-									key={card.id}
+									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}

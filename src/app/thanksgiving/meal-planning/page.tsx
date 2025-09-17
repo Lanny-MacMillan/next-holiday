@@ -332,7 +332,7 @@ export default function ThanksgivingMealPlanningPage() {
 					completedMessage="No meal planning tasks yet. Add your first task!"
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -354,7 +354,7 @@ export default function ThanksgivingMealPlanningPage() {
 					completedMessage="No completed meal planning tasks yet."
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

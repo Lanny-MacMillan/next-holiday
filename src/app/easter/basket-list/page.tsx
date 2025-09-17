@@ -304,7 +304,7 @@ export default function EasterBasketListPage() {
 
 	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
-			key={gift.id}
+			
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
@@ -321,7 +321,7 @@ export default function EasterBasketListPage() {
 
 	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
-			key={gift.id}
+			
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}

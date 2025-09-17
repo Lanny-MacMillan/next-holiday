@@ -347,7 +347,7 @@ export default function FourthOfJulyDecorationsPage() {
 
 	const renderTaskItem = (task: any) => (
 		<DecorationsListItem
-			key={task.id}
+			
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}

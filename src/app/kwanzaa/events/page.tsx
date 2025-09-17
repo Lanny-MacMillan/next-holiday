@@ -461,7 +461,7 @@ export default function KwanzaaEventsPage() {
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{incompleteTasks.map((task: any) => (
 									<EventItems
-										key={task.id}
+										
 										task={task}
 										onToggleTask={handleToggleTask}
 										onDeleteTask={handleDeleteTask}
@@ -489,7 +489,7 @@ export default function KwanzaaEventsPage() {
 							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 								{completedTasks.map((task: any) => (
 									<EventItems
-										key={task.id}
+										
 										task={task}
 										onToggleTask={handleToggleTask}
 										onDeleteTask={handleDeleteTask}

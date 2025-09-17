@@ -231,7 +231,7 @@ export default function KwanzaaTasksPage() {
 					completedMessage=""
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -252,7 +252,7 @@ export default function KwanzaaTasksPage() {
 					completedMessage=""
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

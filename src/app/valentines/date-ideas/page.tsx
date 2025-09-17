@@ -360,7 +360,7 @@ export default function ValentinesDateIdeasPage() {
 					) : (
 						sortedTasks.map((task) => (
 							<DateIdeaCard
-								key={task.id}
+								
 								task={task}
 								onToggleCompletion={handleToggleCompletion}
 								onEdit={handleEditTask}

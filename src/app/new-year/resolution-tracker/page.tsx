@@ -367,7 +367,7 @@ export default function NewYearResolutionTrackerPage() {
 					) : (
 						sortedTasks.map((task) => (
 							<DateIdeaCard
-								key={task.id}
+								
 								task={task}
 								onToggleCompletion={handleToggleCompletion}
 								onEdit={handleEditTask}

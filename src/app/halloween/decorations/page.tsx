@@ -349,7 +349,7 @@ export default function HalloweenDecorationsPage() {
 
 	const renderTaskItem = (task: any) => (
 		<DecorationsListItem
-			key={task.id}
+			
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}

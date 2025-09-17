@@ -298,7 +298,7 @@ export default function GraduationEventsPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<EventItems
-							key={task.id}
+							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
@@ -318,7 +318,7 @@ export default function GraduationEventsPage() {
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
 						<EventItems
-							key={task.id}
+							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}

@@ -313,7 +313,7 @@ export default function ValentinesCardsPage() {
 							completedMessage="All cards sent!"
 							renderItem={(card) => (
 								<MailCard
-									key={card.id}
+									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}
@@ -331,7 +331,7 @@ export default function ValentinesCardsPage() {
 							completedMessage="No sent cards to display."
 							renderItem={(card) => (
 								<MailCard
-									key={card.id}
+									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}

@@ -341,7 +341,6 @@ export default function TasksPage() {
 					completedMessage="All tasks completed! 🎉"
 					renderItem={(task: Task) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -364,7 +363,6 @@ export default function TasksPage() {
 					completedMessage="No completed tasks yet."
 					renderItem={(task: Task) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

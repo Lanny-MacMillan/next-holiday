@@ -308,7 +308,7 @@ export default function HanukkahDecorationsPage() {
 					completedMessage=""
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -330,7 +330,7 @@ export default function HanukkahDecorationsPage() {
 					completedMessage="No completed tasks yet."
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
+							
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

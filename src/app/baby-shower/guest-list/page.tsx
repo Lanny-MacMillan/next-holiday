@@ -395,7 +395,7 @@ export default function BabyShowerGuestListPage() {
 					emptyMessage="No pending RSVPs yet."
 					renderItem={(guest: Guest) => (
 						<GuestCardItem
-							key={guest.id}
+							
 							guest={guest}
 							onToggle={handleToggleGuest}
 							onEdit={(guest) => {
@@ -419,7 +419,7 @@ export default function BabyShowerGuestListPage() {
 					emptyMessage="No confirmed RSVPs yet."
 					renderItem={(guest: Guest) => (
 						<GuestCardItem
-							key={guest.id}
+							
 							guest={guest}
 							onToggle={handleToggleGuest}
 							onEdit={(guest) => {
@@ -443,7 +443,7 @@ export default function BabyShowerGuestListPage() {
 					emptyMessage="No declined RSVPs yet."
 					renderItem={(guest: Guest) => (
 						<GuestCardItem
-							key={guest.id}
+							
 							guest={guest}
 							onToggle={handleToggleGuest}
 							onEdit={(guest) => {

@@ -271,7 +271,7 @@ export default function AddressBookPage() {
 						<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 							{sortedContacts.map((contact: Contact) => (
 								<li
-									key={contact.id}
+									
 									className="flex items-start px-3 sm:px-4 py-3 sm:py-4 gap-3"
 								>
 									<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center flex-shrink-0">

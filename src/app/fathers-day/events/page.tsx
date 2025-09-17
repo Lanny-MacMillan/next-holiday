@@ -290,7 +290,7 @@ export default function FathersDayEventsPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<EventItems
-							key={task.id}
+							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
@@ -310,7 +310,7 @@ export default function FathersDayEventsPage() {
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
 						<EventItems
-							key={task.id}
+							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}

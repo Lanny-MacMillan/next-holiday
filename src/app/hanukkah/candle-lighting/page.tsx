@@ -304,7 +304,6 @@ export default function CandleLightingPage() {
 					completedMessage=""
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
@@ -326,7 +325,6 @@ export default function CandleLightingPage() {
 					completedMessage="No completed tasks yet."
 					renderItem={(task: any) => (
 						<ToDoCard
-							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}

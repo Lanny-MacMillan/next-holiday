@@ -54,7 +54,9 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 					</div>
 				) : (
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-						{items.map((item) => renderItem(item))}
+						{items.map((item, index) => (
+							<li key={item.id || index}>{renderItem(item)}</li>
+						))}
 					</ul>
 				)}
 			</div>
