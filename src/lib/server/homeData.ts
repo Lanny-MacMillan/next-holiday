@@ -59,8 +59,8 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			};
 		}
 
-		// Fetch holidays from user's own accounts or those shared with them
-		const holidays = await prisma.holiday.findMany({
+		// Fetch ALL holidays (owned + shared) for display purposes
+		const allHolidays = await prisma.holiday.findMany({
 			where: {
 				OR: [
 					{ accountId: { in: ownAccountIds } },
@@ -75,11 +75,38 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				guestLists: { include: { contact: true } },
 			},
 			orderBy: { holidayType: "asc" },
+			distinct: ["id"],
 		});
+
+		// Fetch ONLY owned holidays for holiday preferences
+		const ownedHolidays = await prisma.holiday.findMany({
+			where: {
+				accountId: { in: ownAccountIds },
+			},
+			include: {
+				budgets: true,
+				gifts: true,
+				cards: true,
+				tasks: true,
+				guestLists: { include: { contact: true } },
+			},
+			orderBy: { holidayType: "asc" },
+		});
+
 		console.log(
-			"[homeData] holidays fetched:",
-			holidays.length,
-			holidays.map((h) => ({
+			"[homeData] all holidays fetched:",
+			allHolidays.length,
+			allHolidays.map((h) => ({
+				id: h.id,
+				type: h.holidayType,
+				accountId: h.accountId,
+				isOwned: ownAccountIds.includes(h.accountId),
+			}))
+		);
+		console.log(
+			"[homeData] owned holidays for preferences:",
+			ownedHolidays.length,
+			ownedHolidays.map((h) => ({
 				id: h.id,
 				type: h.holidayType,
 				accountId: h.accountId,
@@ -103,7 +130,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			"baby-shower": "Baby Shower",
 		};
 
-		const holidayPreferences = holidays.map((holiday) => {
+		const holidayPreferences = ownedHolidays.map((holiday) => {
 			const allTasks = holiday.tasks || [];
 			const events = allTasks.filter((task: any) => task.category === "Events");
 			const decorations = allTasks.filter(
@@ -159,8 +186,14 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 		});
 
 		console.log(
-			"[homeData] holidayPreferences (display name -> id):",
+			"[homeData] holidayPreferences (display name -> id) - OWNED ONLY:",
 			holidayPreferences.map((p) => ({ holiday: p.holiday, id: p.holidayId }))
+		);
+		console.log(
+			"[homeData] shared holidays excluded from preferences:",
+			allHolidays
+				.filter((h) => !ownAccountIds.includes(h.accountId))
+				.map((h) => ({ holiday: h.holidayType, id: h.id }))
 		);
 
 		// Contacts only from user's own accounts

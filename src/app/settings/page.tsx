@@ -5,7 +5,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
 import { saveHolidayPreferences } from "@/store/slices/holidayPreferencesSlice";
-import { setHomeData } from "@/store/slices/homeSlice";
+import { setHomeData, refreshHomeData } from "@/store/slices/homeSlice";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import HolidayDeleteConfirmationModal from "@/components/modals/HolidayDeleteConfirmationModal";
@@ -89,6 +89,8 @@ export default function SettingsPage() {
 	}, [user, homeData, dispatch]);
 
 	// Update local holiday preferences when home data is loaded
+	// Note: homeData.holidayPreferences only contains OWNED holidays, not shared ones
+	// This prevents shared holidays from being pre-selected and creating duplicates
 	useEffect(() => {
 		if (homeData?.holidayPreferences) {
 			setLocalHolidayPreferences(homeData.holidayPreferences);
@@ -151,6 +153,34 @@ export default function SettingsPage() {
 		}
 	};
 
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!user?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: user.sub,
+						email: user.email,
+						name: user.name,
+						picture: user.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				console.log("Refreshing home data after holiday deletion:", data);
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	const handleHolidayPreferenceChange = async (
 		holiday: string,
 		isSelected: boolean,
@@ -206,6 +236,9 @@ export default function SettingsPage() {
 						auth0User: user,
 					})
 				).unwrap();
+
+				// Refresh home data to reflect the new holiday
+				await refreshHomePageData();
 			} catch (error) {
 				console.error("Failed to save holiday preferences:", error);
 			}
@@ -229,6 +262,9 @@ export default function SettingsPage() {
 						auth0User: user,
 					})
 				).unwrap();
+
+				// Refresh home data to reflect the budget change
+				await refreshHomePageData();
 			} catch (error) {
 				console.error("Failed to save holiday preferences:", error);
 			}
@@ -246,29 +282,17 @@ export default function SettingsPage() {
 	};
 
 	const handleDeleteConfirm = async () => {
+		// The HolidayDeleteConfirmationModal already handled the deletion via API
+		// We just need to refresh the home data and update local state
+
 		// Remove the holiday from local preferences
 		const newPreferences = localHolidayPreferences.filter(
 			(p) => p.holiday !== holidayToDelete?.name
 		);
 		setLocalHolidayPreferences(newPreferences);
 
-		// Save to database
-		if (user?.sub && homeData?.account?.id) {
-			try {
-				await dispatch(
-					saveHolidayPreferences({
-						accountId: homeData.account.id,
-						preferences: newPreferences,
-						auth0User: user,
-					})
-				).unwrap();
-			} catch (error) {
-				console.error(
-					"Failed to save holiday preferences after deletion:",
-					error
-				);
-			}
-		}
+		// Refresh home data to reflect the holiday deletion
+		await refreshHomePageData();
 	};
 
 	// Use preferences from database if available, otherwise fall back to local settings

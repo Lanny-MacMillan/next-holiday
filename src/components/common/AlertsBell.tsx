@@ -13,6 +13,7 @@ import {
 import { addShare, updateShareInState } from "@/store/slices/sharesSlice";
 import { Invite } from "@/store/slices/invitesSlice";
 import { migrateHolidayDataToShare } from "@/utils/shareMigration";
+import { refreshHomeData } from "@/store/slices/homeSlice";
 
 interface AlertsBellProps {
 	className?: string;
@@ -84,6 +85,33 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 		}
 	}, [user?.sub, dispatch]);
 
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!user?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: user.sub,
+						email: user.email,
+						name: user.name,
+						picture: user.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	const handleAcceptInvite = async (inviteId: string) => {
 		try {
 			const result = await dispatch(acceptInvite(inviteId)).unwrap();
@@ -97,6 +125,9 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 				result.share.shareId,
 				dispatch
 			);
+
+			// Refresh home data to reflect the newly shared holiday
+			await refreshHomePageData();
 
 			console.log("You're now sharing this holiday");
 		} catch (error) {

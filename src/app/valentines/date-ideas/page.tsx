@@ -14,6 +14,7 @@ import {
 	updateTaskInHomeData,
 	addTaskToHomeData,
 	removeTaskFromHomeData,
+	refreshHomeData,
 } from "@/store/slices/homeSlice";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
@@ -96,6 +97,33 @@ export default function ValentinesDateIdeasPage() {
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!auth0User?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	const handleFormSubmit = async (values: Record<string, any>) => {
 		if (!holidayId || !auth0User) return;
 
@@ -119,6 +147,9 @@ export default function ValentinesDateIdeasPage() {
 				// Update Redux state directly
 				updateTaskInRedux(result, "update");
 				setEditingTask(null);
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
 			} else {
 				// Add new task
 				const payload = {
@@ -138,6 +169,9 @@ export default function ValentinesDateIdeasPage() {
 
 				// Update Redux state directly
 				updateTaskInRedux(result, "add");
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
 			}
 			setShowFormModal(false);
 		} catch (error) {

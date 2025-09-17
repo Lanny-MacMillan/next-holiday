@@ -14,6 +14,7 @@ import {
 	updateTaskInHomeData,
 	addTaskToHomeData,
 	removeTaskFromHomeData,
+	refreshHomeData,
 } from "@/store/slices/homeSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
@@ -158,6 +159,33 @@ export default function AnniversaryDateIdeasPage() {
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!auth0User?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	const handleSubmit = async (values: Record<string, any>) => {
 		if (!holidayId || !auth0User) return;
 
@@ -180,6 +208,9 @@ export default function AnniversaryDateIdeasPage() {
 				// Update Redux state directly
 				updateTaskInRedux(result, "update");
 				setEditingTask(null);
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
 			} else {
 				const payload = {
 					title: values.title,
@@ -198,6 +229,9 @@ export default function AnniversaryDateIdeasPage() {
 
 				// Update Redux state directly
 				updateTaskInRedux(result, "add");
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
 			}
 			setShowAddForm(false);
 		} catch (error) {
@@ -226,6 +260,10 @@ export default function AnniversaryDateIdeasPage() {
 
 				// Update Redux state directly
 				updateTaskInRedux({ id: taskToDelete.id }, "delete");
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
+
 				setTaskToDelete(null);
 			} catch (error) {
 				console.error("Error deleting date idea:", error);
@@ -254,6 +292,9 @@ export default function AnniversaryDateIdeasPage() {
 					isCompleted: newIsCompleted,
 					auth0User,
 				}).unwrap();
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
 			}
 		} catch (error) {
 			console.error("Error updating date idea:", error);

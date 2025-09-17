@@ -434,6 +434,48 @@ const homeSlice = createSlice({
 				}
 			}
 		},
+		addHolidayToHomeData: (
+			state,
+			action: PayloadAction<{
+				holiday: any;
+			}>
+		) => {
+			if (!state.data) {
+				state.data = {
+					user: null,
+					account: null,
+					holidayPreferences: [],
+					contacts: null,
+					needsUserSetup: false,
+					needsHolidaySelection: false,
+				};
+			}
+
+			if (!state.data.holidayPreferences) {
+				state.data.holidayPreferences = [];
+			}
+
+			const { holiday } = action.payload;
+
+			// Check if holiday already exists to prevent duplicates
+			const existingIndex = state.data.holidayPreferences.findIndex(
+				(h: any) => h.holidayId === holiday.holidayId
+			);
+
+			if (existingIndex === -1) {
+				// Holiday doesn't exist, add it
+				state.data.holidayPreferences.push(holiday);
+			} else {
+				// Holiday exists, update it instead of adding duplicate
+				state.data.holidayPreferences[existingIndex] = holiday;
+			}
+		},
+		refreshHomeData: (state, action: PayloadAction<HomeData>) => {
+			state.data = action.payload;
+			state.initialized = true;
+			state.loading = false;
+			state.error = null;
+		},
 	},
 });
 
@@ -481,5 +523,7 @@ export const {
 	addGuestToHomeData,
 	removeGuestFromHomeData,
 	updateGuestInHomeData,
+	addHolidayToHomeData,
+	refreshHomeData,
 } = homeSlice.actions;
 export default homeSlice.reducer;
