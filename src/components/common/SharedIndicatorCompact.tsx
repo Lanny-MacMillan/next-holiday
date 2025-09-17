@@ -3,7 +3,7 @@
 import { useAppSelector } from "@/store/hooks";
 import {
 	selectShareByHolidayKey,
-	selectMembers,
+	selectMemberProfiles,
 } from "@/store/slices/sharesSlice";
 import { createSelector } from "@reduxjs/toolkit";
 
@@ -12,8 +12,8 @@ interface SharedIndicatorCompactProps {
 	className?: string;
 }
 
-// Create a memoized selector that handles the conditional logic for members
-const selectMembersForDisplay = createSelector(
+// Create a memoized selector that handles the conditional logic for member profiles
+const selectMemberProfilesForDisplay = createSelector(
 	[
 		(state: any, holidayKey: string) =>
 			selectShareByHolidayKey(state, holidayKey),
@@ -21,7 +21,7 @@ const selectMembersForDisplay = createSelector(
 	],
 	(share, state) => {
 		if (share) {
-			return selectMembers(state, share.shareId);
+			return selectMemberProfiles(state, share.shareId);
 		}
 		return [];
 	}
@@ -31,14 +31,46 @@ export default function SharedIndicatorCompact({
 	holidayKey,
 	className = "",
 }: SharedIndicatorCompactProps) {
+	console.log(
+		"[SharedIndicatorCompact] Component rendered with holidayKey:",
+		holidayKey
+	);
 	const share = useAppSelector((state) =>
 		selectShareByHolidayKey(state, holidayKey)
 	);
-	const members = useAppSelector((state) =>
-		selectMembersForDisplay(state, holidayKey)
+	const memberProfiles = useAppSelector((state) =>
+		selectMemberProfilesForDisplay(state, holidayKey)
+	);
+
+	// Debug logging
+	console.log("[SharedIndicatorCompact] holidayKey:", holidayKey);
+	console.log("[SharedIndicatorCompact] share:", share);
+	console.log("[SharedIndicatorCompact] memberProfiles:", memberProfiles);
+
+	// Check shares state
+	const sharesState = useAppSelector((state: any) => state.shares);
+	console.log("[SharedIndicatorCompact] shares state:", sharesState);
+
+	// Check if there are any shares at all
+	const allShares = useAppSelector((state: any) => state.shares.shares);
+	console.log("[SharedIndicatorCompact] all shares:", allShares);
+
+	// Check if any share matches this holiday key
+	const matchingShares = allShares.filter(
+		(s: any) => s.holidayKey === holidayKey
+	);
+	console.log(
+		"[SharedIndicatorCompact] matching shares for",
+		holidayKey,
+		":",
+		matchingShares
 	);
 
 	if (!share) {
+		console.log(
+			"[SharedIndicatorCompact] No share found for holidayKey:",
+			holidayKey
+		);
 		return null;
 	}
 
@@ -58,21 +90,35 @@ export default function SharedIndicatorCompact({
 
 			{/* Compact member avatars */}
 			<div className="flex -space-x-1">
-				{members.slice(0, 2).map((memberId: string, index: number) => (
+				{memberProfiles.slice(0, 2).map((member: any, index: number) => (
 					<div
-						key={memberId}
-						className="w-4 h-4 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 border border-white dark:border-gray-800"
-						title={`Member ${index + 1}`}
+						key={member.userId}
+						className="w-4 h-4 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 border border-white dark:border-gray-800 overflow-hidden"
+						title={
+							member.user.name || member.user.email || `Member ${index + 1}`
+						}
 					>
-						{memberId.charAt(0).toUpperCase()}
+						{member.user.picture ? (
+							<img
+								src={member.user.picture}
+								alt={
+									member.user.name || member.user.email || `Member ${index + 1}`
+								}
+								className="w-full h-full object-cover rounded-full"
+							/>
+						) : (
+							(member.user.name || member.user.email || member.userId)
+								.charAt(0)
+								.toUpperCase()
+						)}
 					</div>
 				))}
-				{members.length > 2 && (
+				{memberProfiles.length > 2 && (
 					<div
 						className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400 border border-white dark:border-gray-800"
-						title={`${members.length - 2} more members`}
+						title={`${memberProfiles.length - 2} more members`}
 					>
-						+{members.length - 2}
+						+{memberProfiles.length - 2}
 					</div>
 				)}
 			</div>

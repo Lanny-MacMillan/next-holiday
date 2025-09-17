@@ -27,6 +27,34 @@ export async function POST(request: NextRequest) {
 		// Check if share already exists for this holiday
 		const existingShare = await prisma.share.findFirst({
 			where: { holidayId: holiday.id },
+			include: {
+				holiday: {
+					select: {
+						id: true,
+						holidayType: true,
+					},
+				},
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								picture: true,
+								email: true,
+							},
+						},
+					},
+				},
+				owner: {
+					select: {
+						id: true,
+						name: true,
+						picture: true,
+						email: true,
+					},
+				},
+			},
 		});
 
 		if (existingShare) {
@@ -61,7 +89,40 @@ export async function POST(request: NextRequest) {
 			},
 		});
 
-		return NextResponse.json(share);
+		// Fetch the complete share with user data
+		const completeShare = await prisma.share.findUnique({
+			where: { id: share.id },
+			include: {
+				holiday: {
+					select: {
+						id: true,
+						holidayType: true,
+					},
+				},
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								picture: true,
+								email: true,
+							},
+						},
+					},
+				},
+				owner: {
+					select: {
+						id: true,
+						name: true,
+						picture: true,
+						email: true,
+					},
+				},
+			},
+		});
+
+		return NextResponse.json(completeShare);
 	} catch (error) {
 		console.error("Error creating share:", error);
 		return NextResponse.json(
@@ -89,6 +150,34 @@ export async function GET(request: NextRequest) {
 
 			const share = await prisma.share.findFirst({
 				where: { holidayId: holiday.id },
+				include: {
+					holiday: {
+						select: {
+							id: true,
+							holidayType: true,
+						},
+					},
+					members: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									picture: true,
+									email: true,
+								},
+							},
+						},
+					},
+					owner: {
+						select: {
+							id: true,
+							name: true,
+							picture: true,
+							email: true,
+						},
+					},
+				},
 			});
 
 			if (!share) {
@@ -99,10 +188,58 @@ export async function GET(request: NextRequest) {
 		}
 
 		if (userId) {
+			// Convert Auth0 sub to internal user ID if needed
+			let internalUserId = userId;
+
+			// Check if userId is an Auth0 sub (starts with 'auth0|' or 'google-oauth2|')
+			if (userId.startsWith("auth0|") || userId.startsWith("google-oauth2|")) {
+				const user = await prisma.user.findUnique({
+					where: { auth0Sub: userId },
+					select: { id: true },
+				});
+
+				if (!user) {
+					return NextResponse.json([]);
+				}
+
+				internalUserId = user.id;
+			}
+
 			// Find all shares where user is owner or member
 			const shares = await prisma.share.findMany({
 				where: {
-					OR: [{ ownerUserId: userId }, { members: { some: { userId } } }],
+					OR: [
+						{ ownerUserId: internalUserId },
+						{ members: { some: { userId: internalUserId } } },
+					],
+				},
+				include: {
+					holiday: {
+						select: {
+							id: true,
+							holidayType: true,
+						},
+					},
+					members: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									picture: true,
+									email: true,
+								},
+							},
+						},
+					},
+					owner: {
+						select: {
+							id: true,
+							name: true,
+							picture: true,
+							email: true,
+						},
+					},
 				},
 			});
 			return NextResponse.json(shares);

@@ -33,13 +33,45 @@ export async function POST(
 			where: {
 				shareId_userId: {
 					shareId,
-					userId
-				}
-			}
+					userId,
+				},
+			},
 		});
 
 		if (existingMember) {
-			return NextResponse.json(share);
+			// Return the complete share with user data
+			const completeShare = await prisma.share.findUnique({
+				where: { id: shareId },
+				include: {
+					holiday: {
+						select: {
+							id: true,
+							holidayType: true,
+						},
+					},
+					members: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									picture: true,
+									email: true,
+								},
+							},
+						},
+					},
+					owner: {
+						select: {
+							id: true,
+							name: true,
+							picture: true,
+							email: true,
+						},
+					},
+				},
+			});
+			return NextResponse.json(completeShare);
 		}
 
 		// Add user to share members
@@ -47,13 +79,40 @@ export async function POST(
 			data: {
 				shareId,
 				userId,
-			}
+			},
 		});
 
-		// Get updated share with members
+		// Get updated share with members and user data
 		const updatedShare = await prisma.share.findUnique({
 			where: { id: shareId },
-			include: { members: true }
+			include: {
+				holiday: {
+					select: {
+						id: true,
+						holidayType: true,
+					},
+				},
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								picture: true,
+								email: true,
+							},
+						},
+					},
+				},
+				owner: {
+					select: {
+						id: true,
+						name: true,
+						picture: true,
+						email: true,
+					},
+				},
+			},
 		});
 
 		return NextResponse.json(updatedShare);

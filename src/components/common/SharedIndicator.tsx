@@ -3,7 +3,7 @@
 import { useAppSelector } from "@/store/hooks";
 import {
 	selectShareByHolidayKey,
-	selectMembers,
+	selectMemberProfiles,
 } from "@/store/slices/sharesSlice";
 
 interface SharedIndicatorProps {
@@ -18,8 +18,8 @@ export default function SharedIndicator({
 	const share = useAppSelector((state) =>
 		selectShareByHolidayKey(state, holidayKey)
 	);
-	const members = useAppSelector((state) =>
-		share ? selectMembers(state, share.shareId) : []
+	const memberProfiles = useAppSelector((state) =>
+		share ? selectMemberProfiles(state, share.shareId) : []
 	);
 
 	if (!share) {
@@ -38,21 +38,35 @@ export default function SharedIndicator({
 
 			{/* Member avatars */}
 			<div className="flex -space-x-2">
-				{members.slice(0, 3).map((memberId: string, index: number) => (
+				{memberProfiles.slice(0, 3).map((member: any, index: number) => (
 					<div
-						key={memberId}
-						className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 border-2 border-white dark:border-gray-800"
-						title={`Member ${index + 1}`}
+						key={member.userId}
+						className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 border-2 border-white dark:border-gray-800 overflow-hidden"
+						title={
+							member.user.name || member.user.email || `Member ${index + 1}`
+						}
 					>
-						{memberId.charAt(0).toUpperCase()}
+						{member.user.picture ? (
+							<img
+								src={member.user.picture}
+								alt={
+									member.user.name || member.user.email || `Member ${index + 1}`
+								}
+								className="w-full h-full object-cover rounded-full"
+							/>
+						) : (
+							(member.user.name || member.user.email || member.userId)
+								.charAt(0)
+								.toUpperCase()
+						)}
 					</div>
 				))}
-				{members.length > 3 && (
+				{memberProfiles.length > 3 && (
 					<div
 						className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400 border-2 border-white dark:border-gray-800"
-						title={`${members.length - 3} more members`}
+						title={`${memberProfiles.length - 3} more members`}
 					>
-						+{members.length - 3}
+						+{memberProfiles.length - 3}
 					</div>
 				)}
 			</div>

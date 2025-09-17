@@ -6,6 +6,7 @@ import { fetchCards } from "@/store/slices/cardsSlice";
 import { fetchGifts } from "@/store/slices/giftListSlice";
 import { fetchTasks } from "@/store/slices/tasksSlice";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { fetchShares } from "@/store/slices/sharesSlice";
 
 export default function DataInitializer() {
 	const dispatch = useAppDispatch();
@@ -20,6 +21,9 @@ export default function DataInitializer() {
 	);
 	const { initialized: contactsInitialized } = useAppSelector(
 		(state) => state.addressBook
+	);
+	const { initialized: sharesInitialized } = useAppSelector(
+		(state) => state.shares
 	);
 	const homeData = useAppSelector((state: any) => state.home.data);
 
@@ -38,12 +42,19 @@ export default function DataInitializer() {
 		if (!contactsInitialized && !homeData?.contacts?.length) {
 			dispatch(fetchContacts());
 		}
+		if (!sharesInitialized) {
+			console.log("[DataInitializer] Fetching shares...");
+			dispatch(fetchShares());
+		} else {
+			console.log("[DataInitializer] Shares already initialized");
+		}
 	}, [
 		dispatch,
 		cardsInitialized,
 		giftsInitialized,
 		tasksInitialized,
 		contactsInitialized,
+		sharesInitialized,
 		homeData?.contacts?.length,
 	]);
 
