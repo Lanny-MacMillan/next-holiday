@@ -160,11 +160,22 @@ export default function NewYearDecorationsPage() {
 				auth0User,
 			}).unwrap();
 
-			// Add to Redux store immediately
+			// Add to Redux store immediately with normalized shape
+			const normalizedDecoration = {
+				id:
+					(result as any)?.id ||
+					(result as any)?._id ||
+					(result as any)?.taskId,
+				...payload,
+				createdAt: (result as any)?.createdAt || new Date().toISOString(),
+				updatedAt: (result as any)?.updatedAt || new Date().toISOString(),
+				isCompleted: false,
+			};
+
 			dispatch(
 				addDecorationToHomeData({
 					holidayId,
-					decoration: result,
+					decoration: normalizedDecoration,
 				})
 			);
 
@@ -358,7 +369,6 @@ export default function NewYearDecorationsPage() {
 
 	const renderTaskItem = (task: any) => (
 		<DecorationsListItem
-			
 			task={task}
 			onToggleTask={handleToggleTask}
 			onDeleteTask={handleDeleteTask}

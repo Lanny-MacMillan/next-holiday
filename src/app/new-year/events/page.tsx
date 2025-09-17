@@ -225,11 +225,22 @@ export default function NewYearEventsPage() {
 				auth0User,
 			}).unwrap();
 
-			// Add to Redux store immediately
+			// Add to Redux store immediately with a normalized shape
+			const normalizedEvent = {
+				id:
+					(result as any)?.id ||
+					(result as any)?._id ||
+					(result as any)?.eventId,
+				...payload,
+				isCompleted: false,
+				createdAt: (result as any)?.createdAt || new Date().toISOString(),
+				updatedAt: (result as any)?.updatedAt || new Date().toISOString(),
+			};
+
 			dispatch(
 				addEventToHomeData({
 					holidayId,
-					event: result,
+					event: normalizedEvent,
 				})
 			);
 
@@ -434,7 +445,6 @@ export default function NewYearEventsPage() {
 					completedMessage=""
 					renderItem={(task) => (
 						<EventItems
-							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}
@@ -477,7 +487,6 @@ export default function NewYearEventsPage() {
 					completedMessage="No completed events yet."
 					renderItem={(task) => (
 						<EventItems
-							
 							task={task}
 							onToggleTask={handleToggleCompletion}
 							onDeleteTask={handleDelete}

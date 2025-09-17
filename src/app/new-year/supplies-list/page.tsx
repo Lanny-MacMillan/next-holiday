@@ -104,11 +104,22 @@ export default function NewYearSuppliesListPage() {
 				auth0User,
 			}).unwrap();
 
-			// Add to Redux store immediately
+			// Add to Redux store immediately with normalized shape
+			const normalizedGift = {
+				id:
+					(result as any)?.id ||
+					(result as any)?._id ||
+					(result as any)?.giftId,
+				...payload,
+				isCompleted: false,
+				createdAt: (result as any)?.createdAt || new Date().toISOString(),
+				updatedAt: (result as any)?.updatedAt || new Date().toISOString(),
+			};
+
 			dispatch(
 				addGiftToHomeData({
 					holidayId,
-					gift: result,
+					gift: normalizedGift,
 				})
 			);
 

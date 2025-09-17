@@ -154,11 +154,21 @@ export default function NewYearResolutionTrackerPage() {
 					auth0User,
 				}).unwrap();
 
-				// Add to Redux store immediately
+				// Add to Redux store immediately with normalized shape
+				const normalizedTask = {
+					id:
+						(result as any)?.id ||
+						(result as any)?._id ||
+						(result as any)?.taskId,
+					...payload,
+					createdAt: (result as any)?.createdAt || new Date().toISOString(),
+					updatedAt: (result as any)?.updatedAt || new Date().toISOString(),
+				};
+
 				dispatch(
 					addTaskToHomeData({
 						holidayId,
-						task: result,
+						task: normalizedTask,
 					})
 				);
 			}
