@@ -54,9 +54,16 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 					</div>
 				) : (
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-						{items.map((item, index) => (
-							<li key={item.id || index}>{renderItem(item)}</li>
-						))}
+						{items.map((item, index) => {
+							const rendered = renderItem(item);
+							const key = (item && (item as any).id) ?? index;
+							return React.isValidElement(rendered) ? (
+								// Inject key without adding extra <li> to avoid nested <li>
+								React.cloneElement(rendered as React.ReactElement, { key })
+							) : (
+								<React.Fragment key={key}>{rendered}</React.Fragment>
+							);
+						})}
 					</ul>
 				)}
 			</div>
