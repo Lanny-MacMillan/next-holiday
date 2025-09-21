@@ -12,7 +12,12 @@ import {
 } from "@/utils/holidayData";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { RootState } from "@/store";
-import { updateTaskInHomeData } from "@/store/slices/homeSlice";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+	refreshHomeData,
+} from "@/store/slices/homeSlice";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
 	useGetTasksQuery,
@@ -90,6 +95,66 @@ export default function TasksPage() {
 	// Use Redux data if available, otherwise use fallback from RTK Query
 	const finalTasks = tasks.length > 0 ? tasks : fallbackTasks;
 
+	// Helper function to update Redux state after task operations
+	const updateTaskInRedux = (
+		taskData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!resolvedHolidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(
+					addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskData })
+				);
+				break;
+			case "update":
+				dispatch(
+					updateTaskInHomeData({
+						holidayId: resolvedHolidayId,
+						taskId: taskData.id,
+						updates: taskData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeTaskFromHomeData({
+						holidayId: resolvedHolidayId,
+						taskId: taskData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!auth0User?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	// Debug logging
 	useEffect(() => {
 		console.log("=== CHRISTMAS TASKS PAGE DEBUG ===");
@@ -137,11 +202,18 @@ export default function TasksPage() {
 				holidayId: resolvedHolidayId,
 			};
 
-			await createTask({
+			const result = await createTask({
 				holidayId: resolvedHolidayId,
 				payload: newTask,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(result, "add");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Failed to add task:", error);
@@ -170,34 +242,23 @@ export default function TasksPage() {
 			// Toggle the completion status
 			const newCompletionStatus = !currentTask.isCompleted;
 
-			// Optimistically update the Redux home data
-			dispatch(
-				updateTaskInHomeData({
-					holidayId: resolvedHolidayId,
-					taskId: taskId,
-					updates: { isCompleted: newCompletionStatus },
-				})
-			);
-
 			await toggleTaskCompletion({
 				holidayId: resolvedHolidayId,
 				taskId,
 				isCompleted: newCompletionStatus,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux(
+				{ id: taskId, isCompleted: newCompletionStatus },
+				"update"
+			);
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 		} catch (error) {
 			console.error("Failed to toggle task:", error);
-			// Revert the optimistic update on error
-			const currentTask = finalTasks.find((task: Task) => task.id === taskId);
-			if (currentTask && resolvedHolidayId) {
-				dispatch(
-					updateTaskInHomeData({
-						holidayId: resolvedHolidayId,
-						taskId: taskId,
-						updates: { isCompleted: currentTask.isCompleted },
-					})
-				);
-			}
 		}
 	}
 
@@ -210,6 +271,12 @@ export default function TasksPage() {
 				taskId,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateTaskInRedux({ id: taskId }, "delete");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 		} catch (error) {
 			console.error("Failed to delete task:", error);
 		}
@@ -224,39 +291,22 @@ export default function TasksPage() {
 	) {
 		if (editingTask && auth0User && resolvedHolidayId) {
 			try {
-				// Optimistically update the Redux home data
-				dispatch(
-					updateTaskInHomeData({
-						holidayId: resolvedHolidayId,
-						taskId: editingTask.id,
-						updates: updatedTask,
-					})
-				);
-
-				await updateTask({
+				const result = await updateTask({
 					holidayId: resolvedHolidayId,
 					taskId: editingTask.id,
 					updates: updatedTask,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateTaskInRedux(result, "update");
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
+
 				setEditingTask(null);
 			} catch (error) {
 				console.error("Failed to update task:", error);
-				// Revert the optimistic update on error
-				dispatch(
-					updateTaskInHomeData({
-						holidayId: resolvedHolidayId,
-						taskId: editingTask.id,
-						updates: {
-							title: editingTask.title,
-							description: editingTask.description,
-							priority: editingTask.priority,
-							category: editingTask.category,
-							assignedTo: editingTask.assignedTo,
-							dueDate: editingTask.dueDate,
-						},
-					})
-				);
 			}
 		}
 	}

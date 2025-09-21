@@ -13,7 +13,12 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { updateCardInHomeData } from "@/store/slices/homeSlice";
+import {
+	updateCardInHomeData,
+	addCardToHomeData,
+	removeCardFromHomeData,
+	refreshHomeData,
+} from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import { useGetCardsQuery } from "@/store/api";
 import { transformCardPayload } from "@/utils/formTransformers";
@@ -78,6 +83,66 @@ export default function ChristmasCardsPage() {
 	// Use Redux data if available, otherwise use fallback from RTK Query
 	const finalCards = cards.length > 0 ? cards : fallbackCards;
 
+	// Helper function to update Redux state after card operations
+	const updateCardInRedux = (
+		cardData: any,
+		operation: "add" | "update" | "delete"
+	) => {
+		if (!resolvedHolidayId) return;
+
+		switch (operation) {
+			case "add":
+				dispatch(
+					addCardToHomeData({ holidayId: resolvedHolidayId, card: cardData })
+				);
+				break;
+			case "update":
+				dispatch(
+					updateCardInHomeData({
+						holidayId: resolvedHolidayId,
+						cardId: cardData.id,
+						updates: cardData,
+					})
+				);
+				break;
+			case "delete":
+				dispatch(
+					removeCardFromHomeData({
+						holidayId: resolvedHolidayId,
+						cardId: cardData.id,
+					})
+				);
+				break;
+		}
+	};
+
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!auth0User?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	// Debug logging
 	useEffect(() => {
 		console.log("=== CHRISTMAS CARDS PAGE DEBUG ===");
@@ -119,11 +184,18 @@ export default function ChristmasCardsPage() {
 
 		try {
 			const payload = transformCardPayload(values, contacts);
-			await mutation({
+			const result = await mutation({
 				holidayId: resolvedHolidayId || "",
 				payload,
 				auth0User,
 			}).unwrap();
+
+			// Update Redux state directly
+			updateCardInRedux(result, "add");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
+
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating card:", error);
@@ -164,6 +236,13 @@ export default function ChristmasCardsPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateCardInRedux({ id: cardToDelete.id }, "delete");
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
+
 				setShowDeleteModal(false);
 				setCardToDelete(null);
 			} catch (error) {
@@ -181,40 +260,22 @@ export default function ChristmasCardsPage() {
 					action: "update",
 				};
 
-				// Optimistically update the Redux home data
-				dispatch(
-					updateCardInHomeData({
-						holidayId: resolvedHolidayId || "",
-						cardId: cardToEdit.id,
-						updates: {
-							recipient: values.recipient,
-							message: values.message,
-							address: values.address,
-						},
-					})
-				);
-
-				await mutation({
+				const result = await mutation({
 					holidayId: resolvedHolidayId || "",
 					payload,
 					auth0User,
 				}).unwrap();
+
+				// Update Redux state directly
+				updateCardInRedux(result, "update");
+
+				// Refresh home data to ensure homepage reflects changes
+				await refreshHomePageData();
+
 				setShowEditModal(false);
 				setCardToEdit(null);
 			} catch (error) {
 				console.error("Error updating card:", error);
-				// Revert the optimistic update on error
-				dispatch(
-					updateCardInHomeData({
-						holidayId: resolvedHolidayId || "",
-						cardId: cardToEdit.id,
-						updates: {
-							recipient: cardToEdit.recipient,
-							message: cardToEdit.message,
-							address: cardToEdit.address,
-						},
-					})
-				);
 			}
 		}
 	};
@@ -233,34 +294,23 @@ export default function ChristmasCardsPage() {
 						address: card.address || "",
 					};
 
-					// Optimistically update the Redux home data
-					dispatch(
-						updateCardInHomeData({
-							holidayId: resolvedHolidayId || "",
-							cardId: cardId,
-							updates: { isCompleted: !card.isCompleted },
-						})
-					);
-
 					await mutation({
 						holidayId: resolvedHolidayId || "",
 						payload,
 						auth0User,
 					}).unwrap();
+
+					// Update Redux state directly
+					updateCardInRedux(
+						{ id: cardId, isCompleted: !card.isCompleted },
+						"update"
+					);
+
+					// Refresh home data to ensure homepage reflects changes
+					await refreshHomePageData();
 				}
 			} catch (error) {
 				console.error("Error toggling card completion:", error);
-				// Revert the optimistic update on error
-				const card = finalCards.find((c) => c.id === cardId);
-				if (card) {
-					dispatch(
-						updateCardInHomeData({
-							holidayId: resolvedHolidayId || "",
-							cardId: cardId,
-							updates: { isCompleted: card.isCompleted },
-						})
-					);
-				}
 			}
 		}
 	};
@@ -268,7 +318,7 @@ export default function ChristmasCardsPage() {
 	const sortedCards = [...finalCards].sort((a, b) => {
 		switch (sortBy) {
 			case "recipient":
-				return a.recipient.localeCompare(b.recipient);
+				return (a.recipient || "").localeCompare(b.recipient || "");
 			case "completed":
 				return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
 			case "message":
@@ -363,7 +413,6 @@ export default function ChristmasCardsPage() {
 							completedMessage="All cards sent!"
 							renderItem={(card) => (
 								<MailCard
-									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}
@@ -381,7 +430,6 @@ export default function ChristmasCardsPage() {
 							completedMessage="No sent cards to display."
 							renderItem={(card) => (
 								<MailCard
-									
 									card={card}
 									onToggleCompletion={handleToggleCompletion}
 									onEditCard={handleEditCard}

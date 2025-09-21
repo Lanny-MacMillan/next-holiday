@@ -14,6 +14,7 @@ import {
 	updateGiftInHomeData,
 	addGiftToHomeData,
 	removeGiftFromHomeData,
+	refreshHomeData,
 } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
@@ -86,6 +87,33 @@ export default function GiftListPage() {
 		}
 	};
 
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!auth0User?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	// Use only Redux data - no GET API calls on holiday pages
 
 	// Update gift mutation
@@ -131,6 +159,9 @@ export default function GiftListPage() {
 
 			// Update Redux state directly
 			updateGiftInRedux(result, "add");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 
 			setShowFormModal(false);
 		} catch (error) {
@@ -199,6 +230,9 @@ export default function GiftListPage() {
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftToDelete.id }, "delete");
 
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
@@ -231,6 +265,9 @@ export default function GiftListPage() {
 			// Update Redux state directly
 			updateGiftInRedux(result, "update");
 
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
+
 			setShowFormModal(false);
 			setSelectedGift(null);
 		} catch (error) {
@@ -248,7 +285,7 @@ export default function GiftListPage() {
 		switch (sortBy) {
 			case "recipient":
 				return [...giftsToSort].sort((a, b) =>
-					a.recipient.localeCompare(b.recipient)
+					(a.recipient || "").localeCompare(b.recipient || "")
 				);
 			case "store":
 				return [...giftsToSort].sort((a, b) =>
@@ -295,7 +332,6 @@ export default function GiftListPage() {
 
 	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
-			
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
@@ -312,7 +348,6 @@ export default function GiftListPage() {
 
 	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
-			
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
