@@ -87,145 +87,149 @@ export async function POST(request: NextRequest) {
 			return !holidayType.includes("wedding");
 		});
 
-		// Process preferences in a single transaction
-		const results = await prisma.$transaction(async (tx) => {
-			// Get current holidays for this account
-			const currentHolidays = await tx.holiday.findMany({
-				where: { accountId },
-				include: {
-					budgets: true,
-				},
-			});
-
-			// Create sets of current and new holiday types for comparison
-			const currentHolidayTypes = new Set(
-				currentHolidays.map((h) => h.holidayType)
-			);
-			const newHolidayTypes = new Set(validPreferences.map((p) => p.holiday));
-
-			// Find holidays to remove (in current but not in new preferences)
-			const holidaysToRemove = currentHolidays.filter(
-				(h) => !newHolidayTypes.has(h.holidayType)
-			);
-
-			// Remove holidays that are no longer selected (this will cascade delete budgets, tasks, etc.)
-			for (const holiday of holidaysToRemove) {
-				await tx.holiday.delete({
-					where: { id: holiday.id },
-				});
-			}
-
-			const holidayResults = [];
-
-			for (const preference of validPreferences) {
-				const { holiday: holidayType, budget, countdownTimer } = preference;
-
-				// Find existing holiday or create new one
-				let holiday = await tx.holiday.findFirst({
-					where: {
-						accountId,
-						holidayType,
+		// Process preferences in a single transaction with increased timeout
+		const results = await prisma.$transaction(
+			async (tx) => {
+				// Get current holidays for this account with budgets in one query
+				const currentHolidays = await tx.holiday.findMany({
+					where: { accountId },
+					include: {
+						budgets: true,
 					},
 				});
 
-				if (holiday) {
-					// Update existing holiday
-					holiday = await tx.holiday.update({
-						where: { id: holiday.id },
-						data: {
-							countdownTimer: countdownTimer ? new Date(countdownTimer) : null,
-							updatedAt: new Date(),
-						},
-					});
-				} else {
-					// Create new holiday
-					holiday = await tx.holiday.create({
-						data: {
-							id: uuidv4(),
-							accountId,
-							holidayType,
-							name: holidayType,
-							startDate: dateOnlyToUTC(new Date().toISOString().slice(0, 10)), // Default to today
-							colorLight: "#3B82F6", // Default blue
-							colorDark: "#1E40AF",
-							isCustom: false,
-							createdBy: user.id,
-							countdownTimer: countdownTimer ? new Date(countdownTimer) : null,
+				// Create maps for efficient lookup
+				const currentHolidayMap = new Map(
+					currentHolidays.map((h) => [h.holidayType, h])
+				);
+				const newHolidayTypes = new Set(validPreferences.map((p) => p.holiday));
+
+				// Find holidays to remove (in current but not in new preferences)
+				const holidaysToRemove = currentHolidays.filter(
+					(h) => !newHolidayTypes.has(h.holidayType)
+				);
+
+				// Batch delete holidays that are no longer selected
+				if (holidaysToRemove.length > 0) {
+					await tx.holiday.deleteMany({
+						where: {
+							id: {
+								in: holidaysToRemove.map((h) => h.id),
+							},
 						},
 					});
 				}
 
-				let budgetResult = null;
+				const holidayResults = [];
 
-				// Handle budget - if budget is provided, create/update; if not provided, remove existing
-				if (budget !== undefined) {
-					let existingBudget = await tx.budget.findFirst({
-						where: {
-							holidayId: holiday.id,
-						},
-					});
+				// Process each preference
+				for (const preference of validPreferences) {
+					const { holiday: holidayType, budget, countdownTimer } = preference;
 
-					if (existingBudget) {
-						// Update existing budget
-						budgetResult = await tx.budget.update({
-							where: { id: existingBudget.id },
+					// Check if holiday already exists
+					let holiday = currentHolidayMap.get(holidayType);
+
+					if (holiday) {
+						// Update existing holiday
+						holiday = await tx.holiday.update({
+							where: { id: holiday.id },
 							data: {
-								totalBudget: parseFloat(budget.toString()),
-								remainingAmount: parseFloat(budget.toString()),
+								countdownTimer: countdownTimer
+									? new Date(countdownTimer)
+									: null,
 								updatedAt: new Date(),
 							},
 						});
 					} else {
-						// Create new budget
-						budgetResult = await tx.budget.create({
+						// Create new holiday
+						holiday = await tx.holiday.create({
 							data: {
 								id: uuidv4(),
-								holidayId: holiday.id,
-								name: `${holidayType} Budget`,
-								totalBudget: parseFloat(budget.toString()),
-								spentAmount: 0,
-								remainingAmount: parseFloat(budget.toString()),
-								currency: "USD",
-								startDate: dateOnlyToUTC(new Date().toISOString().slice(0, 10)),
-								endDate: dateOnlyToUTC(new Date().toISOString().slice(0, 10)),
+								accountId,
+								holidayType,
+								name: holidayType,
+								startDate: dateOnlyToUTC(new Date().toISOString().slice(0, 10)), // Default to today
+								colorLight: "#3B82F6", // Default blue
+								colorDark: "#1E40AF",
+								isCustom: false,
 								createdBy: user.id,
+								countdownTimer: countdownTimer
+									? new Date(countdownTimer)
+									: null,
 							},
 						});
 					}
-				} else {
-					// If no budget is provided, remove any existing budget for this holiday
-					const existingBudget = await tx.budget.findFirst({
-						where: {
-							holidayId: holiday.id,
-						},
-					});
 
-					if (existingBudget) {
-						await tx.budget.delete({
-							where: { id: existingBudget.id },
-						});
+					let budgetResult = null;
+
+					// Handle budget operations
+					if (budget !== undefined) {
+						// Check if budget already exists from the initial query
+						const existingBudget = holiday.budgets?.[0];
+
+						if (existingBudget) {
+							// Update existing budget
+							budgetResult = await tx.budget.update({
+								where: { id: existingBudget.id },
+								data: {
+									totalBudget: parseFloat(budget.toString()),
+									remainingAmount: parseFloat(budget.toString()),
+									updatedAt: new Date(),
+								},
+							});
+						} else {
+							// Create new budget
+							budgetResult = await tx.budget.create({
+								data: {
+									id: uuidv4(),
+									holidayId: holiday.id,
+									name: `${holidayType} Budget`,
+									totalBudget: parseFloat(budget.toString()),
+									spentAmount: 0,
+									remainingAmount: parseFloat(budget.toString()),
+									currency: "USD",
+									startDate: dateOnlyToUTC(
+										new Date().toISOString().slice(0, 10)
+									),
+									endDate: dateOnlyToUTC(new Date().toISOString().slice(0, 10)),
+									createdBy: user.id,
+								},
+							});
+						}
+					} else {
+						// If no budget is provided, remove any existing budget for this holiday
+						const existingBudget = holiday.budgets?.[0];
+						if (existingBudget) {
+							await tx.budget.delete({
+								where: { id: existingBudget.id },
+							});
+						}
 					}
+
+					holidayResults.push({
+						holiday: {
+							...holiday,
+							startDate: toDateOnlyString(holiday.startDate),
+							endDate: toDateOnlyString(holiday.endDate),
+							countdownTimer: holiday.countdownTimer?.toISOString() || null,
+						},
+						budget: budgetResult
+							? {
+									...budgetResult,
+									startDate: toDateOnlyString(budgetResult.startDate),
+									endDate: toDateOnlyString(budgetResult.endDate),
+							  }
+							: null,
+					});
 				}
 
-				holidayResults.push({
-					holiday: {
-						...holiday,
-						startDate: toDateOnlyString(holiday.startDate),
-						endDate: toDateOnlyString(holiday.endDate),
-						countdownTimer: holiday.countdownTimer?.toISOString() || null,
-					},
-					budget: budgetResult
-						? {
-								...budgetResult,
-								startDate: toDateOnlyString(budgetResult.startDate),
-								endDate: toDateOnlyString(budgetResult.endDate),
-						  }
-						: null,
-				});
+				return holidayResults;
+			},
+			{
+				maxWait: 10000, // 10 seconds
+				timeout: 30000, // 30 seconds
 			}
-
-			return holidayResults;
-		});
+		);
 
 		return ok(toPlain(results));
 	} catch (error) {

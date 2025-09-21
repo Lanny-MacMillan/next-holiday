@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HolidayCard from "@/components/cards/HolidayCard";
 import HolidayHeader from "@/components/common/HolidayHeader";
 import { holidayData } from "@/data/holidayData";
@@ -19,9 +19,13 @@ import {
 
 interface HomeContentProps {
 	homeData: HomeData;
+	onRefreshData?: () => Promise<void>;
 }
 
-export default function HomeContent({ homeData }: HomeContentProps) {
+export default function HomeContent({
+	homeData,
+	onRefreshData,
+}: HomeContentProps) {
 	const { user: auth0User, isLoading: authLoading } = useAuth0();
 	const [scope, setScope] = useState<"mine" | "shared" | "all">("all");
 
@@ -59,6 +63,23 @@ export default function HomeContent({ homeData }: HomeContentProps) {
 	console.log("[HomeContent] Shared holidays:", sharedHolidays);
 	console.log("[HomeContent] Has shared holidays:", hasSharedHolidays);
 	console.log("[HomeContent] My holidays:", selectMyHolidays(holidays));
+
+	// Listen for changes in holidays data and refresh home data if needed
+	useEffect(() => {
+		if (holidays.length > 0 && onRefreshData) {
+			// Check if the number of holidays has changed compared to what's in homeData
+			const homeDataHolidayCount = homeData?.holidayPreferences?.length || 0;
+			const currentHolidayCount = selectMyHolidays(holidays).length;
+
+			// If the count has increased, refresh the home data
+			if (currentHolidayCount > homeDataHolidayCount) {
+				console.log(
+					"[HomeContent] Holiday count increased, refreshing home data"
+				);
+				onRefreshData();
+			}
+		}
+	}, [holidays, homeData?.holidayPreferences?.length, onRefreshData]);
 
 	// Filter holidays based on server data for the original UI
 	// IMPORTANT: Only include holidays the current user OWNS.

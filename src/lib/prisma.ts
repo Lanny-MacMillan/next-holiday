@@ -21,6 +21,11 @@ export const prisma =
 				},
 			},
 		}),
+		// Increase transaction timeout to handle complex operations
+		transactionOptions: {
+			maxWait: 10000, // 10 seconds
+			timeout: 30000, // 30 seconds
+		},
 	});
 
 // Install Prisma tracer in development
