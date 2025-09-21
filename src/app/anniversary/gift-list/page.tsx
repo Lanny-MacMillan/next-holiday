@@ -14,6 +14,7 @@ import {
 	updateGiftInHomeData,
 	addGiftToHomeData,
 	removeGiftFromHomeData,
+	refreshHomeData,
 } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import {
@@ -60,7 +61,12 @@ export default function GiftListPage() {
 		giftData: any,
 		operation: "add" | "update" | "delete"
 	) => {
-		if (!holidayId) return;
+		if (!holidayId) {
+			console.error("updateGiftInRedux: No holidayId provided");
+			return;
+		}
+
+		console.log(`updateGiftInRedux: ${operation}`, { holidayId, giftData });
 
 		switch (operation) {
 			case "add":
@@ -84,6 +90,38 @@ export default function GiftListPage() {
 				);
 				break;
 		}
+	};
+
+	// Normalize API gift into UI Gift shape expected by GiftCardItem and home state
+	const normalizeGift = (raw: any) => {
+		const contactId = raw.contactId || raw.contact_id || null;
+		const contactName = contacts.find((c: any) => c.id === contactId)?.name;
+		return {
+			id: raw.id,
+			name: raw.name || raw.giftName || "",
+			description: raw.description || "",
+			price:
+				typeof raw.price === "number"
+					? raw.price
+					: parseFloat((raw.price ?? "0").toString()) || 0,
+			recipient: raw.recipient || contactName || "",
+			isCompleted: Boolean(raw.isCompleted),
+			completedDate: raw.completedDate || raw.completed_date || null,
+			store: raw.store || "",
+			productLink: raw.productLink || raw.product_link || "",
+			notes: raw.notes || "",
+			shareId: raw.shareId || raw.share_id || null,
+			createdAt:
+				raw.createdAt ||
+				(typeof raw.created_at === "string"
+					? raw.created_at
+					: new Date().toISOString()),
+			updatedAt:
+				raw.updatedAt ||
+				(typeof raw.updated_at === "string"
+					? raw.updated_at
+					: new Date().toISOString()),
+		};
 	};
 
 	// Use only Redux data - no GET API calls on holiday pages
@@ -112,16 +150,49 @@ export default function GiftListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
+	// Helper function to refresh home data
+	const refreshHomePageData = async () => {
+		if (!auth0User?.sub) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				const data = result.data;
+				dispatch(refreshHomeData(data));
+			}
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+		}
+	};
+
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
 		if (!holidayId || !mutation) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
+			console.log("handleAddGift: payload", payload);
 			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+			console.log("handleAddGift: result", result);
 
-			// Update Redux state directly
-			updateGiftInRedux(result, "add");
+			// Normalize and update Redux state directly
+			const normalizedGift = normalizeGift(result);
+			updateGiftInRedux(normalizedGift, "add");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 
 			setShowFormModal(false);
 		} catch (error) {
@@ -146,15 +217,22 @@ export default function GiftListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!holidayId) return;
+		if (!holidayId) {
+			console.error("handleToggleGift: No holidayId provided");
+			return;
+		}
 
 		try {
 			// Find the current gift to get its completion status from Redux data
 			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
-			if (!currentGift) return;
+			if (!currentGift) {
+				console.error("handleToggleGift: Gift not found", giftId);
+				return;
+			}
 
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
+			console.log("handleToggleGift: toggling", { giftId, newIsCompleted });
 
 			// Update the gift in the database
 			await updateGift({
@@ -166,6 +244,9 @@ export default function GiftListPage() {
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
@@ -189,6 +270,9 @@ export default function GiftListPage() {
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
@@ -219,8 +303,12 @@ export default function GiftListPage() {
 				auth0User,
 			}).unwrap();
 
-			// Update Redux state directly
-			updateGiftInRedux(result, "update");
+			// Normalize and update Redux state directly
+			const normalized = normalizeGift(result);
+			updateGiftInRedux(normalized, "update");
+
+			// Refresh home data to ensure homepage reflects changes
+			await refreshHomePageData();
 
 			setShowFormModal(false);
 			setSelectedGift(null);
@@ -272,21 +360,35 @@ export default function GiftListPage() {
 			? holidayData.gifts
 			: [];
 
+	// Use only Redux data - no fallback needed since we refresh home data after each operation
+	const finalDisplayGifts = displayGifts;
+
 	// Debug: Log gift data
 	useEffect(() => {
-		console.log("Anniversary gift list - holidayId:", holidayId);
-		console.log("Anniversary gift list - holidayData:", holidayData);
-		console.log("Anniversary gift list - homeInitialized:", homeInitialized);
-		console.log("Anniversary gift list - displayGifts:", displayGifts);
-	}, [holidayId, holidayData, homeInitialized, displayGifts]);
+		console.log("=== ANNIVERSARY GIFT LIST DEBUG ===");
+		console.log("holidayId:", holidayId);
+		console.log("holidayData:", holidayData);
+		console.log("holidayData.gifts:", holidayData?.gifts);
+		console.log("homeInitialized:", homeInitialized);
+		console.log("displayGifts:", displayGifts);
+		console.log("displayGifts.length:", displayGifts.length);
+		console.log("finalDisplayGifts:", finalDisplayGifts);
+		console.log("finalDisplayGifts.length:", finalDisplayGifts.length);
+		console.log("=== END DEBUG ===");
+	}, [
+		holidayId,
+		holidayData,
+		homeInitialized,
+		displayGifts,
+		finalDisplayGifts,
+	]);
 
-	const sortedGifts = sortGifts(displayGifts || []);
+	const sortedGifts = sortGifts(finalDisplayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
 	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
-			
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
@@ -303,7 +405,6 @@ export default function GiftListPage() {
 
 	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
-			
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
