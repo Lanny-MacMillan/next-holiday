@@ -7,7 +7,6 @@ import {
 	selectHomeData,
 } from "@/store/selectors/home";
 import {
-	shouldSkipHolidayQueryWithColdEntry,
 	getHolidayDataFromRedux,
 } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -15,7 +14,6 @@ import { RootState } from "@/store";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import { updateCardInHomeData, setHomeData } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import { useGetCardsQuery } from "@/store/api";
 import { transformCardPayload } from "@/utils/formTransformers";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import FormModal from "@/components/modals/FormModal";
@@ -51,54 +49,13 @@ export default function ChristmasCardsPage() {
 		? getHolidayIdFromRoute("/christmas", holidayPreferences)
 		: getHolidayIdFromRoute("/christmas", holidayPreferences); // Allow fallback for cold entry
 
-	// Get holiday data from Redux if available
+	// Get holiday data from Redux - single source of truth
 	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
 
-	// Use Redux data first, fallback to RTK Query if needed
+	// Use Redux data directly - no individual API calls needed
 	const cards = holidayData?.cards || [];
-
-	// Fetch cards using RTK Query as fallback (only when Redux data is not available)
-	const {
-		data: fallbackCards = [],
-		isLoading: loading,
-		error: cardsError,
-	} = useGetCardsQuery(
-		{ holidayId: resolvedHolidayId || "", auth0User },
-		{
-			skip:
-				shouldSkipHolidayQueryWithColdEntry(
-					resolvedHolidayId,
-					auth0User,
-					currentState,
-					true
-				) || !!holidayData?.cards, // Skip if we have Redux data
-		}
-	);
-
-	// Use Redux data if available, otherwise use fallback from RTK Query
-	const finalCards = cards.length > 0 ? cards : fallbackCards;
-
-	// Debug logging
-	useEffect(() => {
-		console.log("=== CHRISTMAS CARDS PAGE DEBUG ===");
-		console.log("resolvedHolidayId:", resolvedHolidayId);
-		console.log("holidayData:", holidayData);
-		console.log("holidayData?.cards:", holidayData?.cards);
-		console.log("cards from Redux:", cards);
-		console.log("fallbackCards from RTK Query:", fallbackCards);
-		console.log("finalCards:", finalCards);
-		console.log("loading:", loading);
-		console.log("cardsError:", cardsError);
-		console.log("=== END DEBUG ===");
-	}, [
-		resolvedHolidayId,
-		holidayData,
-		cards,
-		fallbackCards,
-		finalCards,
-		loading,
-		cardsError,
-	]);
+	const isLoading = !homeInitialized;
+	const error = null; // Error handling through home data loading
 
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -170,7 +127,7 @@ export default function ChristmasCardsPage() {
 	}
 
 	const handleDeleteCard = async (cardId: string) => {
-		const card = finalCards.find((c) => c.id === cardId);
+		const card = cards.find((c) => c.id === cardId);
 		setCardToDelete(card);
 		setShowDeleteModal(true);
 	};
@@ -260,7 +217,7 @@ export default function ChristmasCardsPage() {
 	const handleToggleCompletion = async (cardId: string) => {
 		if (mutation) {
 			try {
-				const card = finalCards.find((c) => c.id === cardId);
+				const card = cards.find((c) => c.id === cardId);
 				if (card) {
 					const payload = {
 						id: cardId,
@@ -289,7 +246,7 @@ export default function ChristmasCardsPage() {
 			} catch (error) {
 				console.error("Error toggling card completion:", error);
 				// Revert the optimistic update on error
-				const card = finalCards.find((c) => c.id === cardId);
+				const card = cards.find((c) => c.id === cardId);
 				if (card) {
 					dispatch(
 						updateCardInHomeData({
@@ -303,7 +260,7 @@ export default function ChristmasCardsPage() {
 		}
 	};
 
-	const sortedCards = [...finalCards].sort((a, b) => {
+	const sortedCards = [...cards].sort((a, b) => {
 		switch (sortBy) {
 			case "recipient":
 				return a.recipient.localeCompare(b.recipient);
@@ -316,8 +273,8 @@ export default function ChristmasCardsPage() {
 		}
 	});
 
-	const completedCards = finalCards.filter((card) => card.isCompleted);
-	const incompleteCards = finalCards.filter((card) => !card.isCompleted);
+	const completedCards = cards.filter((card) => card.isCompleted);
+	const incompleteCards = cards.filter((card) => !card.isCompleted);
 
 	// Form fields configuration for cards
 	const formFields = [
@@ -359,7 +316,7 @@ export default function ChristmasCardsPage() {
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Summary Stats */}
 				<MailCardStatus
-					totalCards={finalCards.length}
+					totalCards={cards.length}
 					completedCards={completedCards.length}
 					incompleteCards={incompleteCards.length}
 					holidayColor="bg-gradient-to-br from-red-300 to-red-500"
@@ -368,16 +325,12 @@ export default function ChristmasCardsPage() {
 				<AddButton title="Card" onClick={openForm} color="red" />
 
 				{/* Card List */}
-				{loading && !holidayData?.cards ? (
+				{isLoading ? (
 					<div className="text-center py-8">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
 						<p className="text-gray-600 dark:text-gray-400 mt-2">
 							Loading cards...
 						</p>
-					</div>
-				) : cardsError && !holidayData?.cards ? (
-					<div className="text-center text-red-500 py-8">
-						<p>Error loading cards: {cardsError.toString()}</p>
 					</div>
 				) : sortedCards.length === 0 ? (
 					<div className="text-center py-8">

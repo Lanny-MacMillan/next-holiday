@@ -7,7 +7,6 @@ import {
 	selectHomeData,
 } from "@/store/selectors/home";
 import {
-	shouldSkipHolidayQueryWithColdEntry,
 	getHolidayDataFromRedux,
 } from "@/utils/holidayData";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
@@ -15,13 +14,6 @@ import { RootState } from "@/store";
 import { updateTaskInHomeData, setHomeData } from "@/store/slices/homeSlice";
 import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import { useAuth0 } from "@auth0/auth0-react";
-import {
-	useGetTasksQuery,
-	useCreateTaskMutation,
-	useUpdateTaskMutation,
-	useDeleteTaskMutation,
-	useToggleTaskCompletionMutation,
-} from "@/store/api";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import EditTaskModal from "@/components/modals/EditTaskModal";
@@ -69,64 +61,25 @@ export default function TasksPage() {
 		selectIsHolidayShared(state, "christmas")
 	);
 
-	// Get holiday data from Redux if available
+	// Get holiday data from Redux - single source of truth
 	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
 
-	// Use Redux data first, fallback to RTK Query if needed
+	// Use Redux data directly - no individual API calls needed
 	const tasks = holidayData?.tasks || [];
+	const isLoading = !homeInitialized;
+	const error = null; // Error handling through home data loading
 
-	// Fetch tasks using RTK Query as fallback (only when Redux data is not available)
-	const {
-		data: fallbackTasks = [],
-		isLoading,
-		error,
-	} = useGetTasksQuery(
-		{ holidayId: resolvedHolidayId || "", auth0User },
-		{
-			skip:
-				shouldSkipHolidayQueryWithColdEntry(
-					resolvedHolidayId,
-					auth0User,
-					currentState,
-					true
-				) || !!holidayData?.tasks, // Skip if we have Redux data
-		}
-	);
-
-	// Use Redux data if available, otherwise use fallback from RTK Query
-	const finalTasks = tasks.length > 0 ? tasks : fallbackTasks;
-
-	// Debug logging
-	useEffect(() => {
-		console.log("=== CHRISTMAS TASKS PAGE DEBUG ===");
-		console.log("resolvedHolidayId:", resolvedHolidayId);
-		console.log("holidayData:", holidayData);
-		console.log("holidayData?.tasks:", holidayData?.tasks);
-		console.log("tasks from Redux:", tasks);
-		console.log("fallbackTasks from RTK Query:", fallbackTasks);
-		console.log("finalTasks:", finalTasks);
-		console.log("isLoading:", isLoading);
-		console.log("error:", error);
-		console.log("=== END DEBUG ===");
-	}, [
-		resolvedHolidayId,
-		holidayData,
-		tasks,
-		fallbackTasks,
-		finalTasks,
-		isLoading,
-		error,
-	]);
-	const [createTask, { isLoading: isAdding }] = useCreateTaskMutation();
-	const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
-	const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
-	const [toggleTaskCompletion, { isLoading: isToggling }] =
-		useToggleTaskCompletionMutation();
-
+	// State management
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
+	
+	// Local loading states for mutations
+	const [isAdding, setIsAdding] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [isToggling, setIsToggling] = useState(false);
 
 	// Function to refresh home data after mutations
 	async function refreshHomeData() {
@@ -169,11 +122,20 @@ export default function TasksPage() {
 				holidayId: resolvedHolidayId,
 			};
 
-			await createTask({
-				holidayId: resolvedHolidayId,
-				payload: newTask,
-				auth0User,
-			}).unwrap();
+			// Call API directly instead of using RTK mutation
+			await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(newTask),
+			});
 			
 			// Refresh home data to ensure UI is in sync
 			await refreshHomeData();
@@ -181,6 +143,8 @@ export default function TasksPage() {
 			setShowForm(false);
 		} catch (error) {
 			console.error("Failed to add task:", error);
+		} finally {
+			setIsAdding(false);
 		}
 	}
 
@@ -195,9 +159,10 @@ export default function TasksPage() {
 	async function handleToggleTask(taskId: string) {
 		if (!auth0User || !resolvedHolidayId) return;
 
+		setIsToggling(true);
 		try {
 			// Find the current task to get its completion status
-			const currentTask = finalTasks.find((task: Task) => task.id === taskId);
+			const currentTask = tasks.find((task: Task) => task.id === taskId);
 			if (!currentTask) {
 				console.error("Task not found:", taskId);
 				return;
@@ -215,16 +180,26 @@ export default function TasksPage() {
 				})
 			);
 
-			await toggleTaskCompletion({
-				holidayId: resolvedHolidayId,
-				taskId,
-				isCompleted: newCompletionStatus,
-				auth0User,
-			}).unwrap();
+			// Call API directly instead of using RTK mutation
+			await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}/toggle`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newCompletionStatus,
+				}),
+			});
 		} catch (error) {
 			console.error("Failed to toggle task:", error);
 			// Revert the optimistic update on error
-			const currentTask = finalTasks.find((task: Task) => task.id === taskId);
+		const currentTask = tasks.find((task: Task) => task.id === taskId);
 			if (currentTask && resolvedHolidayId) {
 				dispatch(
 					updateTaskInHomeData({
@@ -234,23 +209,36 @@ export default function TasksPage() {
 					})
 				);
 			}
+		} finally {
+			setIsToggling(false);
 		}
 	}
 
 	async function handleDeleteTask(taskId: string) {
 		if (!auth0User || !resolvedHolidayId) return;
 
+		setIsDeleting(true);
 		try {
-			await deleteTask({
-				holidayId: resolvedHolidayId,
-				taskId,
-				auth0User,
-			}).unwrap();
+			// Call API directly instead of using RTK mutation
+			await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
 			
 			// Refresh home data to ensure UI is in sync
 			await refreshHomeData();
 		} catch (error) {
 			console.error("Failed to delete task:", error);
+		} finally {
+			setIsDeleting(false);
 		}
 	}
 
@@ -262,6 +250,7 @@ export default function TasksPage() {
 		updatedTask: Omit<Task, "id" | "createdAt" | "updatedAt">
 	) {
 		if (editingTask && auth0User && resolvedHolidayId) {
+			setIsUpdating(true);
 			try {
 				// Optimistically update the Redux home data
 				dispatch(
@@ -272,12 +261,20 @@ export default function TasksPage() {
 					})
 				);
 
-				await updateTask({
-					holidayId: resolvedHolidayId,
-					taskId: editingTask.id,
-					updates: updatedTask,
-					auth0User,
-				}).unwrap();
+				// Call API directly instead of using RTK mutation
+				await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						"x-test-user": JSON.stringify({
+							sub: auth0User.sub,
+							email: auth0User.email,
+							name: auth0User.name,
+							picture: auth0User.picture,
+						}),
+					},
+					body: JSON.stringify(updatedTask),
+				});
 				
 				// Refresh home data to ensure UI is in sync
 				await refreshHomeData();
@@ -300,6 +297,8 @@ export default function TasksPage() {
 						},
 					})
 				);
+			} finally {
+				setIsUpdating(false);
 			}
 		}
 	}
@@ -346,7 +345,7 @@ export default function TasksPage() {
 		);
 	}
 
-	const sortedTasks = sortTasks(finalTasks);
+	const sortedTasks = sortTasks(tasks);
 	const incompleteTasks = sortedTasks.filter((task: Task) => !task.isCompleted);
 	const completedTasks = sortedTasks.filter((task: Task) => task.isCompleted);
 
