@@ -128,8 +128,21 @@ export const saveHolidayPreferences = createAsyncThunk(
 		});
 
 		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.error || "Failed to save holiday preferences");
+			let errorMessage = "Failed to save holiday preferences";
+			try {
+				const errorData = await response.json();
+				errorMessage = errorData.error || errorData.message || errorMessage;
+				console.error("Holiday preferences error:", {
+					status: response.status,
+					statusText: response.statusText,
+					errorData,
+					requestData: request
+				});
+			} catch (parseError) {
+				console.error("Failed to parse error response:", parseError);
+				errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+			}
+			throw new Error(errorMessage);
 		}
 
 		const result = await response.json();

@@ -87,7 +87,24 @@ export async function POST(request: NextRequest) {
 			return !holidayType.includes("wedding");
 		});
 
-		// Process preferences in a single transaction
+		// Deduplicate holidays by holiday type to prevent duplicate processing
+		const deduplicatedPreferences = validPreferences.reduce((acc, current) => {
+			const existing = acc.find(item => item.holiday === current.holiday);
+			if (!existing) {
+				acc.push(current);
+			} else {
+				// Keep the one with budget if available, otherwise keep the first one
+				if (current.budget && !existing.budget) {
+					const index = acc.findIndex(item => item.holiday === current.holiday);
+					acc[index] = current;
+				}
+			}
+			return acc;
+		}, [] as typeof validPreferences);
+
+		console.log(`Processing ${deduplicatedPreferences.length} unique holidays (filtered from ${preferences.length} total)`);
+
+		// Process preferences in a transaction with increased timeout
 		const results = await prisma.$transaction(async (tx) => {
 			// Get current holidays for this account
 			const currentHolidays = await tx.holiday.findMany({
@@ -101,12 +118,14 @@ export async function POST(request: NextRequest) {
 			const currentHolidayTypes = new Set(
 				currentHolidays.map((h) => h.holidayType)
 			);
-			const newHolidayTypes = new Set(validPreferences.map((p) => p.holiday));
+			const newHolidayTypes = new Set(deduplicatedPreferences.map((p) => p.holiday));
 
 			// Find holidays to remove (in current but not in new preferences)
 			const holidaysToRemove = currentHolidays.filter(
 				(h) => !newHolidayTypes.has(h.holidayType)
 			);
+
+			console.log(`Removing ${holidaysToRemove.length} holidays, processing ${deduplicatedPreferences.length} preferences`);
 
 			// Remove holidays that are no longer selected (this will cascade delete budgets, tasks, etc.)
 			for (const holiday of holidaysToRemove) {
@@ -117,7 +136,7 @@ export async function POST(request: NextRequest) {
 
 			const holidayResults = [];
 
-			for (const preference of validPreferences) {
+			for (const preference of deduplicatedPreferences) {
 				const { holiday: holidayType, budget, countdownTimer } = preference;
 
 				// Find existing holiday or create new one
@@ -225,6 +244,9 @@ export async function POST(request: NextRequest) {
 			}
 
 			return holidayResults;
+		}, {
+			timeout: 15000, // Increase timeout to 15 seconds for complex operations
+			maxWait: 20000, // Maximum wait time for transaction to start
 		});
 
 		return ok(toPlain(results));

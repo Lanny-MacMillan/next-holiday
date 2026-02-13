@@ -199,10 +199,16 @@ export default function SettingsPage() {
 		// Save to database
 		if (user?.sub && homeData?.account?.id) {
 			try {
+				// Send only essential data - holiday type and budget
+				const cleanPreferences = newPreferences.map(pref => ({
+					holiday: pref.holiday,
+					budget: pref.budget || 500
+				}));
+				
 				await dispatch(
 					saveHolidayPreferences({
 						accountId: homeData.account.id,
-						preferences: newPreferences,
+						preferences: cleanPreferences,
 						auth0User: user,
 					})
 				).unwrap();
@@ -222,10 +228,16 @@ export default function SettingsPage() {
 		// Save to database
 		if (user?.sub && homeData?.account?.id) {
 			try {
+				// Send only essential data - holiday type and budget
+				const cleanPreferences = newPreferences.map(pref => ({
+					holiday: pref.holiday,
+					budget: pref.budget || 500
+				}));
+				
 				await dispatch(
 					saveHolidayPreferences({
 						accountId: homeData.account.id,
-						preferences: newPreferences,
+						preferences: cleanPreferences,
 						auth0User: user,
 					})
 				).unwrap();
@@ -255,10 +267,16 @@ export default function SettingsPage() {
 		// Save to database
 		if (user?.sub && homeData?.account?.id) {
 			try {
+				// Send only essential data - holiday type and budget
+				const cleanPreferences = newPreferences.map(pref => ({
+					holiday: pref.holiday,
+					budget: pref.budget || 500
+				}));
+				
 				await dispatch(
 					saveHolidayPreferences({
 						accountId: homeData.account.id,
-						preferences: newPreferences,
+						preferences: cleanPreferences,
 						auth0User: user,
 					})
 				).unwrap();
@@ -467,7 +485,7 @@ export default function SettingsPage() {
 									"Fourth of July",
 									"Graduation",
 									"Baby Shower",
-									"Wedding",
+
 								].map((holiday) => {
 									const isSelected = localHolidayPreferences.some(
 										(choice: { holiday: string; budget: number }) =>

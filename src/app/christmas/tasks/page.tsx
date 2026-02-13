@@ -12,7 +12,8 @@ import {
 } from "@/utils/holidayData";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { RootState } from "@/store";
-import { updateTaskInHomeData } from "@/store/slices/homeSlice";
+import { updateTaskInHomeData, setHomeData } from "@/store/slices/homeSlice";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
 	useGetTasksQuery,
@@ -62,6 +63,11 @@ export default function TasksPage() {
 	const resolvedHolidayId = homeInitialized
 		? getHolidayIdFromRoute("/christmas", holidayPreferences)
 		: getHolidayIdFromRoute("/christmas", holidayPreferences); // Allow fallback for cold entry
+
+	// Check if the holiday is shared to conditionally show assign to field
+	const isHolidayShared = useAppSelector((state: RootState) =>
+		selectIsHolidayShared(state, "christmas")
+	);
 
 	// Get holiday data from Redux if available
 	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
@@ -122,6 +128,32 @@ export default function TasksPage() {
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
 
+	// Function to refresh home data after mutations
+	async function refreshHomeData() {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	}
+
 	async function handleAddTask(formValues: Record<string, any>) {
 		if (!formValues.title?.trim() || !resolvedHolidayId || !auth0User) return;
 
@@ -130,7 +162,7 @@ export default function TasksPage() {
 				title: formValues.title,
 				description: formValues.description || undefined,
 				priority: formValues.priority as "low" | "medium" | "high",
-				assignedTo: formValues.assignedTo || undefined,
+				...(isHolidayShared && { assignedTo: formValues.assignedTo || undefined }),
 				category: formValues.category || "Tasks",
 				dueDate: formValues.dueDate || undefined,
 				isCompleted: false,
@@ -142,6 +174,10 @@ export default function TasksPage() {
 				payload: newTask,
 				auth0User,
 			}).unwrap();
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
+			
 			setShowForm(false);
 		} catch (error) {
 			console.error("Failed to add task:", error);
@@ -210,6 +246,9 @@ export default function TasksPage() {
 				taskId,
 				auth0User,
 			}).unwrap();
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 		} catch (error) {
 			console.error("Failed to delete task:", error);
 		}
@@ -239,6 +278,10 @@ export default function TasksPage() {
 					updates: updatedTask,
 					auth0User,
 				}).unwrap();
+				
+				// Refresh home data to ensure UI is in sync
+				await refreshHomeData();
+				
 				setEditingTask(null);
 			} catch (error) {
 				console.error("Failed to update task:", error);
@@ -385,7 +428,9 @@ export default function TasksPage() {
 			<FormModal
 				isOpen={showForm}
 				title="Add New Task"
-				fields={getFormConfig("tasks", "add").fields}
+				fields={getFormConfig("tasks", "add").fields.filter(
+					(field) => field.id !== "assignedTo" || isHolidayShared
+				)}
 				onSubmit={handleAddTask}
 				onClose={closeForm}
 				loading={loading}
@@ -402,6 +447,7 @@ export default function TasksPage() {
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
 				loading={loading}
+				isHolidayShared={isHolidayShared}
 			/>
 
 			{/* Sort Modal */}
@@ -416,7 +462,7 @@ export default function TasksPage() {
 					{ value: "none", label: "None" },
 					{ value: "priority", label: "Priority" },
 					{ value: "dateDue", label: "Date Due" },
-					{ value: "assignedTo", label: "Assigned To" },
+					...(isHolidayShared ? [{ value: "assignedTo", label: "Assigned To" }] : []),
 					{ value: "category", label: "Category" },
 				]}
 				title="Sort Tasks"

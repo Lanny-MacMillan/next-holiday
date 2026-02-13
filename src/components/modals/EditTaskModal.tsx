@@ -7,6 +7,7 @@ export interface EditTaskModalProps {
 	onClose: () => void;
 	onSave: (task: Omit<Task, "id" | "createdAt" | "updatedAt">) => void;
 	loading?: boolean;
+	isHolidayShared?: boolean;
 }
 
 export default function EditTaskModal({
@@ -15,6 +16,7 @@ export default function EditTaskModal({
 	onClose,
 	onSave,
 	loading = false,
+	isHolidayShared = false,
 }: EditTaskModalProps) {
 	const [form, setForm] = useState({
 		title: "",
@@ -126,16 +128,17 @@ export default function EditTaskModal({
 							<option value="medium">Medium Priority</option>
 							<option value="high">High Priority</option>
 						</select>
-						<input
-							className="flex-1 border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-							placeholder="Assigned To"
-							value={form.assignedTo}
-							onChange={(e) =>
-								setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
-							}
-						/>
+						{isHolidayShared && (
+							<input
+								className="flex-1 border rounded px-3 py-2 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+								placeholder="Assigned To"
+								value={form.assignedTo}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, assignedTo: e.target.value }))
+								}
+							/>
+						)}
 					</div>
-
 					{/* Category and Due Date */}
 					<div className="flex gap-2">
 						<input

@@ -25,11 +25,12 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 	const { theme } = useAppSelector((state: any) => state.theme.settings);
 	const isGamified = displayMode === "gamified";
 	const textColor = theme === "dark" ? "white" : "black";
-	const defaultColor = theme === "dark" ? "#ffffff" : "#000000";
+	const defaultColor = "#000000"; // Always black for buttons
+	const buttonDefaultColor = "#000000"; // Always black for navigation buttons
 
 	// Convert Tailwind classes to actual colors
 	const getHoverColor = () => {
-		if (!holidayColor) return defaultColor;
+		if (!holidayColor) return buttonDefaultColor;
 
 		// If it's already a hex color, use it directly
 		if (holidayColor.startsWith("#")) {
@@ -71,11 +72,11 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 				const colorName = fromMatch[1];
 				const shade = fromMatch[2];
 				const key = `${colorName}-${shade}`;
-				return colorMap[key] || defaultColor;
+				return colorMap[key] || buttonDefaultColor;
 			}
 		}
 
-		return defaultColor;
+		return buttonDefaultColor;
 	};
 
 	const hoverColor = getHoverColor();
@@ -88,13 +89,13 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 						href={backHref}
 						className="flex-shrink-0 text-3xl sm:text-4xl md:text-5xl transition-all duration-200 hover:scale-110 z-10 p-2 -m-2"
 						style={{
-							color: defaultColor,
+							color: buttonDefaultColor,
 						}}
 						onMouseEnter={(e) => {
 							e.currentTarget.style.color = hoverColor;
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.color = defaultColor;
+							e.currentTarget.style.color = buttonDefaultColor;
 						}}
 					>
 						←
@@ -136,13 +137,13 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 							className="flex-shrink-0 transition-all duration-200 hover:scale-110 z-10 p-2 -m-2"
 							title={sortTitle}
 							style={{
-								color: defaultColor,
+								color: buttonDefaultColor,
 							}}
 							onMouseEnter={(e) => {
 								e.currentTarget.style.color = hoverColor;
 							}}
 							onMouseLeave={(e) => {
-								e.currentTarget.style.color = defaultColor;
+								e.currentTarget.style.color = buttonDefaultColor;
 							}}
 						>
 							<div className="flex flex-col gap-1">
@@ -171,13 +172,13 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 					href={backHref}
 					className="flex-shrink-0 text-3xl sm:text-4xl md:text-5xl transition-all duration-200 hover:scale-110 z-10 p-2 -m-2"
 					style={{
-						color: defaultColor,
+						color: buttonDefaultColor,
 					}}
 					onMouseEnter={(e) => {
 						e.currentTarget.style.color = hoverColor;
 					}}
 					onMouseLeave={(e) => {
-						e.currentTarget.style.color = defaultColor;
+						e.currentTarget.style.color = buttonDefaultColor;
 					}}
 				>
 					←
@@ -208,13 +209,13 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 						className="flex-shrink-0 transition-all duration-200 hover:scale-110 z-10 p-2 -m-2"
 						title={sortTitle}
 						style={{
-							color: defaultColor,
+							color: buttonDefaultColor,
 						}}
 						onMouseEnter={(e) => {
 							e.currentTarget.style.color = hoverColor;
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.color = defaultColor;
+							e.currentTarget.style.color = buttonDefaultColor;
 						}}
 					>
 						<div className="flex flex-col gap-1">

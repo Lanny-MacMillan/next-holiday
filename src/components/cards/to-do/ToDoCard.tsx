@@ -273,6 +273,13 @@ export default function ToDoCard({
 									{task.priority} priority
 								</span>
 
+								{/* Assigned To Tag */}
+								{task.assignedTo && (
+									<span className="px-2 py-1 rounded-full text-xs font-medium bg-white text-blue-600">
+										👤 {task.assignedTo}
+									</span>
+								)}
+
 								{/* Due Date */}
 								{task.dueDate && !task.isCompleted && (
 									<span className="text-xs text-white opacity-80">
@@ -411,6 +418,13 @@ export default function ToDoCard({
 						>
 							{task.priority}
 						</span>
+
+						{/* Assigned To Tag */}
+						{task.assignedTo && (
+							<span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+								👤 {task.assignedTo}
+							</span>
+						)}
 
 						{/* Category Tag */}
 						{task.category && (

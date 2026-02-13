@@ -13,7 +13,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { updateCardInHomeData } from "@/store/slices/homeSlice";
+import { updateCardInHomeData, setHomeData } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
 import { useGetCardsQuery } from "@/store/api";
 import { transformCardPayload } from "@/utils/formTransformers";
@@ -108,6 +108,32 @@ export default function ChristmasCardsPage() {
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [sortBy, setSortBy] = useState("recipient");
 
+	// Function to refresh home data after mutations
+	async function refreshHomeData() {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	}
+
 	useEffect(() => {
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
@@ -124,6 +150,10 @@ export default function ChristmasCardsPage() {
 				payload,
 				auth0User,
 			}).unwrap();
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
+			
 			setShowForm(false);
 		} catch (error) {
 			console.error("Error creating card:", error);
@@ -164,6 +194,10 @@ export default function ChristmasCardsPage() {
 					},
 					auth0User,
 				}).unwrap();
+				
+				// Refresh home data to ensure UI is in sync
+				await refreshHomeData();
+				
 				setShowDeleteModal(false);
 				setCardToDelete(null);
 			} catch (error) {
@@ -199,6 +233,10 @@ export default function ChristmasCardsPage() {
 					payload,
 					auth0User,
 				}).unwrap();
+				
+				// Refresh home data to ensure UI is in sync
+				await refreshHomeData();
+				
 				setShowEditModal(false);
 				setCardToEdit(null);
 			} catch (error) {

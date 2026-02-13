@@ -54,7 +54,11 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 					</div>
 				) : (
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-						{items.map((item) => renderItem(item))}
+						{items.map((item) => 
+							React.cloneElement(renderItem(item) as React.ReactElement, {
+								key: item.id || item.uuid || Math.random()
+							})
+						)}
 					</ul>
 				)}
 			</div>

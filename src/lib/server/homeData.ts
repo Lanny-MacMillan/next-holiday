@@ -79,7 +79,11 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			where: { accountId: account.id },
 			include: {
 				budgets: true,
-				gifts: true,
+				gifts: {
+					include: {
+						contact: true,
+					},
+				},
 				cards: true,
 				tasks: true,
 				guestLists: {
@@ -155,7 +159,13 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 					? parseFloat(holiday.budgets[0].totalBudget.toString())
 					: undefined,
 				countdownTimer: holiday.countdownTimer?.toISOString(),
-				gifts: holiday.gifts || [],
+				gifts: holiday.gifts.map((gift: any) => ({
+					...gift,
+					recipient: gift.contact?.name || "Unknown",
+					createdAt: gift.createdAt.toISOString(),
+					updatedAt: gift.updatedAt.toISOString(),
+					completedDate: gift.completedDate?.toISOString() || null,
+				})) || [],
 				cards: holiday.cards || [],
 				tasks: allTasks,
 				// Add filtered task categories
