@@ -12,7 +12,13 @@
     "test:coverage": "jest --coverage",
     "guard:fetch": "grep -r -n \"useEffect.*fetch\\|axios\\.\" src/app src/components && echo \"Forbidden fetch/axios in client components\" && exit 1 || exit 0",
     "guard:storage": "grep -r -n \"localStorage\\.(getItem\\|setItem)\" src/app src/components && echo \"Forbidden localStorage for canonical data\" && exit 1 || exit 0",
-    "guard:all": "npm run guard:fetch && npm run guard:storage"
+    "guard:all": "npm run guard:fetch && npm run guard:storage",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.4.0",
