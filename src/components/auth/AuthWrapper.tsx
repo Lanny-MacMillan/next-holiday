@@ -43,21 +43,14 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 			// Add user to Redux
 			dispatch(setUser(userData));
 
-			// Always try to add/update user in DB (the backend will handle if user exists or not)
-			console.log("Syncing user with database:", {
+			// NOTE: User database sync is now handled by UserSetupHandler
+			// to avoid race conditions between multiple user creation endpoints
+			console.log("User added to Redux, database sync handled by UserSetupHandler:", {
 				sub: userData.sub,
 				email: userData.email,
 				name: userData.name,
 				picture: userData.picture,
 			});
-			dispatch(
-				addUserToDb({
-					sub: userData.sub,
-					email: userData.email,
-					name: userData.name,
-					picture: userData.picture,
-				})
-			);
 		} else if (!isAuthenticated && reduxUser) {
 			// User logged out - clear all user data and caches for multi-tenant safety
 			dispatch(clearUser());

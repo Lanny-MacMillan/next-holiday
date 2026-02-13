@@ -4,7 +4,20 @@ import { ok, serverError, badRequest } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body;
+    
+    // Handle potential empty body or malformed JSON
+    try {
+      const text = await request.text();
+      if (!text.trim()) {
+        return badRequest("Request body is empty");
+      }
+      body = JSON.parse(text);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return badRequest("Invalid JSON in request body");
+    }
+    
     const { auth0User } = body;
 
     if (!auth0User || !auth0User.sub) {

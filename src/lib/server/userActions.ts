@@ -40,24 +40,25 @@ export async function addUserToDb(auth0User: {
 		}
 
 		// Create user and account in a transaction
-		const result = await prisma.$transaction(async (tx) => {
-			// Create or update user
-			const user = await tx.user.upsert({
-				where: { auth0Sub: auth0User.sub },
-				update: {
-					email: auth0User.email,
-					name: auth0User.name,
-					picture: auth0User.picture,
-					updatedAt: new Date(),
-				},
-				create: {
-					id: uuidv4(),
-					auth0Sub: auth0User.sub,
-					email: auth0User.email,
-					name: auth0User.name,
-					picture: auth0User.picture,
-				},
-			});
+		try {
+			const result = await prisma.$transaction(async (tx) => {
+				// Create or update user
+				const user = await tx.user.upsert({
+					where: { auth0Sub: auth0User.sub },
+					update: {
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+						updatedAt: new Date(),
+					},
+					create: {
+						id: uuidv4(),
+						auth0Sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					},
+				});
 
 			// Check if user already has an account
 			const existingAccount = await tx.account.findFirst({
@@ -98,6 +99,51 @@ export async function addUserToDb(auth0User: {
 		revalidatePath("/");
 
 		return { success: true, data: result };
+	} catch (transactionError: any) {
+		// Handle race condition where user was created by another concurrent request
+		if (transactionError.code === "P2002") {
+			console.log("Unique constraint violation detected, handling race condition:", {
+				target: transactionError.meta?.target,
+				auth0Sub: auth0User.sub
+			});
+			
+			try {
+				// Wait a bit to let the other transaction complete
+				await new Promise(resolve => setTimeout(resolve, 100));
+				
+				const existingUser = await prisma.user.findUnique({
+					where: { auth0Sub: auth0User.sub },
+					include: {
+						accountMemberships: {
+							include: {
+								account: true
+							}
+						}
+					}
+				});
+				
+				if (existingUser) {
+					const account = existingUser.accountMemberships?.[0]?.account || null;
+					console.log("Successfully recovered from race condition:", {
+						userId: existingUser.id,
+						hasAccount: !!account
+					});
+					return { success: true, data: { user: existingUser, account } };
+				} else {
+					console.error("User still not found after race condition, this is unexpected");
+				}
+			} catch (findError) {
+				console.error("Error finding existing user after P2002:", findError);
+			}
+		}
+		
+		console.error("Transaction error that could not be recovered:", {
+			code: transactionError.code,
+			message: transactionError.message,
+			target: transactionError.meta?.target
+		});
+		throw transactionError;
+	}
 	} catch (error) {
 		console.error("Error adding user to database:", error);
 		return { success: false, error: "Failed to add user to database" };

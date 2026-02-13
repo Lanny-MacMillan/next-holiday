@@ -114,7 +114,8 @@ export default function AppContent({ children }: AppContentProps) {
 
 	return (
 		<>
-			<UserSync />
+			{/* UserSync disabled to prevent race condition with UserSetupHandler */}
+			{/* <UserSync /> */}
 			<DataInitializer />
 			<Header />
 			<AuthWrapper>{children}</AuthWrapper>

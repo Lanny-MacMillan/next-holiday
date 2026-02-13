@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth0 } from "@auth0/auth0-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface UserSetupHandlerProps {
 	needsUserSetup: boolean;
@@ -15,13 +15,21 @@ export default function UserSetupHandler({
 	const { user: auth0User, isAuthenticated } = useAuth0();
 	const [isSettingUp, setIsSettingUp] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const hasAttemptedSetup = useRef(false);
 
 	useEffect(() => {
 		async function setupUser() {
-			if (!needsUserSetup || !isAuthenticated || !auth0User || isSettingUp) {
+			if (
+				!needsUserSetup || 
+				!isAuthenticated || 
+				!auth0User || 
+				isSettingUp || 
+				hasAttemptedSetup.current
+			) {
 				return;
 			}
 
+			hasAttemptedSetup.current = true;
 			setIsSettingUp(true);
 			setError(null);
 
@@ -58,6 +66,7 @@ export default function UserSetupHandler({
 			} catch (err) {
 				console.error("Error setting up user:", err);
 				setError("Failed to set up user");
+				hasAttemptedSetup.current = false; // Allow retry on error
 			} finally {
 				setIsSettingUp(false);
 			}
@@ -68,8 +77,7 @@ export default function UserSetupHandler({
 		needsUserSetup,
 		isAuthenticated,
 		auth0User,
-		isSettingUp,
-		onSetupComplete,
+		// Removed onSetupComplete to prevent infinite loops
 	]);
 
 	if (!needsUserSetup) {

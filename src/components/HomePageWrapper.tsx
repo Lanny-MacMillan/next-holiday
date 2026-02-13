@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth0 } from "@auth0/auth0-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { setHomeData as setHomeDataAction } from "@/store/slices/homeSlice";
 import { setMany as setBudgets } from "@/store/slices/budgetsSlice";
@@ -15,6 +15,12 @@ export default function HomePageWrapper() {
 	const [homeData, setHomeData] = useState<HomeData | null>(null);
 	const [isLoadingData, setIsLoadingData] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+
+	// Memoize the setup complete callback to prevent useEffect re-runs
+	const handleSetupComplete = useCallback(() => {
+		// Trigger a re-fetch of the data
+		window.location.reload();
+	}, []);
 
 	useEffect(() => {
 		async function fetchHomeData() {
@@ -214,10 +220,7 @@ export default function HomePageWrapper() {
 		return (
 			<UserSetupHandler
 				needsUserSetup={homeData.needsUserSetup}
-				onSetupComplete={() => {
-					// Trigger a re-fetch of the data
-					window.location.reload();
-				}}
+				onSetupComplete={handleSetupComplete}
 			/>
 		);
 	}

@@ -53,56 +53,41 @@ export async function POST(request: NextRequest) {
 
 		console.log("Creating/updating user with auth0Sub:", auth0Sub);
 
-		// First, try to find the user to see if they exist
-		const existingUser = await prisma.user.findUnique({
+		// Use upsert to handle create/update atomically and avoid race conditions
+		const user = await prisma.user.upsert({
 			where: { auth0Sub },
-		});
-
-		let user;
-
-		if (existingUser) {
-			// User exists, update them
-			console.log("User exists, updating...");
-
-			// Only update name if user hasn't set a custom name (preserve custom names)
-			const updateData: any = {
+			update: {
 				email,
 				picture,
 				isInDb: true,
 				updatedAt: new Date(),
-			};
+				// Only update name if it's null/empty (preserve custom names)
+				...(name && { name }),
+			},
+			create: {
+				auth0Sub,
+				email,
+				name,
+				picture,
+				isInDb: true,
+				isFirstLogin: true,
+			},
+		});
 
-			// Only update name if the existing name is null/empty or matches the Auth0 name
-			// This preserves custom names that users have set
-			if (!existingUser.name || existingUser.name === name) {
-				updateData.name = name;
-			}
+		// Check if this is a new user and create default preferences
+		const userPreferencesExist = await prisma.userPreferences.findUnique({
+			where: { userId: user.id },
+		});
 
-			user = await prisma.user.update({
-				where: { auth0Sub },
-				data: updateData,
-			});
-		} else {
-			// User doesn't exist, create them
-			console.log("User doesn't exist, creating...");
-			user = await prisma.user.create({
-				data: {
-					auth0Sub,
-					email,
-					name,
-					picture,
-					isInDb: true,
-					isFirstLogin: true,
-				},
-			});
-
-			// Create default user preferences for new user
+		if (!userPreferencesExist) {
 			console.log("Creating default user preferences for new user:", user.id);
-			await prisma.userPreferences.create({
-				data: {
+			await prisma.userPreferences.upsert({
+				where: { userId: user.id },
+				create: {
 					userId: user.id,
 					...DEFAULT_USER_PREFERENCES,
 				},
+				update: {}, // No updates needed, just ensure it exists
 			});
 			console.log("Default user preferences created successfully");
 		}
@@ -115,22 +100,37 @@ export async function POST(request: NextRequest) {
 	} catch (error: any) {
 		console.error("Error creating/updating user:", error);
 
-		// Handle unique constraint violation specifically
+		// Handle the specific case where upsert fails due to concurrent requests
 		if (error.code === "P2002" && error.meta?.target?.includes("auth0_sub")) {
-			console.log(
-				"Unique constraint violation on auth0_sub - user likely already exists"
-			);
-			// Try to find and return the existing user
+			console.log("Concurrent user creation detected, fetching existing user");
 			try {
 				const existingUser = await prisma.user.findUnique({
-					where: { auth0Sub: body.auth0Sub },
+					where: { auth0Sub },
 				});
+				
 				if (existingUser) {
+					// Ensure preferences exist for this user as well
+					const userPreferencesExist = await prisma.userPreferences.findUnique({
+						where: { userId: existingUser.id },
+					});
+
+					if (!userPreferencesExist) {
+						console.log("Creating missing default user preferences for:", existingUser.id);
+						await prisma.userPreferences.upsert({
+							where: { userId: existingUser.id },
+							create: {
+								userId: existingUser.id,
+								...DEFAULT_USER_PREFERENCES,
+							},
+							update: {}, // No updates needed, just ensure it exists
+						});
+					}
+
 					const { auth0Sub: _, ...userResponse } = existingUser;
 					return Response.json(userResponse);
 				}
 			} catch (findError) {
-				console.error("Error finding existing user:", findError);
+				console.error("Error finding existing user after constraint violation:", findError);
 			}
 		}
 
