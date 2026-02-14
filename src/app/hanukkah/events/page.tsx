@@ -17,6 +17,7 @@ import {
 } from "@/store/selectors/home";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import SortModal from "@/components/modals/SortModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import FormModal from "@/components/modals/FormModal";
@@ -82,6 +83,11 @@ export default function HanukkahEventsPage() {
 	const holidayId = homeInitialized
 		? getHolidayIdFromRoute("/hanukkah", holidayPreferences)
 		: getHolidayIdFromRoute("/hanukkah", holidayPreferences);
+
+	// Check if the holiday is shared to conditionally show assign to field
+	const isHolidayShared = useAppSelector((state: any) =>
+		selectIsHolidayShared(state, "hanukkah")
+	);
 
 	// Get holiday data from Redux if available
 	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
@@ -257,7 +263,6 @@ export default function HanukkahEventsPage() {
 		if (!holidayId || !auth0User) return;
 
 		setIsToggling(true);
-		console.log('Starting toggle for task:', taskId); // Debug
 		try {
 			// Find the current task to get its completion status
 			const currentTask = events.find((task: any) => task.id === taskId);
@@ -643,14 +648,14 @@ export default function HanukkahEventsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={{
 					title: "",
 					description: "",
 					priority: "medium",
-					assignedTo: "",
+					...(isHolidayShared ? { assignedTo: "" } : {}),
 					dueDate: "",
 				}}
 				onSubmit={handleAddTask}
@@ -687,14 +692,14 @@ export default function HanukkahEventsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={{
 					title: editingTask?.title || "",
 					description: editingTask?.description || "",
 					priority: editingTask?.priority || "medium",
-					assignedTo: editingTask?.assignedTo || "",
+					...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || "" } : {}),
 					dueDate: editingTask?.dueDate || "",
 				}}
 				onSubmit={handleEditTaskSubmit}

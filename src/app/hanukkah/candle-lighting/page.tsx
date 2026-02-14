@@ -25,7 +25,7 @@ import {
 	selectHomeData,
 } from "@/store/selectors/home";
 
-type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
+type SortOption = "priority" | "dateDue" | "category" | "none";
 
 const defaultCandleTasks = [
 	{
@@ -447,10 +447,6 @@ export default function CandleLightingPage() {
 					if (!b.dueDate) return -1;
 					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
 				});
-			case "assignedTo":
-				return [...tasksToSort].sort((a, b) =>
-					(a.assignedTo || "").localeCompare(b.assignedTo || "")
-				);
 			case "category":
 				return [...tasksToSort].sort((a, b) =>
 					(a.category || "").localeCompare(b.category || "")
@@ -528,7 +524,6 @@ export default function CandleLightingPage() {
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
 							{sortBy === "priority" && "Sorted by Priority"}
 							{sortBy === "dateDue" && "Sorted by Date Due"}
-							{sortBy === "assignedTo" && "Sorted by Assigned To"}
 							{sortBy === "category" && "Sorted by Category"}
 						</div>
 					)}
@@ -607,14 +602,12 @@ export default function CandleLightingPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={{
 					title: "",
 					description: "",
 					priority: "medium",
-					assignedTo: "",
 					dueDate: "",
 				}}
 				onSubmit={handleAddTask}
@@ -651,14 +644,12 @@ export default function CandleLightingPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={{
 					title: editingTask?.title || "",
 					description: editingTask?.description || "",
 					priority: editingTask?.priority || "medium",
-					assignedTo: editingTask?.assignedTo || "",
 					dueDate: editingTask?.dueDate || "",
 				}}
 				onSubmit={handleEditTaskSubmit}
@@ -680,7 +671,6 @@ export default function CandleLightingPage() {
 					{ value: "none", label: "None" },
 					{ value: "priority", label: "Priority" },
 					{ value: "dateDue", label: "Date Due" },
-					{ value: "assignedTo", label: "Assigned To" },
 					{ value: "category", label: "Category" },
 				]}
 				title="Sort Tasks"
