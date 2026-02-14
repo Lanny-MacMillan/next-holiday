@@ -181,7 +181,7 @@ export default function TasksPage() {
 			);
 
 			// Call API directly instead of using RTK mutation
-			await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}/toggle`, {
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}`, {
 				method: "PATCH",
 				headers: {
 					"Content-Type": "application/json",
@@ -196,6 +196,10 @@ export default function TasksPage() {
 					isCompleted: newCompletionStatus,
 				}),
 			});
+
+			if (!response.ok) {
+				console.error("Failed to toggle task:", response.status, response.statusText);
+			}
 		} catch (error) {
 			console.error("Failed to toggle task:", error);
 			// Revert the optimistic update on error

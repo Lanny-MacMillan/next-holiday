@@ -46,10 +46,10 @@ export function useBudgetInfo(
 		queryHolidayId = routeHolidayId || undefined;
 	}
 
-	// Use the new centralized budget hook if holidayId is provided
-	const { budget, loading, error } = queryHolidayId
-		? useHolidayBudget({ holidayId: queryHolidayId })
-		: { budget: null, loading: false, error: null };
+	// Use the new centralized budget hook (always call, hook handles undefined holidayId)
+	const { budget, loading, error } = useHolidayBudget({ 
+		holidayId: queryHolidayId
+	});
 
 	// Use home data for gifts instead of RTK Query
 	const homeData = useAppSelector((state: any) => state.home.data);
@@ -162,6 +162,7 @@ export function BudgetDisplay({
 	holidayColor,
 	holidayId,
 }: BudgetDisplayProps) {
+	// Call ALL hooks first before any conditional logic
 	const budgetInfo = useBudgetInfo(holiday, holidayId);
 	const pathname = usePathname();
 	const { settings } = useAppSelector((state: any) => state.theme);
@@ -170,11 +171,13 @@ export function BudgetDisplay({
 		preferences?.displayMode === "gamified" ||
 		settings.displayMode === "gamified";
 
-	if (budgetInfo.budgetLimit === 0) {
-		return null; // Don't show if no budget is set
-	}
-
+	// No early return - always render but conditionally show content
 	const displayTitle = holiday ? `${holiday} Budget` : "Gift Budget";
+
+	// Don't render anything if no budget is set
+	if (budgetInfo.budgetLimit === 0) {
+		return null;
+	}
 
 	// If gamified is true, render the playful design
 	if (isGamified) {
