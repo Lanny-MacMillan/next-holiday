@@ -180,28 +180,33 @@ export const holidayData: HolidayData[] = [
 		getProgress: (state) => {
 			const gifts = state.valentinesGiftList?.gifts || [];
 			const tasks = state.valentinesTasks?.tasks || [];
+			const cards = state.valentinesCards?.cards || [];
 
-			const totalItems = gifts.length + tasks.length;
+			const totalItems = gifts.length + tasks.length + cards.length;
 			const completedItems =
 				gifts.filter((gift: any) => gift.isCompleted).length +
-				tasks.filter((task: any) => task.isCompleted).length;
+				tasks.filter((task: any) => task.isCompleted).length +
+				cards.filter((card: any) => card.isCompleted).length;
 
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
 			const gifts = state.valentinesGiftList?.gifts || [];
 			const tasks = state.valentinesTasks?.tasks || [];
+			const cards = state.valentinesCards?.cards || [];
 
 			return (
 				gifts.filter((gift: any) => gift.isCompleted).length +
-				tasks.filter((task: any) => task.isCompleted).length
+				tasks.filter((task: any) => task.isCompleted).length +
+				cards.filter((card: any) => card.isCompleted).length
 			);
 		},
 		getTotalItems: (state) => {
 			const gifts = state.valentinesGiftList?.gifts || [];
 			const tasks = state.valentinesTasks?.tasks || [];
+			const cards = state.valentinesCards?.cards || [];
 
-			return gifts.length + tasks.length;
+			return gifts.length + tasks.length + cards.length;
 		},
 	},
 	{
@@ -326,30 +331,35 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-pink-400 dark:bg-pink-500",
 		},
 		getProgress: (state) => {
+			const cards = state.cards?.cards || [];
 			const gifts = state.mothersDayGiftList?.gifts || [];
 			const tasks = state.mothersDayTasks?.tasks || [];
 
-			const totalItems = gifts.length + tasks.length;
+			const totalItems = cards.length + gifts.length + tasks.length;
 			const completedItems =
+				cards.filter((card: any) => card.isCompleted).length +
 				gifts.filter((gift: any) => gift.isCompleted).length +
 				tasks.filter((task: any) => task.isCompleted).length;
 
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
+			const cards = state.cards?.cards || [];
 			const gifts = state.mothersDayGiftList?.gifts || [];
 			const tasks = state.mothersDayTasks?.tasks || [];
 
 			return (
+				cards.filter((card: any) => card.isCompleted).length +
 				gifts.filter((gift: any) => gift.isCompleted).length +
 				tasks.filter((task: any) => task.isCompleted).length
 			);
 		},
 		getTotalItems: (state) => {
+			const cards = state.cards?.cards || [];
 			const gifts = state.mothersDayGiftList?.gifts || [];
 			const tasks = state.mothersDayTasks?.tasks || [];
 
-			return gifts.length + tasks.length;
+			return cards.length + gifts.length + tasks.length;
 		},
 	},
 	{
@@ -363,30 +373,35 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-blue-400 dark:bg-blue-500",
 		},
 		getProgress: (state) => {
+			const cards = state.fathersDayCards?.cards || [];
 			const gifts = state.fathersDayGiftList?.gifts || [];
 			const tasks = state.fathersDayTasks?.tasks || [];
 
-			const totalItems = gifts.length + tasks.length;
+			const totalItems = cards.length + gifts.length + tasks.length;
 			const completedItems =
+				cards.filter((card: any) => card.isCompleted).length +
 				gifts.filter((gift: any) => gift.isCompleted).length +
 				tasks.filter((task: any) => task.isCompleted).length;
 
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
+			const cards = state.fathersDayCards?.cards || [];
 			const gifts = state.fathersDayGiftList?.gifts || [];
 			const tasks = state.fathersDayTasks?.tasks || [];
 
 			return (
+				cards.filter((card: any) => card.isCompleted).length +
 				gifts.filter((gift: any) => gift.isCompleted).length +
 				tasks.filter((task: any) => task.isCompleted).length
 			);
 		},
 		getTotalItems: (state) => {
+			const cards = state.fathersDayCards?.cards || [];
 			const gifts = state.fathersDayGiftList?.gifts || [];
 			const tasks = state.fathersDayTasks?.tasks || [];
 
-			return gifts.length + tasks.length;
+			return cards.length + gifts.length + tasks.length;
 		},
 	},
 	{
@@ -440,10 +455,8 @@ export const holidayData: HolidayData[] = [
 			const gifts = state.birthdayGiftList?.gifts || [];
 			const tasks = state.birthdayTasks?.tasks || [];
 			const cards = state.birthdayCards?.cards || [];
-			const contacts = state.birthdayAddressBook?.contacts || [];
 
-			const totalItems =
-				gifts.length + tasks.length + cards.length + contacts.length;
+			const totalItems = gifts.length + tasks.length + cards.length;
 			const completedItems =
 				gifts.filter((gift: any) => gift.isCompleted).length +
 				tasks.filter((task: any) => task.isCompleted).length +
@@ -466,9 +479,8 @@ export const holidayData: HolidayData[] = [
 			const gifts = state.birthdayGiftList?.gifts || [];
 			const tasks = state.birthdayTasks?.tasks || [];
 			const cards = state.birthdayCards?.cards || [];
-			const contacts = state.birthdayAddressBook?.contacts || [];
 
-			return gifts.length + tasks.length + cards.length + contacts.length;
+			return gifts.length + tasks.length + cards.length;
 		},
 	},
 	{
@@ -522,10 +534,8 @@ export const holidayData: HolidayData[] = [
 			const gifts = state.graduationGiftList?.gifts || [];
 			const tasks = state.graduationTasks?.tasks || [];
 			const cards = state.graduationCards?.cards || [];
-			const contacts = state.graduationAddressBook?.contacts || [];
 
-			const totalItems =
-				gifts.length + tasks.length + cards.length + contacts.length;
+			const totalItems = gifts.length + tasks.length + cards.length;
 			const completedItems =
 				gifts.filter((gift: any) => gift.isCompleted).length +
 				tasks.filter((task: any) => task.isCompleted).length +
@@ -548,9 +558,8 @@ export const holidayData: HolidayData[] = [
 			const gifts = state.graduationGiftList?.gifts || [];
 			const tasks = state.graduationTasks?.tasks || [];
 			const cards = state.graduationCards?.cards || [];
-			const contacts = state.graduationAddressBook?.contacts || [];
 
-			return gifts.length + tasks.length + cards.length + contacts.length;
+			return gifts.length + tasks.length + cards.length;
 		},
 	},
 	{

@@ -80,6 +80,7 @@ export function useHomePageData(homeData?: any) {
 				"Valentine's Day": {
 					valentinesGiftList: { gifts: holidayData.gifts },
 					valentinesTasks: { tasks: holidayData.tasks },
+					valentinesCards: { cards: holidayData.cards },
 				},
 				Easter: {
 					easterGiftList: { gifts: holidayData.gifts },
@@ -96,10 +97,12 @@ export function useHomePageData(homeData?: any) {
 				"Mother's Day": {
 					mothersDayGiftList: { gifts: holidayData.gifts },
 					mothersDayTasks: { tasks: holidayData.tasks },
+					cards: { cards: holidayData.cards },
 				},
 				"Father's Day": {
 					fathersDayGiftList: { gifts: holidayData.gifts },
 					fathersDayTasks: { tasks: holidayData.tasks },
+					fathersDayCards: { cards: holidayData.cards },
 				},
 				"Fourth of July": {
 					fourthOfJulySuppliesList: { gifts: holidayData.gifts },
