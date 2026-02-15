@@ -11,16 +11,13 @@ import { getHolidayDataFromRedux } from "@/utils/holidayData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import {
-	addGiftToHomeData,
 	updateGiftInHomeData,
+	addGiftToHomeData,
 	removeGiftFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import {
-	useUpdateGiftMutation,
-	useEditGiftMutation,
-	useDeleteGiftMutation,
-} from "@/store/api";
+
 import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
@@ -61,37 +58,46 @@ export default function BabyShowerGiftListPage() {
 	) => {
 		if (!holidayId) return;
 
+		// For add and update operations, ensure the recipient field is populated
+		let processedGiftData = giftData;
+		if ((operation === "add" || operation === "update") && giftData.contactId && contacts) {
+			const contact = contacts.find((c: any) => c.id === giftData.contactId);
+			processedGiftData = {
+				...giftData,
+				recipient: contact?.name || "Unknown"
+			};
+		}
+
 		switch (operation) {
 			case "add":
-				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
 				break;
 			case "update":
 				dispatch(
 					updateGiftInHomeData({
 						holidayId,
-						giftId: giftData.id,
-						updates: giftData,
+						giftId: processedGiftData.id,
+						updates: processedGiftData,
 					})
 				);
 				break;
 			case "delete":
-				dispatch(removeGiftFromHomeData({ holidayId, giftId: giftData.id }));
+				dispatch(
+					removeGiftFromHomeData({
+						holidayId,
+						giftId: giftData.id,
+					})
+				);
 				break;
 		}
 	};
 
-	// Use Redux data instead of RTK Query
-	const gifts = holidayData?.gifts || [];
-	const loading = !homeInitialized;
-	const error = null;
-	const initialized = homeInitialized;
+	// Use only Redux data - no GET API calls on holiday pages
 
-	// Update gift mutation
-	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
-
-	// Edit and delete mutations
-	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
-	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+	// Local loading states for mutations
+	const [updateLoading, setUpdateLoading] = useState(false);
+	const [editLoading, setEditLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -116,8 +122,11 @@ export default function BabyShowerGiftListPage() {
 			const payload = transformGiftPayload(values, contacts);
 			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
 
-			// Update Redux state directly for optimistic updates
+			// Update Redux state directly
 			updateGiftInRedux(result, "add");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 		} catch (error) {
@@ -146,25 +155,37 @@ export default function BabyShowerGiftListPage() {
 
 		try {
 			// Find the current gift to get its completion status from Redux data
-			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
 
-			// Optimistically update Redux state first
-			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
+			setUpdateLoading(true);
+			// Update the gift in the database with direct API call
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newIsCompleted,
+				}),
+			});
 
-			// Update the gift in the database
-			await updateGift({
-				holidayId: holidayId || "",
-				giftId,
-				isCompleted: newIsCompleted,
-				auth0User,
-			}).unwrap();
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
+		} finally {
+			setUpdateLoading(false);
 		}
 	}
 
@@ -176,19 +197,34 @@ export default function BabyShowerGiftListPage() {
 	async function confirmDelete() {
 		if (!giftToDelete || !holidayId) return;
 
+		setDeleteLoading(true);
 		try {
-			// Optimistically update Redux state first
-			updateGiftInRedux(giftToDelete, "delete");
+			// Direct API call instead of RTK mutation
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
 
-			await deleteGift({
-				holidayId,
-				giftId: giftToDelete.id,
-				auth0User,
-			}).unwrap();
+			// Update Redux state directly
+			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
+
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
 			console.error("Error deleting gift:", error);
+		} finally {
+			setDeleteLoading(false);
 		}
 	}
 
@@ -205,17 +241,31 @@ export default function BabyShowerGiftListPage() {
 	async function handleUpdateGift(values: Record<string, any>) {
 		if (!selectedGift || !holidayId) return;
 
+		setEditLoading(true);
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			const result = await editGift({
-				holidayId,
-				giftId: selectedGift.id,
-				payload,
-				auth0User,
-			}).unwrap();
+			// Direct API call instead of RTK mutation
+			const response = await fetch(`/api/holidays/${holidayId}/gifts/${selectedGift.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(payload),
+			});
+			
+			const result = await response.json();
 
-			// Update Redux state directly for optimistic updates
+			// Update Redux state directly
 			updateGiftInRedux(result, "update");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 			setSelectedGift(null);
@@ -227,6 +277,8 @@ export default function BabyShowerGiftListPage() {
 			} else {
 				alert("Error updating gift. Please try again.");
 			}
+		} finally {
+			setEditLoading(false);
 		}
 	}
 
@@ -249,7 +301,8 @@ export default function BabyShowerGiftListPage() {
 		}
 	}
 
-	if (loading && !initialized) {
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
 		return (
 			<div className="min-h-screen baby-shower-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -260,19 +313,50 @@ export default function BabyShowerGiftListPage() {
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts || []);
+	// Use only Redux data - no fallback to API calls
+	const displayGifts =
+		holidayData && homeInitialized && holidayData.gifts
+			? holidayData.gifts
+			: [];
+
+	// Function to refresh home data from server
+	const refreshHomeData = async () => {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	};
+
+	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
 	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
-			key={gift.id}
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#06b6d4", // Cyan for Baby Shower
 			}}
@@ -283,13 +367,12 @@ export default function BabyShowerGiftListPage() {
 
 	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
-			key={gift.id}
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
 			onEdit={handleEditGift}
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
-			loading={loading}
+			loading={updateLoading}
 			theme={{
 				accentColor: "#06b6d4", // Cyan for Baby Shower
 			}}
@@ -345,11 +428,16 @@ export default function BabyShowerGiftListPage() {
 	const getInitialValues = () => {
 		if (!selectedGift) return {};
 
+		// Find the contact that matches this gift's recipient
+		const matchingContact = contacts.find(
+			(contact) => contact.name === selectedGift.recipient
+		);
+
 		return {
-			recipient: selectedGift.recipient || "",
+			recipient: matchingContact ? selectedGift.recipient : "",
 			giftName: selectedGift.name,
 			description: selectedGift.description || "",
-			price: selectedGift.price.toString(),
+			price: selectedGift.price ? selectedGift.price.toString() : "",
 			store: selectedGift.store || "",
 			product_link: selectedGift.productLink || "",
 			notes: selectedGift.notes || "",
@@ -359,13 +447,13 @@ export default function BabyShowerGiftListPage() {
 	return (
 		<div className="min-h-screen baby-shower-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Gift List"
+				title="Baby Shower Gift List"
 				backHref="/baby-shower"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Plan your baby shower gift list with style!"
+				description="Track your Baby Shower gift ideas!"
 				holidayColor="cyan-500"
-				error={error ? "Error loading gifts" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}

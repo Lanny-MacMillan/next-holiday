@@ -102,6 +102,7 @@ export function useHomePageData(homeData?: any) {
 					fathersDayTasks: { tasks: holidayData.tasks },
 				},
 				"Fourth of July": {
+					fourthOfJulySuppliesList: { gifts: holidayData.gifts },
 					fourthOfJulyTasks: { tasks: holidayData.tasks },
 				},
 				Birthday: {

@@ -1,26 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
 import {
 	selectHolidayPreferences,
 	selectHomeInitialized,
 	selectHomeData,
 } from "@/store/selectors/home";
 import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import Link from "next/link";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
 import {
 	updateGiftInHomeData,
 	addGiftToHomeData,
 	removeGiftFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import {
-	useUpdateGiftMutation,
-	useEditGiftMutation,
-	useDeleteGiftMutation,
-} from "@/store/api";
 import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
@@ -61,16 +57,26 @@ export default function FourthOfJulySuppliesListPage() {
 	) => {
 		if (!holidayId) return;
 
+		// For add and update operations, ensure the recipient field is populated
+		let processedGiftData = giftData;
+		if ((operation === "add" || operation === "update") && giftData.contactId && contacts) {
+			const contact = contacts.find((c: any) => c.id === giftData.contactId);
+			processedGiftData = {
+				...giftData,
+				recipient: contact?.name || "Unknown"
+			};
+		}
+
 		switch (operation) {
 			case "add":
-				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
 				break;
 			case "update":
 				dispatch(
 					updateGiftInHomeData({
 						holidayId,
-						giftId: giftData.id,
-						updates: giftData,
+						giftId: processedGiftData.id,
+						updates: processedGiftData,
 					})
 				);
 				break;
@@ -86,17 +92,11 @@ export default function FourthOfJulySuppliesListPage() {
 	};
 
 	// Use only Redux data - no GET API calls on holiday pages
-	const gifts = holidayData?.gifts || [];
-	const loading = !homeInitialized;
-	const error = null;
-	const initialized = homeInitialized;
 
-	// Update gift mutation
-	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
-
-	// Edit and delete mutations
-	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
-	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+	// Local loading states for mutations
+	const [updateLoading, setUpdateLoading] = useState(false);
+	const [editLoading, setEditLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -105,6 +105,8 @@ export default function FourthOfJulySuppliesListPage() {
 	const [selectedGift, setSelectedGift] = useState<any>(null);
 	const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
+	// Home data already declared above
+
 	useEffect(() => {
 		// Fetch contacts for address book functionality
 		// Only fetch if home data is initialized (which contains contacts)
@@ -112,6 +114,15 @@ export default function FourthOfJulySuppliesListPage() {
 			dispatch(fetchContacts());
 		}
 	}, [dispatch, homeInitialized]);
+
+	// Debug contacts loading
+	useEffect(() => {
+		console.log("Contacts in Fourth of July supplies list:", contacts);
+		console.log("Contacts length:", contacts?.length);
+		console.log("Home data:", homeData);
+		console.log("Home initialized:", homeInitialized);
+		console.log("Home contacts:", homeData?.contacts);
+	}, [contacts, homeData, homeInitialized]);
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
@@ -123,6 +134,9 @@ export default function FourthOfJulySuppliesListPage() {
 
 			// Update Redux state directly
 			updateGiftInRedux(result, "add");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 		} catch (error) {
@@ -151,25 +165,37 @@ export default function FourthOfJulySuppliesListPage() {
 
 		try {
 			// Find the current gift to get its completion status from Redux data
-			const currentGift = gifts.find((gift: any) => gift.id === giftId);
+			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
 			if (!currentGift) return;
 
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
 
-			// Update the gift in the database
-			await updateGift({
-				holidayId: holidayId || "",
-				giftId,
-				isCompleted: newIsCompleted,
-				auth0User,
-			}).unwrap();
+			setUpdateLoading(true);
+			// Update the gift in the database with direct API call
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newIsCompleted,
+				}),
+			});
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
+		} finally {
+			setUpdateLoading(false);
 		}
 	}
 
@@ -181,20 +207,34 @@ export default function FourthOfJulySuppliesListPage() {
 	async function confirmDelete() {
 		if (!giftToDelete || !holidayId) return;
 
+		setDeleteLoading(true);
 		try {
-			await deleteGift({
-				holidayId,
-				giftId: giftToDelete.id,
-				auth0User,
-			}).unwrap();
+			// Direct API call instead of RTK mutation
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
 			console.error("Error deleting gift:", error);
+		} finally {
+			setDeleteLoading(false);
 		}
 	}
 
@@ -211,17 +251,31 @@ export default function FourthOfJulySuppliesListPage() {
 	async function handleUpdateGift(values: Record<string, any>) {
 		if (!selectedGift || !holidayId) return;
 
+		setEditLoading(true);
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			const result = await editGift({
-				holidayId,
-				giftId: selectedGift.id,
-				payload,
-				auth0User,
-			}).unwrap();
+			// Direct API call instead of RTK mutation
+			const response = await fetch(`/api/holidays/${holidayId}/gifts/${selectedGift.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(payload),
+			});
+			
+			const result = await response.json();
 
 			// Update Redux state directly
 			updateGiftInRedux(result, "update");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 			setSelectedGift(null);
@@ -233,6 +287,8 @@ export default function FourthOfJulySuppliesListPage() {
 			} else {
 				alert("Error updating gift. Please try again.");
 			}
+		} finally {
+			setEditLoading(false);
 		}
 	}
 
@@ -261,28 +317,161 @@ export default function FourthOfJulySuppliesListPage() {
 			<div className="min-h-screen fourth-of-july-gradient flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">
-						Loading supplies...
-					</p>
+					<p className="text-gray-600 dark:text-gray-300">Loading supplies...</p>
 				</div>
 			</div>
 		);
 	}
 
-	const sortedGifts = sortGifts(gifts);
+	// Use only Redux data - no fallback to API calls
+	const displayGifts =
+		holidayData && homeInitialized && holidayData.gifts
+			? holidayData.gifts
+			: [];
+
+	// Function to refresh home data from server
+	const refreshHomeData = async () => {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	};
+
+	// Debug: Log gift data
+	useEffect(() => {
+		console.log("Fourth of July supplies list - holidayId:", holidayId);
+		console.log("Fourth of July supplies list - holidayData:", holidayData);
+		console.log("Fourth of July supplies list - homeInitialized:", homeInitialized);
+		console.log("Fourth of July supplies list - displayGifts:", displayGifts);
+	}, [holidayId, holidayData, homeInitialized, displayGifts]);
+
+	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
+
+	const renderGiftItem = (gift: any) => (
+		<GiftCardItem
+			gift={gift}
+			isCompleted={false}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={updateLoading}
+			theme={{
+				accentColor: "#dc2626", // Red for Fourth of July
+			}}
+			borderColor="rgb(var(--color-red-500))" // Red border for Fourth of July
+			gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+		/>
+	);
+
+	const renderCompletedGiftItem = (gift: any) => (
+		<GiftCardItem
+			gift={gift}
+			isCompleted={true}
+			onToggle={handleToggleGift}
+			onEdit={handleEditGift}
+			onDelete={(giftId: string) => handleDeleteGift(gift)}
+			loading={updateLoading}
+			theme={{
+				accentColor: "#dc2626", // Red for Fourth of July
+			}}
+			borderColor="rgb(var(--color-red-500))" // Red border for Fourth of July
+			gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+		/>
+	);
+
+	// Form fields configuration
+	const formFields = [
+		{
+			id: "recipient",
+			type: "text" as const,
+			placeholder: "Recipient (select from address book)*",
+			required: true,
+		},
+		{
+			id: "giftName",
+			type: "text" as const,
+			placeholder: "Supply Item Name*",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "text" as const,
+			placeholder: "Description",
+		},
+		{
+			id: "price",
+			type: "number" as const,
+			placeholder: "Price",
+			step: "0.01",
+		},
+		{
+			id: "store",
+			type: "text" as const,
+			placeholder: "Store",
+		},
+		{
+			id: "product_link",
+			type: "url" as const,
+			placeholder: "Product Link (optional)",
+		},
+		{
+			id: "notes",
+			type: "textarea" as const,
+			placeholder: "Notes",
+			rows: 2,
+		},
+	];
+
+	// Initial values for editing
+	const getInitialValues = () => {
+		if (!selectedGift) return {};
+
+		// Find the contact that matches this gift's recipient
+		const matchingContact = contacts.find(
+			(contact) => contact.name === selectedGift.recipient
+		);
+
+		return {
+			recipient: matchingContact ? selectedGift.recipient : "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price ? selectedGift.price.toString() : "",
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
+		};
+	};
 
 	return (
 		<div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Supplies"
+				title="Fourth of July Supply List"
 				backHref="/fourth-of-july"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort supplies"
-				description="Keep track of all your Fourth of July supplies!"
+				description="Track your Fourth of July supply ideas!"
 				holidayColor="red-500"
-				error={error ? "Error loading supplies" : undefined}
+				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
@@ -292,8 +481,7 @@ export default function FourthOfJulySuppliesListPage() {
 					holidayId={holidayId || undefined}
 				/>
 
-				<AddButton title="Supply Item" onClick={openForm} color="red" />
-
+				<AddButton title="Supply" onClick={openForm} color="red" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -311,22 +499,7 @@ export default function FourthOfJulySuppliesListPage() {
 					isCompleted={false}
 					emptyMessage="All supplies completed! 🎉"
 					completedMessage=""
-					renderItem={(gift: any) => (
-						<GiftCardItem
-							key={gift.id}
-							gift={gift}
-							isCompleted={false}
-							onToggle={handleToggleGift}
-							onEdit={handleEditGift}
-							onDelete={(giftId: string) => handleDeleteGift(gift)}
-							loading={loading || updateLoading}
-							theme={{
-								accentColor: "#dc2626",
-							}}
-							borderColor="rgb(var(--color-red-500))"
-							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
-						/>
-					)}
+					renderItem={renderGiftItem}
 				/>
 
 				<TaskSection
@@ -335,83 +508,54 @@ export default function FourthOfJulySuppliesListPage() {
 					isCompleted={true}
 					emptyMessage="No completed supplies yet."
 					completedMessage=""
-					renderItem={(gift: any) => (
-						<GiftCardItem
-							key={gift.id}
-							gift={gift}
-							isCompleted={true}
-							onToggle={handleToggleGift}
-							onEdit={handleEditGift}
-							onDelete={(giftId: string) => handleDeleteGift(gift)}
-							loading={loading || updateLoading}
-							theme={{
-								accentColor: "#dc2626",
-							}}
-							borderColor="rgb(var(--color-red-500))"
-							gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
-						/>
-					)}
-				/>
-
-				{/* Form Modal */}
-				<FormModal
-					isOpen={showFormModal}
-					title={selectedGift ? "Edit Supply Item" : "Add New Supply Item"}
-					fields={
-						getFormConfig("supplies", selectedGift ? "edit" : "add").fields
-					}
-					initialValues={
-						selectedGift
-							? {
-									giftName: selectedGift.name,
-									description: selectedGift.description,
-									price: selectedGift.price,
-									recipient: selectedGift.recipient,
-									store: selectedGift.store,
-									product_link: selectedGift.product_link,
-									notes: selectedGift.notes,
-							  }
-							: undefined
-					}
-					onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-					onClose={closeForm}
-					loading={mutationLoading || editLoading}
-					submitText={selectedGift ? "Update Supply Item" : "Add Supply Item"}
-					cancelText="Cancel"
-					cardClassName="card"
-					submitButtonColor="#dc2626"
-					showAddressBook={true}
-					contacts={contacts}
-				/>
-
-				{/* Sort Modal */}
-				<SortModal
-					isOpen={showSortModal}
-					onClose={() => setShowSortModal(false)}
-					sortBy={sortBy}
-					onSortChange={(sortOption: string) =>
-						setSortBy(sortOption as SortOption)
-					}
-					sortOptions={[
-						{ value: "none", label: "None" },
-						{ value: "recipient", label: "Recipient" },
-						{ value: "store", label: "Store" },
-						{ value: "price-high", label: "Price: High to Low" },
-						{ value: "price-low", label: "Price: Low to High" },
-					]}
-					title="Sort Supplies"
-				/>
-
-				{/* Delete Modal */}
-				<DeleteModal
-					isOpen={showDeleteModal}
-					title="Delete Supply Item"
-					message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
-					onConfirm={confirmDelete}
-					onCancel={cancelDelete}
-					loading={deleteLoading}
+					renderItem={renderCompletedGiftItem}
 				/>
 			</main>
+
+			{/* Form Modal */}
+			<FormModal
+				isOpen={showFormModal}
+				title={selectedGift ? "Edit Supply" : "Add New Supply"}
+				fields={formFields}
+				initialValues={getInitialValues()}
+				onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
+				onClose={closeForm}
+				loading={mutationLoading || editLoading}
+				submitText={selectedGift ? "Update Supply" : "Add Supply"}
+				cancelText="Cancel"
+				cardClassName="card"
+				submitButtonColor="#dc2626"
+				showAddressBook={true}
+				contacts={contacts}
+			/>
+
+			{/* Delete Confirmation Modal */}
+			<DeleteModal
+				isOpen={showDeleteModal}
+				title="Delete Supply"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
+				onConfirm={confirmDelete}
+				onCancel={cancelDelete}
+				loading={deleteLoading}
+			/>
+
+			{/* Sort Modal */}
+			<SortModal
+				isOpen={showSortModal}
+				onClose={() => setShowSortModal(false)}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) =>
+					setSortBy(sortOption as SortOption)
+				}
+				sortOptions={[
+					{ value: "none", label: "None" },
+					{ value: "recipient", label: "Recipient" },
+					{ value: "store", label: "Store" },
+					{ value: "price-high", label: "Price: High to Low" },
+					{ value: "price-low", label: "Price: Low to High" },
+				]}
+				title="Sort Supplies"
+			/>
 		</div>
 	);
 }

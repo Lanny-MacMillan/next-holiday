@@ -141,9 +141,7 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-amber-400 dark:bg-amber-500",
 		},
 		getProgress: (state) => {
-			// Use RTK Query data
-			const gifts =
-				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
+			const gifts = state.newYearGiftList?.gifts || [];
 			const tasks = state.newYearTasks?.tasks || [];
 
 			const totalItems = gifts.length + tasks.length;
@@ -154,9 +152,7 @@ export const holidayData: HolidayData[] = [
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
-			// Use RTK Query data
-			const gifts =
-				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
+			const gifts = state.newYearGiftList?.gifts || [];
 			const tasks = state.newYearTasks?.tasks || [];
 
 			return (
@@ -165,9 +161,7 @@ export const holidayData: HolidayData[] = [
 			);
 		},
 		getTotalItems: (state) => {
-			// Use RTK Query data
-			const gifts =
-				state.api?.queries?.['getGifts({"holidayId":"new-year"})']?.data || [];
+			const gifts = state.newYearGiftList?.gifts || [];
 			const tasks = state.newYearTasks?.tasks || [];
 
 			return gifts.length + tasks.length;
@@ -406,24 +400,30 @@ export const holidayData: HolidayData[] = [
 			progress: "bg-red-400 dark:bg-red-500",
 		},
 		getProgress: (state) => {
+			const supplies = state.fourthOfJulySuppliesList?.gifts || [];
 			const tasks = state.fourthOfJulyTasks?.tasks || [];
 
-			const totalItems = tasks.length;
-			const completedItems = tasks.filter(
-				(task: any) => task.isCompleted
-			).length;
+			const totalItems = supplies.length + tasks.length;
+			const completedItems =
+				supplies.filter((supply: any) => supply.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length;
 
 			return totalItems > 0 ? completedItems / totalItems : 0;
 		},
 		getCompletedItems: (state) => {
+			const supplies = state.fourthOfJulySuppliesList?.gifts || [];
 			const tasks = state.fourthOfJulyTasks?.tasks || [];
 
-			return tasks.filter((task: any) => task.isCompleted).length;
+			return (
+				supplies.filter((supply: any) => supply.isCompleted).length +
+				tasks.filter((task: any) => task.isCompleted).length
+			);
 		},
 		getTotalItems: (state) => {
+			const supplies = state.fourthOfJulySuppliesList?.gifts || [];
 			const tasks = state.fourthOfJulyTasks?.tasks || [];
 
-			return tasks.length;
+			return supplies.length + tasks.length;
 		},
 	},
 	{

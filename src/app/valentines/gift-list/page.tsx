@@ -13,13 +13,9 @@ import {
 	updateGiftInHomeData,
 	addGiftToHomeData,
 	removeGiftFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import {
-	useUpdateGiftMutation,
-	useEditGiftMutation,
-	useDeleteGiftMutation,
-} from "@/store/api";
 import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
@@ -58,16 +54,26 @@ export default function ValentinesGiftListPage() {
 	) => {
 		if (!holidayId) return;
 
+		// For add and update operations, ensure the recipient field is populated
+		let processedGiftData = giftData;
+		if ((operation === "add" || operation === "update") && giftData.contactId && contacts) {
+			const contact = contacts.find((c: any) => c.id === giftData.contactId);
+			processedGiftData = {
+				...giftData,
+				recipient: contact?.name || "Unknown"
+			};
+		}
+
 		switch (operation) {
 			case "add":
-				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
 				break;
 			case "update":
 				dispatch(
 					updateGiftInHomeData({
 						holidayId,
-						giftId: giftData.id,
-						updates: giftData,
+						giftId: processedGiftData.id,
+						updates: processedGiftData,
 					})
 				);
 				break;
@@ -82,12 +88,12 @@ export default function ValentinesGiftListPage() {
 		}
 	};
 
-	// Update gift mutation
-	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
+	// Use only Redux data - no GET API calls on holiday pages
 
-	// Edit and delete mutations
-	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
-	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+	// Local loading states for mutations
+	const [updateLoading, setUpdateLoading] = useState(false);
+	const [editLoading, setEditLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -104,20 +110,54 @@ export default function ValentinesGiftListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
+	// Debug contacts loading
+	useEffect(() => {
+		console.log("Contacts in Valentines gift list:", contacts);
+		console.log("Contacts length:", contacts?.length);
+		console.log("Home data:", homeData);
+		console.log("Home initialized:", homeInitialized);
+		console.log("Home contacts:", homeData?.contacts);
+	}, [contacts, homeData, homeInitialized]);
+
+	// Function to refresh home data from server
+	const refreshHomeData = async () => {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	};
+
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
 		if (!holidayId || !mutation) return;
 
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			const result = await mutation({
-				holidayId,
-				payload,
-				auth0User,
-			}).unwrap();
+			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
 
 			// Update Redux state directly
 			updateGiftInRedux(result, "add");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 		} catch (error) {
@@ -131,32 +171,14 @@ export default function ValentinesGiftListPage() {
 		}
 	}
 
-	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+	function openForm() {
+		setShowFormModal(true);
+		setSelectedGift(null);
+	}
 
-		try {
-			const payload = transformGiftPayload(values, contacts);
-			const result = await editGift({
-				holidayId,
-				giftId: selectedGift.id,
-				payload,
-				auth0User,
-			}).unwrap();
-
-			// Update Redux state directly
-			updateGiftInRedux(result, "update");
-
-			setShowFormModal(false);
-			setSelectedGift(null);
-		} catch (error) {
-			console.error("Error updating gift:", error);
-			// Show user-friendly error message
-			if (error instanceof Error && error.message.includes("address book")) {
-				alert("Please select a recipient from the address book");
-			} else {
-				alert("Error updating gift. Please try again.");
-			}
-		}
+	function closeForm() {
+		setShowFormModal(false);
+		setSelectedGift(null);
 	}
 
 	async function handleToggleGift(giftId: string) {
@@ -170,19 +192,31 @@ export default function ValentinesGiftListPage() {
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
 
-			// Update the gift in the database
-			await updateGift({
-				holidayId: holidayId || "",
-				giftId,
-				isCompleted: newIsCompleted,
-				auth0User,
-			}).unwrap();
+			setUpdateLoading(true);
+			// Update the gift in the database with direct API call
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newIsCompleted,
+				}),
+			});
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
+		} finally {
+			setUpdateLoading(false);
 		}
 	}
 
@@ -194,20 +228,34 @@ export default function ValentinesGiftListPage() {
 	async function confirmDelete() {
 		if (!giftToDelete || !holidayId) return;
 
+		setDeleteLoading(true);
 		try {
-			await deleteGift({
-				holidayId,
-				giftId: giftToDelete.id,
-				auth0User,
-			}).unwrap();
+			// Direct API call instead of RTK mutation
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
 			console.error("Error deleting gift:", error);
+		} finally {
+			setDeleteLoading(false);
 		}
 	}
 
@@ -221,30 +269,49 @@ export default function ValentinesGiftListPage() {
 		setShowFormModal(true);
 	}
 
-	function openForm() {
-		setShowFormModal(true);
-		setSelectedGift(null);
+	async function handleUpdateGift(values: Record<string, any>) {
+		if (!selectedGift || !holidayId) return;
+
+		setEditLoading(true);
+		try {
+			const payload = transformGiftPayload(values, contacts);
+			// Direct API call instead of RTK mutation
+			const response = await fetch(`/api/holidays/${holidayId}/gifts/${selectedGift.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(payload),
+			});
+			
+			const result = await response.json();
+
+			// Update Redux state directly
+			updateGiftInRedux(result, "update");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
+
+			setShowFormModal(false);
+			setSelectedGift(null);
+		} catch (error) {
+			console.error("Error updating gift:", error);
+			// Show user-friendly error message
+			if (error instanceof Error && error.message.includes("address book")) {
+				alert("Please select a recipient from the address book");
+			} else {
+				alert("Error updating gift. Please try again.");
+			}
+		} finally {
+			setEditLoading(false);
+		}
 	}
-
-	function closeForm() {
-		setShowFormModal(false);
-		setSelectedGift(null);
-	}
-
-	// Initial values for editing
-	const getInitialValues = () => {
-		if (!selectedGift) return {};
-
-		return {
-			recipient: selectedGift.recipient || "",
-			giftName: selectedGift.name,
-			description: selectedGift.description || "",
-			price: selectedGift.price.toString(),
-			store: selectedGift.store || "",
-			product_link: selectedGift.productLink || "",
-			notes: selectedGift.notes || "",
-		};
-	};
 
 	function sortGifts(giftsToSort: any[]): any[] {
 		switch (sortBy) {
@@ -284,6 +351,14 @@ export default function ValentinesGiftListPage() {
 		holidayData && homeInitialized && holidayData.gifts
 			? holidayData.gifts
 			: [];
+
+	// Debug: Log gift data
+	useEffect(() => {
+		console.log("Valentines gift list - holidayId:", holidayId);
+		console.log("Valentines gift list - holidayData:", holidayData);
+		console.log("Valentines gift list - homeInitialized:", homeInitialized);
+		console.log("Valentines gift list - displayGifts:", displayGifts);
+	}, [holidayId, holidayData, homeInitialized, displayGifts]);
 
 	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift) => !gift.isCompleted);
@@ -332,6 +407,26 @@ export default function ValentinesGiftListPage() {
 		},
 	];
 
+	// Initial values for editing
+	const getInitialValues = () => {
+		if (!selectedGift) return {};
+
+		// Find the contact that matches this gift's recipient
+		const matchingContact = contacts.find(
+			(contact) => contact.name === selectedGift.recipient
+		);
+
+		return {
+			recipient: matchingContact ? selectedGift.recipient : "",
+			giftName: selectedGift.name,
+			description: selectedGift.description || "",
+			price: selectedGift.price ? selectedGift.price.toString() : "",
+			store: selectedGift.store || "",
+			product_link: selectedGift.productLink || "",
+			notes: selectedGift.notes || "",
+		};
+	};
+
 	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
 			key={gift.id}
@@ -369,11 +464,11 @@ export default function ValentinesGiftListPage() {
 	return (
 		<div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Gift List"
+				title="Valentines Gift List"
 				backHref="/valentines"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Keep track of gift ideas and purchases!"
+				description="Track your Valentines gift ideas!"
 				holidayColor="pink-500"
 				error={undefined}
 			/>
@@ -413,19 +508,15 @@ export default function ValentinesGiftListPage() {
 					emptyMessage="All gifts completed! 💝"
 					completedMessage=""
 					renderItem={renderGiftItem}
-					cardClassName="card-valentines"
-					borderColor="#ec4899"
 				/>
 
 				<TaskSection
 					title="Completed"
 					items={completedGifts}
 					isCompleted={true}
-					emptyMessage=""
-					completedMessage="No completed gifts yet."
-					renderItem={renderGiftItem}
-					cardClassName="card-valentines"
-					borderColor="#ec4899"
+					emptyMessage="No completed gifts yet."
+					completedMessage=""
+					renderItem={renderCompletedGiftItem}
 				/>
 			</main>
 
@@ -449,16 +540,11 @@ export default function ValentinesGiftListPage() {
 			{/* Delete Confirmation Modal */}
 			<DeleteModal
 				isOpen={showDeleteModal}
-				title="Confirm Delete"
-				message="Are you sure you want to delete this gift? This action cannot be undone."
+				title="Delete Gift"
+				message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
 				onConfirm={confirmDelete}
-				onCancel={() => {
-					setShowDeleteModal(false);
-					setGiftToDelete(null);
-				}}
+				onCancel={cancelDelete}
 				loading={deleteLoading}
-				cardClassName="card card-valentines"
-				confirmButtonColor="#ec4899"
 			/>
 
 			{/* Sort Modal */}

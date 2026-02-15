@@ -14,14 +14,9 @@ import {
 	updateGiftInHomeData,
 	addGiftToHomeData,
 	removeGiftFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import {
-	useUpdateGiftMutation,
-	useEditGiftMutation,
-	useDeleteGiftMutation,
-	api,
-} from "@/store/api";
 import { transformGiftPayload } from "@/utils/formTransformers";
 import { BudgetDisplay } from "@/components/common/BudgetDisplay";
 import SortModal from "@/components/modals/SortModal";
@@ -62,16 +57,26 @@ export default function GiftListPage() {
 	) => {
 		if (!holidayId) return;
 
+		// For add and update operations, ensure the recipient field is populated
+		let processedGiftData = giftData;
+		if ((operation === "add" || operation === "update") && giftData.contactId && contacts) {
+			const contact = contacts.find((c: any) => c.id === giftData.contactId);
+			processedGiftData = {
+				...giftData,
+				recipient: contact?.name || "Unknown"
+			};
+		}
+
 		switch (operation) {
 			case "add":
-				dispatch(addGiftToHomeData({ holidayId, gift: giftData }));
+				dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
 				break;
 			case "update":
 				dispatch(
 					updateGiftInHomeData({
 						holidayId,
-						giftId: giftData.id,
-						updates: giftData,
+						giftId: processedGiftData.id,
+						updates: processedGiftData,
 					})
 				);
 				break;
@@ -88,12 +93,10 @@ export default function GiftListPage() {
 
 	// Use only Redux data - no GET API calls on holiday pages
 
-	// Update gift mutation
-	const [updateGift, { isLoading: updateLoading }] = useUpdateGiftMutation();
-
-	// Edit and delete mutations
-	const [editGift, { isLoading: editLoading }] = useEditGiftMutation();
-	const [deleteGift, { isLoading: deleteLoading }] = useDeleteGiftMutation();
+	// Local loading states for mutations
+	const [updateLoading, setUpdateLoading] = useState(false);
+	const [editLoading, setEditLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -112,6 +115,15 @@ export default function GiftListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
+	// Debug contacts loading
+	useEffect(() => {
+		console.log("Contacts in Anniversary gift list:", contacts);
+		console.log("Contacts length:", contacts?.length);
+		console.log("Home data:", homeData);
+		console.log("Home initialized:", homeInitialized);
+		console.log("Home contacts:", homeData?.contacts);
+	}, [contacts, homeData, homeInitialized]);
+
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
 		if (!holidayId || !mutation) return;
@@ -122,6 +134,9 @@ export default function GiftListPage() {
 
 			// Update Redux state directly
 			updateGiftInRedux(result, "add");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 		} catch (error) {
@@ -156,19 +171,31 @@ export default function GiftListPage() {
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
 
-			// Update the gift in the database
-			await updateGift({
-				holidayId: holidayId || "",
-				giftId,
-				isCompleted: newIsCompleted,
-				auth0User,
-			}).unwrap();
+			setUpdateLoading(true);
+			// Update the gift in the database with direct API call
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newIsCompleted,
+				}),
+			});
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, "update");
 		} catch (error) {
 			console.error("Error toggling gift:", error);
 			// Handle error (could show a toast notification)
+		} finally {
+			setUpdateLoading(false);
 		}
 	}
 
@@ -180,20 +207,34 @@ export default function GiftListPage() {
 	async function confirmDelete() {
 		if (!giftToDelete || !holidayId) return;
 
+		setDeleteLoading(true);
 		try {
-			await deleteGift({
-				holidayId,
-				giftId: giftToDelete.id,
-				auth0User,
-			}).unwrap();
+			// Direct API call instead of RTK mutation
+			await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
 
 			// Update Redux state directly
 			updateGiftInRedux({ id: giftToDelete.id }, "delete");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowDeleteModal(false);
 			setGiftToDelete(null);
 		} catch (error) {
 			console.error("Error deleting gift:", error);
+		} finally {
+			setDeleteLoading(false);
 		}
 	}
 
@@ -210,17 +251,31 @@ export default function GiftListPage() {
 	async function handleUpdateGift(values: Record<string, any>) {
 		if (!selectedGift || !holidayId) return;
 
+		setEditLoading(true);
 		try {
 			const payload = transformGiftPayload(values, contacts);
-			const result = await editGift({
-				holidayId,
-				giftId: selectedGift.id,
-				payload,
-				auth0User,
-			}).unwrap();
+			// Direct API call instead of RTK mutation
+			const response = await fetch(`/api/holidays/${holidayId}/gifts/${selectedGift.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(payload),
+			});
+			
+			const result = await response.json();
 
 			// Update Redux state directly
 			updateGiftInRedux(result, "update");
+			
+			// Refresh home data to ensure UI is in sync
+			await refreshHomeData();
 
 			setShowFormModal(false);
 			setSelectedGift(null);
@@ -232,6 +287,8 @@ export default function GiftListPage() {
 			} else {
 				alert("Error updating gift. Please try again.");
 			}
+		} finally {
+			setEditLoading(false);
 		}
 	}
 
@@ -272,6 +329,32 @@ export default function GiftListPage() {
 			? holidayData.gifts
 			: [];
 
+	// Function to refresh home data from server
+	const refreshHomeData = async () => {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	};
+
 	// Debug: Log gift data
 	useEffect(() => {
 		console.log("Anniversary gift list - holidayId:", holidayId);
@@ -286,7 +369,6 @@ export default function GiftListPage() {
 
 	const renderGiftItem = (gift: any) => (
 		<GiftCardItem
-			key={gift.id}
 			gift={gift}
 			isCompleted={false}
 			onToggle={handleToggleGift}
@@ -303,7 +385,6 @@ export default function GiftListPage() {
 
 	const renderCompletedGiftItem = (gift: any) => (
 		<GiftCardItem
-			key={gift.id}
 			gift={gift}
 			isCompleted={true}
 			onToggle={handleToggleGift}
@@ -365,11 +446,16 @@ export default function GiftListPage() {
 	const getInitialValues = () => {
 		if (!selectedGift) return {};
 
+		// Find the contact that matches this gift's recipient
+		const matchingContact = contacts.find(
+			(contact) => contact.name === selectedGift.recipient
+		);
+
 		return {
-			recipient: selectedGift.recipient || "",
+			recipient: matchingContact ? selectedGift.recipient : "",
 			giftName: selectedGift.name,
 			description: selectedGift.description || "",
-			price: selectedGift.price.toString(),
+			price: selectedGift.price ? selectedGift.price.toString() : "",
 			store: selectedGift.store || "",
 			product_link: selectedGift.productLink || "",
 			notes: selectedGift.notes || "",
@@ -379,11 +465,11 @@ export default function GiftListPage() {
 	return (
 		<div className="min-h-screen anniversary-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Gift List"
+				title="Anniversary Gift List"
 				backHref="/anniversary"
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
-				description="Plan your anniversary gift list with style!"
+				description="Track your Anniversary gift ideas!"
 				holidayColor="pink-500"
 				error={undefined}
 			/>
