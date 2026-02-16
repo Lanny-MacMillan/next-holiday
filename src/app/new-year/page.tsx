@@ -101,9 +101,12 @@ export default function NewYearPage() {
 				}
 				break;
 			case "events":
-				if (holidayData.events) {
-					total = holidayData.events.length;
-					completed = holidayData.events.filter(
+				if (holidayData.tasks) {
+					const eventTasks = holidayData.tasks.filter(
+						(task: any) => task.category === "Events"
+					);
+					total = eventTasks.length;
+					completed = eventTasks.filter(
 						(event: any) => event.isCompleted
 					).length;
 				}

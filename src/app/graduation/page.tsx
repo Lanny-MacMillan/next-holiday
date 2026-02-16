@@ -102,14 +102,12 @@ export default function GraduationPage() {
 				}
 				break;
 			case "tasks":
-				// For Event Planning, use events data instead of tasks
+				// For Event Planning, filter tasks by category "Events" (like New Year)
 				if (category === "Events") {
-					if (holidayData.events) {
-						total = holidayData.events.length;
-						completed = holidayData.events.filter(
-							(event: any) => event.isCompleted
-						).length;
-					}
+					// Events are stored as tasks with category "Events"
+					const eventTasks = holidayData.tasks?.filter((task: any) => task.category === "Events") || [];
+					total = eventTasks.length;
+					completed = eventTasks.filter((task: any) => task.isCompleted).length;
 				} else {
 					// Filter tasks by category
 					if (holidayData.tasks) {

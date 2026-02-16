@@ -115,7 +115,7 @@ export default function FourthOfJulyPage() {
 
 		switch (sliceKey) {
 			case "tasks":
-				// Filter tasks by category
+				// Filter tasks by category - for events, look for category "Events"
 				if (holidayData.tasks) {
 					const filteredTasks = category
 						? holidayData.tasks.filter(

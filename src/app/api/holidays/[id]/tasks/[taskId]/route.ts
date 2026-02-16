@@ -9,7 +9,7 @@ const updateTaskSchema = z.object({
 	description: z.string().nullable().optional(),
 	priority: z.enum(["low", "medium", "high"]).optional(),
 	category: z.string().nullable().optional(),
-	dueDate: z.date().nullable().optional(),
+	due_date: z.string().nullable().optional(), // Accept string date format from frontend
 	assignedTo: z.string().uuid().nullable().optional(),
 	isCompleted: z.boolean().optional(),
 });
@@ -49,7 +49,7 @@ export async function PATCH(
 				...(data.description !== undefined && { description: data.description }),
 				...(data.priority !== undefined && { priority: data.priority as any }),
 				...(data.category !== undefined && { category: data.category }),
-				...(data.dueDate !== undefined && { dueDate: data.dueDate }),
+				...(data.due_date !== undefined && { dueDate: data.due_date ? new Date(data.due_date) : null }),
 				...(data.assignedTo !== undefined && { assignedTo: data.assignedTo }),
 				...(data.isCompleted !== undefined && { isCompleted: data.isCompleted }),
 			},

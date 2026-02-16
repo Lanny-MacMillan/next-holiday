@@ -82,7 +82,7 @@ const AddButton: React.FC<AddButtonProps> = ({
 			return (
 				<button
 					onClick={onClick}
-					className={`hover:opacity-90 hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 tracking-wide border-2 border-white text-sm sm:text-base ${
+					className={`w-full hover:opacity-90 hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 tracking-wide border-2 border-white text-sm sm:text-base ${
 						disabled ? "opacity-50 cursor-not-allowed" : ""
 					}`}
 					style={{
@@ -106,7 +106,7 @@ const AddButton: React.FC<AddButtonProps> = ({
 		return (
 			<button
 				onClick={onClick}
-				className={`${getColorClasses()} hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 tracking-wide border-2 border-white text-sm sm:text-base ${
+				className={`w-full ${getColorClasses()} hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 tracking-wide border-2 border-white text-sm sm:text-base ${
 					disabled ? "opacity-50 cursor-not-allowed" : ""
 				}`}
 				style={{
@@ -129,7 +129,7 @@ const AddButton: React.FC<AddButtonProps> = ({
 		return (
 			<button
 				onClick={onClick}
-				className={`hover:opacity-90 hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 text-sm sm:text-base ${
+				className={`w-full hover:opacity-90 hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 text-sm sm:text-base ${
 					disabled ? "opacity-50 cursor-not-allowed" : ""
 				}`}
 				style={{
@@ -147,7 +147,7 @@ const AddButton: React.FC<AddButtonProps> = ({
 	return (
 		<button
 			onClick={onClick}
-			className={`${getColorClasses()} hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 text-sm sm:text-base ${
+			className={`w-full ${getColorClasses()} hover:scale-102 text-white px-3 py-2 sm:px-4 sm:py-2 rounded transition-all duration-200 text-sm sm:text-base ${
 				disabled ? "opacity-50 cursor-not-allowed" : ""
 			}`}
 			disabled={disabled}

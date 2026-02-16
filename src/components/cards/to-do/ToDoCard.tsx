@@ -133,7 +133,17 @@ export default function ToDoCard({
 		getTaskGamifiedBackgroundColor(task.priority);
 
 	const formatDate = (dateString: string) => {
-		return new Date(dateString).toLocaleDateString();
+		// Handle both date-only strings (YYYY-MM-DD) and ISO timestamps
+		if (dateString.includes('T')) {
+			// ISO timestamp - extract date part only to avoid timezone issues
+			const datePart = dateString.split('T')[0];
+			const [year, month, day] = datePart.split('-').map(Number);
+			return new Date(year, month - 1, day).toLocaleDateString();
+		} else {
+			// Date-only string - create date without timezone conversion
+			const [year, month, day] = dateString.split('-').map(Number);
+			return new Date(year, month - 1, day).toLocaleDateString();
+		}
 	};
 
 	if (isGamifiedMode) {

@@ -1,29 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+	setHomeData,
+} from "@/store/slices/homeSlice";
 import {
 	selectHolidayPreferences,
 	selectHomeInitialized,
 	selectHomeData,
 } from "@/store/selectors/home";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import { getHolidayDataFromRedux } from "@/utils/holidayData";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { updateTaskInHomeData } from "@/store/slices/homeSlice";
-import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import {
-	useUpdateEventMutation,
-	useEditEventMutation,
-	useDeleteEventMutation,
-} from "@/store/api";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import SortModal from "@/components/modals/SortModal";
 import FormModal from "@/components/modals/FormModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import AddButton from "@/components/common/AddButton";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
+import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
-import { EventItems } from "@/components/cards/event";
-import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
@@ -31,320 +31,499 @@ const defaultEventTasks = [
 	{
 		title: "Kwanzaa Karamu Feast Planning",
 		description: "Plan the traditional Kwanzaa feast celebration",
-		category: "Events",
 		priority: "high" as const,
 	},
 	{
 		title: "Kinara Lighting Ceremony Setup",
 		description: "Prepare for daily kinara candle lighting ceremonies",
-		category: "Events",
 		priority: "high" as const,
 	},
 	{
 		title: "Zawadi Gift Exchange Planning",
 		description: "Organize handmade gift exchange activities",
-		category: "Events",
 		priority: "medium" as const,
 	},
 	{
 		title: "African Drum and Dance Workshop",
 		description: "Plan traditional music and dance activities",
-		category: "Events",
 		priority: "medium" as const,
 	},
 	{
 		title: "Storytelling and Poetry Reading",
 		description: "Prepare for Kuumba (Creativity) day activities",
-		category: "Events",
 		priority: "medium" as const,
 	},
 	{
 		title: "Community Service Planning",
 		description: "Organize Ujima (Collective Work) activities",
-		category: "Events",
 		priority: "high" as const,
 	},
 	{
 		title: "Family Heritage Workshop",
 		description: "Plan genealogy and heritage activities",
-		category: "Events",
 		priority: "medium" as const,
 	},
 	{
 		title: "Unity Cup Ceremony Preparation",
 		description: "Set up Kikombe cha Umoja ceremony space",
-		category: "Events",
 		priority: "high" as const,
 	},
 	{
 		title: "African Art & Craft Workshop",
 		description: "Prepare materials for traditional crafts",
-		category: "Events",
 		priority: "low" as const,
 	},
 	{
 		title: "Vision Board Workshop",
 		description: "Plan Nia (Purpose) day goal-setting activities",
-		category: "Events",
 		priority: "low" as const,
 	},
 ];
 
 export default function KwanzaaEventsPage() {
 	const dispatch = useAppDispatch();
-	const {
-		holidayId,
-		mutation,
-		isLoading: mutationLoading,
-		error: mutationError,
-		auth0User,
-	} = useFormModalMutation();
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
+	
+	// No need for useFormModalMutation hook - using direct API calls like Hanukkah
 
-	// Get current Redux state for skip logic
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for data access
 	const currentState = useAppSelector((state: any) => state);
 
-	// Get home data and holiday data from Redux
-	const homeData = useAppSelector(selectHomeData);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+	// Holiday ID resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/kwanzaa", holidayPreferences)
+		: getHolidayIdFromRoute("/kwanzaa", holidayPreferences);
 
-	// Helper function to update Redux state after task operations
-	const updateTaskInRedux = (
-		taskData: any,
-		operation: "add" | "update" | "delete"
-	) => {
-		if (!holidayId) return;
+	// Check if the holiday is shared to conditionally show assign to field
+	const isHolidayShared = useAppSelector((state: any) =>
+		selectIsHolidayShared(state, "kwanzaa")
+	);
 
-		switch (operation) {
-			case "add":
-				// For now, we'll rely on the API cache invalidation to refresh the data
-				// TODO: Add addTaskToHomeData function to homeSlice if needed
-				break;
-			case "update":
-				dispatch(
-					updateTaskInHomeData({
-						holidayId,
-						taskId: taskData.id,
-						updates: taskData,
-					})
-				);
-				break;
-			case "delete":
-				// For now, we'll rely on the API cache invalidation to refresh the data
-				// TODO: Add removeTaskFromHomeData function to homeSlice if needed
-				break;
+	// Redux data access - events are stored as tasks with category "Events" like in Hanukkah
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+	const events = holidayData?.tasks?.filter((task: any) => task.category === "Events") || [];
+	const isLoading = !homeInitialized;
+	const error = null;
+
+	// Debug logging to understand the state
+	console.log('Kwanzaa Events Debug:', {
+		resolvedHolidayId,
+		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
+		allTasks: holidayData?.tasks?.length || 0,
+		eventTasks: events.length,
+		events: events.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
+	});
+
+	// Refresh home data function (like gift-list)
+	const refreshHomeData = async () => {
+		if (!auth0User?.sub || !resolvedHolidayId) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
 		}
 	};
 
-	// Update task mutation
-	const [updateEvent, { isLoading: updateLoading }] = useUpdateEventMutation();
+	// Removed refreshHomeData helper to prevent infinite loops
+	// Direct dispatch calls are used instead
 
-	// Edit and delete mutations
-	const [editEvent, { isLoading: editLoading }] = useEditEventMutation();
-	const [deleteEvent, { isLoading: deleteLoading }] = useDeleteEventMutation();
-
-	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [showFormModal, setShowFormModal] = useState(false);
-	const [showSortModal, setShowSortModal] = useState(false);
+	// State management
+	const [showForm, setShowForm] = useState(false);
+	const [editingTask, setEditingTask] = useState<any>(null);
+	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [selectedTask, setSelectedTask] = useState<any>(null);
-	const [taskToDelete, setTaskToDelete] = useState<any>(null);
+	const [sortBy, setSortBy] = useState<SortOption>("none");
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [isAdding, setIsAdding] = useState(false);
+	const [isToggling, setIsToggling] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
-	// Use only Redux data - no fallback to API calls
-	// Events are stored in the tasks array with category: "Events"
-	const displayEvents =
-		holidayData && homeInitialized && holidayData.tasks
-			? holidayData.tasks.filter((task: any) => task.category === "Events")
-			: [];
+	useEffect(() => {
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
 	// Check if default event tasks exist
 	useEffect(() => {
-		if (displayEvents.length === 0 && homeInitialized) {
+		if (events.length === 0 && homeInitialized) {
 			setShowDefaultTasks(true);
 		}
-	}, [displayEvents, homeInitialized]);
+	}, [events, homeInitialized]);
 
-	// Debug: Log event data
-	useEffect(() => {
-		console.log("Events - holidayId:", holidayId);
-		console.log("Events - holidayData:", holidayData);
-		console.log("Events - homeInitialized:", homeInitialized);
-		console.log("Events - displayEvents:", displayEvents);
-	}, [holidayId, holidayData, homeInitialized, displayEvents]);
-
+	// CRUD Operations
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
-		if (!holidayId || !mutation) return;
+		if (!resolvedHolidayId || !auth0User) return;
+
+		setIsAdding(true);
+		
+		const newTask = {
+			id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+			title: values.title,
+			description: values.description || undefined,
+			priority: values.priority as "low" | "medium" | "high",
+			assignedTo: values.assignedTo || undefined,
+			category: "Events",
+			dueDate: values.dueDate || undefined,
+			isCompleted: false,
+			holidayId: resolvedHolidayId,
+		};
 
 		try {
-			const payload = {
+			// Optimistically update Redux state first (like Hanukkah)
+			console.log('Adding task optimistically:', newTask);
+			console.log('Holiday ID for addition:', resolvedHolidayId);
+			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+			console.log('Task added to Redux, making API call...');
+
+			// Call API - map camelCase to snake_case for API
+			const apiPayload = {
 				title: values.title,
 				description: values.description || undefined,
 				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
+				assigned_to: values.assignedTo || undefined, // snake_case for API
 				category: "Events",
-				dueDate: values.dueDate || undefined,
+				due_date: values.dueDate || undefined, // snake_case for API
 				isCompleted: false,
 			};
+			
+			console.log('🐛 [KwanzaaAdd] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
 
-			const result = await mutation({ holidayId, payload, auth0User }).unwrap();
-
-			// Update Redux state directly
-			updateTaskInRedux(result, "add");
-
-			setShowFormModal(false);
+			if (response.ok) {
+				// Replace temporary task with real task from API (like Hanukkah)
+				const result = await response.json();
+				console.log('API success, replacing temp task with real task:', result);
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+				
+				// Also refresh home data like gift-list does
+				await refreshHomeData();
+			} else {
+				// Remove optimistic update on error
+				console.log('API error, removing optimistic update');
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				console.error("Failed to add task:", response.status, response.statusText);
+			}
+			
+			setShowForm(false);
 		} catch (error) {
-			console.error("Error creating event:", error);
-		}
-	}
-
-	async function handleEditTask(values: Record<string, any>) {
-		if (!values.title?.trim()) return;
-		if (!holidayId || !selectedTask) return;
-
-		try {
-			const payload = {
-				title: values.title,
-				description: values.description || undefined,
-				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
-				category: "Events",
-				dueDate: values.dueDate || undefined,
-			};
-
-			const result = await editEvent({
-				holidayId,
-				taskId: selectedTask.id,
-				payload,
-				auth0User,
-			}).unwrap();
-
-			// Update Redux state directly
-			updateTaskInRedux(result, "update");
-
-			setShowFormModal(false);
-			setSelectedTask(null);
-		} catch (error) {
-			console.error("Error editing event:", error);
+			// Remove optimistic update on error (like Hanukkah)
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+			console.error("Failed to add task:", error);
+		} finally {
+			setIsAdding(false);
 		}
 	}
 
 	async function addDefaultEventTasks() {
-		if (!holidayId || !mutation) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
+		setIsAdding(true);
 		try {
+			// Add all default event tasks with optimistic updates
 			for (const task of defaultEventTasks) {
-				const payload = {
-					title: task.title,
-					description: task.description,
-					priority: task.priority,
-					assignedTo: undefined,
-					category: task.category,
-					dueDate: undefined,
+				const newTask = {
+					id: `temp-${Date.now()}-${task.title}`, // Temporary ID
+					...task,
 					isCompleted: false,
+					holidayId: resolvedHolidayId,
 				};
 
-				const result = await mutation({
-					holidayId,
-					payload,
-					auth0User,
-				}).unwrap();
+				// Optimistically update Redux state first
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 
-				// Update Redux state directly
-				updateTaskInRedux(result, "add");
+				try {
+					const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"x-test-user": JSON.stringify({
+								sub: auth0User.sub,
+								email: auth0User.email,
+								name: auth0User.name,
+								picture: auth0User.picture,
+							}),
+						},
+						body: JSON.stringify({
+							...task,
+							isCompleted: false,
+							holidayId: resolvedHolidayId,
+						}),
+					});
+					
+					if (response.ok) {
+						// Replace temporary task with real task from API
+						const result = await response.json();
+						dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+						dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+					} else {
+						// Remove optimistic update on error
+						dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+						console.error("Failed to add default task:", response.status, response.statusText);
+					}
+				} catch (taskError) {
+					// Remove optimistic update on error
+					dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+					console.error("Failed to add default task:", taskError);
+				}
 			}
+			
 			setShowDefaultTasks(false);
 		} catch (error) {
-			console.error("Error adding default event tasks:", error);
+			console.error("Failed to add default tasks:", error);
+		} finally {
+			setIsAdding(false);
+		}
+	}
+
+	async function handleToggleTask(taskId: string) {
+		if (!resolvedHolidayId || !auth0User) return;
+
+		setIsToggling(true);
+		try {
+			// Find the current task to get its completion status
+			const currentTask = events.find((task: any) => task.id === taskId);
+			if (!currentTask) {
+				console.error("Task not found:", taskId);
+				return;
+			}
+
+			// Toggle the completion status
+			const newCompletionStatus = !currentTask.isCompleted;
+
+			// Optimistically update the Redux home data
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: taskId,
+					updates: { isCompleted: newCompletionStatus },
+				})
+			);
+
+			// Call API directly instead of using custom hook
+			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+			console.log('Toggle API URL:', apiUrl); // Debug logging
+			const response = await fetch(apiUrl, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newCompletionStatus,
+				}),
+			});
+
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				const currentTask = events.find((task: any) => task.id === taskId);
+				if (currentTask) {
+					dispatch(
+						updateTaskInHomeData({
+							holidayId: resolvedHolidayId,
+							taskId: taskId,
+							updates: { isCompleted: currentTask.isCompleted },
+						})
+					);
+				}
+				console.error("Failed to toggle task:", response.status, response.statusText);
+			}
+		} catch (error) {
+			console.error("Failed to toggle task:", error);
+		} finally {
+			setIsToggling(false);
+		}
+	}
+
+	const handleEditTask = (task: any) => {
+		setEditingTask(task);
+		setShowEditModal(true);
+	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !resolvedHolidayId || !auth0User) return;
+
+		setIsUpdating(true);
+		try {
+			const updatedTask = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Events",
+				dueDate: values.dueDate || undefined,
+			};
+
+			// Optimistically update the Redux home data
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: editingTask.id,
+					updates: updatedTask,
+				})
+			);
+
+			// Call API directly instead of using custom hook - map camelCase to snake_case
+			const apiPayload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assigned_to: values.assignedTo || undefined, // snake_case for API
+				category: "Events",
+				due_date: values.dueDate || undefined, // snake_case for API
+			};
+			
+			console.log('🐛 [KwanzaaEdit] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
+			
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				dispatch(
+					updateTaskInHomeData({
+						holidayId: resolvedHolidayId,
+						taskId: editingTask.id,
+						updates: {
+							title: editingTask.title,
+							description: editingTask.description,
+							priority: editingTask.priority,
+							assignedTo: editingTask.assignedTo,
+							category: editingTask.category,
+							dueDate: editingTask.dueDate,
+						},
+					})
+				);
+				console.error("Failed to update task:", response.status, response.statusText);
+			}
+			
+			setEditingTask(null);
+			setShowEditModal(false);
+		} catch (error) {
+			console.error("Failed to update task:", error);
+		} finally {
+			setIsUpdating(false);
+		}
+	}
+
+	async function handleDeleteTask(taskId: string) {
+		if (!resolvedHolidayId || !auth0User) return;
+
+		// Find the task to delete for potential rollback
+		const taskToDelete = events.find((task: any) => task.id === taskId);
+		if (!taskToDelete) return;
+
+		setIsDeleting(true);
+		try {
+			// Optimistically update Redux state first
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+
+			// Call API directly instead of using custom hook
+			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+			console.log('Delete API URL:', apiUrl); // Debug logging  
+			console.log('Events before delete:', events.length);
+			const response = await fetch(apiUrl, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (!response.ok) {
+				// If API failed, revert the optimistic update
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }));
+				console.error("Failed to delete task:", response.status, response.statusText);
+			} else {
+				console.log('Task deleted successfully');
+				// Check if this was the last task and re-show default tasks prompt
+				const remainingTasks = events.filter(e => e.id !== taskId);
+				console.log('Events after delete:', remainingTasks.length);
+				if (remainingTasks.length === 0) {
+					console.log('No tasks remaining, showing default tasks prompt');
+					setShowDefaultTasks(true);
+				}
+			}
+		} catch (error) {
+			// If API failed, revert the optimistic update
+			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }));
+			console.error("Failed to delete task:", error);
+		} finally {
+			setIsDeleting(false);
 		}
 	}
 
 	function openForm() {
-		setShowFormModal(true);
-		setSelectedTask(null);
+		setShowForm(true);
 	}
 
 	function closeForm() {
-		setShowFormModal(false);
-		setSelectedTask(null);
+		setShowForm(false);
 	}
 
-	function openEditModal(task: any) {
-		setSelectedTask(task);
-		setShowFormModal(true);
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
 	}
 
-	async function handleToggleTask(taskId: string) {
-		if (!holidayId) return;
-
-		try {
-			// Find the current task to get its completion status from Redux data
-			const currentTask = displayEvents.find((task: any) => task.id === taskId);
-			if (!currentTask) return;
-
-			// Toggle the completion status
-			const newIsCompleted = !currentTask.isCompleted;
-
-			// Update Redux state immediately for instant UI feedback
-			updateTaskInRedux(
-				{
-					...currentTask,
-					isCompleted: newIsCompleted,
-					completedDate: newIsCompleted ? new Date().toISOString() : null,
-					updatedAt: new Date().toISOString(),
-				},
-				"update"
-			);
-
-			// Update the task in the database
-			await updateEvent({
-				holidayId: holidayId || "",
-				taskId,
-				isCompleted: newIsCompleted,
-				auth0User,
-			}).unwrap();
-		} catch (error) {
-			console.error("Error toggling event:", error);
-			// Revert the optimistic update on error
-			const currentTask = displayEvents.find((task: any) => task.id === taskId);
-			if (currentTask) {
-				updateTaskInRedux(currentTask, "update");
-			}
-		}
-	}
-
-	function handleDeleteTask(taskId: string, taskTitle: string) {
-		const task = displayEvents.find((t: any) => t.id === taskId);
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
-	}
-
-	async function confirmDelete() {
-		if (!taskToDelete || !holidayId) return;
-
-		try {
-			await deleteEvent({
-				holidayId,
-				taskId: taskToDelete.id,
-				auth0User,
-			}).unwrap();
-
-			// Update Redux state directly
-			updateTaskInRedux({ id: taskToDelete.id }, "delete");
-
-			setShowDeleteModal(false);
-			setTaskToDelete(null);
-		} catch (error) {
-			console.error("Error deleting event:", error);
-		}
-	}
-
-	function cancelDelete() {
-		setShowDeleteModal(false);
-		setTaskToDelete(null);
-	}
-
+	// Task sorting function from Hanukkah
 	function sortTasks(tasksToSort: any[]): any[] {
 		switch (sortBy) {
 			case "priority":
@@ -354,8 +533,7 @@ export default function KwanzaaEventsPage() {
 					low: 1,
 				};
 				return [...tasksToSort].sort(
-					(a, b) =>
-						(priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
+					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
 				);
 			case "dateDue":
 				return [...tasksToSort].sort((a, b) => {
@@ -377,8 +555,9 @@ export default function KwanzaaEventsPage() {
 		}
 	}
 
-	// Show loading only if home data is not initialized
-	if (!homeInitialized) {
+	const loading = isAdding || isUpdating || isDeleting || isToggling;
+
+	if (isLoading) {
 		return (
 			<div className="min-h-screen kwanzaa-gradient flex items-center justify-center">
 				<div className="text-center">
@@ -389,15 +568,45 @@ export default function KwanzaaEventsPage() {
 		);
 	}
 
-	// Sort events
-	const sortedEvents = sortTasks(displayEvents || []);
-	const incompleteTasks = sortedEvents.filter((task: any) => !task.isCompleted);
-	const completedTasks = sortedEvents.filter((task: any) => task.isCompleted);
+	const sortedTasks = sortTasks(events);
+	const incompleteEvents = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedEvents = sortedTasks.filter((task: any) => task.isCompleted);
 
-	// Get form configuration
-	const formConfig = getFormConfig("tasks", "add");
-	const editFormConfig = getFormConfig("tasks", "edit");
-	const deleteConfig = getDeleteConfig("tasks");
+	// FormModal fields configuration - matching Hanukkah events exactly
+	const formFields = [
+		{
+			id: "title",
+			type: "text" as const,
+			placeholder: "Task Title*",
+			required: true,
+		},
+		{
+			id: "description",
+			type: "textarea" as const,
+			placeholder: "Description",
+			rows: 2,
+		},
+		{
+			id: "priority",
+			type: "select" as const,
+			placeholder: "Priority",
+			options: [
+				{ value: "low", label: "Low Priority" },
+				{ value: "medium", label: "Medium Priority" },
+				{ value: "high", label: "High Priority" },
+			],
+		},
+		...(isHolidayShared ? [{
+			id: "assignedTo",
+			type: "text" as const,
+			placeholder: "Assigned To",
+		}] : []),
+		{
+			id: "dueDate",
+			type: "date" as const,
+			placeholder: "Due Date",
+		},
+	];
 
 	return (
 		<div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -405,11 +614,12 @@ export default function KwanzaaEventsPage() {
 				title="Kwanzaa Events"
 				backHref="/kwanzaa"
 				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort Events"
-				error={mutationError ? "API Error" : undefined}
+				description="Plan your Kwanzaa celebrations!"
 				holidayColor="red-600"
+				sortTitle="Sort Events"
 			/>
-			<main className="w-full max-w-4xl flex flex-col gap-6">
+
+			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				{/* Default Tasks Prompt */}
 				{showDefaultTasks && (
 					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
@@ -424,7 +634,7 @@ export default function KwanzaaEventsPage() {
 								onClick={addDefaultEventTasks}
 								className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
 							>
-								Add Default Tasks
+								Add Default Events
 							</button>
 							<button
 								onClick={() => setShowDefaultTasks(false)}
@@ -436,108 +646,161 @@ export default function KwanzaaEventsPage() {
 					</div>
 				)}
 
-				<AddButton title="Event Task" onClick={openForm} color="red" />
-				<div className="flex items-center justify-center">
-					{sortBy !== "none" && (
-						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "priority" && "Sorted by Priority"}
-							{sortBy === "dateDue" && "Sorted by Date Due"}
-							{sortBy === "assignedTo" && "Sorted by Assigned To"}
-							{sortBy === "category" && "Sorted by Category"}
+				<AddButton title="Event" onClick={openForm} color="red" />
+
+				{/* Event Status Summary */}
+				{events.length > 0 && (
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+						<h3 className="text-lg font-semibold mb-4">Event Status</h3>
+						<div className="grid grid-cols-3 gap-4 text-center">
+							<div>
+								<div className="text-2xl font-bold text-blue-600">{events.length}</div>
+								<div className="text-sm text-gray-600 dark:text-gray-400">Total Events</div>
+							</div>
+							<div>
+								<div className="text-2xl font-bold text-green-600">{completedEvents.length}</div>
+								<div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
+							</div>
+							<div>
+								<div className="text-2xl font-bold text-orange-600">{incompleteEvents.length}</div>
+								<div className="text-sm text-gray-600 dark:text-gray-400">Remaining</div>
+							</div>
 						</div>
+					</div>
+				)}
+
+				<TaskSection
+					title="Upcoming Events"
+					items={incompleteEvents}
+					isCompleted={false}
+					emptyMessage="No events planned yet."
+					completedMessage="All events completed!"
+					renderItem={(task: any) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							theme={{
+								accentColor: "#dc2626", // Red for Kwanzaa
+							}}
+							borderColor="rgb(239 68 68)" // Red border for Kwanzaa
+							disableInternalModal={true}
+						/>
 					)}
-				</div>
+				/>
 
-				<div>
-					<h2 className="font-semibold text-gray-800 dark:text-white mb-2">
-						Incomplete ({incompleteTasks.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{incompleteTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-400 dark:text-gray-500 text-center">
-								All events planned! 🎉
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{incompleteTasks.map((task: any) => (
-									<EventItems
-										key={task.id}
-										task={task}
-										onToggleTask={handleToggleTask}
-										onDeleteTask={handleDeleteTask}
-										onEditTask={openEditModal}
-										loading={updateLoading}
-										themeColor="red"
-										holidayColor="bg-red-600"
-									/>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
-
-				<div>
-					<h2 className="font-semibold text-gray-400 dark:text-gray-500 mb-2">
-						Completed ({completedTasks.length})
-					</h2>
-					<div className="card card-tasks rounded shadow">
-						{completedTasks.length === 0 ? (
-							<div className="px-4 py-3 text-gray-300 dark:text-gray-600 text-center">
-								No completed tasks yet.
-							</div>
-						) : (
-							<ul className="divide-y divide-gray-200 dark:divide-gray-700">
-								{completedTasks.map((task: any) => (
-									<EventItems
-										key={task.id}
-										task={task}
-										onToggleTask={handleToggleTask}
-										onDeleteTask={handleDeleteTask}
-										onEditTask={openEditModal}
-										loading={updateLoading}
-										themeColor="red"
-										holidayColor="bg-red-600"
-									/>
-								))}
-							</ul>
-						)}
-					</div>
-				</div>
+				<TaskSection
+					title="Completed Events"
+					items={completedEvents}
+					isCompleted={true}
+					emptyMessage=""
+					completedMessage=""
+					renderItem={(task: any) => (
+						<ToDoCard
+							key={task.id}
+							task={task}
+							onToggleComplete={handleToggleTask}
+							onDelete={handleDeleteTask}
+							onEdit={handleEditTask}
+							className="opacity-60"
+							theme={{
+								accentColor: "#dc2626", // Red for Kwanzaa
+							}}
+							borderColor="rgb(239 68 68)" // Red border for Kwanzaa
+							disableInternalModal={true}
+						/>
+					)}
+				/>
 			</main>
 
 			{/* Form Modal */}
 			<FormModal
-				isOpen={showFormModal}
-				title={selectedTask ? "Edit Event" : "Add Event"}
-				fields={formConfig.fields}
-				initialValues={
-					selectedTask
-						? {
-								title: selectedTask.title || "",
-								description: selectedTask.description || "",
-								priority: selectedTask.priority || "medium",
-								assignedTo: selectedTask.assignedTo || "",
-								dueDate: selectedTask.dueDate || "",
-						  }
-						: {}
-				}
-				onSubmit={selectedTask ? handleEditTask : handleAddTask}
+				isOpen={showForm}
+				title="Add New Event Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={{
+					title: "",
+					description: "",
+					priority: "medium",
+					...(isHolidayShared ? { assignedTo: "" } : {}),
+					dueDate: "",
+				}}
+				onSubmit={handleAddTask}
 				onClose={closeForm}
-				loading={mutationLoading || editLoading}
-				submitText={selectedTask ? "Update Event" : "Add Event"}
-				cancelText="Cancel"
-				cardClassName="card card-tasks"
-				submitButtonColor="#dc2626"
+				loading={isAdding}
+				submitText="Add Task"
+				cardClassName="card-tasks"
 			/>
 
-			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				title="Delete Event"
-				message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={deleteLoading}
+			{/* Edit Modal */}
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Event Task"
+				fields={[
+					{
+						id: "title",
+						type: "text",
+						placeholder: "Task Title*",
+						required: true,
+					},
+					{
+						id: "description",
+						type: "textarea",
+						placeholder: "Description",
+						rows: 2,
+					},
+					{
+						id: "priority",
+						type: "select",
+						placeholder: "Priority",
+						options: [
+							{ value: "low", label: "Low Priority" },
+							{ value: "medium", label: "Medium Priority" },
+							{ value: "high", label: "High Priority" },
+						],
+					},
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
+					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+				]}
+				initialValues={editingTask ? {
+					title: editingTask.title || "",
+					description: editingTask.description || "",
+					priority: editingTask.priority || "medium",
+					...(isHolidayShared ? { assignedTo: editingTask.assignedTo || "" } : {}),
+					dueDate: editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : "",
+				} : {}}
+				onSubmit={handleEditTaskSubmit}
+				onClose={closeEditModal}
+				loading={isUpdating}
+				submitText="Update Task"
+				cardClassName="card-tasks"
 			/>
 
 			{/* Sort Modal */}
@@ -551,11 +814,11 @@ export default function KwanzaaEventsPage() {
 				sortOptions={[
 					{ value: "none", label: "None" },
 					{ value: "priority", label: "Priority" },
-					{ value: "dateDue", label: "Date Due" },
+					{ value: "dateDue", label: "Due Date" },
 					{ value: "assignedTo", label: "Assigned To" },
 					{ value: "category", label: "Category" },
 				]}
-				title="Sort Tasks"
+				title="Sort Events"
 			/>
 		</div>
 	);

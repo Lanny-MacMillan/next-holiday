@@ -1,268 +1,441 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+	setHomeData,
+} from "@/store/slices/homeSlice";
+import {
+	selectHolidayPreferences,
+	selectHomeInitialized,
+	selectHomeData,
+} from "@/store/selectors/home";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
+import SortModal from "@/components/modals/SortModal";
+import FormModal from "@/components/modals/FormModal";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
 import TaskSection from "@/components/common/TaskSection";
-import { EventItems } from "@/components/cards/event";
-import FormModal from "@/components/modals/FormModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import SortModal from "@/components/modals/SortModal";
-import { useEventMutations } from "@/hooks/useEventMutations";
-import {
-	updateEventInHomeData,
-	addEventToHomeData,
-	removeEventFromHomeData,
-} from "@/store/slices/homeSlice";
-import { getHolidayDataFromRedux } from "@/utils/holidayData";
-import { selectHomeData, selectHomeInitialized } from "@/store/selectors/home";
+import ToDoCard from "@/components/cards/to-do/ToDoCard";
+
+type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
 export default function MothersDayEventsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
+	
+	// No need for useFormModalMutation hook - using direct API calls like Kwanzaa
 
-	// Use the new event mutations hook
-	const {
-		holidayId,
-		auth0User,
-		createEvent,
-		updateEvent,
-		editEvent,
-		deleteEvent,
-		updateEventState,
-		editEventState,
-		deleteEventState,
-	} = useEventMutations();
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
 
-	// Get current Redux state for skip logic
+	// Get current Redux state for data access
 	const currentState = useAppSelector((state: any) => state);
 
-	// Get home data and holiday data from Redux
-	const homeData = useAppSelector(selectHomeData);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+	// Holiday ID resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/mothers-day", holidayPreferences)
+		: getHolidayIdFromRoute("/mothers-day", holidayPreferences);
 
-	// Helper function to update Redux state after event operations
-	const updateEventInRedux = (
-		eventData: any,
-		operation: "add" | "update" | "delete"
-	) => {
-		if (!holidayId) return;
+	// Check if the holiday is shared to conditionally show assign to field
+	const isHolidayShared = useAppSelector((state: any) =>
+		selectIsHolidayShared(state, "mothers-day")
+	);
 
-		switch (operation) {
-			case "add":
-				dispatch(addEventToHomeData({ holidayId, event: eventData }));
-				break;
-			case "update":
-				dispatch(
-					updateEventInHomeData({
-						holidayId,
-						eventId: eventData.id,
-						updates: eventData,
-					})
-				);
-				break;
-			case "delete":
-				dispatch(
-					removeEventFromHomeData({
-						holidayId,
-						eventId: eventData.id,
-					})
-				);
-				break;
+	// Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+	const events = holidayData?.tasks?.filter((task: any) => task.category === "Events") || [];
+	const isLoading = !homeInitialized;
+	const error = null;
+
+	// Debug logging to understand the state
+	console.log('Mother\'s Day Events Debug:', {
+		resolvedHolidayId,
+		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
+		allTasks: holidayData?.tasks?.length || 0,
+		eventTasks: events.length,
+		events: events.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
+	});
+
+	// Refresh home data function (like gift-list)
+	const refreshHomeData = async () => {
+		if (!auth0User?.sub || !resolvedHolidayId) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
 		}
 	};
 
-	// Use only Redux data - no GET API calls on holiday pages
-
-	const [showAddForm, setShowAddForm] = useState(false);
+	// State management
+	const [showForm, setShowForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [taskToDelete, setTaskToDelete] = useState<any>(null);
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [sortBy, setSortBy] = useState<string>("dateCreated");
 	const [showEditModal, setShowEditModal] = useState(false);
-
-	// Sort options for events
-	const sortOptions = [
-		{ value: "dateCreated", label: "Date Created" },
-		{ value: "title", label: "Title A-Z" },
-		{ value: "priority", label: "Priority" },
-		{ value: "dueDate", label: "Due Date" },
-	];
-
-	// Sort function
-	const sortTasks = (tasks: any[], sortOption: string) => {
-		const sortedTasks = [...tasks];
-		switch (sortOption) {
-			case "title":
-				return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
-			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
-				return sortedTasks.sort(
-					(a, b) =>
-						(priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
-						(priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
-				);
-			case "dueDate":
-				return sortedTasks.sort((a, b) => {
-					if (!a.dueDate && !b.dueDate) return 0;
-					if (!a.dueDate) return 1;
-					if (!b.dueDate) return -1;
-					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-				});
-			case "dateCreated":
-			default:
-				return sortedTasks.sort(
-					(a, b) =>
-						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-				);
-		}
-	};
-
-	// Use only Redux data - no fallback to API calls
-	const displayEvents =
-		holidayData && homeInitialized && holidayData.events
-			? holidayData.events
-			: [];
-
-	const sortedEventTasks = sortTasks(displayEvents, sortBy);
+	const [sortBy, setSortBy] = useState<SortOption>("none");
+	const [showSortModal, setShowSortModal] = useState(false);
+	const [isAdding, setIsAdding] = useState(false);
+	const [isToggling, setIsToggling] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	useEffect(() => {
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
-	// Debug: Log event data
-	useEffect(() => {
-		console.log("Mother's Day events - holidayId:", holidayId);
-		console.log("Mother's Day events - holidayData:", holidayData);
-		console.log("Mother's Day events - homeInitialized:", homeInitialized);
-		console.log("Mother's Day events - displayEvents:", holidayData?.events);
-	}, [holidayId, holidayData, homeInitialized]);
+	// CRUD Operations
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
-	const handleSubmit = async (values: Record<string, any>) => {
-		if (!holidayId || !auth0User) return;
+		setIsAdding(true);
+		
+		const newTask = {
+			id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+			title: values.title,
+			description: values.description || undefined,
+			priority: values.priority as "low" | "medium" | "high",
+			assignedTo: values.assignedTo || undefined,
+			category: "Events",
+			dueDate: values.dueDate || undefined,
+			isCompleted: false,
+			holidayId: resolvedHolidayId,
+		};
 
 		try {
-			const payload = {
+			// Optimistically update Redux state first (like Kwanzaa)
+			console.log('Adding task optimistically:', newTask);
+			console.log('Holiday ID for addition:', resolvedHolidayId);
+			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+			console.log('Task added to Redux, making API call...');
+
+			// Call API - map camelCase to snake_case for API
+			const apiPayload = {
 				title: values.title,
 				description: values.description || undefined,
 				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
+				assigned_to: values.assignedTo || undefined, // snake_case for API
 				category: "Events",
-				dueDate: values.dueDate || undefined,
+				due_date: values.dueDate || undefined, // snake_case for API
 				isCompleted: false,
 			};
-			const result = await createEvent({
-				holidayId,
-				payload,
-				auth0User,
-			}).unwrap();
-			setShowAddForm(false);
+			
+			console.log('🐛 [MothersDayAdd] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
 
-			// Update Redux state directly
-			updateEventInRedux(result, "add");
+			if (response.ok) {
+				// Replace temporary task with real task from API (like Kwanzaa)
+				const result = await response.json();
+				console.log('API success, replacing temp task with real task:', result);
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+				
+				// Also refresh home data like gift-list does
+				await refreshHomeData();
+			} else {
+				// Remove optimistic update on error
+				console.log('API error, removing optimistic update');
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				console.error("Failed to add task:", response.status, response.statusText);
+			}
+			
+			setShowForm(false);
 		} catch (error) {
-			console.error("Error handling event:", error);
+			// Remove optimistic update on error (like Kwanzaa)
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+			console.error("Failed to add task:", error);
+		} finally {
+			setIsAdding(false);
 		}
-	};
+	}
 
-	const handleEditTask = (task: any) => {
+	async function handleToggleCompletion(taskId: string) {
+		if (!resolvedHolidayId || !auth0User) return;
+
+		setIsToggling(true);
+		try {
+			// Find the current task to get its completion status
+			const currentTask = events.find((task: any) => task.id === taskId);
+			if (!currentTask) {
+				console.error("Task not found:", taskId);
+				return;
+			}
+
+			// Toggle the completion status
+			const newCompletionStatus = !currentTask.isCompleted;
+
+			// Optimistically update the Redux home data
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: taskId,
+					updates: { isCompleted: newCompletionStatus },
+				})
+			);
+
+			// Call API directly instead of using custom hook
+			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+			console.log('Toggle API URL:', apiUrl); // Debug logging
+			const response = await fetch(apiUrl, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newCompletionStatus,
+				}),
+			});
+
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				const currentTask = events.find((task: any) => task.id === taskId);
+				if (currentTask) {
+					dispatch(
+						updateTaskInHomeData({
+							holidayId: resolvedHolidayId,
+							taskId: taskId,
+							updates: { isCompleted: currentTask.isCompleted },
+						})
+					);
+				}
+				console.error("Failed to toggle task:", response.status, response.statusText);
+			}
+		} catch (error) {
+			console.error("Failed to toggle task:", error);
+		} finally {
+			setIsToggling(false);
+		}
+	}
+
+	const handleEditEvent = (task: any) => {
 		setEditingTask(task);
 		setShowEditModal(true);
 	};
 
-	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!editingTask || !holidayId || !auth0User) return;
+	async function handleEditSubmit(values: Record<string, any>) {
+		if (!editingTask || !resolvedHolidayId || !auth0User) return;
 
+		setIsUpdating(true);
 		try {
-			const result = await editEvent({
-				holidayId,
-				taskId: editingTask.id,
-				payload: {
-					title: values.title,
-					description: values.description || undefined,
-					priority: values.priority as "low" | "medium" | "high",
-					assignedTo: values.assignedTo || undefined,
-					category: "Events",
-					dueDate: values.dueDate || undefined,
+			const updatedTask = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				dueDate: values.dueDate || undefined,
+			};
+
+			// Optimistically update the Redux home data
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: editingTask.id,
+					updates: updatedTask,
+				})
+			);
+
+			// Call API directly instead of using custom hook - map camelCase to snake_case
+			const apiPayload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assigned_to: values.assignedTo || undefined, // snake_case for API
+				due_date: values.dueDate || undefined, // snake_case for API
+			};
+			
+			console.log('🐛 [MothersDayEdit] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
 				},
-				auth0User,
-			}).unwrap();
+				body: JSON.stringify(apiPayload),
+			});
+			
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				dispatch(
+					updateTaskInHomeData({
+						holidayId: resolvedHolidayId,
+						taskId: editingTask.id,
+						updates: {
+							title: editingTask.title,
+							description: editingTask.description,
+							priority: editingTask.priority,
+							assignedTo: editingTask.assignedTo,
+							dueDate: editingTask.dueDate,
+						},
+					})
+				);
+				console.error("Failed to update task:", response.status, response.statusText);
+			}
+
 			setShowEditModal(false);
 			setEditingTask(null);
-
-			// Update Redux state directly
-			updateEventInRedux(result, "update");
 		} catch (error) {
-			console.error("Error editing event:", error);
+			console.error("Failed to update task:", error);
+		} finally {
+			setIsUpdating(false);
 		}
 	}
 
-	function closeEditModal() {
-		setShowEditModal(false);
-		setEditingTask(null);
-	}
+	async function handleDelete(taskId: string, taskTitle: string) {
+		if (!resolvedHolidayId || !auth0User) return;
 
-	const handleDelete = (taskId: string) => {
-		const task = displayEvents.find((e: any) => e.id === taskId);
-		if (task) {
-			setTaskToDelete(task);
-			setShowDeleteModal(true);
-		}
-	};
-
-	const confirmDelete = async () => {
-		if (taskToDelete && holidayId && auth0User) {
-			try {
-				await deleteEvent({
-					holidayId,
-					taskId: taskToDelete.id,
-					auth0User,
-				}).unwrap();
-				setTaskToDelete(null);
-
-				// Update Redux state directly
-				updateEventInRedux({ id: taskToDelete.id }, "delete");
-			} catch (error) {
-				console.error("Error deleting event:", error);
-			}
-		}
-		setShowDeleteModal(false);
-	};
-
-	const handleToggleCompletion = async (taskId: string) => {
-		if (!holidayId || !auth0User) return;
-
+		setIsDeleting(true);
 		try {
-			const event = displayEvents.find((e: any) => e.id === taskId);
-			if (event) {
-				await updateEvent({
-					holidayId,
-					taskId,
-					isCompleted: !event.isCompleted,
-					auth0User,
-				}).unwrap();
+			// Optimistically remove the task from Redux
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
 
-				// Update Redux state directly
-				updateEventInRedux(
-					{ id: taskId, isCompleted: !event.isCompleted },
-					"update"
-				);
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (!response.ok) {
+				// Revert the optimistic removal on error
+				const taskToRestore = events.find((task: any) => task.id === taskId);
+				if (taskToRestore) {
+					dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToRestore }));
+				}
+				console.error("Failed to delete task:", response.status, response.statusText);
 			}
 		} catch (error) {
-			console.error("Error updating event:", error);
+			console.error("Failed to delete task:", error);
+		} finally {
+			setIsDeleting(false);
 		}
+	}
+
+	// Sorting functionality
+	const sortOptions = [
+		{ value: "none", label: "Default Order" },
+		{ value: "priority", label: "Priority" },
+		{ value: "dateDue", label: "Due Date" },
+		{ value: "assignedTo", label: "Assigned To" },
+	];
+
+	const sortTasks = (tasks: any[]) => {
+		if (sortBy === "none") return tasks;
+
+		return [...tasks].sort((a, b) => {
+			switch (sortBy) {
+				case "priority":
+					const priorityOrder = { high: 3, medium: 2, low: 1 };
+					return (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
+						   (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+				case "dateDue":
+					if (!a.dueDate && !b.dueDate) return 0;
+					if (!a.dueDate) return 1;
+					if (!b.dueDate) return -1;
+					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+				case "assignedTo":
+					return (a.assignedTo || "").localeCompare(b.assignedTo || "");
+				default:
+					return 0;
+			}
+		});
 	};
 
-	const handleSortChange = (sortOption: string) => {
-		setSortBy(sortOption);
-	};
+	// Separate incomplete and complete events
+	const sortedEvents = sortTasks(events);
+	const incompleteEvents = sortedEvents.filter((event) => !event.isCompleted);
+	const completeEvents = sortedEvents.filter((event) => event.isCompleted);
+
+	// Form configuration
+	const formFields = [
+		{
+			id: "title",
+			type: "text" as const,
+			placeholder: "Task Title*", 
+			required: true,
+		},
+		{
+			id: "description",
+			type: "textarea" as const,
+			placeholder: "Description",
+			rows: 2,
+		},
+		{
+			id: "priority",
+			type: "select" as const,
+			placeholder: "Priority",
+			options: [
+				{ value: "low", label: "Low Priority" },
+				{ value: "medium", label: "Medium Priority" },
+				{ value: "high", label: "High Priority" },
+			],
+		},
+		...(isHolidayShared ? [{
+			id: "assignedTo",
+			type: "text" as const,
+			placeholder: "Assigned To"
+		}] : []),
+		{
+			id: "dueDate",
+			type: "date" as const,
+			placeholder: "Due Date"
+		},
+	];
 
 	return (
 		<div className="min-h-screen mothers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -278,46 +451,50 @@ export default function MothersDayEventsPage() {
 			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
 				<AddButton
 					title="Event"
-					onClick={() => setShowAddForm(true)}
+					onClick={() => setShowForm(true)}
 					color="pink"
 				/>
 
 				<TaskSection
-					title="Incomplete"
-					items={sortedEventTasks.filter((task) => !task.isCompleted)}
+					title="Upcoming Events"
+					items={incompleteEvents}
 					isCompleted={false}
-					emptyMessage="All events completed! 🎉"
-					completedMessage=""
-					renderItem={(task) => (
-						<EventItems
+					emptyMessage="No events planned yet."
+					completedMessage="All events completed!"
+					renderItem={(task: any) => (
+						<ToDoCard
 							key={task.id}
 							task={task}
-							onToggleTask={handleToggleCompletion}
-							onDeleteTask={handleDelete}
-							onEditTask={handleEditTask}
-							loading={false}
-							themeColor="pink"
-							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+							onToggleComplete={handleToggleCompletion}
+							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onEdit={handleEditEvent}
+							theme={{
+								accentColor: "#ec4899", // Pink for Mother's Day
+							}}
+							borderColor="rgb(236 72 153)"
+							disableInternalModal={true}
 						/>
 					)}
 				/>
 
 				<TaskSection
-					title="Completed"
-					items={sortedEventTasks.filter((task) => task.isCompleted)}
+					title="Completed Events"
+					items={completeEvents}
 					isCompleted={true}
 					emptyMessage="No completed events yet."
 					completedMessage="No completed events yet."
-					renderItem={(task) => (
-						<EventItems
+					renderItem={(task: any) => (
+						<ToDoCard
 							key={task.id}
 							task={task}
-							onToggleTask={handleToggleCompletion}
-							onDeleteTask={handleDelete}
-							onEditTask={handleEditTask}
-							loading={false}
-							themeColor="pink"
-							holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+							onToggleComplete={handleToggleCompletion}
+							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onEdit={handleEditEvent}
+							theme={{
+								accentColor: "#ec4899", // Pink for Mother's Day
+							}}
+							borderColor="rgb(236 72 153)"
+							disableInternalModal={true}
 						/>
 					)}
 				/>
@@ -328,115 +505,44 @@ export default function MothersDayEventsPage() {
 				isOpen={showSortModal}
 				onClose={() => setShowSortModal(false)}
 				sortBy={sortBy}
-				onSortChange={handleSortChange}
+				onSortChange={(sortOption: string) => setSortBy(sortOption as SortOption)}
 				sortOptions={sortOptions}
 				title="Sort Events"
 			/>
 
-			{/* Form Modal */}
+			{/* Add Form Modal */}
 			<FormModal
-				isOpen={showAddForm}
+				isOpen={showForm}
 				title="Add New Event"
-				fields={[
-					{
-						id: "title",
-						type: "text" as const,
-						placeholder: "Event Title*",
-						required: true,
-					},
-					{
-						id: "description",
-						type: "textarea" as const,
-						placeholder: "Description",
-						rows: 3,
-					},
-					{
-						id: "priority",
-						type: "select" as const,
-						placeholder: "Priority",
-						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
-						],
-					},
-					{
-						id: "assignedTo",
-						type: "text" as const,
-						placeholder: "Assigned To",
-					},
-					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
-				]}
+				fields={formFields}
 				initialValues={{ priority: "medium" }}
-				onSubmit={handleSubmit}
-				onClose={() => {
-					setShowAddForm(false);
-				}}
-				loading={false}
+				onSubmit={handleAddTask}
+				onClose={() => setShowForm(false)}
+				loading={isAdding}
 				submitText="Add Event"
 				cardClassName="card-events-mothers-day"
 			/>
 
-			{/* Edit Modal */}
+			{/* Edit Form Modal */}
 			<FormModal
 				isOpen={showEditModal}
 				title="Edit Event"
-				fields={[
-					{
-						id: "title",
-						type: "text" as const,
-						placeholder: "Event Title*",
-						required: true,
-					},
-					{
-						id: "description",
-						type: "textarea" as const,
-						placeholder: "Description",
-						rows: 3,
-					},
-					{
-						id: "priority",
-						type: "select" as const,
-						placeholder: "Priority",
-						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
-						],
-					},
-					{
-						id: "assignedTo",
-						type: "text" as const,
-						placeholder: "Assigned To",
-					},
-					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
-				]}
-				initialValues={{
-					title: editingTask?.title || "",
-					description: editingTask?.description || "",
-					priority: editingTask?.priority || "medium",
-					assignedTo: editingTask?.assignedTo || "",
-					dueDate: editingTask?.dueDate || "",
+				fields={formFields}
+				initialValues={editingTask ? {
+					title: editingTask.title || "",
+					description: editingTask.description || "",
+					priority: editingTask.priority || "medium",
+					...(isHolidayShared ? { assignedTo: editingTask.assignedTo || "" } : {}),
+					dueDate: editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : "",
+				} : {}}
+				onSubmit={handleEditSubmit}
+				onClose={() => {
+					setShowEditModal(false);
+					setEditingTask(null);
 				}}
-				onSubmit={handleEditTaskSubmit}
-				onClose={closeEditModal}
-				loading={editEventState.isLoading}
+				loading={isUpdating}
 				submitText="Update Event"
 				cardClassName="card-events-mothers-day"
-			/>
-
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				onConfirm={confirmDelete}
-				onCancel={() => {
-					setShowDeleteModal(false);
-					setTaskToDelete(null);
-				}}
-				loading={deleteEventState.isLoading}
-				cardClassName="card-events-mothers-day"
-				title="Delete Event"
-				message="Are you sure you want to delete this event? This action cannot be undone."
 			/>
 		</div>
 	);
