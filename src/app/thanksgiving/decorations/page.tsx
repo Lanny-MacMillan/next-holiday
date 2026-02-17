@@ -27,40 +27,7 @@ import ToDoCard from "@/components/cards/to-do/ToDoCard";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
-const defaultDecorationTasks = [
-	{
-		title: "Set up Easter tree",
-		description: "Decorate with Easter eggs and spring flowers",
-		priority: "high" as const,
-	},
-	{
-		title: "Hang Easter banners",
-		description: "Display Easter-themed banners and signs",
-		priority: "medium" as const,
-	},
-	{
-		title: "Arrange Easter centerpiece",
-		description: "Create a festive centerpiece for the table",
-		priority: "medium" as const,
-	},
-	{
-		title: "Set up Easter egg hunt area",
-		description: "Prepare the area for Easter egg hunting",
-		priority: "high" as const,
-	},
-	{
-		title: "Decorate Easter egg display",
-		description: "Create beautiful Easter egg arrangements",
-		priority: "medium" as const,
-	},
-	{
-		title: "Set up Easter photo booth",
-		description: "Prepare Easter-themed photo opportunity",
-		priority: "low" as const,
-	},
-];
-
-export default function EasterDecorationsPage() {
+export default function ThanksgivingDecorationsPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
 	const { user: auth0User } = useAuth0();
@@ -77,22 +44,22 @@ export default function EasterDecorationsPage() {
 
 	// Holiday ID resolution
 	const resolvedHolidayId = homeInitialized
-		? getHolidayIdFromRoute("/easter", holidayPreferences)
-		: getHolidayIdFromRoute("/easter", holidayPreferences);
+		? getHolidayIdFromRoute("/thanksgiving", holidayPreferences)
+		: getHolidayIdFromRoute("/thanksgiving", holidayPreferences);
 
 	// Check if the holiday is shared to conditionally show assign to field
 	const isHolidayShared = useAppSelector((state: any) =>
-		selectIsHolidayShared(state, "easter")
+		selectIsHolidayShared(state, "thanksgiving")
 	);
 
-	// Redux data access - decorations are stored as tasks with category "Decorations" like Kwanzaa
+	// Redux data access - decorations are stored as tasks with category "Decorations" like in Kwanzaa
 	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
 	const decorations = holidayData?.tasks?.filter((task: any) => task.category === "Decorations") || [];
 	const isLoading = !homeInitialized;
 	const error = null;
 
 	// Debug logging to understand the state
-	console.log('Easter Decorations Debug:', {
+	console.log('Thanksgiving Decorations Debug:', {
 		resolvedHolidayId,
 		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
 		allTasks: holidayData?.tasks?.length || 0,
@@ -100,7 +67,7 @@ export default function EasterDecorationsPage() {
 		decorations: decorations.map(d => ({ id: d.id, title: d.title, category: d.category, isCompleted: d.isCompleted }))
 	});
 
-	// Refresh home data function (like gift-list)
+	// Refresh home data function (like Kwanzaa)
 	const refreshHomeData = async () => {
 		if (!auth0User?.sub || !resolvedHolidayId) return;
 
@@ -125,10 +92,7 @@ export default function EasterDecorationsPage() {
 		}
 	};
 
-	// Removed refreshHomeData helper to prevent infinite loops
-	// Direct dispatch calls are used instead
-
-	// State management
+	// State management (like Kwanzaa)
 	const [showForm, setShowForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showEditModal, setShowEditModal] = useState(false);
@@ -144,7 +108,7 @@ export default function EasterDecorationsPage() {
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
-	// CRUD Operations
+	// CRUD Operations - Direct API calls like Kwanzaa
 	async function handleAddTask(values: Record<string, any>) {
 		if (!values.title?.trim()) return;
 		if (!resolvedHolidayId || !auth0User) return;
@@ -166,11 +130,9 @@ export default function EasterDecorationsPage() {
 		try {
 			// Optimistically update Redux state first (like Kwanzaa)
 			console.log('Adding decoration task optimistically:', newTask);
-			console.log('Holiday ID for addition:', resolvedHolidayId);
 			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-			console.log('Task added to Redux, making API call...');
 
-			// Call API - map camelCase to snake_case for API
+			// CRITICAL: Map camelCase to snake_case for API
 			const apiPayload = {
 				title: values.title,
 				description: values.description || undefined,
@@ -180,9 +142,9 @@ export default function EasterDecorationsPage() {
 				due_date: values.dueDate || undefined, // snake_case for API
 				isCompleted: false,
 			};
-			
-			console.log('🐛 [EasterDecorationsAdd] API payload:', apiPayload);
-			
+
+			console.log('🐛 [ThanksgivingDecorationsAdd] API payload:', apiPayload);
+
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
 				method: "POST",
 				headers: {
@@ -194,53 +156,60 @@ export default function EasterDecorationsPage() {
 						picture: auth0User.picture,
 					}),
 				},
-				body: JSON.stringify(apiPayload),
+				body: JSON.stringify(apiPayload), // Use mapped payload
 			});
 
 			if (response.ok) {
-				// Replace temporary task with real task from API (like Kwanzaa)
 				const result = await response.json();
-				console.log('API success, replacing temp task with real task:', result);
+				// Replace temporary task with real one from API
 				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
 				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
 				
-				// Also refresh home data like gift-list does
+				// CRITICAL: Refresh home data for proper UI updates
 				await refreshHomeData();
+
+				setShowForm(false);
 			} else {
-				// Remove optimistic update on error
-				console.log('API error, removing optimistic update');
+				console.error('API call failed:', response.status);
+				// Revert optimistic update on failure
 				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
-				console.error("Failed to add task:", response.status, response.statusText);
 			}
-			
-			setShowForm(false);
 		} catch (error) {
-			// Remove optimistic update on error (like Kwanzaa)
+			console.error("Error creating decoration:", error);
+			// Revert optimistic update on failure
 			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
-			console.error("Failed to add task:", error);
 		} finally {
 			setIsAdding(false);
 		}
 	}
 
-	async function handleToggleCompletion(taskId: string) {
-		if (!resolvedHolidayId || !auth0User) return;
+	function openForm() {
+		setShowForm(true);
+	}
 
-		const task = decorations.find(t => t.id === taskId);
-		if (!task) return;
+	function closeForm() {
+		setShowForm(false);
+	}
+
+	async function handleToggleCompletion(taskId: string) {
+		if (!resolvedHolidayId || !auth0User || isToggling) return;
 
 		setIsToggling(true);
 		try {
-			const updatedTask = { ...task, isCompleted: !task.isCompleted };
-			
-			// Optimistically update Redux state first
-			dispatch(updateTaskInHomeData({ 
-				holidayId: resolvedHolidayId, 
-				taskId: taskId, 
-				updates: { isCompleted: !task.isCompleted } 
+			// Find the current decoration to get its completion status
+			const currentDecoration = decorations.find((d: any) => d.id === taskId);
+			if (!currentDecoration) return;
+
+			// Toggle the completion status
+			const newIsCompleted = !currentDecoration.isCompleted;
+
+			// Optimistically update Redux state
+			dispatch(updateTaskInHomeData({
+				holidayId: resolvedHolidayId,
+				taskId: taskId,
+				updates: { isCompleted: newIsCompleted }
 			}));
 
-			// Call API
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}`, {
 				method: "PATCH",
 				headers: {
@@ -252,72 +221,60 @@ export default function EasterDecorationsPage() {
 						picture: auth0User.picture,
 					}),
 				},
-				body: JSON.stringify({
-					isCompleted: !task.isCompleted,
-				}),
+				body: JSON.stringify({ isCompleted: newIsCompleted }),
 			});
 
 			if (!response.ok) {
-				// Revert optimistic update on error
-				dispatch(updateTaskInHomeData({ 
-					holidayId: resolvedHolidayId, 
-					taskId: taskId, 
-					updates: { isCompleted: task.isCompleted } 
+				// Revert optimistic update on failure
+				dispatch(updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: taskId,
+					updates: { isCompleted: !newIsCompleted }
 				}));
-				console.error("Failed to toggle task completion:", response.status, response.statusText);
 			} else {
-				// Refresh home data for proper UI updates
+				// CRITICAL: Refresh home data for proper UI updates
 				await refreshHomeData();
 			}
 		} catch (error) {
+			console.error("Error updating decoration:", error);
 			// Revert optimistic update on error
-			dispatch(updateTaskInHomeData({ 
-				holidayId: resolvedHolidayId, 
-				taskId: taskId, 
-				updates: { isCompleted: task.isCompleted } 
-			}));
-			console.error("Failed to toggle task completion:", error);
+			const currentDecoration = decorations.find((d: any) => d.id === taskId);
+			if (currentDecoration) {
+				dispatch(updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: taskId,
+					updates: { isCompleted: currentDecoration.isCompleted }
+				}));
+			}
 		} finally {
 			setIsToggling(false);
 		}
 	}
 
-	async function handleEditDecoration(task: any) {
-		if (!task) return;
-		
-		// Format dates for input fields (YYYY-MM-DD format)
-		const formattedTask = {
-			...task,
-			dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""
-		};
-		
-		setEditingTask(formattedTask);
-		setShowEditModal(true);
+	function handleDeleteTask(taskId: string, taskTitle: string) {
+		// For delete, we'll use the existing approach with confirmation
+		// We can implement a simple confirm dialog in place of DeleteModal
+		if (confirm(`Are you sure you want to delete "${taskTitle}"? This action cannot be undone.`)) {
+			confirmDelete(taskId);
+		}
 	}
 
+	const handleEditDecoration = (task: any) => {
+		// Format the date for the input field (YYYY-MM-DD format)
+		const formattedTask = {
+			...task,
+			dueDate: task.dueDate ? task.dueDate.split('T')[0] : '', // Convert to YYYY-MM-DD
+		};
+		setEditingTask(formattedTask);
+		setShowEditModal(true);
+	};
+
 	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!values.title?.trim() || !editingTask) return;
-		if (!resolvedHolidayId || !auth0User) return;
+		if (!editingTask || !resolvedHolidayId || !auth0User || isUpdating) return;
 
 		setIsUpdating(true);
 		try {
-			const updatedTask = {
-				...editingTask,
-				title: values.title,
-				description: values.description || undefined,
-				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
-				dueDate: values.dueDate || undefined,
-			};
-
-			// Optimistically update Redux state first
-			dispatch(updateTaskInHomeData({ 
-				holidayId: resolvedHolidayId, 
-				taskId: editingTask.id, 
-				updates: updatedTask 
-			}));
-
-			// Call API with field mapping
+			// CRITICAL: Map camelCase to snake_case for API
 			const apiPayload = {
 				title: values.title,
 				description: values.description || undefined,
@@ -325,10 +282,9 @@ export default function EasterDecorationsPage() {
 				assigned_to: values.assignedTo || undefined, // snake_case for API
 				category: "Decorations",
 				due_date: values.dueDate || undefined, // snake_case for API
-				isCompleted: editingTask.isCompleted,
 			};
 
-			console.log('🐛 [EasterDecorationsEdit] API payload:', apiPayload);
+			console.log('🐛 [ThanksgivingDecorationsEdit] API payload:', apiPayload);
 
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
 				method: "PATCH",
@@ -345,47 +301,45 @@ export default function EasterDecorationsPage() {
 			});
 
 			if (response.ok) {
-				// Refresh home data for proper UI updates
-				await refreshHomeData();
-			} else {
-				// Revert optimistic update on error
-				dispatch(updateTaskInHomeData({ 
-					holidayId: resolvedHolidayId, 
-					taskId: editingTask.id, 
-					updates: editingTask 
+				const result = await response.json();
+				// Update Redux state directly
+				dispatch(updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: editingTask.id,
+					updates: result
 				}));
-				console.error("Failed to update task:", response.status, response.statusText);
-			}
 
-			setShowEditModal(false);
-			setEditingTask(null);
-		} catch (error) {
-			// Revert optimistic update on error
-			if (editingTask) {
-				dispatch(updateTaskInHomeData({ 
-					holidayId: resolvedHolidayId, 
-					taskId: editingTask.id, 
-					updates: editingTask 
-				}));
+				// CRITICAL: Refresh home data for proper UI updates
+				await refreshHomeData();
+
+				setShowEditModal(false);
+				setEditingTask(null);
+			} else {
+				console.error('Edit API call failed:', response.status);
 			}
-			console.error("Failed to update task:", error);
+		} catch (error) {
+			console.error("Error editing decoration:", error);
 		} finally {
 			setIsUpdating(false);
 		}
 	}
 
-	async function handleDelete(taskId: string, taskTitle: string) {
-		if (!resolvedHolidayId || !auth0User) return;
+	function closeEditModal() {
+		setShowEditModal(false);
+		setEditingTask(null);
+	}
+
+	async function confirmDelete(taskId: string) {
+		if (!resolvedHolidayId || !auth0User || isDeleting) return;
 
 		setIsDeleting(true);
 		try {
-			const taskToDelete = decorations.find(t => t.id === taskId);
-			if (!taskToDelete) return;
+			// Optimistically update Redux state
+			dispatch(removeTaskFromHomeData({
+				holidayId: resolvedHolidayId,
+				taskId: taskId
+			}));
 
-			// Optimistically remove from Redux state first
-			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
-
-			// Call API
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${taskId}`, {
 				method: "DELETE",
 				headers: {
@@ -399,54 +353,67 @@ export default function EasterDecorationsPage() {
 				},
 			});
 
-			if (!response.ok) {
-				// Revert optimistic update on error
-				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }));
-				console.error("Failed to delete task:", response.status, response.statusText);
-			} else {
-				// Refresh home data for proper UI updates
+			if (response.ok) {
+				// CRITICAL: Refresh home data for proper UI updates
 				await refreshHomeData();
+			} else {
+				console.error('Delete API call failed:', response.status);
+				// TODO: Revert optimistic update on failure (would need to store original task)
 			}
 		} catch (error) {
-			console.error("Failed to delete task:", error);
+			console.error("Error deleting decoration:", error);
+			// TODO: Revert optimistic update on error
 		} finally {
 			setIsDeleting(false);
 		}
 	}
 
-	// Filter tasks by completion status
-	const incompleteDecorations = decorations.filter(decoration => !decoration.isCompleted);
-	const completedDecorations = decorations.filter(decoration => decoration.isCompleted);
-
-	// Sort functions (same as Kwanzaa pattern)
-	const sortTasks = (tasks: any[], sortBy: SortOption) => {
-		if (sortBy === "none") return tasks;
-
-		return [...tasks].sort((a, b) => {
-			switch (sortBy) {
-				case "priority":
-					const priorityOrder = { high: 3, medium: 2, low: 1 };
-					return priorityOrder[b.priority] - priorityOrder[a.priority];
-				case "dateDue":
+	function sortTasks(tasksToSort: any[]): any[] {
+		switch (sortBy) {
+			case "priority":
+				const priorityOrder = { high: 3, medium: 2, low: 1 };
+				return [...tasksToSort].sort(
+					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+				);
+			case "dateDue":
+				return [...tasksToSort].sort((a, b) => {
+					if (!a.dueDate && !b.dueDate) return 0;
 					if (!a.dueDate) return 1;
 					if (!b.dueDate) return -1;
 					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-				case "assignedTo":
-					if (!a.assignedTo) return 1;
-					if (!b.assignedTo) return -1;
-					return a.assignedTo.localeCompare(b.assignedTo);
-				case "category":
-					return a.category.localeCompare(b.category);
-				default:
-					return 0;
-			}
-		});
-	};
+				});
+			case "assignedTo":
+				return [...tasksToSort].sort((a, b) =>
+					(a.assignedTo || "").localeCompare(b.assignedTo || "")
+				);
+			case "category":
+				return [...tasksToSort].sort((a, b) =>
+					(a.category || "").localeCompare(b.category || "")
+				);
+			default:
+				return tasksToSort;
+		}
+	}
 
-	const sortedIncompleteDecorations = sortTasks(incompleteDecorations, sortBy);
-	const sortedCompletedDecorations = sortTasks(completedDecorations, sortBy);
+	// Show loading only if home data is not initialized
+	if (!homeInitialized) {
+		return (
+			<div className="min-h-screen thanksgiving-tasks-gradient flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+					<p className="text-gray-600 dark:text-gray-300">
+						Loading decorations...
+					</p>
+				</div>
+			</div>
+		);
+	}
 
-	// Form field configuration with conditional assign to field
+	const sortedTasks = sortTasks(decorations);
+	const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
+	const completedDecorations = sortedTasks.filter((task: any) => task.isCompleted);
+
+	// Form configuration with conditional assign to field
 	const formFields = [
 		{
 			id: "title",
@@ -482,32 +449,19 @@ export default function EasterDecorationsPage() {
 		},
 	];
 
-	// Loading state
-	if (isLoading) {
-		return (
-			<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-				<div className="flex-1 w-full max-w-4xl flex flex-col items-center justify-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-400">Loading decorations...</p>
-				</div>
-			</div>
-		);
-	}
-
 	return (
-		<div className="min-h-screen easter-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+		<div className="min-h-screen thanksgiving-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
 			<HolidayPageHeader
-				title="Easter Decorations"
-				backHref="/easter"
+				title="Decorations"
+				backHref="/thanksgiving"
 				onSortClick={() => setShowSortModal(true)}
-				description="Plan your Easter decorations with festive flair!"
-				holidayColor="purple-500"
-				sortTitle="Sort Decorations"
+				sortTitle="Sort tasks"
+				description="Keep track of Thanksgiving decorations!"
+				holidayColor="amber-500"
+				error={undefined}
 			/>
-
-			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
-				<AddButton title="Decoration" onClick={() => setShowForm(true)} color="purple" />
-
+			<main className="w-full max-w-4xl flex flex-col gap-6">
+				<AddButton title="Decoration Task" onClick={openForm} color="amber" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -521,7 +475,7 @@ export default function EasterDecorationsPage() {
 
 				<TaskSection
 					title="Pending Decorations"
-					items={sortedIncompleteDecorations}
+					items={incompleteDecorations}
 					isCompleted={false}
 					emptyMessage="No decorations planned yet."
 					completedMessage="All decorations completed!"
@@ -530,12 +484,12 @@ export default function EasterDecorationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string, taskTitle: string) => handleDeleteTask(taskId, taskTitle)}
 							onEdit={handleEditDecoration}
 							theme={{
-								accentColor: "#a855f7", // Purple for Easter
+								accentColor: "#d97706", // Amber for Thanksgiving
 							}}
-							borderColor="rgb(168 85 247)" // Purple border for Easter
+							borderColor="rgb(217 119 6)" // Amber border for Thanksgiving
 							disableInternalModal={true}
 						/>
 					)}
@@ -543,21 +497,21 @@ export default function EasterDecorationsPage() {
 
 				<TaskSection
 					title="Completed Decorations"
-					items={sortedCompletedDecorations}
+					items={completedDecorations}
 					isCompleted={true}
 					emptyMessage="No completed decorations yet."
-					completedMessage=""
+					completedMessage="No completed decorations yet."
 					renderItem={(task: any) => (
 						<ToDoCard
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string, taskTitle: string) => handleDeleteTask(taskId, taskTitle)}
 							onEdit={handleEditDecoration}
 							theme={{
-								accentColor: "#a855f7", // Purple for Easter
+								accentColor: "#d97706", // Amber for Thanksgiving
 							}}
-							borderColor="rgb(168 85 247)" // Purple border for Easter
+							borderColor="rgb(217 119 6)" // Amber border for Thanksgiving
 							disableInternalModal={true}
 						/>
 					)}
@@ -577,7 +531,7 @@ export default function EasterDecorationsPage() {
 					dueDate: "",
 				}}
 				onSubmit={handleAddTask}
-				onClose={() => setShowForm(false)}
+				onClose={closeForm}
 				loading={isAdding}
 				submitText="Add Task"
 				cardClassName="card-tasks"
@@ -596,10 +550,7 @@ export default function EasterDecorationsPage() {
 					dueDate: editingTask?.dueDate || "",
 				}}
 				onSubmit={handleEditTaskSubmit}
-				onClose={() => {
-					setShowEditModal(false);
-					setEditingTask(null);
-				}}
+				onClose={closeEditModal}
 				loading={isUpdating}
 				submitText="Update Task"
 				cardClassName="card-tasks"

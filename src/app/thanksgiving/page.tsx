@@ -40,9 +40,9 @@ const subsections = [
 		type: "guest-list",
 	},
 	{
-		name: "Decorations Checklist",
+		name: "Decorations",
 		description: "Stay on top of your Thanksgiving decorations",
-		href: "/thanksgiving/decorations-checklist",
+		href: "/thanksgiving/decorations",
 		sliceKey: "decorations",
 		type: "task",
 	},
@@ -107,12 +107,10 @@ export default function ThanksgivingPage() {
 				}
 				break;
 			case "decorations":
-				if (holidayData.decorations) {
-					total = holidayData.decorations.length;
-					completed = holidayData.decorations.filter(
-						(decoration: any) => decoration.isCompleted
-					).length;
-				}
+				// Decorations are stored as tasks with category "Decorations"
+				const decorationTasks = holidayData.tasks?.filter((task: any) => task.category === "Decorations") || [];
+				total = decorationTasks.length;
+				completed = decorationTasks.filter((task: any) => task.isCompleted).length;
 				break;
 			default:
 				total = 0;

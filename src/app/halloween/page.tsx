@@ -97,12 +97,10 @@ export default function HalloweenPage() {
 				}
 				break;
 			case "decorations":
-				if (holidayData.decorations) {
-					total = holidayData.decorations.length;
-					completed = holidayData.decorations.filter(
-						(decoration: any) => decoration.isCompleted
-					).length;
-				}
+				// Decorations are stored as tasks with category "Decorations"
+				const decorationTasks = holidayData.tasks?.filter((task: any) => task.category === "Decorations") || [];
+				total = decorationTasks.length;
+				completed = decorationTasks.filter((task: any) => task.isCompleted).length;
 				break;
 			case "giftList":
 				if (holidayData.gifts) {

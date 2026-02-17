@@ -90,12 +90,10 @@ export default function EasterPage() {
 				completed = eventTasks.filter((task: any) => task.isCompleted).length;
 				break;
 			case "decorations":
-				if (holidayData.decorations) {
-					total = holidayData.decorations.length;
-					completed = holidayData.decorations.filter(
-						(decoration: any) => decoration.isCompleted
-					).length;
-				}
+				// Decorations are stored as tasks with category "Decorations" (like Kwanzaa)
+				const decorationTasks = holidayData.tasks?.filter((task: any) => task.category === "Decorations") || [];
+				total = decorationTasks.length;
+				completed = decorationTasks.filter((task: any) => task.isCompleted).length;
 				break;
 			default:
 				total = 0;
