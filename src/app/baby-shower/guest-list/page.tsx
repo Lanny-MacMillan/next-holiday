@@ -27,6 +27,7 @@ import {
 	updateGuestInHomeData,
 	addGuestToHomeData,
 	removeGuestFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import {
 	useCreateGuestMutation,
@@ -113,6 +114,40 @@ export default function BabyShowerGuestListPage() {
 		// Always fetch contacts for address book functionality
 		dispatch(fetchContacts());
 	}, [dispatch]);
+
+	// Debug logging for troubleshooting
+	console.log('Baby Shower Guest List Debug:', {
+		holidayId,
+		holidayData: holidayData ? { ...holidayData, guestLists: guestLists.length } : null,
+		guestListsCount: guestLists.length,
+		guests: guests.map(g => ({ id: g.id, name: g.name, rsvpStatus: g.rsvpStatus }))
+	});
+
+	// Function to refresh home data from server
+	const refreshHomeData = async () => {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	};
 
 	async function handleAddGuest(formValues: Record<string, any>) {
 		if (
@@ -218,6 +253,9 @@ export default function BabyShowerGuestListPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Refresh home data to get the real ID from server
+				await refreshHomeData();
 			} catch (error) {
 				console.error("Failed to create guest:", error);
 				// Could implement rollback logic here if needed

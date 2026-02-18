@@ -90,15 +90,10 @@ export default function NewYearPage() {
 				}
 				break;
 			case "resolutions":
-				if (holidayData.tasks) {
-					const resolutionTasks = holidayData.tasks.filter(
-						(task: any) => task.category === "Resolutions"
-					);
-					total = resolutionTasks.length;
-					completed = resolutionTasks.filter(
-						(resolution: any) => resolution.isCompleted
-					).length;
-				}
+				// Resolutions are stored as tasks with category "Resolutions"
+				const resolutionTasks = holidayData.tasks?.filter((task: any) => task.category === "Resolutions") || [];
+				total = resolutionTasks.length;
+				completed = resolutionTasks.filter((task: any) => task.isCompleted).length;
 				break;
 			case "events":
 				if (holidayData.tasks) {

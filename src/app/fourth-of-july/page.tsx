@@ -137,9 +137,12 @@ export default function FourthOfJulyPage() {
 				}
 				break;
 			case "guestList":
-				// Guest list doesn't have completion status, so we'll show total count
-				total = 0;
-				completed = 0;
+				// Guest lists are stored separately from tasks
+				if (holidayData.guestLists) {
+					const guestLists = holidayData.guestLists || [];
+					total = guestLists.length;
+					completed = guestLists.filter((guest: any) => guest.rsvpStatus === "confirmed").length;
+				}
 				break;
 			default:
 				total = 0;

@@ -111,9 +111,9 @@ export default function BirthdayPage() {
 				}
 				break;
 			case "guestList":
-				// Guest list doesn't have completion status, so we'll show total count
-				total = 0;
-				completed = 0;
+				const guestLists = holidayData.guestLists || [];
+				total = guestLists.length;
+				completed = guestLists.filter((guest: any) => guest.rsvpStatus === "confirmed").length;
 				break;
 			default:
 				total = 0;
@@ -223,6 +223,10 @@ export default function BirthdayPage() {
 									<GuestListCard
 										holiday="Birthday"
 										href={section.href}
+										guestList={{
+											totalItems: total,
+											completedItems: completed,
+										}}
 										theme={{
 											primaryColor: "#f59e0b", // Amber for Birthday
 											accentColor: "#f59e0b", // Amber accent

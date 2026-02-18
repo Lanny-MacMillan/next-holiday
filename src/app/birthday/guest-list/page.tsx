@@ -27,6 +27,7 @@ import {
 	updateGuestInHomeData,
 	addGuestToHomeData,
 	removeGuestFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import {
 	useCreateGuestMutation,
@@ -88,6 +89,40 @@ export default function BirthdayGuestListPage() {
 		createdAt: guestList.createdAt,
 		updatedAt: guestList.updatedAt,
 	}));
+
+	// Debug logging (Essential for troubleshooting)
+	console.log('Birthday Guest List Debug:', {
+		holidayId,
+		holidayData: holidayData ? { ...holidayData, guestLists: guestLists.length } : null,
+		guestListsCount: guestLists.length,
+		guests: guests.map(g => ({ id: g.id, name: g.name, rsvpStatus: g.rsvpStatus }))
+	});
+
+	// Function to refresh home data from server
+	const refreshHomeData = async () => {
+		if (!auth0User) return;
+		
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
+		}
+	};
 
 	// Use API mutations only for data persistence
 	const [createGuest, createGuestState] = useCreateGuestMutation();
@@ -176,8 +211,9 @@ export default function BirthdayGuestListPage() {
 			setShowForm(false);
 		} else {
 			// Add new guest - optimistic update to Redux first, then persist to API
+			const tempId = `temp-${Date.now()}`;
 			const newGuestList = {
-				id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+				id: tempId, // Temporary ID for optimistic update
 				contact: {
 					name: formValues.name,
 					email: formValues.email || undefined,
@@ -201,7 +237,7 @@ export default function BirthdayGuestListPage() {
 				})
 			);
 
-			// Persist to API in background
+			// Persist to API in background and refresh guest data
 			try {
 				await createGuest({
 					holidayId,
@@ -218,9 +254,18 @@ export default function BirthdayGuestListPage() {
 					},
 					auth0User,
 				}).unwrap();
+
+				// Refresh home data to get the new guest with real ID
+				await refreshHomeData();
 			} catch (error) {
 				console.error("Failed to create guest:", error);
-				// Could implement rollback logic here if needed
+				// Remove the temporary guest from Redux on error
+				dispatch(
+					removeGuestFromHomeData({
+						holidayId,
+						guestId: tempId,
+					})
+				);
 			}
 
 			setShowForm(false);

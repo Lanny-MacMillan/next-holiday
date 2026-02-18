@@ -137,7 +137,7 @@ export default function DateIdeaCard({
 												className="ml-1 font-medium text-white"
 												style={{ fontFamily: "var(--font-family-fredoka)" }}
 											>
-												{new Date(task.dueDate).toLocaleDateString()}
+												{task.dueDate?.split('T')[0] ? new Date(task.dueDate.split('T')[0] + 'T12:00:00').toLocaleDateString() : 'No date set'}
 											</span>
 										</div>
 									)}
@@ -242,7 +242,7 @@ export default function DateIdeaCard({
 								<div>
 									<span className="text-gray-500 dark:text-gray-500">Due:</span>
 									<span className="ml-1 font-medium text-gray-800 dark:text-white">
-										{new Date(task.dueDate).toLocaleDateString()}
+										{task.dueDate?.split('T')[0] ? new Date(task.dueDate.split('T')[0] + 'T12:00:00').toLocaleDateString() : 'No date set'}
 									</span>
 								</div>
 							)}
