@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 import { fetchContacts } from "@/store/slices/addressBookSlice";
 import {
 	selectHolidayPreferences,
@@ -9,10 +10,13 @@ import {
 	selectHomeData,
 } from "@/store/selectors/home";
 import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import {
 	updateTaskInHomeData,
 	addTaskToHomeData,
 	removeTaskFromHomeData,
+	setHomeData,
 } from "@/store/slices/homeSlice";
 import SortModal from "@/components/modals/SortModal";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
@@ -24,18 +28,17 @@ import FormModal from "@/components/modals/FormModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import { getFormConfig } from "@/config/formConfigs";
 import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { useCostumeIdeasMutations } from "@/hooks/useCostumeIdeasMutations";
 
 type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
 
 // Custom form configuration for costume ideas
-const costumeFormConfig = {
-	title: "Add New Costume Task",
+const costumeFormConfig = (isHolidayShared: boolean) => ({
+	title: "Add New Costume",
 	fields: [
 		{
 			id: "title",
 			type: "text" as const,
-			placeholder: "Costume Task Title*",
+			placeholder: "Costume*",
 			required: true,
 		},
 		{
@@ -54,116 +57,86 @@ const costumeFormConfig = {
 				{ value: "high", label: "High Priority" },
 			],
 		},
-		{
+		...(isHolidayShared ? [{
 			id: "assignedTo",
 			type: "text" as const,
-			placeholder: "Recipient",
-		},
+			placeholder: "Assigned To"
+		}] : []),
 		{
 			id: "dueDate",
 			type: "date" as const,
 			placeholder: "Due Date",
 		},
 	] as any[],
-	submitText: "Add Costume Task",
+	submitText: "Add Costume",
 	cancelText: "Cancel",
 	cardClassName: "card card-tasks",
 	submitButtonColor: "#f97316", // Orange for Halloween
-};
-
-const defaultCostumeTasks = [
-	{
-		title: "Plan Family Costumes",
-		description: "Coordinate costumes for the whole family",
-		category: "Costume Ideas",
-		priority: "high" as const,
-	},
-	{
-		title: "Buy Costume for Kids",
-		description: "Purchase or make costumes for children",
-		category: "Costume Ideas",
-		priority: "high" as const,
-	},
-	{
-		title: "DIY Costume Ideas",
-		description: "Research homemade costume options",
-		category: "Costume Ideas",
-		priority: "medium" as const,
-	},
-	{
-		title: "Costume Accessories",
-		description: "Get props and accessories for costumes",
-		category: "Costume Ideas",
-		priority: "medium" as const,
-	},
-];
+});
 
 export default function HalloweenCostumeIdeasPage() {
 	const dispatch = useAppDispatch();
 	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
 
-	// Get home data and holiday data from Redux
-	const homeData = useAppSelector(selectHomeData);
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
 	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for data access
 	const currentState = useAppSelector((state: any) => state);
 
-	// Use the new costume ideas mutations hook
-	const {
-		holidayId,
-		auth0User,
-		loading,
-		error,
-		initialized,
-		createCostumeIdeas,
-		updateCostumeIdeas,
-		editCostumeIdeas,
-		deleteCostumeIdeas,
-		createCostumeIdeasState,
-		updateCostumeIdeasState,
-		editCostumeIdeasState,
-		deleteCostumeIdeasState,
-	} = useCostumeIdeasMutations();
+	// Holiday ID resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/halloween", holidayPreferences)
+		: getHolidayIdFromRoute("/halloween", holidayPreferences);
 
-	// Get holiday data from Redux
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+	// Check if the holiday is shared to conditionally show assign to field
+	const isHolidayShared = useAppSelector((state: any) =>
+		selectIsHolidayShared(state, "halloween")
+	);
 
-	// Helper function to update Redux state after task operations
-	const updateTaskInRedux = (
-		taskData: any,
-		operation: "add" | "update" | "delete"
-	) => {
-		if (!holidayId) return;
+	// Redux data access - costume ideas are stored as tasks with category "Costume Ideas"
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+	const costumeIdeas = holidayData?.tasks?.filter((task: any) => task.category === "Costume Ideas") || [];
+	const isLoading = !homeInitialized;
 
-		switch (operation) {
-			case "add":
-				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
-				break;
-			case "update":
-				dispatch(
-					updateTaskInHomeData({
-						holidayId,
-						taskId: taskData.id,
-						updates: taskData,
-					})
-				);
-				break;
-			case "delete":
-				dispatch(
-					removeTaskFromHomeData({
-						holidayId,
-						taskId: taskData.id,
-					})
-				);
-				break;
+	// Debug logging to understand the state
+	console.log('Halloween Costume Ideas Debug:', {
+		resolvedHolidayId,
+		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
+		allTasks: holidayData?.tasks?.length || 0,
+		costumeIdeasTasks: costumeIdeas.length,
+		costumeIdeas: costumeIdeas.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
+	});
+
+	// Refresh home data function (like gift-list)
+	const refreshHomeData = async () => {
+		if (!auth0User?.sub || !resolvedHolidayId) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
 		}
 	};
 
-	// Get costume ideas from Redux data (filtered by category)
-	const costumeIdeas =
-		holidayData?.tasks?.filter(
-			(task: any) => task.category === "Costume Ideas"
-		) || [];
-
+	// State management
 	const [sortBy, setSortBy] = useState<SortOption>("none");
 	const [showForm, setShowForm] = useState(false);
 	const [showSortModal, setShowSortModal] = useState(false);
@@ -175,74 +148,94 @@ export default function HalloweenCostumeIdeasPage() {
 		show: false,
 		taskId: null,
 	});
-	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+	const [isAdding, setIsAdding] = useState(false);
+	const [isToggling, setIsToggling] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	useEffect(() => {
-		// Fetch contacts for address book functionality
-		// Only fetch if home data is initialized (which contains contacts)
-		if (homeInitialized) {
-			dispatch(fetchContacts());
-		}
-	}, [dispatch, homeInitialized]);
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
 
-	useEffect(() => {
-		if (costumeIdeas.length === 0 && homeInitialized) {
-			setShowDefaultTasks(true);
-		}
-	}, [costumeIdeas, homeInitialized]);
+	// CRUD Operations
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!resolvedHolidayId || !auth0User) return;
 
-	const handleAddTask = async (formValues: Record<string, any>) => {
-		if (!formValues.title?.trim() || !holidayId || !auth0User) return;
+		setIsAdding(true);
+		
+		const newTask = {
+			id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+			title: values.title,
+			description: values.description || undefined,
+			priority: values.priority as "low" | "medium" | "high",
+			assignedTo: values.assignedTo || undefined,
+			category: "Costume Ideas",
+			dueDate: values.dueDate || undefined,
+			isCompleted: false,
+			holidayId: resolvedHolidayId,
+		};
 
 		try {
-			const payload = {
-				title: formValues.title,
-				description: formValues.description || undefined,
-				priority: formValues.priority as "low" | "medium" | "high",
-				assignedTo: formValues.assignedTo || undefined,
+			// Optimistically update Redux state first (like Hanukkah)
+			console.log('Adding costume task optimistically:', newTask);
+			console.log('Holiday ID for addition:', resolvedHolidayId);
+			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+			console.log('Task added to Redux, making API call...');
+
+			// Call API - map camelCase to snake_case for API
+			const apiPayload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assigned_to: values.assignedTo || undefined, // snake_case for API
 				category: "Costume Ideas",
-				dueDate: formValues.dueDate || undefined,
+				due_date: values.dueDate || undefined, // snake_case for API
 				isCompleted: false,
 			};
+			
+			console.log('🐛 [HalloweenAdd] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
 
-			const result = await createCostumeIdeas({
-				holidayId,
-				payload,
-				auth0User,
-			}).unwrap();
-
-			// Update Redux state directly
-			updateTaskInRedux(result, "add");
-
+			if (response.ok) {
+				// Replace temporary task with real task from API (like Hanukkah)
+				const result = await response.json();
+				console.log('API success, replacing temp task with real task:', result);
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+				
+				// Also refresh home data like gift-list does
+				await refreshHomeData();
+			} else {
+				// Remove optimistic update on error
+				console.log('API error, removing optimistic update');
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				console.error("Failed to add costume task:", response.status, response.statusText);
+			}
+			
 			setShowForm(false);
 		} catch (error) {
-			console.error("Error creating costume task:", error);
+			// Remove optimistic update on error (like Hanukkah)
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+			console.error("Failed to add costume task:", error);
+		} finally {
+			setIsAdding(false);
 		}
-	};
-
-	const addDefaultCostumeTasks = async () => {
-		if (!holidayId || !auth0User) return;
-
-		try {
-			for (const task of defaultCostumeTasks) {
-				const payload = {
-					...task,
-					isCompleted: false,
-				};
-				const result = await createCostumeIdeas({
-					holidayId,
-					payload,
-					auth0User,
-				}).unwrap();
-
-				// Update Redux state directly
-				updateTaskInRedux(result, "add");
-			}
-			setShowDefaultTasks(false);
-		} catch (error) {
-			console.error("Error adding default costume tasks:", error);
-		}
-	};
+	}
 
 	function openForm() {
 		setShowForm(true);
@@ -252,88 +245,215 @@ export default function HalloweenCostumeIdeasPage() {
 		setShowForm(false);
 	}
 
-	const handleToggleTask = async (taskId: string) => {
-		if (!holidayId || !auth0User) return;
+	async function handleToggleTask(taskId: string) {
+		if (!resolvedHolidayId || !auth0User) return;
 
+		setIsToggling(true);
 		try {
-			const task = costumeIdeas.find((t: any) => t.id === taskId);
-			if (task) {
-				const newIsCompleted = !task.isCompleted;
-				await updateCostumeIdeas({
-					holidayId,
-					taskId,
-					isCompleted: newIsCompleted,
-					auth0User,
-				}).unwrap();
+			// Find the current task to get its completion status
+			const currentTask = costumeIdeas.find((task: any) => task.id === taskId);
+			if (!currentTask) {
+				console.error("Costume task not found:", taskId);
+				return;
+			}
 
-				// Update Redux state directly
-				updateTaskInRedux(
-					{ id: taskId, isCompleted: newIsCompleted },
-					"update"
-				);
+			// Toggle the completion status
+			const newCompletionStatus = !currentTask.isCompleted;
+
+			// Optimistically update the Redux home data
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: taskId,
+					updates: { isCompleted: newCompletionStatus },
+				})
+			);
+
+			// Call API directly instead of using custom hook
+			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+			console.log('Toggle API URL:', apiUrl); // Debug logging
+			const response = await fetch(apiUrl, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newCompletionStatus,
+				}),
+			});
+
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				const currentTask = costumeIdeas.find((task: any) => task.id === taskId);
+				if (currentTask) {
+					dispatch(
+						updateTaskInHomeData({
+							holidayId: resolvedHolidayId,
+							taskId: taskId,
+							updates: { isCompleted: currentTask.isCompleted },
+						})
+					);
+				}
+				console.error("Failed to toggle costume task:", response.status, response.statusText);
 			}
 		} catch (error) {
-			console.error("Error updating costume task:", error);
+			console.error("Failed to toggle costume task:", error);
+		} finally {
+			setIsToggling(false);
 		}
-	};
+	}
 
 	const handleDeleteTask = (taskId: string) => {
 		setDeleteConfirm({ show: true, taskId });
 	};
 
 	const handleEditTask = (task: any) => {
+		console.log('🐛 [EditTask] Opening edit modal for task:', {
+			id: task.id,
+			title: task.title,
+			dueDate: task.dueDate,
+			dueDateType: typeof task.dueDate,
+			parsedDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null
+		});
 		setEditingTask(task);
 	};
 
-	const handleSaveEdit = async (updatedTask: any) => {
-		if (editingTask && holidayId && auth0User) {
-			try {
-				const result = await editCostumeIdeas({
-					holidayId,
+	async function handleSaveEdit(values: Record<string, any>) {
+		if (!editingTask || !resolvedHolidayId || !auth0User) return;
+
+		// Close modal immediately for better UX (optimistic)
+		setEditingTask(null);
+
+		setIsUpdating(true);
+		try {
+			const updatedTask = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Costume Ideas",
+				dueDate: values.dueDate || undefined,
+			};
+
+			// Optimistically update the Redux home data
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
 					taskId: editingTask.id,
-					payload: {
-						title: updatedTask.title,
-						description: updatedTask.description || undefined,
-						priority: updatedTask.priority as "low" | "medium" | "high",
-						assignedTo: updatedTask.assignedTo || undefined,
-						category: "Costume Ideas",
-						dueDate: updatedTask.dueDate || undefined,
-					},
-					auth0User,
-				}).unwrap();
+					updates: updatedTask,
+				})
+			);
 
-				// Update Redux state directly
-				updateTaskInRedux(result, "update");
+			// Call API directly - map camelCase to snake_case for API
+			const apiPayload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assigned_to: values.assignedTo || undefined, // snake_case for API
+				category: "Costume Ideas",
+				due_date: values.dueDate || undefined, // snake_case for API
+			};
 
-				setEditingTask(null);
-			} catch (error) {
-				console.error("Error updating costume task:", error);
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
+
+			if (!response.ok) {
+				// Revert the optimistic update on error and reopen modal
+				dispatch(
+					updateTaskInHomeData({
+						holidayId: resolvedHolidayId,
+						taskId: editingTask.id,
+						updates: editingTask,
+					})
+				);
+				setEditingTask(editingTask); // Reopen modal on error
+				console.error("Failed to update costume task:", response.status, response.statusText);
 			}
+		} catch (error) {
+			// Revert on error and reopen modal
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: editingTask.id,
+					updates: editingTask,
+				})
+			);
+			setEditingTask(editingTask); // Reopen modal on error
+			console.error("Failed to update costume task:", error);
+		} finally {
+			setIsUpdating(false);
 		}
-	};
+	}
 
 	function handleCloseEdit() {
 		setEditingTask(null);
 	}
 
-	const confirmDelete = async () => {
-		if (deleteConfirm.taskId && holidayId && auth0User) {
-			try {
-				await deleteCostumeIdeas({
-					holidayId,
+	async function confirmDelete() {
+		if (!deleteConfirm.taskId || !resolvedHolidayId || !auth0User) return;
+
+		setIsDeleting(true);
+		try {
+			const taskToDelete = costumeIdeas.find((task: any) => task.id === deleteConfirm.taskId);
+
+			// Optimistically remove from Redux state first
+			dispatch(
+				removeTaskFromHomeData({
+					holidayId: resolvedHolidayId,
 					taskId: deleteConfirm.taskId,
-					auth0User,
-				}).unwrap();
+				})
+			);
 
-				// Update Redux state directly
-				updateTaskInRedux({ id: deleteConfirm.taskId }, "delete");
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${deleteConfirm.taskId}`, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
 
-				setDeleteConfirm({ show: false, taskId: null });
-			} catch (error) {
-				console.error("Error deleting costume task:", error);
+			if (!response.ok) {
+				// Restore the task on error
+				if (taskToDelete) {
+					dispatch(
+						addTaskToHomeData({
+							holidayId: resolvedHolidayId,
+							task: taskToDelete,
+						})
+					);
+				}
+				console.error("Failed to delete costume task:", response.status, response.statusText);
 			}
+
+			setDeleteConfirm({ show: false, taskId: null });
+		} catch (error) {
+			console.error("Failed to delete costume task:", error);
+		} finally {
+			setIsDeleting(false);
 		}
-	};
+	}
 
 	function cancelDelete() {
 		setDeleteConfirm({ show: false, taskId: null });
@@ -400,25 +520,7 @@ export default function HalloweenCostumeIdeasPage() {
 				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
-				{/* Default Tasks Modal */}
-				{showDefaultTasks && (
-					<div className="card rounded-lg p-6 mb-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700">
-						<h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">
-							🎃 Welcome to Costume Planning!
-						</h3>
-						<p className="text-gray-600 dark:text-gray-400 mb-4">
-							Let's get you started with some essential costume planning tasks.
-						</p>
-						<button
-							onClick={addDefaultCostumeTasks}
-							className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
-						>
-							Add Default Tasks
-						</button>
-					</div>
-				)}
-
-				<AddButton title="Task" onClick={openForm} holidayColor="orange" />
+				<AddButton title="Costume" onClick={openForm} holidayColor="orange" />
 
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
@@ -480,28 +582,59 @@ export default function HalloweenCostumeIdeasPage() {
 			{/* Form Modal */}
 			<FormModal
 				isOpen={showForm}
-				title={costumeFormConfig.title}
-				fields={costumeFormConfig.fields}
+				title={costumeFormConfig(isHolidayShared).title}
+				fields={costumeFormConfig(isHolidayShared).fields}
 				onSubmit={handleAddTask}
 				onClose={closeForm}
-				loading={createCostumeIdeasState.isLoading}
+				loading={isAdding}
 				submitText={
-					createCostumeIdeasState.isLoading
+					isAdding
 						? "Adding..."
-						: costumeFormConfig.submitText
+						: costumeFormConfig(isHolidayShared).submitText
 				}
-				cancelText={costumeFormConfig.cancelText}
+				cancelText={costumeFormConfig(isHolidayShared).cancelText}
 				cardClassName="card"
-				submitButtonColor={costumeFormConfig.submitButtonColor}
+				submitButtonColor={costumeFormConfig(isHolidayShared).submitButtonColor}
 			/>
 
 			{/* Edit Task Modal */}
 			<EditTaskModal
 				isOpen={editingTask !== null}
-				task={editingTask}
+				task={editingTask ? {
+					...editingTask,
+					dueDate: editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : ""
+				} : null}
+				initialValues={(() => {
+					if (!editingTask) return {};
+					
+					const initialValues = {
+						title: editingTask.title || "",
+						description: editingTask.description || "",
+						priority: editingTask.priority || "medium",
+						...(isHolidayShared ? { assignedTo: editingTask.assignedTo || "" } : {}),
+						dueDate: editingTask.dueDate ? (() => {
+							try {
+								const date = new Date(editingTask.dueDate);
+								const formattedDate = date.toISOString().split('T')[0];
+								console.log('🐛 [EditModal] Date formatting:', {
+									original: editingTask.dueDate,
+									parsed: date,
+									formatted: formattedDate
+								});
+								return formattedDate;
+							} catch (e) {
+								console.error('🐛 [EditModal] Date parsing error:', e, editingTask.dueDate);
+								return "";
+							}
+						})() : "",
+					};
+					
+					console.log('🐛 [EditModal] Final initialValues:', initialValues);
+					return initialValues;
+				})()}
 				onClose={handleCloseEdit}
 				onSave={handleSaveEdit}
-				loading={editCostumeIdeasState.isLoading}
+				loading={isUpdating}
 			/>
 
 			{/* Delete Confirmation Modal */}
@@ -510,7 +643,7 @@ export default function HalloweenCostumeIdeasPage() {
 				{...getDeleteConfig("tasks")}
 				onConfirm={confirmDelete}
 				onCancel={cancelDelete}
-				loading={deleteCostumeIdeasState.isLoading}
+				loading={isDeleting}
 				cardClassName="card"
 				confirmText="Delete"
 				cancelText="Cancel"

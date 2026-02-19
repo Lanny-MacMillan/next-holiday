@@ -1,8 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { fetchContacts } from "@/store/slices/addressBookSlice";
+import {
+	updateTaskInHomeData,
+	addTaskToHomeData,
+	removeTaskFromHomeData,
+	setHomeData,
+} from "@/store/slices/homeSlice";
 import {
 	selectHolidayPreferences,
 	selectHomeInitialized,
@@ -10,12 +17,7 @@ import {
 } from "@/store/selectors/home";
 import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
 import { getHolidayDataFromRedux } from "@/utils/holidayData";
-import {
-	updateTaskInHomeData,
-	addTaskToHomeData,
-	removeTaskFromHomeData,
-} from "@/store/slices/homeSlice";
-import { useBabyShowerGamesMutations } from "@/hooks/useBabyShowerGamesMutations";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import HolidayPageHeader from "@/components/common/HolidayPageHeader";
 import ToDoCard from "@/components/cards/to-do/ToDoCard";
 import AddButton from "@/components/common/AddButton";
@@ -26,64 +28,90 @@ import SortModal from "@/components/modals/SortModal";
 
 export default function BabyShowerGamesPage() {
 	const dispatch = useAppDispatch();
+	const { contacts } = useAppSelector((state: any) => state.addressBook);
+	const { user: auth0User } = useAuth0();
 
-	// Get current Redux state for skip logic
+	// Get Redux data
+	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+	const homeInitialized = useAppSelector(selectHomeInitialized);
+	const homeData = useAppSelector(selectHomeData);
+
+	// Get current Redux state for data access
 	const currentState = useAppSelector((state: any) => state);
 
-	const {
-		holidayId,
-		auth0User,
-		babyShowerGames,
-		loading,
-		error,
-		initialized,
-		createBabyShowerGames,
-		updateBabyShowerGames,
-		editBabyShowerGames,
-		deleteBabyShowerGames,
-	} = useBabyShowerGamesMutations();
+	// Holiday ID resolution
+	const resolvedHolidayId = homeInitialized
+		? getHolidayIdFromRoute("/baby-shower", holidayPreferences)
+		: getHolidayIdFromRoute("/baby-shower", holidayPreferences);
 
-	// Get home data and holiday data from Redux
-	const homeData = useAppSelector(selectHomeData);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+	// Check if the holiday is shared to conditionally show assign to field
+	const isHolidayShared = useAppSelector((state: any) =>
+		selectIsHolidayShared(state, "baby-shower")
+	);
 
-	// Helper function to update Redux state after task operations
-	const updateTaskInRedux = (
-		taskData: any,
-		operation: "add" | "update" | "delete"
-	) => {
-		if (!holidayId) return;
+	// Redux data access - games are stored as tasks with category "Games"
+	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+	const gameTasks = holidayData?.tasks?.filter((task: any) => task.category === "Games") || [];
+	const isLoading = !homeInitialized;
+	const error = null;
 
-		switch (operation) {
-			case "add":
-				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
-				break;
-			case "update":
-				dispatch(
-					updateTaskInHomeData({
-						holidayId,
-						taskId: taskData.id,
-						updates: taskData,
-					})
-				);
-				break;
-			case "delete":
-				dispatch(removeTaskFromHomeData({ holidayId, taskId: taskData.id }));
-				break;
+	// Debug logging to understand the state
+	console.log('Baby Shower Games Debug:', {
+		resolvedHolidayId,
+		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
+		allTasks: holidayData?.tasks?.length || 0,
+		gameTasks: gameTasks.length,
+		games: gameTasks.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
+	});
+
+	// Refresh home data function
+	const refreshHomeData = async () => {
+		if (!auth0User?.sub || !resolvedHolidayId) return;
+
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+			if (response.ok) {
+				const result = await response.json();
+				dispatch(setHomeData(result.data));
+			}
+		} catch (error) {
+			console.error("Error refreshing home data:", error);
 		}
 	};
 
-	// Use Redux data for tasks instead of the hook's data
-	const allTasks = holidayData?.tasks || [];
-	const gameTasks = allTasks.filter((task) => task.category === "Games");
-
+	// State management
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<any>(null);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [taskToDelete, setTaskToDelete] = useState<any>(null);
 	const [showSortModal, setShowSortModal] = useState(false);
 	const [sortBy, setSortBy] = useState<string>("dateCreated");
+	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+	const [isAdding, setIsAdding] = useState(false);
+	const [isToggling, setIsToggling] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+
+	useEffect(() => {
+		// Always fetch contacts for address book functionality
+		dispatch(fetchContacts());
+	}, [dispatch]);
+
+	useEffect(() => {
+		if (gameTasks.length === 0 && homeInitialized) {
+			setShowDefaultTasks(true);
+		}
+	}, [gameTasks, homeInitialized]);
 
 	// Sort options for games
 	const sortOptions = [
@@ -124,46 +152,166 @@ export default function BabyShowerGamesPage() {
 
 	const sortedGameTasks = sortTasks(gameTasks, sortBy);
 
-	const handleSubmit = async (values: Record<string, any>) => {
+	// CRUD Operations
+	async function handleAddTask(values: Record<string, any>) {
+		if (!values.title?.trim()) return;
+		if (!resolvedHolidayId || !auth0User) return;
+
+		setIsAdding(true);
+		
+		const newTask = {
+			id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+			title: values.title,
+			description: values.description || undefined,
+			priority: values.priority as "low" | "medium" | "high",
+			assignedTo: values.assignedTo || undefined,
+			category: "Games",
+			dueDate: values.dueDate || undefined,
+			isCompleted: false,
+			holidayId: resolvedHolidayId,
+		};
+
 		try {
-			if (editingTask) {
-				const result = await editBabyShowerGames({
-					holidayId: holidayId || "",
-					taskId: editingTask.id,
-					payload: values,
-					auth0User,
-				}).unwrap();
+			// Optimistically update Redux state first
+			console.log('Adding task optimistically:', newTask);
+			console.log('Holiday ID for addition:', resolvedHolidayId);
+			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+			console.log('Task added to Redux, making API call...');
 
-				// Update Redux state directly for optimistic updates
-				updateTaskInRedux(result, "update");
+			// Call API - map camelCase to snake_case for API
+			const apiPayload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assigned_to: values.assignedTo || undefined, // snake_case for API
+				category: "Games",
+				due_date: values.dueDate || undefined, // snake_case for API
+				isCompleted: false,
+			};
+			
+			console.log('🐛 [BabyShowerAdd] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
 
-				setEditingTask(null);
+			if (response.ok) {
+				// Replace temporary task with real task from API
+				const result = await response.json();
+				console.log('API success, replacing temp task with real task:', result);
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+				
+				// Also refresh home data
+				await refreshHomeData();
 			} else {
-				const result = await createBabyShowerGames({
-					holidayId: holidayId || "",
-					payload: {
-						...values,
-						isCompleted: false,
-						category: "Games",
-						title: values.title || "",
-						priority: values.priority || "medium",
-					},
-					auth0User,
-				}).unwrap();
-
-				// Update Redux state directly for optimistic updates
-				updateTaskInRedux(result, "add");
+				// Remove optimistic update on error
+				console.log('API error, removing optimistic update');
+				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+				console.error("Failed to add task:", response.status, response.statusText);
 			}
+			
 			setShowAddForm(false);
 		} catch (error) {
-			console.error("Error saving game:", error);
+			// Remove optimistic update on error
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
+			console.error("Failed to add task:", error);
+		} finally {
+			setIsAdding(false);
 		}
-	};
+	}
 
 	const handleEdit = (task: any) => {
 		setEditingTask(task);
 		setShowAddForm(true);
 	};
+
+	async function handleEditTaskSubmit(values: Record<string, any>) {
+		if (!editingTask || !resolvedHolidayId || !auth0User) return;
+
+		setIsUpdating(true);
+		try {
+			const updatedTask = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assignedTo: values.assignedTo || undefined,
+				category: "Games",
+				dueDate: values.dueDate || undefined,
+			};
+
+			// Optimistically update the Redux state
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
+					taskId: editingTask.id,
+					updates: updatedTask,
+				})
+			);
+
+			// Call API - map camelCase to snake_case
+			const apiPayload = {
+				title: values.title,
+				description: values.description || undefined,
+				priority: values.priority as "low" | "medium" | "high",
+				assigned_to: values.assignedTo || undefined, // snake_case for API
+				category: "Games",
+				due_date: values.dueDate || undefined, // snake_case for API
+			};
+			
+			console.log('🐛 [BabyShowerEdit] API payload:', apiPayload);
+			
+			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify(apiPayload),
+			});
+			
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				dispatch(
+					updateTaskInHomeData({
+						holidayId: resolvedHolidayId,
+						taskId: editingTask.id,
+						updates: {
+							title: editingTask.title,
+							description: editingTask.description,
+							priority: editingTask.priority,
+							assignedTo: editingTask.assignedTo,
+							category: editingTask.category,
+							dueDate: editingTask.dueDate,
+						},
+					})
+				);
+				console.error("Failed to update task:", response.status, response.statusText);
+			}
+			
+			setEditingTask(null);
+			setShowAddForm(false);
+		} catch (error) {
+			console.error("Failed to update task:", error);
+		} finally {
+			setIsUpdating(false);
+		}
+	}
 
 	const handleDelete = (taskOrId: any) => {
 		// Handle both task object and task ID
@@ -178,48 +326,118 @@ export default function BabyShowerGamesPage() {
 		}
 	};
 
+	async function handleDeleteTask(taskId: string) {
+		if (!resolvedHolidayId || !auth0User) return;
+
+		// Find the task to delete for potential rollback
+		const taskToDelete = gameTasks.find((task: any) => task.id === taskId);
+		if (!taskToDelete) return;
+
+		setIsDeleting(true);
+		try {
+			// Optimistically update Redux state first
+			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+
+			// Call API directly
+			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+			console.log('Delete API URL:', apiUrl);
+			const response = await fetch(apiUrl, {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+			});
+
+			if (!response.ok) {
+				// If API failed, revert the optimistic update
+				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }));
+				console.error("Failed to delete task:", response.status, response.statusText);
+			}
+		} catch (error) {
+			// If API failed, revert the optimistic update
+			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }));
+			console.error("Failed to delete task:", error);
+		} finally {
+			setIsDeleting(false);
+		}
+	}
+
 	const confirmDelete = async () => {
 		if (taskToDelete) {
-			try {
-				// Optimistically update Redux state first
-				updateTaskInRedux(taskToDelete, "delete");
-
-				await deleteBabyShowerGames({
-					holidayId: holidayId || "",
-					taskId: taskToDelete.id,
-					auth0User,
-				}).unwrap();
-				setTaskToDelete(null);
-			} catch (error) {
-				console.error("Error deleting game:", error);
-			}
+			await handleDeleteTask(taskToDelete.id);
+			setTaskToDelete(null);
 		}
 		setShowDeleteModal(false);
 	};
 
-	const handleToggleCompletion = async (taskId: string) => {
+	async function handleToggleTask(taskId: string) {
+		if (!resolvedHolidayId || !auth0User) return;
+
+		setIsToggling(true);
 		try {
-			const task = gameTasks.find((t) => t.id === taskId);
-			if (task) {
-				const newIsCompleted = !task.isCompleted;
+			// Find the current task to get its completion status
+			const currentTask = gameTasks.find((task: any) => task.id === taskId);
+			if (!currentTask) {
+				console.error("Task not found:", taskId);
+				return;
+			}
 
-				// Optimistically update Redux state first
-				updateTaskInRedux(
-					{ id: taskId, isCompleted: newIsCompleted },
-					"update"
-				);
+			// Toggle the completion status
+			const newCompletionStatus = !currentTask.isCompleted;
 
-				await updateBabyShowerGames({
-					holidayId: holidayId || "",
+			// Optimistically update the Redux state
+			dispatch(
+				updateTaskInHomeData({
+					holidayId: resolvedHolidayId,
 					taskId: taskId,
-					isCompleted: newIsCompleted,
-					auth0User,
-				}).unwrap();
+					updates: { isCompleted: newCompletionStatus },
+				})
+			);
+
+			// Call API directly
+			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+			const response = await fetch(apiUrl, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: auth0User.sub,
+						email: auth0User.email,
+						name: auth0User.name,
+						picture: auth0User.picture,
+					}),
+				},
+				body: JSON.stringify({
+					isCompleted: newCompletionStatus,
+				}),
+			});
+
+			if (!response.ok) {
+				// Revert the optimistic update on error
+				const revertTask = gameTasks.find((task: any) => task.id === taskId);
+				if (revertTask) {
+					dispatch(
+						updateTaskInHomeData({
+							holidayId: resolvedHolidayId,
+							taskId: taskId,
+							updates: { isCompleted: currentTask.isCompleted },
+						})
+					);
+				}
+				console.error("Failed to toggle task:", response.status, response.statusText);
 			}
 		} catch (error) {
-			console.error("Error updating game completion:", error);
+			console.error("Failed to toggle task:", error);
+		} finally {
+			setIsToggling(false);
 		}
-	};
+	}
 
 	const handleSortChange = (sortOption: string) => {
 		setSortBy(sortOption);
@@ -254,7 +472,7 @@ export default function BabyShowerGamesPage() {
 						<ToDoCard
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
+							onToggleComplete={handleToggleTask}
 							onDelete={handleDelete}
 							onEdit={handleEdit}
 							gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
@@ -273,7 +491,7 @@ export default function BabyShowerGamesPage() {
 						<ToDoCard
 							key={task.id}
 							task={task}
-							onToggleComplete={handleToggleCompletion}
+							onToggleComplete={handleToggleTask}
 							onDelete={handleDelete}
 							onEdit={handleEdit}
 							className="opacity-60"
@@ -320,33 +538,36 @@ export default function BabyShowerGamesPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
+					...(isHolidayShared ? [{
+						id: "assignedTo",
+						type: "text" as const,
+						placeholder: "Assigned To"
+					}] : []),
 					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
-					{
-						id: "notes",
-						type: "textarea" as const,
-						placeholder: "Notes",
-						rows: 2,
-					},
 				]}
 				initialValues={
 					editingTask
 						? {
-								title: editingTask.title,
+								title: editingTask.title || "",
 								description: editingTask.description || "",
-								priority: editingTask.priority,
+								priority: editingTask.priority || "medium",
+								...(isHolidayShared ? { assignedTo: editingTask.assignedTo || "" } : {}),
 								dueDate: editingTask.dueDate
-									? editingTask.dueDate.split("T")[0]
+									? new Date(editingTask.dueDate).toISOString().split('T')[0]
 									: "",
-								notes: editingTask.notes || "",
 						  }
-						: { priority: "medium", category: "Games" }
+						: { 
+							priority: "medium", 
+							category: "Games",
+							...(isHolidayShared ? { assignedTo: "" } : {}),
+						}
 				}
-				onSubmit={handleSubmit}
+				onSubmit={editingTask ? handleEditTaskSubmit : handleAddTask}
 				onClose={() => {
 					setShowAddForm(false);
 					setEditingTask(null);
 				}}
-				loading={loading}
+				loading={editingTask ? isUpdating : isAdding}
 				submitText={editingTask ? "Update Game" : "Add Game"}
 				cardClassName="card"
 				submitButtonColor="#06b6d4"
@@ -362,7 +583,7 @@ export default function BabyShowerGamesPage() {
 					setShowDeleteModal(false);
 					setTaskToDelete(null);
 				}}
-				loading={loading}
+				loading={isDeleting}
 				cardClassName="card"
 				confirmButtonColor="#06b6d4"
 			/>

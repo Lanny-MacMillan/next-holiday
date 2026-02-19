@@ -87,14 +87,10 @@ export default function HalloweenPage() {
 				}
 				break;
 			case "trickOrTreatPrep":
-				// Filter tasks by category for trick or treat prep
-				if (holidayData.tasks) {
-					const prepTasks = holidayData.tasks.filter(
-						(task: any) => task.category === "Trick or Treat Prep"
-					);
-					total = prepTasks.length;
-					completed = prepTasks.filter((task: any) => task.isCompleted).length;
-				}
+				// Trick or treat prep are stored as tasks with category "Trick or Treat Prep"
+				const trickOrTreatTasks = holidayData.tasks?.filter((task: any) => task.category === "Trick or Treat Prep") || [];
+				total = trickOrTreatTasks.length;
+				completed = trickOrTreatTasks.filter((task: any) => task.isCompleted).length;
 				break;
 			case "decorations":
 				// Decorations are stored as tasks with category "Decorations"
