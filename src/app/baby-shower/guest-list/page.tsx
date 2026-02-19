@@ -115,13 +115,6 @@ export default function BabyShowerGuestListPage() {
 		dispatch(fetchContacts());
 	}, [dispatch]);
 
-	// Debug logging for troubleshooting
-	console.log('Baby Shower Guest List Debug:', {
-		holidayId,
-		holidayData: holidayData ? { ...holidayData, guestLists: guestLists.length } : null,
-		guestListsCount: guestLists.length,
-		guests: guests.map(g => ({ id: g.id, name: g.name, rsvpStatus: g.rsvpStatus }))
-	});
 
 	// Function to refresh home data from server
 	const refreshHomeData = async () => {

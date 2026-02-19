@@ -60,31 +60,18 @@ export function getHolidayDataFromRedux(
 	holidayId: string | null | undefined,
 	state: RootState
 ) {
-	console.log("=== getHolidayDataFromRedux DEBUG ===");
-	console.log("holidayId:", holidayId);
-	console.log("state.home:", state.home);
-	console.log("state.home.data:", state.home.data);
-	console.log(
-		"state.home.data?.holidayPreferences:",
-		state.home.data?.holidayPreferences
-	);
-
 	if (!holidayId) {
-		console.log("No holidayId, returning null");
 		return null;
 	}
 
 	const homeData = state.home.data;
 	if (!homeData?.holidayPreferences) {
-		console.log("No homeData or holidayPreferences, returning null");
 		return null;
 	}
 
 	const foundHoliday = homeData.holidayPreferences.find(
 		(h) => h.holidayId === holidayId
 	);
-	console.log("Found holiday:", foundHoliday);
-	console.log("=== END getHolidayDataFromRedux DEBUG ===");
 
 	return foundHoliday || null;
 }

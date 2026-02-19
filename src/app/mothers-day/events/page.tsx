@@ -145,7 +145,7 @@ export default function MothersDayEventsPage() {
 				isCompleted: false,
 			};
 			
-			console.log('🐛 [MothersDayAdd] API payload:', apiPayload);
+
 			
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
 				method: "POST",

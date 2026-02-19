@@ -115,14 +115,6 @@ export default function ThanksgivingShoppingListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
-	// Debug contacts loading
-	useEffect(() => {
-		console.log("Contacts in Thanksgiving gift list:", contacts);
-		console.log("Contacts length:", contacts?.length);
-		console.log("Home data:", homeData);
-		console.log("Home initialized:", homeInitialized);
-		console.log("Home contacts:", homeData?.contacts);
-	}, [contacts, homeData, homeInitialized]);
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;

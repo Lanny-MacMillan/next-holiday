@@ -55,14 +55,7 @@ export default function BabyShowerGamesPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Baby Shower Games Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		gameTasks: gameTasks.length,
-		games: gameTasks.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
-	});
+
 
 	// Refresh home data function
 	const refreshHomeData = async () => {
@@ -173,10 +166,7 @@ export default function BabyShowerGamesPage() {
 
 		try {
 			// Optimistically update Redux state first
-			console.log('Adding task optimistically:', newTask);
-			console.log('Holiday ID for addition:', resolvedHolidayId);
 			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-			console.log('Task added to Redux, making API call...');
 
 			// Call API - map camelCase to snake_case for API
 			const apiPayload = {
@@ -189,7 +179,7 @@ export default function BabyShowerGamesPage() {
 				isCompleted: false,
 			};
 			
-			console.log('🐛 [BabyShowerAdd] API payload:', apiPayload);
+
 			
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
 				method: "POST",
@@ -208,7 +198,6 @@ export default function BabyShowerGamesPage() {
 			if (response.ok) {
 				// Replace temporary task with real task from API
 				const result = await response.json();
-				console.log('API success, replacing temp task with real task:', result);
 				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
 				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
 				
@@ -216,7 +205,6 @@ export default function BabyShowerGamesPage() {
 				await refreshHomeData();
 			} else {
 				// Remove optimistic update on error
-				console.log('API error, removing optimistic update');
 				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
 				console.error("Failed to add task:", response.status, response.statusText);
 			}
@@ -269,7 +257,7 @@ export default function BabyShowerGamesPage() {
 				due_date: values.dueDate || undefined, // snake_case for API
 			};
 			
-			console.log('🐛 [BabyShowerEdit] API payload:', apiPayload);
+
 			
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
 				method: "PATCH",
@@ -340,7 +328,7 @@ export default function BabyShowerGamesPage() {
 
 			// Call API directly
 			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-			console.log('Delete API URL:', apiUrl);
+
 			const response = await fetch(apiUrl, {
 				method: "DELETE",
 				headers: {

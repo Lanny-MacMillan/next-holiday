@@ -25,7 +25,7 @@ export default function UpgradeBanner() {
 
 	const handleUpgrade = () => {
 		// TODO: Implement upgrade logic
-		console.log("Upgrade clicked from banner");
+
 		setShowUpgradeModal(false);
 	};
 

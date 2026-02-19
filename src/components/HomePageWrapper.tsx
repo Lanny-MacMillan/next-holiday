@@ -51,9 +51,7 @@ export default function HomePageWrapper() {
 				}
 
 				const result = await response.json();
-				console.log("HomePageWrapper API response:", result);
 				const data = result.data;
-				console.log("HomePageWrapper extracted data:", data);
 				setHomeData(data);
 				// Also dispatch to Redux store for access throughout the app
 				dispatch(setHomeDataAction(data));

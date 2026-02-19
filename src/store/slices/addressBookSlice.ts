@@ -35,7 +35,7 @@ const initialState: AddressBookState = {
 export const fetchContacts = createAsyncThunk(
 	"addressBook/fetchContacts",
 	async (_, { getState }) => {
-		console.log("fetchContacts thunk called");
+	
 		// Get current state to check if we already have data
 		const state = getState() as any;
 		const currentContacts = state.addressBook.contacts;
@@ -46,12 +46,8 @@ export const fetchContacts = createAsyncThunk(
 
 		// Check if we already have contacts and home data is available
 		if (isInitialized && currentContacts.length > 0) {
-			console.log(
-				"Already initialized with contacts, returning current contacts"
-			);
 			return currentContacts;
 		}
-		console.log("Home contacts available:", homeContacts);
 		if (homeContacts && homeContacts.length > 0) {
 			// Convert Date objects to strings for consistency with API responses
 			const convertedContacts = homeContacts.map((contact: any) => ({
@@ -65,11 +61,6 @@ export const fetchContacts = createAsyncThunk(
 						? contact.updatedAt.toISOString()
 						: contact.updatedAt,
 			}));
-			console.log("Converted contacts:", convertedContacts);
-			console.log(
-				"Returning contacts from fetchContacts thunk:",
-				convertedContacts
-			);
 			return convertedContacts;
 		}
 
@@ -115,9 +106,7 @@ export const addContact = createAsyncThunk(
 		}
 
 		const result = await response.json();
-		console.log("Add Contact API Response:", result);
 		const contactData = result.data || result; // Handle both {data: contact} and direct contact response
-		console.log("Returning contact data:", contactData);
 		return contactData;
 	}
 );
@@ -154,9 +143,7 @@ export const updateContact = createAsyncThunk(
 		}
 
 		const result = await response.json();
-		console.log("Update Contact API Response:", result);
-		const contactData = result.data || result; // Handle both {data: contact} and direct contact response
-		console.log("Returning updated contact data:", contactData);
+			const contactData = result.data || result; // Handle both {data: contact} and direct contact response
 		return contactData;
 	}
 );
@@ -212,15 +199,7 @@ const addressBookSlice = createSlice({
 			})
 			.addCase(fetchContacts.fulfilled, (state, action) => {
 				state.loading = false;
-				console.log(
-					"fetchContacts.fulfilled - action.payload:",
-					action.payload
-				);
 				state.contacts = action.payload;
-				console.log(
-					"fetchContacts.fulfilled - state.contacts after setting:",
-					state.contacts
-				);
 				state.initialized = true; // Set initialized to true on successful fetch
 			})
 			.addCase(fetchContacts.rejected, (state, action) => {
@@ -234,9 +213,7 @@ const addressBookSlice = createSlice({
 			})
 			.addCase(addContact.fulfilled, (state, action) => {
 				state.loading = false;
-				console.log("Adding contact to Redux store:", action.payload);
 				state.contacts.push(action.payload);
-				console.log("Updated contacts array:", state.contacts);
 			})
 			.addCase(addContact.rejected, (state, action) => {
 				state.loading = false;

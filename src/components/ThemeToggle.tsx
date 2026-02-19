@@ -15,7 +15,7 @@ export default function ThemeToggle() {
 	const currentTheme = preferences?.theme || theme;
 
 	const handleToggle = async () => {
-		console.log("Theme toggle clicked, current theme:", currentTheme);
+
 		const newTheme = currentTheme === "light" ? "dark" : "light";
 
 		// Update both local state and database

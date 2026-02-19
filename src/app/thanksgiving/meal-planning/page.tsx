@@ -111,14 +111,6 @@ export default function ThanksgivingMealPlanningPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Thanksgiving Meal Planning Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		mealPlanningTasks: mealPlanningTasks.length,
-		mealPlanningTasks: mealPlanningTasks.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
-	});
 
 	// Refresh home data function (like Kwanzaa)
 	const refreshHomeData = async () => {
@@ -233,10 +225,7 @@ export default function ThanksgivingMealPlanningPage() {
 
 		try {
 			// Optimistically update Redux state first (like Kwanzaa)
-			console.log('Adding meal planning task optimistically:', newTask);
-			console.log('Holiday ID for addition:', resolvedHolidayId);
 			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-			console.log('Task added to Redux, making API call...');
 
 			// Call API - map camelCase to snake_case for API
 			const apiPayload = {
@@ -249,7 +238,7 @@ export default function ThanksgivingMealPlanningPage() {
 				isCompleted: false,
 			};
 			
-			console.log('🐛 [ThanksgivingAdd] API payload:', apiPayload);
+
 			
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
 				method: "POST",
@@ -276,7 +265,6 @@ export default function ThanksgivingMealPlanningPage() {
 				await refreshHomeData();
 			} else {
 				// Remove optimistic update on error
-				console.log('API error, removing optimistic update');
 				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
 				console.error("Failed to add task:", response.status, response.statusText);
 			}
@@ -317,7 +305,7 @@ export default function ThanksgivingMealPlanningPage() {
 
 			// Call API directly instead of using custom hook
 			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-			console.log('Toggle API URL:', apiUrl); // Debug logging
+
 			const response = await fetch(apiUrl, {
 				method: "PATCH",
 				headers: {
@@ -393,7 +381,7 @@ export default function ThanksgivingMealPlanningPage() {
 				due_date: values.dueDate || undefined, // snake_case for API
 			};
 			
-			console.log('🐛 [ThanksgivingEdit] API payload:', apiPayload);
+
 			
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
 				method: "PATCH",
@@ -451,8 +439,7 @@ export default function ThanksgivingMealPlanningPage() {
 
 			// Call API directly instead of using custom hook
 			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-			console.log('Delete API URL:', apiUrl); // Debug logging  
-			console.log('Meal planning tasks before delete:', mealPlanningTasks.length);
+
 			const response = await fetch(apiUrl, {
 				method: "DELETE",
 				headers: {

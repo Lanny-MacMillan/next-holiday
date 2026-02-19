@@ -59,33 +59,18 @@ export default function AppContent({ children }: AppContentProps) {
 			const currentDisplayMode =
 				preferences?.displayMode || settings.displayMode;
 
-			console.log(
-				"Theme state:",
-				currentTheme,
-				"Display mode:",
-				currentDisplayMode,
-				"Initialized:",
-				initialized,
-				"Preferences initialized:",
-				preferencesInitialized
-			);
-
 			// Apply dark/light theme
 			if (currentTheme === "dark") {
 				html.classList.add("dark");
-				console.log("Added dark class to html");
 			} else {
 				html.classList.remove("dark");
-				console.log("Removed dark class from html");
 			}
 
 			// Apply gamified/professional mode
 			if (currentDisplayMode === "gamified") {
 				html.classList.add("gamified-mode");
-				console.log("Added gamified-mode class to html");
 			} else {
 				html.classList.remove("gamified-mode");
-				console.log("Removed gamified-mode class from html");
 			}
 		}
 	}, [

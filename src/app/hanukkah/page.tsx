@@ -136,35 +136,6 @@ export default function HanukkahPage() {
 		return { total, completed, progress };
 	}
 
-	// Debug: Log all available data
-	useEffect(() => {
-		// Log the full home data structure
-		if (homeData) {
-			console.log("homeData.holidayPreferences:", homeData.holidayPreferences);
-			if (homeData.holidayPreferences) {
-				homeData.holidayPreferences.forEach((pref: any, index: number) => {
-					console.log(`holidayPreferences[${index}]:`, pref);
-					console.log(
-						`holidayPreferences[${index}].holidayId:`,
-						pref.holidayId
-					);
-					console.log(`holidayPreferences[${index}].gifts:`, pref.gifts);
-					console.log(`holidayPreferences[${index}].cards:`, pref.cards);
-					console.log(`holidayPreferences[${index}].tasks:`, pref.tasks);
-				});
-			}
-		}
-		console.log("=== HANUKKAH MAIN PAGE DEBUG ===");
-		console.log("holidayId:", holidayId);
-		console.log("homeInitialized:", homeInitialized);
-		console.log("holidayData:", holidayData);
-		console.log("holidayData.gifts:", holidayData?.gifts);
-		console.log("holidayData.cards:", holidayData?.cards);
-		console.log("holidayData.tasks:", holidayData?.tasks);
-		console.log("holidayData.events:", holidayData?.events);
-		console.log("holidayData.decorations:", holidayData?.decorations);
-		console.log("=== END DEBUG ===");
-	}, [holidayId, holidayData, homeInitialized, homeData]);
 
 	return (
 		<div className="min-h-screen hanukkah-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
