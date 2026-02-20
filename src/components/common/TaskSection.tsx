@@ -44,7 +44,11 @@ const TaskSection: React.FC<TaskSectionProps> = ({
 			</h2>
 			<div
 				className={`card ${cardClassName} rounded shadow`}
-				style={borderColor ? { borderLeft: `4px solid ${borderColor}` } : {}}
+				style={borderColor ? { 
+					borderLeftWidth: '4px',
+					borderLeftStyle: 'solid',
+					borderLeftColor: borderColor
+				} : {}}
 			>
 				{items.length === 0 ? (
 					<div

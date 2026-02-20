@@ -36,7 +36,7 @@ export default function HolidayTaskCard({
 	const {
 		primaryColor = "#22c55e", // Default green
 		accentColor = "#eab308", // Default yellow
-		backgroundColor: themeBackgroundColor = "white",
+		backgroundColor: themeBackgroundColor,
 		progressColor = "#22c55e", // Default green for progress bar
 	} = theme;
 
@@ -59,13 +59,14 @@ export default function HolidayTaskCard({
 				href={href}
 				className={`block card card-cards rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${backgroundColor} text-white ${className}`}
 				style={{
-					border: isDarkMode ? "3px solid rgba(255, 255, 255, 1)" : "none",
-					borderLeft: isDarkMode ? "3px solid rgba(255, 255, 255, 1)" : "none",
-					...getCardStyling({
+					borderWidth: isDarkMode ? "3px" : "0",
+					borderStyle: "solid",
+					borderColor: isDarkMode ? "rgba(255, 255, 255, 1)" : "transparent",
+					filter: getCardStyling({
 						isDarkMode,
 						isGamified: true,
 						intensity: "heavy",
-					}),
+					}).filter,
 				}}
 			>
 				{/* Background texture overlay */}
@@ -118,13 +119,15 @@ export default function HolidayTaskCard({
 			href={href}
 			className={`block card card-cards rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
 			style={{
-				backgroundColor,
-				borderLeft: `4px solid ${primaryColor}`, // Colored line on left edge
-				...getCardStyling({
+				...(themeBackgroundColor && { backgroundColor: themeBackgroundColor }),
+				borderLeftWidth: '4px',
+				borderLeftStyle: 'solid',
+				borderLeftColor: primaryColor,
+				filter: getCardStyling({
 					isDarkMode,
 					isGamified: false,
 					intensity: "medium",
-				}),
+				}).filter,
 			}}
 		>
 			<div className="flex items-center justify-between mb-1">

@@ -148,10 +148,28 @@ export default function MailCard({
 		);
 	}
 
+	// Helper function to get appropriate card class based on holiday color
+	const getCardClass = () => {
+		if (holidayColor?.includes('blue')) return 'card-events-fathers-day';
+		if (holidayColor?.includes('green')) return 'card-events-christmas';
+		if (holidayColor?.includes('red')) return 'card-events-fourth-of-july';
+		if (holidayColor?.includes('purple')) {
+			// Check if it's graduation specifically
+			if (holidayColor?.includes('graduation') || 
+				(typeof window !== 'undefined' && window.location.pathname.includes('/graduation'))) {
+				return 'card-events-graduation';
+			}
+			return 'card-events-easter';
+		}
+		if (holidayColor?.includes('orange')) return 'card-events-new-year';
+		if (holidayColor?.includes('yellow') || holidayColor?.includes('amber')) return 'card-events-birthday';
+		return 'card-valentines'; // Default fallback
+	};
+
 	// Professional mode (existing design)
 	return (
 		<div
-			className={`card card-valentines rounded-2xl p-3 sm:p-4 transition-all ${
+			className={`card ${getCardClass()} rounded-2xl p-3 sm:p-4 transition-all ${
 				card.isCompleted ? "opacity-75" : ""
 			}`}
 		>

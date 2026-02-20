@@ -282,23 +282,23 @@ export function BudgetDisplay({
 
 	// Original clean, professional design
 	return (
-		<div className={`card rounded-lg p-3 sm:p-4 mb-4 ${budgetInfo.colorClass}`}>
+		<div className={`card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 mb-4 ${budgetInfo.colorClass}`}>
 			<div className="flex justify-between items-center mb-2">
-				<h3 className="font-semibold text-sm sm:text-base">{displayTitle}</h3>
-				<span className="text-xs sm:text-sm font-medium">
+				<h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">{displayTitle}</h3>
+				<span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
 					{budgetInfo.statusText}
 				</span>
 			</div>
 			<div className="flex justify-between items-center text-xs sm:text-sm">
 				<div>
-					<span className="font-medium">Spent: </span>
-					<span className="font-bold">${budgetInfo.totalSpent.toFixed(2)}</span>
+					<span className="font-medium text-gray-700 dark:text-gray-300">Spent: </span>
+					<span className="font-bold text-gray-900 dark:text-white">${budgetInfo.totalSpent.toFixed(2)}</span>
 				</div>
 				<div>
-					<span className="font-medium">Remaining: </span>
+					<span className="font-medium text-gray-700 dark:text-gray-300">Remaining: </span>
 					<span
 						className={`font-bold ${
-							budgetInfo.remaining < 0 ? "text-red-700 dark:text-red-300" : ""
+							budgetInfo.remaining < 0 ? "text-red-700 dark:text-red-300" : "text-gray-900 dark:text-white"
 						}`}
 					>
 						${budgetInfo.remaining.toFixed(2)}
@@ -306,7 +306,7 @@ export function BudgetDisplay({
 				</div>
 			</div>
 			<div className="mt-2">
-				<div className="flex justify-between text-xs mb-1">
+				<div className="flex justify-between text-xs mb-1 text-gray-600 dark:text-gray-400">
 					<span>Budget: ${budgetInfo.budgetLimit.toFixed(2)}</span>
 					<span>{budgetInfo.percentageUsed.toFixed(1)}% used</span>
 				</div>

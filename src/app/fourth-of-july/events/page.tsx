@@ -485,7 +485,7 @@ export default function FourthOfJulyEventsPage() {
 
 				{/* Event Status Summary */}
 				{events.length > 0 && (
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+					<div className="card p-6">
 						<h3 className="text-lg font-semibold mb-4">Event Status</h3>
 						<div className="grid grid-cols-3 gap-4 text-center">
 							<div>

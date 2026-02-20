@@ -372,7 +372,7 @@ export default function BabyShowerGuestListPage() {
 		return (
 			<div className="min-h-screen baby-shower-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">Loading guests...</p>
 				</div>
 			</div>
@@ -398,16 +398,16 @@ export default function BabyShowerGuestListPage() {
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
 				description="Keep track of your Baby Shower guests!"
-				holidayColor="pink-600"
+				holidayColor="cyan-500"
 				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<ReservationsTracker
 					guests={guests}
 					title="Baby Shower Guest Tracker"
-					accentColor="#ec4899"
+					accentColor="#06b6d4"
 				/>
-				<AddButton title="Guest" onClick={openForm} color="pink" />
+				<AddButton title="Guest" onClick={openForm} color="cyan" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -436,9 +436,9 @@ export default function BabyShowerGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={updateGuestState.isLoading}
 							theme={{
-								accentColor: "#ec4899", // Pink for Baby Shower
+								accentColor: "#06b6d4", // Cyan for Baby Shower
 							}}
-							borderColor="rgb(var(--color-pink-500))" // Pink border for Baby Shower
+							borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
 						/>
 					)}
 				/>
@@ -460,9 +460,9 @@ export default function BabyShowerGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={updateGuestState.isLoading}
 							theme={{
-								accentColor: "#ec4899", // Pink for Baby Shower
+								accentColor: "#06b6d4", // Cyan for Baby Shower
 							}}
-							borderColor="rgb(var(--color-pink-500))" // Pink border for Baby Shower
+							borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
 						/>
 					)}
 				/>
@@ -484,9 +484,9 @@ export default function BabyShowerGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={updateGuestState.isLoading}
 							theme={{
-								accentColor: "#ec4899", // Pink for Baby Shower
+								accentColor: "#06b6d4", // Cyan for Baby Shower
 							}}
-							borderColor="rgb(var(--color-pink-500))" // Pink border for Baby Shower
+							borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
 						/>
 					)}
 				/>
@@ -517,7 +517,7 @@ export default function BabyShowerGuestListPage() {
 				submitText={editingGuest ? "Update Guest" : "Add Guest"}
 				cancelText="Cancel"
 				cardClassName="card"
-				submitButtonColor="#ec4899"
+				submitButtonColor="#06b6d4"
 				showAddressBook={true}
 				contacts={contacts}
 				onAddressBookSelect={(contact) => {

@@ -367,10 +367,10 @@ export default function BirthdayGiftListPage() {
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={updateLoading}
 			theme={{
-				accentColor: "#3b82f6", // Blue for Birthday
+				accentColor: "#f59e0b", // Amber for Birthday
 			}}
-			borderColor="rgb(var(--color-blue-500))" // Blue border for Birthday
-			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+			borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
+			gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 		/>
 	);
 
@@ -384,10 +384,10 @@ export default function BirthdayGiftListPage() {
 			onDelete={(giftId: string) => handleDeleteGift(gift)}
 			loading={updateLoading}
 			theme={{
-				accentColor: "#3b82f6", // Blue for Birthday
+				accentColor: "#f59e0b", // Amber for Birthday
 			}}
-			borderColor="rgb(var(--color-blue-500))" // Blue border for Birthday
-			gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+			borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
+			gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 		/>
 	);
 
@@ -462,18 +462,18 @@ export default function BirthdayGiftListPage() {
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort gifts"
 				description="Track your Birthday gift ideas!"
-				holidayColor="blue-500"
+				holidayColor="yellow-500"
 				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
 				<BudgetDisplay
 					holiday="Birthday"
-					holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+					holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
 					holidayId={holidayId || undefined}
 				/>
 
-				<AddButton title="Gift" onClick={openForm} color="blue" />
+				<AddButton title="Gift" onClick={openForm} color="yellow" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">

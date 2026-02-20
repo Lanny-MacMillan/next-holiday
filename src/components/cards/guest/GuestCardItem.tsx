@@ -47,7 +47,11 @@ export default function GuestCardItem({
 
 	// Apply border color if provided
 	const borderStyle = borderColor
-		? { borderLeft: `4px solid ${borderColor}` }
+		? { 
+			borderLeftWidth: '4px',
+			borderLeftStyle: 'solid',
+			borderLeftColor: borderColor
+		}
 		: {};
 
 	// RSVP status colors

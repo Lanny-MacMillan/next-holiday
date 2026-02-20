@@ -184,7 +184,11 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
 			) : (
 				<div
 					className={`card ${cardClassName} rounded shadow`}
-					style={borderColor ? { borderLeft: `4px solid ${borderColor}` } : {}}
+					style={borderColor ? { 
+						borderLeftWidth: '4px',
+						borderLeftStyle: 'solid',
+						borderLeftColor: borderColor
+					} : {}}
 				>
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{items.map((item) => renderItem(item))}

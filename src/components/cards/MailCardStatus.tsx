@@ -31,7 +31,7 @@ export default function MailCardStatus({
 	if (isGamifiedMode) {
 		// Gamified mode design
 		const backgroundColor =
-			holidayColor || "bg-gradient-to-br from-pink-400 to-pink-600";
+			holidayColor || "bg-gradient-to-br from-yellow-300 to-yellow-500";
 
 		return (
 			<div
@@ -115,8 +115,37 @@ export default function MailCardStatus({
 	}
 
 	// Professional mode (existing design)
+	// Determine card class and colors based on holiday
+	const getCardClass = () => {
+		if (holidayColor?.includes('blue')) return 'card-events-fathers-day';
+		if (holidayColor?.includes('green')) return 'card-events-christmas';
+		if (holidayColor?.includes('red')) return 'card-events-fourth-of-july';
+		if (holidayColor?.includes('purple')) {
+			// Check if it's graduation specifically
+			if (holidayColor?.includes('graduation') || 
+				(typeof window !== 'undefined' && window.location.pathname.includes('/graduation'))) {
+				return 'card-events-graduation';
+			}
+			return 'card-events-easter';
+		}
+		if (holidayColor?.includes('orange')) return 'card-events-new-year';
+		if (holidayColor?.includes('yellow') || holidayColor?.includes('amber')) return 'card-events-birthday';
+		return 'card-valentines'; // Default fallback
+	};
+
+	const getAccentColor = () => {
+		if (holidayColor?.includes('blue')) return 'text-blue-600 dark:text-blue-400';
+		if (holidayColor?.includes('green')) return 'text-green-600 dark:text-green-400';
+		if (holidayColor?.includes('red')) return 'text-red-600 dark:text-red-400';
+		if (holidayColor?.includes('purple')) return 'text-purple-600 dark:text-purple-400';
+		if (holidayColor?.includes('orange')) return 'text-orange-600 dark:text-orange-400';
+		if (holidayColor?.includes('yellow')) return 'text-yellow-600 dark:text-yellow-400';
+		if (holidayColor?.includes('amber')) return 'text-amber-600 dark:text-amber-400';
+		return 'text-pink-600 dark:text-pink-400'; // Default fallback
+	};
+
 	return (
-		<div className="card card-valentines rounded-2xl p-3 sm:p-4">
+		<div className={`card ${getCardClass()} rounded-2xl p-3 sm:p-4`}>
 			<div className="grid grid-cols-2 gap-3 sm:gap-4 text-center">
 				<div>
 					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
@@ -130,7 +159,7 @@ export default function MailCardStatus({
 					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 						Sent
 					</p>
-					<p className="text-xl sm:text-2xl font-bold text-pink-600 dark:text-pink-400">
+					<p className={`text-xl sm:text-2xl font-bold ${getAccentColor()}`}>
 						{completedCards}
 					</p>
 				</div>
@@ -146,7 +175,7 @@ export default function MailCardStatus({
 					<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 						Progress
 					</p>
-					<p className="text-base sm:text-lg font-bold text-pink-600 dark:text-pink-400">
+					<p className={`text-base sm:text-lg font-bold ${getAccentColor()}`}>
 						{progressPercentage}%
 					</p>
 				</div>

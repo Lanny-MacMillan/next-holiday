@@ -641,8 +641,8 @@ export default function CandleLightingPage() {
 
 				{/* Candle Lighting Status Summary */}
 				{candleLighting.length > 0 && (
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-						<h3 className="text-lg font-semibold mb-4">Candle Lighting Status</h3>
+					<div className="card rounded-lg p-6">
+						<h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Candle Lighting Status</h3>
 						<div className="grid grid-cols-3 gap-4 text-center">
 							<div>
 								<div className="text-2xl font-bold text-blue-600">{candleLighting.length}</div>

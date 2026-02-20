@@ -413,15 +413,16 @@ export default function GiftListCard({
 	// Professional mode (existing design)
 	const cardContent = (
 		<div
-			className={`max-w-4xl mx-auto bg-white rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
+			className={`max-w-4xl mx-auto card rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
 			style={{
-				backgroundColor,
-				borderLeft: `4px solid ${primaryColor}`, // Green line on left edge
-				...getCardStyling({
+				borderLeftWidth: '4px',
+				borderLeftStyle: 'solid',
+				borderLeftColor: primaryColor,
+				filter: getCardStyling({
 					isDarkMode,
 					isGamified: false,
 					intensity: "medium",
-				}),
+				}).filter,
 			}}
 		>
 			{/* Main card content */}

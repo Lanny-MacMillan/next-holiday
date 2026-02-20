@@ -460,7 +460,7 @@ export default function ValentinesReservationsPage() {
 		}
 	}
 
-	async function handleDeleteReservation(taskId: string, taskTitle: string) {
+	async function handleDeleteReservation(taskId: string) {
 		if (!resolvedHolidayId || !auth0User) return;
 
 		// Find the task to delete for potential rollback
@@ -653,8 +653,8 @@ export default function ValentinesReservationsPage() {
 
 				{/* Reservation Status Summary */}
 				{reservations.length > 0 && (
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-						<h3 className="text-lg font-semibold mb-4">Reservation Status</h3>
+					<div className="card rounded-lg p-6">
+						<h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Reservation Status</h3>
 						<div className="grid grid-cols-3 gap-4 text-center">
 							<div>
 								<div className="text-2xl font-bold text-blue-600">{reservations.length}</div>
@@ -683,7 +683,7 @@ export default function ValentinesReservationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDeleteReservation(taskId, taskTitle)}
+							onDelete={handleDeleteReservation}
 							onEdit={handleEditReservation}
 							theme={{
 								accentColor: "#ec4899", // Pink for Valentine's
@@ -705,7 +705,7 @@ export default function ValentinesReservationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDeleteReservation(taskId, taskTitle)}
+							onDelete={handleDeleteReservation}
 							onEdit={handleEditReservation}
 							className="opacity-60"
 							theme={{
