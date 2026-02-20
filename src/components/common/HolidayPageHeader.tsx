@@ -23,10 +23,14 @@ const HolidayPageHeader: React.FC<HolidayPageHeaderProps> = ({
 }) => {
 	const { displayMode } = useAppSelector((state: any) => state.theme.settings);
 	const { theme } = useAppSelector((state: any) => state.theme.settings);
+	const { preferences } = useAppSelector((state: any) => state.userPreferences);
+	
 	const isGamified = displayMode === "gamified";
-	const textColor = theme === "dark" ? "white" : "black";
-	const defaultColor = "#000000"; // Always black for buttons
-	const buttonDefaultColor = "#000000"; // Always black for navigation buttons
+	const isDarkMode = preferences?.theme === "dark" || theme === "dark";
+	const textColor = isDarkMode ? "white" : "black";
+	
+	// Button colors should be white in dark mode, black in light mode
+	const buttonDefaultColor = isDarkMode ? "#ffffff" : "#000000";
 
 	// Convert Tailwind classes to actual colors
 	const getHoverColor = () => {

@@ -71,7 +71,11 @@ export default function ToDoCard({
 
 	// Apply border color if provided
 	const borderStyle = borderColor
-		? { borderLeft: `4px solid ${borderColor}` }
+		? { 
+			borderLeftWidth: '4px',
+			borderLeftStyle: 'solid',
+			borderLeftColor: borderColor
+		}
 		: {};
 
 	const handleToggle = () => {

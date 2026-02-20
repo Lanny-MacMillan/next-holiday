@@ -531,7 +531,7 @@ export default function HalloweenDecorationsPage() {
 					emptyMessage="No decorations planned yet."
 					completedMessage="All decorations completed!"
 					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
+					// cardClassName="card-tasks"
 				/>
 
 				<TaskSection
@@ -541,7 +541,7 @@ export default function HalloweenDecorationsPage() {
 					emptyMessage="No completed decorations yet."
 					completedMessage=""
 					renderItem={renderTaskItem}
-					cardClassName="card-tasks"
+					// cardClassName="card-tasks"
 				/>
 			</main>
 

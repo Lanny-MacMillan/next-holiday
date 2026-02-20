@@ -36,7 +36,7 @@ export default function PartyPlanningCard({
 	const {
 		primaryColor = "#f59e0b", // Default amber for birthday
 		accentColor = "#f59e0b", // Default amber accent
-		backgroundColor = "white",
+		backgroundColor: themeBackgroundColor, // Don't provide default fallback
 		progressColor = "#f59e0b", // Default amber for progress bar
 	} = theme;
 
@@ -129,8 +129,10 @@ export default function PartyPlanningCard({
 			href={href}
 			className={`block card card-party-planning rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 ${className}`}
 			style={{
-				backgroundColor,
-				borderLeft: `4px solid ${primaryColor}`, // Colored line on left edge
+				...(themeBackgroundColor && { backgroundColor: themeBackgroundColor }),
+				borderLeftWidth: '4px',
+				borderLeftStyle: 'solid',
+				borderLeftColor: primaryColor,
 			}}
 		>
 			<div className="flex items-center justify-between mb-1">

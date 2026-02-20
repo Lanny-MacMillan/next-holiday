@@ -26,8 +26,12 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
 	const accentColor = theme.accentColor;
 	const hoverColor =
 		theme.hoverColor || "hover:bg-amber-50 dark:hover:bg-amber-900/20";
-	const borderStyle = borderColor
-		? { borderLeft: `4px solid ${borderColor}` }
+	const borderStyle: React.CSSProperties = borderColor
+		? { 
+			borderLeftWidth: '4px',
+			borderLeftStyle: 'solid',
+			borderLeftColor: borderColor
+		}
 		: {};
 
 	return (

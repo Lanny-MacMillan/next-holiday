@@ -497,6 +497,11 @@ export default function AnniversaryDateIdeasPage() {
 							onToggleComplete={handleToggleTask}
 							onDelete={handleDeleteTask}
 							onEdit={handleEdit}
+							theme={{
+								accentColor: "#ec4899", // Pink for Anniversary
+								hoverColor: "hover:bg-pink-50 dark:hover:bg-pink-900/10",
+							}}
+							borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
 							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 							disableInternalModal={true}
 						/>
@@ -517,6 +522,11 @@ export default function AnniversaryDateIdeasPage() {
 							onDelete={handleDeleteTask}
 							onEdit={handleEdit}
 							className="opacity-60"
+							theme={{
+								accentColor: "#ec4899", // Pink for Anniversary
+								hoverColor: "hover:bg-pink-50 dark:hover:bg-pink-900/10",
+							}}
+							borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
 							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
 							disableInternalModal={true}
 						/>

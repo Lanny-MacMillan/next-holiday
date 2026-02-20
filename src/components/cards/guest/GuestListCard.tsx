@@ -305,12 +305,14 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
 			<div
 				className="card rounded-lg p-4 sm:p-6 transition-all duration-200"
 				style={{
-					borderLeft: `4px solid ${theme.primaryColor}`,
-					...getCardStyling({
+					borderLeftWidth: '4px',
+					borderLeftStyle: 'solid',
+					borderLeftColor: theme.primaryColor,
+					filter: getCardStyling({
 						isDarkMode,
 						isGamified: false,
 						intensity: "medium",
-					}),
+					}).filter,
 				}}
 			>
 				<div className="flex justify-between items-start mb-3 sm:mb-4">

@@ -367,8 +367,7 @@ export default function HanukkahGiftListPage() {
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				{/* Budget Display */}
-				{/* Temporarily disabled due to hooks error */}
-				{/* <BudgetDisplay holiday="Hanukkah" /> */}
+				<BudgetDisplay holiday="Hanukkah" />
 
 				<AddButton title="Gift" onClick={openAddModal} color="blue" />
 				<div className="flex items-center justify-center">

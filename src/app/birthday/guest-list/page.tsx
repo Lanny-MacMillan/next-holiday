@@ -386,7 +386,7 @@ export default function BirthdayGuestListPage() {
 		return (
 			<div className="min-h-screen birthday-gradient flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
 					<p className="text-gray-600 dark:text-gray-300">Loading guests...</p>
 				</div>
 			</div>
@@ -412,16 +412,16 @@ export default function BirthdayGuestListPage() {
 				onSortClick={() => setShowSortModal(true)}
 				sortTitle="Sort guests"
 				description="Keep track of your Birthday guests!"
-				holidayColor="pink-600"
+				holidayColor="yellow-500"
 				error={undefined}
 			/>
 			<main className="w-full max-w-4xl flex flex-col gap-6">
 				<ReservationsTracker
 					guests={guests}
 					title="Birthday Guest Tracker"
-					accentColor="#ec4899"
+					accentColor="#f59e0b"
 				/>
-				<AddButton title="Guest" onClick={openForm} color="pink" />
+				<AddButton title="Guest" onClick={openForm} color="yellow" />
 				<div className="flex items-center justify-center">
 					{sortBy !== "none" && (
 						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -450,9 +450,9 @@ export default function BirthdayGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={updateGuestState.isLoading}
 							theme={{
-								accentColor: "#ec4899", // Pink for Birthday
+								accentColor: "#f59e0b", // Amber for Birthday
 							}}
-							borderColor="rgb(var(--color-pink-500))" // Pink border for Birthday
+							borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
 						/>
 					)}
 				/>
@@ -474,9 +474,9 @@ export default function BirthdayGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={updateGuestState.isLoading}
 							theme={{
-								accentColor: "#ec4899", // Pink for Birthday
+								accentColor: "#f59e0b", // Amber for Birthday
 							}}
-							borderColor="rgb(var(--color-pink-500))" // Pink border for Birthday
+							borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
 						/>
 					)}
 				/>
@@ -498,9 +498,9 @@ export default function BirthdayGuestListPage() {
 							onDelete={handleDeleteGuest}
 							loading={updateGuestState.isLoading}
 							theme={{
-								accentColor: "#ec4899", // Pink for Birthday
+								accentColor: "#f59e0b", // Amber for Birthday
 							}}
-							borderColor="rgb(var(--color-pink-500))" // Pink border for Birthday
+							borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
 						/>
 					)}
 				/>
@@ -531,7 +531,7 @@ export default function BirthdayGuestListPage() {
 				submitText={editingGuest ? "Update Guest" : "Add Guest"}
 				cancelText="Cancel"
 				cardClassName="card"
-				submitButtonColor="#ec4899"
+				submitButtonColor="#f59e0b"
 				showAddressBook={true}
 				contacts={contacts}
 				onAddressBookSelect={(contact) => {
