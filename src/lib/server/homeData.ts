@@ -100,17 +100,6 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 		const holidayPreferences = holidays.map((holiday) => {
 			const allTasks = holiday.tasks || [];
 
-			// Debug: Log task categories for Kwanzaa
-			if (holiday.holidayType === "Kwanzaa") {
-				console.log(
-					"Kwanzaa tasks:",
-					allTasks.map((t: any) => ({
-						id: t.id,
-						title: t.title,
-						category: t.category,
-					}))
-				);
-			}
 
 			// Filter tasks by category for specific holiday types
 			const events = allTasks.filter((task: any) => task.category === "Events");
