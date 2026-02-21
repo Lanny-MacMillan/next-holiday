@@ -577,7 +577,7 @@ export default function FourthOfJulyEventsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" } as const] : []),
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={{
@@ -622,7 +622,7 @@ export default function FourthOfJulyEventsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" } as const] : []),
 					{ id: "dueDate", type: "date", placeholder: "Due Date" },
 				]}
 				initialValues={editingTask ? {
