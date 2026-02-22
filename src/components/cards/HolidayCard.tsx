@@ -4,9 +4,11 @@ import Link from "next/link";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import CountdownWithInviteCompact from "@/components/common/CountdownWithInviteCompact";
 import SharedIndicatorCompact from "@/components/common/SharedIndicatorCompact";
+import BouncingShape from "@/components/animations/BouncingShape";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
 import { getGamifiedBackgroundColor } from "@/utils/gamifiedUtils";
+
 import {
 	IconChristmas,
 	IconHanukkah,
@@ -45,25 +47,6 @@ interface HolidayCardProps {
 	holidayId?: string; // New prop for API-based countdown
 	countdownTimer?: string | null; // New prop for countdown timer
 }
-
-// Default blob SVG component
-const DefaultBlob = ({ className = "" }: { className?: string }) => (
-	<svg
-		viewBox="0 0 100 100"
-		className={`w-full h-full ${className}`}
-		fill="currentColor"
-	>
-		<path d="M50 10C30 10 15 25 15 45C15 65 30 80 50 80C70 80 85 65 85 45C85 25 70 10 50 10ZM50 70C35 70 25 60 25 45C25 30 35 20 50 20C65 20 75 30 75 45C75 60 65 70 50 70Z" />
-		<circle cx="35" cy="35" r="3" />
-		<circle cx="65" cy="35" r="3" />
-		<path
-			d="M40 55C40 55 45 60 50 55C55 50 60 55 60 55"
-			stroke="currentColor"
-			strokeWidth="2"
-			fill="none"
-		/>
-	</svg>
-);
 
 // Holiday-themed icons for gamified mode
 const HolidayIcon = ({
@@ -119,32 +102,6 @@ const getHolidaySvgIcon = (holidayId: string) => {
 	return iconMap[holidayId] || IconChristmas; // Fallback to Christmas icon
 };
 
-// Animated blob component for gamified mode
-const AnimatedBlob = ({
-	className = "",
-	animationDelay = "0s",
-	scale = 1,
-	style = {},
-}: {
-	className?: string;
-	animationDelay?: string;
-	scale?: number;
-	style?: React.CSSProperties;
-}) => (
-	<div
-		className={`absolute animate-pulse ${className}`}
-		style={{
-			animationDelay,
-			transform: `scale(${scale})`,
-			...style,
-		}}
-	>
-		<svg viewBox="0 0 100 100" className="w-4 h-4" fill="currentColor">
-			<path d="M50 10C30 10 15 25 15 45C15 65 30 80 50 80C70 80 85 65 85 45C85 25 70 10 50 10ZM50 70C35 70 25 60 25 45C25 30 35 20 50 20C65 20 75 30 75 45C75 60 65 70 50 70Z" />
-		</svg>
-	</div>
-);
-
 export default function HolidayCard({
 	id,
 	name,
@@ -170,22 +127,6 @@ export default function HolidayCard({
 	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
 	const incompleteItems = totalItems - completedItems;
-
-	// Generate blob positions for gamified mode
-	const generateBlobPositions = (count: number) => {
-		const positions = [];
-		for (let i = 0; i < count; i++) {
-			positions.push({
-				top: `${Math.random() * 60 + 10}%`,
-				left: `${Math.random() * 60 + 10}%`,
-				animationDelay: `${Math.random() * 2}s`,
-				scale: 0.8 + Math.random() * 0.4,
-			});
-		}
-		return positions;
-	};
-
-	const blobPositions = generateBlobPositions(incompleteItems);
 
 	// Use provided background color, holiday-specific gradient, or fallback to default
 	const backgroundColor =
@@ -213,19 +154,14 @@ export default function HolidayCard({
 						<div className="absolute bottom-4 right-4 w-4 h-4 rounded-full bg-white opacity-20"></div>
 					</div>
 
-					{/* Task blobs scattered across the card */}
-					{blobPositions.map((pos, index) => (
-						<AnimatedBlob
-							key={index}
-							className="text-white opacity-70"
-							animationDelay={pos.animationDelay}
-							scale={pos.scale}
-							style={{
-								top: pos.top,
-								left: pos.left,
-							}}
-						/>
-					))}
+					{/* Enhanced bouncing shapes for each incomplete task */}
+				{incompleteItems > 0 && Array.from({ length: Math.min(incompleteItems, 8) }).map((_, index) => (
+					<BouncingShape
+						key={index}
+						holidayId={id}
+						className="text-white opacity-80 hover:opacity-100 transition-opacity"
+					/>
+				))}
 
 					<div className="relative z-10">
 						{/* Header with holiday name and shared indicator */}
@@ -307,7 +243,7 @@ export default function HolidayCard({
 	return (
 		<li>
 			<div
-				className="relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group"
+				className="relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden"
 				style={
 					{
 						...getCardStyling({

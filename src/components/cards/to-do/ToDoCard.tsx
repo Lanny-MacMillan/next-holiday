@@ -9,7 +9,7 @@ import { getTaskGamifiedBackgroundColor } from "@/utils/gamifiedUtils";
 export interface ToDoCardProps {
 	task: Task;
 	onToggleComplete: (taskId: string) => void;
-	onDelete: (taskId: string) => void;
+	onDelete: (taskId: string) => void; // Simplified back to just taskId
 	onEdit: (task: Task) => void;
 	className?: string;
 	theme?: {
@@ -72,8 +72,8 @@ export default function ToDoCard({
 	// Apply border color if provided
 	const borderStyle = borderColor
 		? { 
-			borderLeftWidth: '4px',
-			borderLeftStyle: 'solid',
+			borderLeftWidth: '4px' as const,
+			borderLeftStyle: 'solid' as const,
 			borderLeftColor: borderColor
 		}
 		: {};
@@ -134,7 +134,8 @@ export default function ToDoCard({
 	};
 	const gamifiedBackgroundColor =
 		propGamifiedBackgroundColor ||
-		getTaskGamifiedBackgroundColor(task.priority);
+		(accentColor ? `bg-gradient-to-br from-purple-400 to-purple-600` : // Use graduation colors when theme is provided
+		getTaskGamifiedBackgroundColor(task.priority));
 
 	const formatDate = (dateString: string) => {
 		// Handle both date-only strings (YYYY-MM-DD) and ISO timestamps
