@@ -1170,3 +1170,188 @@ button.dark .hover\:bg-purple-500:hover {
 .countdown-timer-professional:hover {
 	color: var(--holiday-color-dark) !important;
 }
+
+/* Bouncing animation keyframes for gamified mode shapes */
+@keyframes bounce-diagonal-1 {
+	0%, 100% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)); 
+	}
+	25% { 
+		transform: translate(50px, -30px) scale(var(--shape-scale, 1)) rotate(90deg); 
+	}
+	50% { 
+		transform: translate(100px, 40px) scale(var(--shape-scale, 1)) rotate(180deg); 
+	}
+	75% { 
+		transform: translate(20px, 60px) scale(var(--shape-scale, 1)) rotate(270deg); 
+	}
+}
+
+@keyframes bounce-diagonal-2 {
+	0%, 100% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)); 
+	}
+	25% { 
+		transform: translate(-40px, 50px) scale(var(--shape-scale, 1)) rotate(-90deg); 
+	}
+	50% { 
+		transform: translate(80px, -20px) scale(var(--shape-scale, 1)) rotate(-180deg); 
+	}
+	75% { 
+		transform: translate(-30px, -40px) scale(var(--shape-scale, 1)) rotate(-270deg); 
+	}
+}
+
+@keyframes bounce-horizontal {
+	0%, 100% { 
+		transform: translateX(0) scale(var(--shape-scale, 1)); 
+	}
+	25% { 
+		transform: translateX(60px) scale(var(--shape-scale, 1)) rotateY(180deg); 
+	}
+	50% { 
+		transform: translateX(-30px) scale(var(--shape-scale, 1)) rotateY(360deg); 
+	}
+	75% { 
+		transform: translateX(40px) scale(var(--shape-scale, 1)) rotateY(180deg); 
+	}
+}
+
+@keyframes bounce-vertical {
+	0%, 100% { 
+		transform: translateY(0) scale(var(--shape-scale, 1)); 
+	}
+	25% { 
+		transform: translateY(-50px) scale(var(--shape-scale, 1)) rotateX(180deg); 
+	}
+	50% { 
+		transform: translateY(40px) scale(var(--shape-scale, 1)) rotateX(360deg); 
+	}
+	75% { 
+		transform: translateY(-20px) scale(var(--shape-scale, 1)) rotateX(180deg); 
+	}
+}
+
+@keyframes bounce-circular {
+	0% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(0deg); 
+	}
+	25% { 
+		transform: translate(40px, -40px) scale(var(--shape-scale, 1)) rotate(90deg); 
+	}
+	50% { 
+		transform: translate(0, -80px) scale(var(--shape-scale, 1)) rotate(180deg); 
+	}
+	75% { 
+		transform: translate(-40px, -40px) scale(var(--shape-scale, 1)) rotate(270deg); 
+	}
+	100% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(360deg); 
+	}
+}
+
+@keyframes bounce-figure-eight {
+	0% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(0deg); 
+	}
+	12.5% { 
+		transform: translate(20px, -15px) scale(var(--shape-scale, 1)) rotate(45deg); 
+	}
+	25% { 
+		transform: translate(30px, 0) scale(var(--shape-scale, 1)) rotate(90deg); 
+	}
+	37.5% { 
+		transform: translate(20px, 15px) scale(var(--shape-scale, 1)) rotate(135deg); 
+	}
+	50% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(180deg); 
+	}
+	62.5% { 
+		transform: translate(-20px, 15px) scale(var(--shape-scale, 1)) rotate(225deg); 
+	}
+	75% { 
+		transform: translate(-30px, 0) scale(var(--shape-scale, 1)) rotate(270deg); 
+	}
+	87.5% { 
+		transform: translate(-20px, -15px) scale(var(--shape-scale, 1)) rotate(315deg); 
+	}
+	100% { 
+		transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(360deg); 
+	}
+}
+
+/* Bouncing animation classes */
+.bounce-diagonal-1 {
+	animation-name: bounce-diagonal-1;
+	animation-duration: 4s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+.bounce-diagonal-2 {
+	animation-name: bounce-diagonal-2;
+	animation-duration: 5s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+.bounce-horizontal {
+	animation-name: bounce-horizontal;
+	animation-duration: 3.5s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+.bounce-vertical {
+	animation-name: bounce-vertical;
+	animation-duration: 4.5s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+.bounce-circular {
+	animation-name: bounce-circular;
+	animation-duration: 6s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+.bounce-figure-eight {
+	animation-name: bounce-figure-eight;
+	animation-duration: 5.5s;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 640px) {
+	@keyframes bounce-diagonal-1 {
+		0%, 100% { 
+			transform: translate(0, 0) scale(var(--shape-scale, 1)); 
+		}
+		25% { 
+			transform: translate(25px, -15px) scale(var(--shape-scale, 1)) rotate(90deg); 
+		}
+		50% { 
+			transform: translate(50px, 20px) scale(var(--shape-scale, 1)) rotate(180deg); 
+		}
+		75% { 
+			transform: translate(10px, 30px) scale(var(--shape-scale, 1)) rotate(270deg); 
+		}
+	}
+	
+	@keyframes bounce-diagonal-2 {
+		0%, 100% { 
+			transform: translate(0, 0) scale(var(--shape-scale, 1)); 
+		}
+		25% { 
+			transform: translate(-20px, 25px) scale(var(--shape-scale, 1)) rotate(-90deg); 
+		}
+		50% { 
+			transform: translate(40px, -10px) scale(var(--shape-scale, 1)) rotate(-180deg); 
+		}
+		75% { 
+			transform: translate(-15px, -20px) scale(var(--shape-scale, 1)) rotate(-270deg); 
+		}
+	}
+}

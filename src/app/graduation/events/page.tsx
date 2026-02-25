@@ -354,7 +354,7 @@ export default function GraduationEventsPage() {
 		}
 	}
 
-	async function handleDelete(taskId: string, taskTitle: string) {
+	async function handleDelete(taskId: string) {
 		if (!resolvedHolidayId || !auth0User) return;
 
 		// Find the task to delete for potential rollback
@@ -462,7 +462,7 @@ export default function GraduationEventsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={handleDelete}
 							onEdit={handleEditEvent}
 							theme={{
 								accentColor: "#9333ea", // Purple for Graduation
@@ -484,7 +484,7 @@ export default function GraduationEventsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={handleDelete}
 							onEdit={handleEditEvent}
 							className="opacity-60"
 							theme={{
