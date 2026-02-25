@@ -1288,22 +1288,3 @@ export const HolidayShapes = {
 		</svg>
 	),
 };
-
-// export const HolidayShapes = {
-//   christmas: ChristmasTree,
-//   hanukkah: Menorah,
-//   kwanzaa: KwanzaaCup,
-//   valentines: Heart,
-//   easter: EasterEgg,
-//   halloween: Pumpkin,
-//   thanksgiving: Turkey,
-//   mothersday: Flower,
-//   fathersday: Necktie,
-//   fourthofuly: Flag,
-//   birthday: BirthdayBalloon,
-//   anniversary: Heart, // Could reuse Heart or create Anniversary-specific
-//   graduation: GraduationCap,
-//   babyshower: BabyBottle,
-//   newyear: ChampagneGlass,
-//   default: ChristmasTree // Fallback
-// };
