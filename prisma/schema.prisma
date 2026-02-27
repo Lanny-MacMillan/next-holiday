@@ -420,16 +420,17 @@ model ShareMember {
 
 // Invitation system for holiday sharing
 model Invite {
-  id          String      @id @default(uuid()) @db.Char(36)
-  shareId     String      @map("share_id") @db.Char(36)
-  fromUserId  String      @map("from_user_id") @db.Char(36)
-  toUserId    String?     @map("to_user_id") @db.Char(36)
-  toEmail     String?
-  holidayKey  String      @map("holiday_key")
-  status      InviteStatus
-  message     String?
-  respondedAt DateTime?   @map("responded_at") @db.DateTime(3)
-  createdAt   DateTime    @default(now()) @map("created_at")
+  id                String      @id @default(uuid()) @db.Char(36)
+  shareId           String      @map("share_id") @db.Char(36)
+  fromUserId        String      @map("from_user_id") @db.Char(36)
+  toUserId          String?     @map("to_user_id") @db.Char(36)
+  toEmail           String?
+  holidayKey        String      @map("holiday_key")
+  status            InviteStatus
+  message           String?
+  respondedAt       DateTime?   @map("responded_at") @db.DateTime(3)
+  senderDismissedAt DateTime?   @map("sender_dismissed_at") @db.DateTime(3)
+  createdAt         DateTime    @default(now()) @map("created_at")
 
   // Relationships
   share       Share @relation(fields: [shareId], references: [id], onDelete: Cascade)

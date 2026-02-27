@@ -9,8 +9,9 @@ import {
 	fetchOutgoingInvites,
 	acceptInvite,
 	declineInvite,
+	dismissInvite,
 } from "@/store/slices/invitesSlice";
-import { addShare, updateShareInState } from "@/store/slices/sharesSlice";
+import { addShare } from "@/store/slices/sharesSlice";
 import { Invite } from "@/store/slices/invitesSlice";
 import { migrateHolidayDataToShare } from "@/utils/shareMigration";
 import { selectHolidayPreferences } from "@/store/selectors/home";
@@ -24,6 +25,8 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	const dispatch = useAppDispatch();
 	const [showAlertsModal, setShowAlertsModal] = useState(false);
 	const [activeTab, setActiveTab] = useState<"inbox" | "outgoing">("inbox");
+	const [outgoingAlertsViewed, setOutgoingAlertsViewed] = useState(false);
+	const [dismissingInviteId, setDismissingInviteId] = useState<string | null>(null);
 	const [confirmInvite, setConfirmInvite] = useState<{
 		invite: Invite;
 		hasExistingHoliday: boolean;
@@ -57,6 +60,13 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 		);
 	};
 
+
+	const filterAcceptedOutgoingInvites = (invite: any) => {
+		return (
+			invite.fromUser?.email === user?.email && invite.status === "accepted"
+		);
+	};
+
 	// Apply filters
 	const pendingInvites = allInvites.filter(filterInboxInvites);
 	const outgoingInvites = allInvites.filter(filterOutgoingInvites);
@@ -64,19 +74,14 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	const declinedOutgoingInvites = allInvites.filter(
 		filterDeclinedOutgoingInvites,
 	);
+	const acceptedOutgoingInvites = allInvites.filter(
+		filterAcceptedOutgoingInvites,
+	);
 
 	const pendingCount = pendingInvites.length;
-	const alertCount = pendingCount + declinedOutgoingInvites.length;
-
-	// Debug logging
-	console.log("🔍 AlertsBell Debug:");
-	console.log("  - user.email:", user?.email);
-	console.log("  - user.sub:", user?.sub);
-	console.log("  - allInvites count:", allInvites.length);
-	console.log("  - allInvites:", allInvites);
-	console.log("  - pendingInvites count:", pendingInvites.length);
-	console.log("  - outgoingInvites count:", outgoingInvites.length);
-	console.log("  - allOutgoingInvites count:", allOutgoingInvites.length);
+	const unviewedAlertsCount = declinedOutgoingInvites.length + acceptedOutgoingInvites.length;
+	// Header shows: total of inbox + outgoing alerts
+	const alertCount = pendingCount + unviewedAlertsCount;
 
 	// Detailed invite structure logging
 	allInvites.forEach((invite: any, index: number) => {
@@ -215,6 +220,18 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 		}
 	};
 
+	const handleDismissDeclinedInvite = async (inviteId: string) => {
+		try {
+			setDismissingInviteId(inviteId);
+			await dispatch(dismissInvite({ inviteId, auth0User: user })).unwrap();
+			console.log("Invite dismissed from database and UI");
+		} catch (error) {
+			console.error("Failed to dismiss invite:", error);
+		} finally {
+			setDismissingInviteId(null);
+		}
+	};
+
 	const getHolidayDisplayName = (holidayKey: string) => {
 		const holidayMap: Record<string, string> = {
 			christmas: "Christmas",
@@ -320,7 +337,10 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									Inbox ({pendingInvites.length})
 								</button>
 								<button
-									onClick={() => setActiveTab("outgoing")}
+									onClick={() => {
+										setActiveTab("outgoing");
+										setOutgoingAlertsViewed(true);
+									}}
 									className={`px-4 py-2 text-sm font-medium relative ${
 										activeTab === "outgoing"
 											? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
@@ -328,11 +348,7 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									}`}
 								>
 									Outgoing ({allOutgoingInvites.length})
-									{declinedOutgoingInvites.length > 0 && (
-										<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-											{declinedOutgoingInvites.length}
-										</span>
-									)}
+
 								</button>
 							</div>
 
@@ -432,7 +448,99 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 																		</p>
 																	)}
 																</div>
-																{getStatusBadge(invite.status)}
+																<div className="flex items-center gap-2">
+																	{getStatusBadge(invite.status)}
+																	<button
+																		onClick={() => handleDismissDeclinedInvite(invite.id)}
+																		disabled={dismissingInviteId === invite.id}
+																		className="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+																		title="Remove from list"
+																	>
+																		{dismissingInviteId === invite.id ? (
+																			<span className="flex items-center gap-1">
+																				<svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+																					<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+																					<path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+																				</svg>
+																				...
+																			</span>
+																		) : (
+																			"Dismiss"
+																		)}
+																	</button>
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
+
+										{/* Accepted Invites Section */}
+										{acceptedOutgoingInvites.length > 0 && (
+											<div>
+												<h4 className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase mb-2 flex items-center">
+													<svg
+														className="w-4 h-4 mr-1"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+														/>
+													</svg>
+													Accepted ({acceptedOutgoingInvites.length})
+												</h4>
+												<div className="space-y-3">
+													{acceptedOutgoingInvites.map((invite: Invite) => (
+														<div
+															key={invite.id}
+															className="border-2 border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/30 rounded-lg p-3"
+														>
+															<div className="flex justify-between items-start mb-2">
+																<div className="flex-1">
+																	<p className="text-sm font-medium text-gray-900 dark:text-white">
+																		<span className="text-green-600 dark:text-green-400">
+																			✓
+																		</span>{" "}
+																		{invite.toEmail || "User"} accepted your
+																		invite
+																	</p>
+																	<p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+																		Holiday:{" "}
+																		{getHolidayDisplayName(invite.holidayKey)}
+																	</p>
+																	{invite.message && (
+																		<p className="text-xs text-gray-600 dark:text-gray-400 mt-1 italic">
+																			Your message: "{invite.message}"
+																		</p>
+																	)}
+																</div>
+																<div className="flex items-center gap-2">
+																	{getStatusBadge(invite.status)}
+																	<button
+																		onClick={() => handleDismissDeclinedInvite(invite.id)}
+																			disabled={dismissingInviteId === invite.id}
+																			className="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+																			title="Remove from list"
+																		>
+																			{dismissingInviteId === invite.id ? (
+																				<span className="flex items-center gap-1">
+																					<svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+																						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+																						<path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+																					</svg>
+																					...
+																				</span>
+																			) : (
+																				"Dismiss"
+																			)}
+																	</button>
+																</div>
 															</div>
 														</div>
 													))}
@@ -443,7 +551,7 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 										{/* Pending Outgoing Invites */}
 										{outgoingInvites.length > 0 && (
 											<div>
-												{declinedOutgoingInvites.length > 0 && (
+											{(declinedOutgoingInvites.length > 0 || acceptedOutgoingInvites.length > 0) && (
 													<h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
 														Pending ({outgoingInvites.length})
 													</h4>
@@ -476,11 +584,10 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 
 										{/* Empty State */}
 										{outgoingInvites.length === 0 &&
-											declinedOutgoingInvites.length === 0 && (
-												<p className="text-gray-500 dark:text-gray-400 text-center py-4">
-													{allOutgoingInvites.length === 0
-														? "No outgoing invites"
-														: "No pending or declined invites"}
+										declinedOutgoingInvites.length === 0 &&
+										acceptedOutgoingInvites.length === 0 && (
+											<p className="text-gray-500 dark:text-gray-400 text-center py-4">
+												No outgoing invites
 												</p>
 											)}
 									</div>

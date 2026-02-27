@@ -163,6 +163,35 @@ export const declineInvite = createAsyncThunk(
 	},
 );
 
+export const dismissInvite = createAsyncThunk(
+	"invites/dismissInvite",
+	async ({ inviteId, auth0User }: { inviteId: string; auth0User?: any }) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+
+		// Add authentication header if auth0User is provided
+		if (auth0User) {
+			headers["x-test-user"] = JSON.stringify({
+				sub: auth0User.sub,
+				email: auth0User.email,
+				name: auth0User.name,
+			});
+		}
+
+		const response = await fetch(`/api/invites/${inviteId}/dismiss`, {
+			method: "POST",
+			headers,
+		});
+
+		if (!response.ok) {
+			throw new Error("Failed to dismiss invite");
+		}
+
+		return await response.json();
+	},
+);
+
 const invitesSlice = createSlice({
 	name: "invites",
 	initialState,
@@ -290,6 +319,22 @@ const invitesSlice = createSlice({
 			.addCase(declineInvite.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to decline invite";
+			})
+			// Dismiss invite
+			.addCase(dismissInvite.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(dismissInvite.fulfilled, (state, action) => {
+				state.loading = false;
+				// Remove the dismissed invite from state
+				state.invites = state.invites.filter(
+					(invite) => invite.id !== action.payload.id,
+				);
+			})
+			.addCase(dismissInvite.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to dismiss invite";
 			});
 	},
 });

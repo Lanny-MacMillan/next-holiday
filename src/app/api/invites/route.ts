@@ -130,10 +130,11 @@ export async function GET(request: NextRequest) {
 				return NextResponse.json({ error: "User not found" }, { status: 404 });
 			}
 
-			// Search for outgoing invites by internal userId
+			// Search for outgoing invites by internal userId (exclude dismissed ones)
 			const invites = await prisma.invite.findMany({
 				where: {
 					fromUserId: internalUserId,
+					senderDismissedAt: null, // Only get non-dismissed invites
 				},
 				include: {
 					fromUser: {
