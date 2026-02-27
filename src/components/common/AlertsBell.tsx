@@ -28,7 +28,9 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	const [showAlertsModal, setShowAlertsModal] = useState(false);
 	const [activeTab, setActiveTab] = useState<"inbox" | "outgoing">("inbox");
 	const [outgoingAlertsViewed, setOutgoingAlertsViewed] = useState(false);
-	const [dismissingInviteId, setDismissingInviteId] = useState<string | null>(null);
+	const [dismissingInviteId, setDismissingInviteId] = useState<string | null>(
+		null,
+	);
 	const [acceptingInvite, setAcceptingInvite] = useState(false);
 	const [deletingExistingData, setDeletingExistingData] = useState(false);
 	const [confirmInvite, setConfirmInvite] = useState<{
@@ -64,7 +66,6 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 		);
 	};
 
-
 	const filterAcceptedOutgoingInvites = (invite: any) => {
 		return (
 			invite.fromUser?.email === user?.email && invite.status === "accepted"
@@ -83,7 +84,8 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	);
 
 	const pendingCount = pendingInvites.length;
-	const unviewedAlertsCount = declinedOutgoingInvites.length + acceptedOutgoingInvites.length;
+	const unviewedAlertsCount =
+		declinedOutgoingInvites.length + acceptedOutgoingInvites.length;
 	// Header shows: total of inbox + outgoing alerts
 	const alertCount = pendingCount + unviewedAlertsCount;
 
@@ -96,15 +98,24 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	console.log("  - pendingInvites count:", pendingInvites.length);
 	console.log("  - outgoingInvites count:", outgoingInvites.length);
 	console.log("  - allOutgoingInvites count:", allOutgoingInvites.length);
-	console.log("  - allOutgoingInvites details:", allOutgoingInvites.map(invite => ({
-		id: invite.id,
-		status: invite.status,
-		toEmail: invite.toEmail,
-		holidayKey: invite.holidayKey,
-		message: invite.message
-	})));
-	console.log("  - declinedOutgoingInvites count:", declinedOutgoingInvites.length);
-	console.log("  - acceptedOutgoingInvites count:", acceptedOutgoingInvites.length);
+	console.log(
+		"  - allOutgoingInvites details:",
+		allOutgoingInvites.map((invite) => ({
+			id: invite.id,
+			status: invite.status,
+			toEmail: invite.toEmail,
+			holidayKey: invite.holidayKey,
+			message: invite.message,
+		})),
+	);
+	console.log(
+		"  - declinedOutgoingInvites count:",
+		declinedOutgoingInvites.length,
+	);
+	console.log(
+		"  - acceptedOutgoingInvites count:",
+		acceptedOutgoingInvites.length,
+	);
 	console.log("  - unviewedAlertsCount:", unviewedAlertsCount);
 	console.log("  - outgoingAlertsViewed:", outgoingAlertsViewed);
 	console.log("  - final alertCount:", alertCount);
@@ -433,7 +444,6 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									}`}
 								>
 									Outgoing ({allOutgoingInvites.length})
-
 								</button>
 							</div>
 
@@ -536,16 +546,33 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 																<div className="flex items-center gap-2">
 																	{getStatusBadge(invite.status)}
 																	<button
-																		onClick={() => handleDismissDeclinedInvite(invite.id)}
+																		onClick={() =>
+																			handleDismissDeclinedInvite(invite.id)
+																		}
 																		disabled={dismissingInviteId === invite.id}
 																		className="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 																		title="Remove from list"
 																	>
 																		{dismissingInviteId === invite.id ? (
 																			<span className="flex items-center gap-1">
-																				<svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-																					<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-																					<path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+																				<svg
+																					className="animate-spin h-3 w-3"
+																					fill="none"
+																					viewBox="0 0 24 24"
+																				>
+																					<circle
+																						className="opacity-25"
+																						cx="12"
+																						cy="12"
+																						r="10"
+																						stroke="currentColor"
+																						strokeWidth="4"
+																					></circle>
+																					<path
+																						className="opacity-75"
+																						fill="currentColor"
+																						d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+																					></path>
 																				</svg>
 																				...
 																			</span>
@@ -608,22 +635,39 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 																<div className="flex items-center gap-2">
 																	{getStatusBadge(invite.status)}
 																	<button
-																		onClick={() => handleDismissDeclinedInvite(invite.id)}
-																			disabled={dismissingInviteId === invite.id}
-																			className="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-																			title="Remove from list"
-																		>
-																			{dismissingInviteId === invite.id ? (
-																				<span className="flex items-center gap-1">
-																					<svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-																						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-																						<path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-																					</svg>
-																					...
-																				</span>
-																			) : (
-																				"Dismiss"
-																			)}
+																		onClick={() =>
+																			handleDismissDeclinedInvite(invite.id)
+																		}
+																		disabled={dismissingInviteId === invite.id}
+																		className="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+																		title="Remove from list"
+																	>
+																		{dismissingInviteId === invite.id ? (
+																			<span className="flex items-center gap-1">
+																				<svg
+																					className="animate-spin h-3 w-3"
+																					fill="none"
+																					viewBox="0 0 24 24"
+																				>
+																					<circle
+																						className="opacity-25"
+																						cx="12"
+																						cy="12"
+																						r="10"
+																						stroke="currentColor"
+																						strokeWidth="4"
+																					></circle>
+																					<path
+																						className="opacity-75"
+																						fill="currentColor"
+																						d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+																					></path>
+																				</svg>
+																				...
+																			</span>
+																		) : (
+																			"Dismiss"
+																		)}
 																	</button>
 																</div>
 															</div>
@@ -636,7 +680,8 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 										{/* Pending Outgoing Invites */}
 										{outgoingInvites.length > 0 && (
 											<div>
-											{(declinedOutgoingInvites.length > 0 || acceptedOutgoingInvites.length > 0) && (
+												{(declinedOutgoingInvites.length > 0 ||
+													acceptedOutgoingInvites.length > 0) && (
 													<h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
 														Pending ({outgoingInvites.length})
 													</h4>
@@ -669,10 +714,10 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 
 										{/* Empty State */}
 										{outgoingInvites.length === 0 &&
-										declinedOutgoingInvites.length === 0 &&
-										acceptedOutgoingInvites.length === 0 && (
-											<p className="text-gray-500 dark:text-gray-400 text-center py-4">
-												No outgoing invites
+											declinedOutgoingInvites.length === 0 &&
+											acceptedOutgoingInvites.length === 0 && (
+												<p className="text-gray-500 dark:text-gray-400 text-center py-4">
+													No outgoing invites
 												</p>
 											)}
 									</div>
@@ -803,8 +848,8 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 											{deletingExistingData
 												? "Deleting Your Data..."
 												: acceptingInvite
-												? "Accepting Invite..."
-												: "Accept & Replace My Data"}
+													? "Accepting Invite..."
+													: "Accept & Replace My Data"}
 										</button>
 										<button
 											onClick={async () => {
