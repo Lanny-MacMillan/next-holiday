@@ -11,10 +11,12 @@ import {
 	declineInvite,
 	dismissInvite,
 } from "@/store/slices/invitesSlice";
-import { addShare } from "@/store/slices/sharesSlice";
+import { addShare, fetchShares } from "@/store/slices/sharesSlice";
 import { Invite } from "@/store/slices/invitesSlice";
 import { migrateHolidayDataToShare } from "@/utils/shareMigration";
 import { selectHolidayPreferences } from "@/store/selectors/home";
+import { setHomeData } from "@/store/slices/homeSlice";
+import { setMany as setBudgets } from "@/store/slices/budgetsSlice";
 
 interface AlertsBellProps {
 	className?: string;
@@ -27,6 +29,8 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	const [activeTab, setActiveTab] = useState<"inbox" | "outgoing">("inbox");
 	const [outgoingAlertsViewed, setOutgoingAlertsViewed] = useState(false);
 	const [dismissingInviteId, setDismissingInviteId] = useState<string | null>(null);
+	const [acceptingInvite, setAcceptingInvite] = useState(false);
+	const [deletingExistingData, setDeletingExistingData] = useState(false);
 	const [confirmInvite, setConfirmInvite] = useState<{
 		invite: Invite;
 		hasExistingHoliday: boolean;
@@ -141,13 +145,68 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 		setConfirmInvite({ invite, hasExistingHoliday: hasExisting });
 	};
 
+	// Refresh home data after accepting invite
+	const refreshHomeData = async () => {
+		try {
+			const response = await fetch("/api/home", {
+				headers: {
+					"Content-Type": "application/json",
+					"x-test-user": JSON.stringify({
+						sub: user?.sub,
+						email: user?.email,
+						name: user?.name,
+						picture: user?.picture,
+					}),
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to fetch home data");
+			}
+
+			const result = await response.json();
+			const data = result.data;
+
+			// Update Redux store with fresh data
+			dispatch(setHomeData(data));
+
+			// Update budgets
+			if (data?.holidayPreferences?.length) {
+				const budgets = data.holidayPreferences
+					.filter((pref: any) => pref.budget !== undefined)
+					.map((pref: any) => ({
+						holidayId: pref.holidayId,
+						targetAmount: pref.budget,
+						spentAmount: 0,
+						updatedAt: new Date().toISOString(),
+					}));
+
+				if (budgets.length > 0) {
+					dispatch(setBudgets(budgets));
+				}
+			}
+
+			// Refresh shares
+			if (user?.sub) {
+				await dispatch(fetchShares(user.sub));
+			}
+
+			console.log("Home data refreshed successfully");
+		} catch (error) {
+			console.error("Failed to refresh home data:", error);
+			throw error;
+		}
+	};
+
 	// Actually accept the invite after confirmation
 	const handleConfirmAccept = async (deleteExisting: boolean = false) => {
 		if (!confirmInvite) return;
 
+		setAcceptingInvite(true);
 		try {
 			// If user chose to delete their existing data, do that first
 			if (deleteExisting && confirmInvite.hasExistingHoliday) {
+				setDeletingExistingData(true);
 				const holidayDisplayName = getHolidayDisplayName(
 					confirmInvite.invite.holidayKey,
 				);
@@ -183,6 +242,7 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 
 					console.log("Existing holiday deleted successfully");
 				}
+				setDeletingExistingData(false);
 			}
 
 			// Now accept the invite
@@ -203,11 +263,14 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 			setConfirmInvite(null);
 			console.log("You're now sharing this holiday");
 
-			// Reload the page to refresh all data
-			window.location.reload();
+			// Refresh home data to update UI
+			await refreshHomeData();
 		} catch (error) {
 			console.error("Failed to accept invite:", error);
 			alert("Failed to accept invite. Please try again.");
+		} finally {
+			setAcceptingInvite(false);
+			setDeletingExistingData(false);
 		}
 	};
 
@@ -712,22 +775,51 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									<>
 										<button
 											onClick={() => handleConfirmAccept(true)}
-											className="w-full px-4 py-2 bg-green-700 hover:brightness-75 dark:bg-green-700 dark:hover:brightness-75 text-white rounded transition-colors font-medium text-sm shadow-sm"
+											disabled={acceptingInvite}
+											className="w-full px-4 py-2 bg-green-700 hover:brightness-75 dark:bg-green-700 dark:hover:brightness-75 text-white rounded transition-colors font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 										>
-											Accept & Replace My Data
+											{acceptingInvite && (
+												<svg
+													className="animate-spin h-4 w-4 text-white"
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+												>
+													<circle
+														className="opacity-25"
+														cx="12"
+														cy="12"
+														r="10"
+														stroke="currentColor"
+														strokeWidth="4"
+													></circle>
+													<path
+														className="opacity-75"
+														fill="currentColor"
+														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+													></path>
+												</svg>
+											)}
+											{deletingExistingData
+												? "Deleting Your Data..."
+												: acceptingInvite
+												? "Accepting Invite..."
+												: "Accept & Replace My Data"}
 										</button>
 										<button
 											onClick={async () => {
 												await handleDeclineInvite(confirmInvite.invite.id);
 												setConfirmInvite(null);
 											}}
-											className="w-full px-4 py-2 bg-red-600 hover:brightness-75 dark:bg-red-600 dark:hover:brightness-75 text-white rounded transition-all font-medium text-sm shadow-sm"
+											disabled={acceptingInvite}
+											className="w-full px-4 py-2 bg-red-600 hover:brightness-75 dark:bg-red-600 dark:hover:brightness-75 text-white rounded transition-all font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
 										>
 											Decline
 										</button>
 										<button
 											onClick={() => setConfirmInvite(null)}
-											className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium"
+											disabled={acceptingInvite}
+											className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
 										>
 											Cancel
 										</button>
@@ -736,13 +828,37 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 									<>
 										<button
 											onClick={() => handleConfirmAccept(false)}
-											className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded transition-colors font-medium text-sm shadow-sm"
+											disabled={acceptingInvite}
+											className="w-full px-4 py-2 bg-green-700 hover:brightness-75 dark:bg-green-700 dark:hover:brightness-75 text-white rounded transition-colors font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 										>
-											Accept Invite
+											{acceptingInvite && (
+												<svg
+													className="animate-spin h-4 w-4 text-white"
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+												>
+													<circle
+														className="opacity-25"
+														cx="12"
+														cy="12"
+														r="10"
+														stroke="currentColor"
+														strokeWidth="4"
+													></circle>
+													<path
+														className="opacity-75"
+														fill="currentColor"
+														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+													></path>
+												</svg>
+											)}
+											{acceptingInvite ? "Accepting..." : "Accept Invite"}
 										</button>
 										<button
 											onClick={() => setConfirmInvite(null)}
-											className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+											disabled={acceptingInvite}
+											className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
 										>
 											Cancel
 										</button>
