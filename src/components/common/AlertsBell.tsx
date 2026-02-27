@@ -83,6 +83,28 @@ export default function AlertsBell({ className = "" }: AlertsBellProps) {
 	// Header shows: total of inbox + outgoing alerts
 	const alertCount = pendingCount + unviewedAlertsCount;
 
+	// Debug logging
+	console.log("🔍 AlertsBell Debug:");
+	console.log("  - user.email:", user?.email);
+	console.log("  - user.sub:", user?.sub);
+	console.log("  - allInvites count:", allInvites.length);
+	console.log("  - allInvites:", allInvites);
+	console.log("  - pendingInvites count:", pendingInvites.length);
+	console.log("  - outgoingInvites count:", outgoingInvites.length);
+	console.log("  - allOutgoingInvites count:", allOutgoingInvites.length);
+	console.log("  - allOutgoingInvites details:", allOutgoingInvites.map(invite => ({
+		id: invite.id,
+		status: invite.status,
+		toEmail: invite.toEmail,
+		holidayKey: invite.holidayKey,
+		message: invite.message
+	})));
+	console.log("  - declinedOutgoingInvites count:", declinedOutgoingInvites.length);
+	console.log("  - acceptedOutgoingInvites count:", acceptedOutgoingInvites.length);
+	console.log("  - unviewedAlertsCount:", unviewedAlertsCount);
+	console.log("  - outgoingAlertsViewed:", outgoingAlertsViewed);
+	console.log("  - final alertCount:", alertCount);
+
 	// Detailed invite structure logging
 	allInvites.forEach((invite: any, index: number) => {
 		console.log(`  📧 Invite ${index + 1}:`, {

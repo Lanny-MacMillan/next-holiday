@@ -15,9 +15,30 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// First, find the holiday by holidayType (holidayKey)
+		// Convert holidayKey to display name for database lookup
+		const holidayKeyToDisplayName: Record<string, string> = {
+			"christmas": "Christmas",
+			"hanukkah": "Hanukkah", 
+			"kwanzaa": "Kwanzaa",
+			"new-year": "New Year",
+			"valentines": "Valentine's Day",
+			"easter": "Easter",
+			"halloween": "Halloween",
+			"thanksgiving": "Thanksgiving",
+			"mothers-day": "Mother's Day",
+			"fathers-day": "Father's Day",
+			"fourth-of-july": "Fourth of July",
+			"birthday": "Birthday",
+			"anniversary": "Anniversary",
+			"graduation": "Graduation",
+			"baby-shower": "Baby Shower",
+		};
+
+		const holidayDisplayName = holidayKeyToDisplayName[holidayKey] || holidayKey;
+
+		// First, find the holiday by holidayType (using display name)
 		const holiday = await prisma.holiday.findFirst({
-			where: { holidayType: holidayKey },
+			where: { holidayType: holidayDisplayName },
 		});
 
 		if (!holiday) {
