@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 		if (!holidayKey || !ownerUserId) {
 			return NextResponse.json(
 				{ error: "Missing required fields: holidayKey, ownerUserId" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 		if (!ownerUser) {
 			return NextResponse.json(
 				{ error: "Owner user not found" },
-				{ status: 404 }
+				{ status: 404 },
 			);
 		}
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 		console.error("Error creating share:", error);
 		return NextResponse.json(
 			{ error: "Failed to create share" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -99,24 +99,68 @@ export async function GET(request: NextRequest) {
 		}
 
 		if (userId) {
+			// Look up the actual user ID from the Auth0 sub
+			const user = await prisma.user.findUnique({
+				where: { auth0Sub: userId },
+			});
+
+			if (!user) {
+				return NextResponse.json([]);
+			}
+
 			// Find all shares where user is owner or member
 			const shares = await prisma.share.findMany({
 				where: {
-					OR: [{ ownerUserId: userId }, { members: { some: { userId } } }],
+					OR: [
+						{ ownerUserId: user.id },
+						{ members: { some: { userId: user.id } } },
+					],
+				},
+				include: {
+					members: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									email: true,
+									picture: true,
+								},
+							},
+						},
+					},
+					holiday: {
+						select: {
+							id: true,
+							holidayType: true,
+							name: true,
+						},
+					},
 				},
 			});
-			return NextResponse.json(shares);
+
+			// Transform the shares to match the expected format
+			const transformedShares = shares.map((share) => ({
+				shareId: share.id,
+				holidayKey: share.holiday.holidayType,
+				ownerUserId: share.ownerUserId,
+				memberUserIds: share.members.map((m) => m.userId),
+				createdAt: share.createdAt.toISOString(),
+				updatedAt: share.updatedAt.toISOString(),
+			}));
+
+			return NextResponse.json(transformedShares);
 		}
 
 		return NextResponse.json(
 			{ error: "Missing query parameters" },
-			{ status: 400 }
+			{ status: 400 },
 		);
 	} catch (error) {
 		console.error("Error fetching shares:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch shares" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

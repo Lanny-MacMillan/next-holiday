@@ -31,7 +31,7 @@ const initialState: SharesState = {
 // Async thunks
 export const fetchShares = createAsyncThunk(
 	"shares/fetchShares",
-	async (_, { getState }) => {
+	async (userId: string, { getState }) => {
 		const state = getState() as any;
 		const currentShares = state.shares.shares;
 		const isInitialized = state.shares.initialized;
@@ -40,20 +40,21 @@ export const fetchShares = createAsyncThunk(
 			return currentShares;
 		}
 
-		// Simulate API call
-		const response = await new Promise<HolidayShare[]>((resolve) => {
-			setTimeout(() => {
-				resolve([]);
-			}, 500);
-		});
-		return response;
-	}
+		// Fetch shares from API
+		const response = await fetch(`/api/shares?userId=${userId}`);
+
+		if (!response.ok) {
+			throw new Error("Failed to fetch shares");
+		}
+
+		return await response.json();
+	},
 );
 
 export const createShare = createAsyncThunk(
 	"shares/createShare",
 	async (
-		shareData: Omit<HolidayShare, "shareId" | "createdAt" | "updatedAt">
+		shareData: Omit<HolidayShare, "shareId" | "createdAt" | "updatedAt">,
 	) => {
 		const response = await fetch("/api/shares", {
 			method: "POST",
@@ -68,7 +69,7 @@ export const createShare = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const updateShare = createAsyncThunk(
@@ -87,7 +88,7 @@ export const updateShare = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const addMemberToShare = createAsyncThunk(
@@ -106,7 +107,7 @@ export const addMemberToShare = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 const sharesSlice = createSlice({
@@ -121,7 +122,7 @@ const sharesSlice = createSlice({
 		},
 		updateShareInState: (state, action: PayloadAction<HolidayShare>) => {
 			const index = state.shares.findIndex(
-				(share) => share.shareId === action.payload.shareId
+				(share) => share.shareId === action.payload.shareId,
 			);
 			if (index !== -1) {
 				state.shares[index] = action.payload;
@@ -165,7 +166,7 @@ const sharesSlice = createSlice({
 			.addCase(updateShare.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.shares.findIndex(
-					(share) => share.shareId === action.payload.shareId
+					(share) => share.shareId === action.payload.shareId,
 				);
 				if (index !== -1) {
 					state.shares[index] = action.payload;
@@ -183,7 +184,7 @@ const sharesSlice = createSlice({
 			.addCase(addMemberToShare.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.shares.findIndex(
-					(share) => share.shareId === action.payload.shareId
+					(share) => share.shareId === action.payload.shareId,
 				);
 				if (index !== -1) {
 					state.shares[index] = action.payload;
@@ -204,20 +205,20 @@ export const selectShareByHolidayKey = createSelector(
 	(state: any, holidayKey: string) => state.shares.shares,
 	(holidayKey: string) => holidayKey,
 	(shares, holidayKey) =>
-		shares.find((share: HolidayShare) => share.holidayKey === holidayKey)
+		shares.find((share: HolidayShare) => share.holidayKey === holidayKey),
 );
 
 export const selectShareById = createSelector(
 	(state: any, shareId: string) => state.shares.shares,
 	(shareId: string) => shareId,
 	(shares, shareId) =>
-		shares.find((share: HolidayShare) => share.shareId === shareId)
+		shares.find((share: HolidayShare) => share.shareId === shareId),
 );
 
 export const selectMembers = createSelector(
 	(state: any, shareId: string) =>
 		state.shares.shares.find((s: HolidayShare) => s.shareId === shareId),
-	(share) => (share ? share.memberUserIds : [])
+	(share) => (share ? share.memberUserIds : []),
 );
 
 export const selectHolidayShareId = createSelector(
@@ -227,17 +228,17 @@ export const selectHolidayShareId = createSelector(
 		const share = shares.find(
 			(s: HolidayShare) =>
 				s.holidayKey === holidayKey &&
-				(s.ownerUserId === userId || s.memberUserIds.includes(userId))
+				(s.ownerUserId === userId || s.memberUserIds.includes(userId)),
 		);
 		return share ? share.shareId : undefined;
-	}
+	},
 );
 
 export const selectIsHolidayShared = createSelector(
 	(state: any, holidayKey: string) => state.shares.shares,
 	(holidayKey: string) => holidayKey,
 	(shares, holidayKey) =>
-		shares.some((share: HolidayShare) => share.holidayKey === holidayKey)
+		shares.some((share: HolidayShare) => share.holidayKey === holidayKey),
 );
 
 export const selectIsUserInShare = createSelector(
@@ -248,5 +249,5 @@ export const selectIsUserInShare = createSelector(
 		return share
 			? share.ownerUserId === userId || share.memberUserIds.includes(userId)
 			: false;
-	}
+	},
 );

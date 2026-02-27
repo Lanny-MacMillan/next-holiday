@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { createShare } from "@/store/slices/sharesSlice";
-import { createInvite } from "@/store/slices/invitesSlice";
+import {
+	createInvite,
+	fetchOutgoingInvites,
+} from "@/store/slices/invitesSlice";
 import {
 	selectShareByHolidayKey,
 	selectIsUserInShare,
@@ -29,10 +32,10 @@ export default function InviteButton({
 
 	// Get current user's share for this holiday
 	const share = useAppSelector((state) =>
-		selectShareByHolidayKey(state, holidayKey)
+		selectShareByHolidayKey(state, holidayKey),
 	);
 	const isUserInShare = useAppSelector((state) =>
-		share ? selectIsUserInShare(state, share.shareId, user?.sub || "") : false
+		share ? selectIsUserInShare(state, share.shareId, user?.sub || "") : false,
 	);
 
 	const handleInviteClick = () => {
@@ -53,7 +56,7 @@ export default function InviteButton({
 						holidayKey,
 						ownerUserId: user.sub,
 						memberUserIds: [user.sub],
-					})
+					}),
 				).unwrap();
 				currentShare = shareResult;
 			}
@@ -66,8 +69,11 @@ export default function InviteButton({
 					toEmail: values.email,
 					holidayKey,
 					message: values.message || "",
-				})
+				}),
 			).unwrap();
+
+			// Refetch outgoing invites to update the alerts bell
+			await dispatch(fetchOutgoingInvites(user.sub));
 
 			setShowInviteModal(false);
 			// Show success toast (you can implement this)

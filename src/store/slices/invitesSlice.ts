@@ -55,7 +55,7 @@ export const fetchInvites = createAsyncThunk(
 			}, 500);
 		});
 		return response;
-	}
+	},
 );
 
 export const fetchInboxInvites = createAsyncThunk(
@@ -68,7 +68,7 @@ export const fetchInboxInvites = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const fetchOutgoingInvites = createAsyncThunk(
@@ -81,16 +81,13 @@ export const fetchOutgoingInvites = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const createInvite = createAsyncThunk(
 	"invites/createInvite",
 	async (
-		inviteData: Omit<
-			Invite,
-			"inviteId" | "status" | "createdAt" | "respondedAt"
-		>
+		inviteData: Omit<Invite, "id" | "status" | "createdAt" | "respondedAt">,
 	) => {
 		const response = await fetch("/api/invites", {
 			method: "POST",
@@ -105,17 +102,28 @@ export const createInvite = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const acceptInvite = createAsyncThunk(
 	"invites/acceptInvite",
-	async (inviteId: string) => {
+	async ({ inviteId, auth0User }: { inviteId: string; auth0User?: any }) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+
+		// Add authentication header if auth0User is provided
+		if (auth0User) {
+			headers["x-test-user"] = JSON.stringify({
+				sub: auth0User.sub,
+				email: auth0User.email,
+				name: auth0User.name,
+			});
+		}
+
 		const response = await fetch(`/api/invites/${inviteId}/accept`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
+			headers,
 		});
 
 		if (!response.ok) {
@@ -123,17 +131,28 @@ export const acceptInvite = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const declineInvite = createAsyncThunk(
 	"invites/declineInvite",
-	async (inviteId: string) => {
+	async ({ inviteId, auth0User }: { inviteId: string; auth0User?: any }) => {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+
+		// Add authentication header if auth0User is provided
+		if (auth0User) {
+			headers["x-test-user"] = JSON.stringify({
+				sub: auth0User.sub,
+				email: auth0User.email,
+				name: auth0User.name,
+			});
+		}
+
 		const response = await fetch(`/api/invites/${inviteId}/decline`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
+			headers,
 		});
 
 		if (!response.ok) {
@@ -141,7 +160,7 @@ export const declineInvite = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 const invitesSlice = createSlice({
@@ -156,7 +175,7 @@ const invitesSlice = createSlice({
 		},
 		updateInviteInState: (state, action: PayloadAction<Invite>) => {
 			const index = state.invites.findIndex(
-				(invite) => invite.inviteId === action.payload.inviteId
+				(invite) => invite.id === action.payload.id,
 			);
 			if (index !== -1) {
 				state.invites[index] = action.payload;
@@ -164,7 +183,7 @@ const invitesSlice = createSlice({
 		},
 		removeInvite: (state, action: PayloadAction<string>) => {
 			state.invites = state.invites.filter(
-				(invite) => invite.inviteId !== action.payload
+				(invite) => invite.id !== action.payload,
 			);
 		},
 	},
@@ -195,7 +214,7 @@ const invitesSlice = createSlice({
 				const newInvites = action.payload;
 				const existingIds = new Set(state.invites.map((invite) => invite.id));
 				const uniqueNewInvites = newInvites.filter(
-					(invite: Invite) => !existingIds.has(invite.id)
+					(invite: Invite) => !existingIds.has(invite.id),
 				);
 				state.invites = [...state.invites, ...uniqueNewInvites];
 			})
@@ -214,7 +233,7 @@ const invitesSlice = createSlice({
 				const newInvites = action.payload;
 				const existingIds = new Set(state.invites.map((invite) => invite.id));
 				const uniqueNewInvites = newInvites.filter(
-					(invite: Invite) => !existingIds.has(invite.id)
+					(invite: Invite) => !existingIds.has(invite.id),
 				);
 				state.invites = [...state.invites, ...uniqueNewInvites];
 			})
@@ -244,10 +263,10 @@ const invitesSlice = createSlice({
 			.addCase(acceptInvite.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.invites.findIndex(
-					(invite) => invite.inviteId === action.payload.inviteId
+					(invite) => invite.id === action.payload.invite.id,
 				);
 				if (index !== -1) {
-					state.invites[index] = action.payload;
+					state.invites[index] = action.payload.invite;
 				}
 			})
 			.addCase(acceptInvite.rejected, (state, action) => {
@@ -262,7 +281,7 @@ const invitesSlice = createSlice({
 			.addCase(declineInvite.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.invites.findIndex(
-					(invite) => invite.inviteId === action.payload.inviteId
+					(invite) => invite.id === action.payload.id,
 				);
 				if (index !== -1) {
 					state.invites[index] = action.payload;
@@ -299,7 +318,7 @@ export const selectPendingInvites = createSelector(
 				invite.status === "pending";
 
 			console.log("🔍 Invite Filter:", {
-				inviteId: invite.inviteId,
+				inviteId: invite.id,
 				inviteToUserId: invite.toUserId,
 				inviteToEmail: invite.toEmail,
 				inviteStatus: invite.status,
@@ -313,28 +332,28 @@ export const selectPendingInvites = createSelector(
 
 		console.log("🔍 Selector Result:", filtered);
 		return filtered;
-	}
+	},
 );
 
 export const selectOutgoingInvites = createSelector(
 	(state: any, userId: string) => state.invites.invites,
 	(userId: string) => userId,
 	(invites, userId) =>
-		invites.filter((invite: Invite) => invite.fromUserId === userId)
+		invites.filter((invite: Invite) => invite.fromUserId === userId),
 );
 
 export const selectInviteById = createSelector(
 	(state: any, inviteId: string) => state.invites.invites,
 	(inviteId: string) => inviteId,
 	(invites, inviteId) =>
-		invites.find((invite: Invite) => invite.inviteId === inviteId)
+		invites.find((invite: Invite) => invite.id === inviteId),
 );
 
 export const selectInvitesByShareId = createSelector(
 	(state: any, shareId: string) => state.invites.invites,
 	(shareId: string) => shareId,
 	(invites, shareId) =>
-		invites.filter((invite: Invite) => invite.shareId === shareId)
+		invites.filter((invite: Invite) => invite.shareId === shareId),
 );
 
 export const selectPendingInvitesCount = createSelector(
@@ -344,6 +363,6 @@ export const selectPendingInvitesCount = createSelector(
 		invites.filter(
 			(invite: Invite) =>
 				(invite.toUserId === userId || invite.toEmail === userId) &&
-				invite.status === "pending"
-		).length
+				invite.status === "pending",
+		).length,
 );

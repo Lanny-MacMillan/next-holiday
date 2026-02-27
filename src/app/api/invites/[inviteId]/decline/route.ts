@@ -5,10 +5,10 @@ const prisma = new PrismaClient();
 
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: { inviteId: string } }
+	{ params }: { params: Promise<{ inviteId: string }> },
 ) {
 	try {
-		const { inviteId } = params;
+		const { inviteId } = await params;
 
 		// Find the invite
 		const invite = await prisma.invite.findUnique({
@@ -22,7 +22,7 @@ export async function POST(
 		if (invite.status !== "pending") {
 			return NextResponse.json(
 				{ error: "Invite is not pending" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -40,7 +40,7 @@ export async function POST(
 		console.error("Error declining invite:", error);
 		return NextResponse.json(
 			{ error: "Failed to decline invite" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

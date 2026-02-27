@@ -97,17 +97,66 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 			},
 		});
 
-		const holidayPreferences = holidays.map((holiday) => {
-			const allTasks = holiday.tasks || [];
+		// Also get holidays shared with the user
+		const sharedHolidays = await prisma.holiday.findMany({
+			where: {
+				shares: {
+					some: {
+						members: {
+							some: {
+								userId: user.id,
+							},
+						},
+					},
+				},
+				// Exclude holidays from the user's own account (already fetched above)
+				NOT: {
+					accountId: account.id,
+				},
+			},
+			include: {
+				budgets: true,
+				gifts: {
+					include: {
+						contact: true,
+					},
+				},
+				cards: true,
+				tasks: true,
+				guestLists: {
+					include: {
+						contact: true,
+					},
+				},
+				shares: {
+					include: {
+						owner: {
+							select: {
+								name: true,
+								email: true,
+							},
+						},
+					},
+				},
+			},
+			orderBy: {
+				holidayType: "asc",
+			},
+		});
 
+		// Combine owned and shared holidays
+		const allHolidays = [...holidays, ...sharedHolidays];
+
+		const holidayPreferences = allHolidays.map((holiday) => {
+			const allTasks = holiday.tasks || [];
 
 			// Filter tasks by category for specific holiday types
 			const events = allTasks.filter((task: any) => task.category === "Events");
 			const decorations = allTasks.filter(
-				(task: any) => task.category === "Decorations"
+				(task: any) => task.category === "Decorations",
 			);
 			const kwanzaaPrinciples = allTasks.filter(
-				(task: any) => task.category === "Kwanzaa Principles"
+				(task: any) => task.category === "Kwanzaa Principles",
 			);
 
 			// Transform guest lists to include contact information
@@ -137,7 +186,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 								notes: guestList.contact.notes,
 								createdAt: guestList.contact.createdAt.toISOString(),
 								updatedAt: guestList.contact.updatedAt.toISOString(),
-						  }
+							}
 						: null,
 				})) || [];
 
@@ -148,13 +197,14 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 					? parseFloat(holiday.budgets[0].totalBudget.toString())
 					: undefined,
 				countdownTimer: holiday.countdownTimer?.toISOString(),
-				gifts: holiday.gifts.map((gift: any) => ({
-					...gift,
-					recipient: gift.contact?.name || "Unknown",
-					createdAt: gift.createdAt.toISOString(),
-					updatedAt: gift.updatedAt.toISOString(),
-					completedDate: gift.completedDate?.toISOString() || null,
-				})) || [],
+				gifts:
+					holiday.gifts.map((gift: any) => ({
+						...gift,
+						recipient: gift.contact?.name || "Unknown",
+						createdAt: gift.createdAt.toISOString(),
+						updatedAt: gift.updatedAt.toISOString(),
+						completedDate: gift.completedDate?.toISOString() || null,
+					})) || [],
 				cards: holiday.cards || [],
 				tasks: allTasks,
 				// Add filtered task categories
