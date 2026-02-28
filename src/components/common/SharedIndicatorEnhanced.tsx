@@ -76,7 +76,9 @@ export default function SharedIndicatorEnhanced({
 				<span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border-2 ${
 					members.length > 1 
 						? "bg-green-500 text-white border-green-300" 
-						: "bg-blue-500 text-white border-blue-300"
+						: share.hasPendingInvites
+							? "bg-blue-500 text-white border-blue-300"
+							: "bg-gray-500 text-white border-gray-300"
 				}`}>
 					<svg
 						className="w-2.5 h-2.5 mr-1"
@@ -85,7 +87,12 @@ export default function SharedIndicatorEnhanced({
 					>
 						<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 					</svg>
-					{members.length > 1 ? "Shared" : "Shareable"}
+					{members.length > 1 
+						? "Shared" 
+						: share.hasPendingInvites 
+							? "Invite Pending"
+							: "Shareable"
+					}
 				</span>
 			)}
 
@@ -101,7 +108,7 @@ export default function SharedIndicatorEnhanced({
 			{members.length >= 1 && (
 				<span className="text-xs text-white ml-1">
 					{members.length} member{members.length !== 1 ? "s" : ""}
-					{members.length === 1 ? " (invite pending)" : ""}
+					{members.length === 1 && share.hasPendingInvites ? " (invite pending)" : ""}
 				</span>
 			)}
 		</div>

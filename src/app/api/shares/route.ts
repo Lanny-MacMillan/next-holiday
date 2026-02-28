@@ -157,6 +157,13 @@ export async function GET(request: NextRequest) {
 							name: true,
 						},
 					},
+					invites: {
+						select: {
+							id: true,
+							status: true,
+							toEmail: true,
+						},
+					},
 				},
 			});
 
@@ -179,21 +186,37 @@ export async function GET(request: NextRequest) {
 				"Baby Shower": "baby-shower",
 			};
 
-			const transformedShares = shares.map((share: any) => ({
-				shareId: share.id,
-				holidayKey: holidayDisplayNameToKey[share.holiday.holidayType] || share.holiday.holidayType.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''),
-				ownerUserId: share.ownerUserId,
-				memberUserIds: share.members.map((m: any) => m.userId), // Keep for backward compatibility
-				members: share.members.map((m: any) => ({
-					userId: m.userId,
-					name: m.user.name,
-					email: m.user.email,
-					picture: m.user.picture,
-					joinedAt: m.joinedAt?.toISOString(),
-				})),
-				createdAt: share.createdAt.toISOString(),
-				updatedAt: share.updatedAt.toISOString(),
-			}));
+			const transformedShares = shares
+				.map((share: any) => {
+					// Check if this share has any pending invites
+					const pendingInvites = share.invites.filter((invite: any) => invite.status === 'pending');
+					const hasPendingInvites = pendingInvites.length > 0;
+					
+					// If this share only has 1 member (the owner) and no pending invites, don't include it
+					// This filters out shares where invites have been declined or expired
+					if (share.members.length === 1 && !hasPendingInvites) {
+						return null;
+					}
+
+					return {
+						shareId: share.id,
+						holidayKey: holidayDisplayNameToKey[share.holiday.holidayType] || share.holiday.holidayType.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''),
+						ownerUserId: share.ownerUserId,
+						memberUserIds: share.members.map((m: any) => m.userId), // Keep for backward compatibility
+						members: share.members.map((m: any) => ({
+							userId: m.userId,
+							name: m.user.name,
+							email: m.user.email,
+							picture: m.user.picture,
+							joinedAt: m.joinedAt?.toISOString(),
+						})),
+						hasPendingInvites,
+						pendingInviteCount: pendingInvites.length,
+						createdAt: share.createdAt.toISOString(),
+						updatedAt: share.updatedAt.toISOString(),
+					};
+				})
+				.filter(Boolean); // Remove null entries
 
 			console.log('📤 API Shares Response:', {
 				userId,

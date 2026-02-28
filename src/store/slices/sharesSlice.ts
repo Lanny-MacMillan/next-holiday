@@ -19,6 +19,8 @@ export interface HolidayShare {
 	ownerUserId: string;
 	memberUserIds: string[]; // Keep for backward compatibility
 	members?: ShareMember[]; // Enhanced member info with user details
+	hasPendingInvites?: boolean; // Whether this share has pending invites
+	pendingInviteCount?: number; // Number of pending invites
 	createdAt: string;
 	updatedAt: string;
 }
