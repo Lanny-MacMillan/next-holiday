@@ -258,7 +258,11 @@ export default function SettingsPage() {
 	};
 
 	const handleDeleteConfirm = async () => {
-		// Remove the holiday from local preferences
+		// This function is called ONLY after the user has successfully confirmed
+		// the deletion by typing the holiday name and clicking "Delete Holiday" 
+		// in the modal. The cascade delete has completed successfully by this point.
+		
+		// Now remove the holiday from local preferences and save to database
 		const newPreferences = localHolidayPreferences.filter(
 			(p) => p.holiday !== holidayToDelete?.name
 		);
@@ -287,6 +291,9 @@ export default function SettingsPage() {
 				);
 			}
 		}
+
+		// Close the modal
+		handleDeleteModalClose();
 	};
 
 	// Use preferences from database if available, otherwise fall back to local settings

@@ -5,11 +5,20 @@ import {
 	createSelector,
 } from "@reduxjs/toolkit";
 
+export interface ShareMember {
+	userId: string;
+	name?: string | null;
+	email?: string | null;
+	picture?: string | null;
+	joinedAt?: string;
+}
+
 export interface HolidayShare {
 	shareId: string;
 	holidayKey: string;
 	ownerUserId: string;
-	memberUserIds: string[];
+	memberUserIds: string[]; // Keep for backward compatibility
+	members?: ShareMember[]; // Enhanced member info with user details
 	createdAt: string;
 	updatedAt: string;
 }
@@ -47,7 +56,15 @@ export const fetchShares = createAsyncThunk(
 			throw new Error("Failed to fetch shares");
 		}
 
-		return await response.json();
+		const data = await response.json();
+		console.log('📥 Fetched Shares Data:', {
+			userId,
+			responseOk: response.ok,
+			dataLength: data?.length || 0,
+			data
+		});
+
+		return data;
 	},
 );
 
@@ -140,6 +157,11 @@ const sharesSlice = createSlice({
 				state.loading = false;
 				state.shares = action.payload;
 				state.initialized = true;
+				console.log('✅ Redux: Shares stored in state:', {
+					sharesCount: action.payload?.length || 0,
+					shares: action.payload,
+					stateShares: state.shares
+				});
 			})
 			.addCase(fetchShares.rejected, (state, action) => {
 				state.loading = false;
@@ -202,10 +224,36 @@ export default sharesSlice.reducer;
 
 // Selectors
 export const selectShareByHolidayKey = createSelector(
-	(state: any, holidayKey: string) => state.shares.shares,
-	(holidayKey: string) => holidayKey,
-	(shares, holidayKey) =>
-		shares.find((share: HolidayShare) => share.holidayKey === holidayKey),
+	(state: any) => state.shares.shares,
+	(state: any, holidayKey: string) => holidayKey,
+	(shares, holidayKey) => {
+		// Normalize holiday key for comparison (handle "new-year" vs "New Year")
+		const normalizeKey = (key: string | null | undefined) => {
+			if (!key || typeof key !== 'string') return '';
+			return key.toLowerCase().replace(/[-\s]/g, '').replace(/'/g, '');
+		};
+		
+		const normalizedSearchKey = normalizeKey(holidayKey);
+		console.log('🔍 Redux Selector Debug:', {
+			searchingFor: holidayKey,
+			normalizedSearch: normalizedSearchKey,
+			totalSharesInState: shares?.length || 0,
+			sharesArray: shares,
+			availableShares: shares?.map((s: any) => ({
+				holidayKey: s.holidayKey,
+				normalized: normalizeKey(s.holidayKey),
+				matches: normalizeKey(s.holidayKey) === normalizedSearchKey
+			})) || []
+		});
+		
+		const found = shares?.find((share: HolidayShare) => {
+			const normalizedShareKey = normalizeKey(share.holidayKey);
+			return normalizedShareKey === normalizedSearchKey;
+		});
+		
+		console.log('🎯 Found share:', found ? 'YES' : 'NO', found);
+		return found;
+	},
 );
 
 export const selectShareById = createSelector(
@@ -235,10 +283,31 @@ export const selectHolidayShareId = createSelector(
 );
 
 export const selectIsHolidayShared = createSelector(
-	(state: any, holidayKey: string) => state.shares.shares,
-	(holidayKey: string) => holidayKey,
-	(shares, holidayKey) =>
-		shares.some((share: HolidayShare) => share.holidayKey === holidayKey),
+	(state: any) => state.shares.shares,
+	(state: any, holidayKey: string) => holidayKey,
+	(shares, holidayKey) => {
+		// Normalize holiday key for comparison (handle "new-year" vs "New Year")
+		const normalizeKey = (key: string | null | undefined) => {
+			if (!key || typeof key !== 'string') return '';
+			return key.toLowerCase().replace(/[-\s]/g, '').replace(/'/g, '');
+		};
+		
+		const normalizedSearchKey = normalizeKey(holidayKey);
+		
+		const isShared = shares?.some((share: HolidayShare) => {
+			const normalizedShareKey = normalizeKey(share.holidayKey);
+			return normalizedShareKey === normalizedSearchKey;
+		});
+		
+		console.log('🎯 selectIsHolidayShared:', {
+			holidayKey,
+			normalizedSearchKey,
+			sharesCount: shares?.length || 0,
+			isShared
+		});
+		
+		return isShared || false;
+	},
 );
 
 export const selectIsUserInShare = createSelector(

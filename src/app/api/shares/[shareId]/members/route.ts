@@ -50,6 +50,42 @@ export async function POST(
 			}
 		});
 
+		// IMPORTANT: Ensure the holiday owner is also a member
+		// This fixes the bug where shares don't include the original holiday owner
+		const shareWithHoliday = await prisma.share.findUnique({
+			where: { id: shareId },
+			include: {
+				holiday: {
+					include: {
+						account: true
+					}
+				},
+				members: true
+			}
+		});
+
+		if (shareWithHoliday) {
+			const holidayOwnerUserId = shareWithHoliday.holiday.account.ownerUserId;
+			const ownerIsMember = shareWithHoliday.members.some(member => member.userId === holidayOwnerUserId);
+			
+			if (!ownerIsMember) {
+				console.log(`🔧 Adding holiday owner ${holidayOwnerUserId} to share ${shareId}`);
+				try {
+					await prisma.shareMember.create({
+						data: {
+							shareId,
+							userId: holidayOwnerUserId,
+						}
+					});
+				} catch (error: any) {
+					// Ignore if already exists due to race condition
+					if (error.code !== 'P2002') {
+						console.error('Error adding holiday owner to share:', error);
+					}
+				}
+			}
+		}
+
 		// Get updated share with members
 		const updatedShare = await prisma.share.findUnique({
 			where: { id: shareId },

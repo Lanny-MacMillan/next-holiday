@@ -160,15 +160,46 @@ export async function GET(request: NextRequest) {
 				},
 			});
 
-			// Transform the shares to match the expected format
-			const transformedShares = shares.map((share) => ({
+			// Transform the shares to include member user information
+			const holidayDisplayNameToKey: Record<string, string> = {
+				"Christmas": "christmas",
+				"Hanukkah": "hanukkah", 
+				"Kwanzaa": "kwanzaa",
+				"New Year": "new-year",
+				"Valentine's Day": "valentines",
+				"Easter": "easter",
+				"Halloween": "halloween",
+				"Thanksgiving": "thanksgiving",
+				"Mother's Day": "mothers-day",
+				"Father's Day": "fathers-day",
+				"Fourth of July": "fourth-of-july",
+				"Birthday": "birthday",
+				"Anniversary": "anniversary",
+				"Graduation": "graduation",
+				"Baby Shower": "baby-shower",
+			};
+
+			const transformedShares = shares.map((share: any) => ({
 				shareId: share.id,
-				holidayKey: share.holiday.holidayType,
+				holidayKey: holidayDisplayNameToKey[share.holiday.holidayType] || share.holiday.holidayType.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''),
 				ownerUserId: share.ownerUserId,
-				memberUserIds: share.members.map((m) => m.userId),
+				memberUserIds: share.members.map((m: any) => m.userId), // Keep for backward compatibility
+				members: share.members.map((m: any) => ({
+					userId: m.userId,
+					name: m.user.name,
+					email: m.user.email,
+					picture: m.user.picture,
+					joinedAt: m.joinedAt?.toISOString(),
+				})),
 				createdAt: share.createdAt.toISOString(),
 				updatedAt: share.updatedAt.toISOString(),
 			}));
+
+			console.log('📤 API Shares Response:', {
+				userId,
+				shareCount: transformedShares.length,
+				shares: transformedShares
+			});
 
 			return NextResponse.json(transformedShares);
 		}

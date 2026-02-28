@@ -24,11 +24,11 @@ const DeleteHolidaySchema = z.object({
 // POST /api/holidays/[id]/delete-cascade - Delete holiday with cascade
 export async function POST(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const user = await requireAuth(request);
-		const { id: holidayId } = params;
+		const { id: holidayId } = await params;
 
 		// Parse and validate request body
 		const body = await request.json();
@@ -72,11 +72,7 @@ export async function POST(
 				return serverError("Cascade delete feature is not enabled");
 			}
 			if (result.error.includes("threshold")) {
-				return badRequest({
-					error: result.error,
-					totals: result.totals,
-					suggestion: "Use force=true to override the threshold",
-				});
+				return badRequest(result.error);
 			}
 			return serverError(result.error);
 		}
@@ -95,11 +91,11 @@ export async function POST(
 // GET /api/holidays/[id]/delete-cascade - Get dry run results without deletion
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
 		const user = await requireAuth(request);
-		const { id: holidayId } = params;
+		const { id: holidayId } = await params;
 
 		// Validate user has permission to access this holiday
 		const permissionCheck = await validateHolidayDeletePermission(

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import CountdownWithInviteCompact from "@/components/common/CountdownWithInviteCompact";
-import SharedIndicatorCompact from "@/components/common/SharedIndicatorCompact";
+import SharedIndicatorEnhanced from "@/components/common/SharedIndicatorEnhanced";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import BouncingShape from "@/components/animations/BouncingShape";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
@@ -126,6 +127,18 @@ export default function HolidayCard({
 		settings.displayMode === "gamified";
 	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
+	// Check if this holiday is shared
+	const isShared = useAppSelector((state) =>
+		selectIsHolidayShared(state, id)
+	);
+
+	console.log('🎄 HolidayCard Debug:', {
+		holidayId: id,
+		holidayName: name,
+		isShared,
+		sharesInState: useAppSelector((state: any) => state.shares?.shares || [])
+	});
+
 	const incompleteItems = totalItems - completedItems;
 
 	// Use provided background color, holiday-specific gradient, or fallback to default
@@ -139,7 +152,9 @@ export default function HolidayCard({
 		return (
 			<li>
 				<div
-					className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white`}
+					className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white ${
+						isShared ? "ring-2 ring-blue-400 dark:ring-blue-500 ring-opacity-50" : ""
+					}`}
 					style={getCardStyling({
 						isDarkMode,
 						isGamified: true,
@@ -171,7 +186,15 @@ export default function HolidayCard({
 									<h3 className="text-base sm:text-lg font-bold text-white">
 										{name}
 									</h3>
-									<SharedIndicatorCompact holidayKey={id} />
+								{isShared && (
+									<SharedIndicatorEnhanced
+										holidayKey={id}
+										size="xs"
+										maxVisibleMembers={2}
+										showLabel={false}
+										className="opacity-90"
+									/>
+								)}
 								</div>
 								<p className="text-white opacity-90 text-xs sm:text-sm">
 									{description}
@@ -243,7 +266,9 @@ export default function HolidayCard({
 	return (
 		<li>
 			<div
-				className="relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden"
+				className={`relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden ${
+					isShared ? "ring-2 ring-blue-300 dark:ring-blue-600 ring-opacity-40" : ""
+				}`}
 				style={
 					{
 						...getCardStyling({
@@ -252,6 +277,9 @@ export default function HolidayCard({
 							intensity: "medium",
 						}),
 						"--holiday-color": color.light,
+						...(isShared && {
+							borderLeft: `4px solid ${color.light}`,
+						}),
 					} as React.CSSProperties
 				}
 			>
@@ -305,7 +333,13 @@ export default function HolidayCard({
 								<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">
 									{name}
 								</h3>
-								<SharedIndicatorCompact holidayKey={id} />
+								{/* Force show for debugging - remove isShared check temporarily */}
+								<SharedIndicatorEnhanced
+									holidayKey={id}
+									size="sm"
+									maxVisibleMembers={2}
+									showLabel={true}
+								/>
 							</div>
 							<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
 								{description}
