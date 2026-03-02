@@ -348,15 +348,28 @@ export default function HolidayCard({
 								</p>
 							)}
 						</div>
-						{/* Countdown Timer with Invite Button - positioned on the right */}
+						{/* Right side controls: SharedIndicator and Countdown Timer with Invite Button */}
 						<div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
-							<CountdownWithInviteCompact
-								className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
-								holiday={name}
-								holidayKey={id}
-								holidayId={holidayId}
-								countdownTimer={countdownTimer}
-							/>
+							<div className="flex items-end gap-2">
+								{/* SharedIndicator positioned to the left of invite button in professional mode */}
+								{isShared && (
+									<div className="flex items-center">
+										<SharedIndicatorEnhanced
+											holidayKey={id}
+											size="sm"
+											maxVisibleMembers={3}
+											showLabel={false}
+										/>
+									</div>
+								)}
+								<CountdownWithInviteCompact
+									className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
+									holiday={name}
+									holidayKey={id}
+									holidayId={holidayId}
+									countdownTimer={countdownTimer}
+								/>
+							</div>
 							<span className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
 								→
 							</span>
@@ -381,18 +394,6 @@ export default function HolidayCard({
 					</div>
 				</div>
 			
-			{/* Shared Indicator - positioned outside Link coverage */}
-			{isShared && (
-				<div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30">
-					<SharedIndicatorEnhanced
-						holidayKey={id}
-						size="sm"
-						maxVisibleMembers={5}
-						showLabel={true}
-					/>
-				</div>
-			)}
-
 			{/* Link component for navigation */}
 			<Link
 				href={route}
