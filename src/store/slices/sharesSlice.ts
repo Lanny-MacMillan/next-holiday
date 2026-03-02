@@ -129,6 +129,44 @@ export const addMemberToShare = createAsyncThunk(
 	},
 );
 
+export const removeMemberFromShare = createAsyncThunk(
+	"shares/removeMemberFromShare",
+	async ({ shareId, userId }: { shareId: string; userId: string }) => {
+		const response = await fetch(`/api/shares/${shareId}/members?userId=${encodeURIComponent(userId)}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to remove member from share");
+		}
+
+		return await response.json();
+	},
+);
+
+export const leaveShare = createAsyncThunk(
+	"shares/leaveShare",
+	async ({ shareId, userId }: { shareId: string; userId: string }) => {
+		const response = await fetch(`/api/shares/${shareId}/members?userId=${encodeURIComponent(userId)}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to leave share");
+		}
+
+		return await response.json();
+	},
+);
+
 const sharesSlice = createSlice({
 	name: "shares",
 	initialState,
@@ -217,6 +255,42 @@ const sharesSlice = createSlice({
 			.addCase(addMemberToShare.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to add member to share";
+			})
+			// Remove member from share
+			.addCase(removeMemberFromShare.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(removeMemberFromShare.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.shares.findIndex(
+					(share) => share.shareId === action.payload.shareId,
+				);
+				if (index !== -1) {
+					state.shares[index] = action.payload;
+				}
+			})
+			.addCase(removeMemberFromShare.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to remove member from share";
+			})
+			// Leave share (same as remove member but different semantics)
+			.addCase(leaveShare.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(leaveShare.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.shares.findIndex(
+					(share) => share.shareId === action.payload.shareId,
+				);
+				if (index !== -1) {
+					state.shares[index] = action.payload;
+				}
+			})
+			.addCase(leaveShare.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to leave share";
 			});
 	},
 });

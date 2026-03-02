@@ -143,11 +143,21 @@ export async function GET(request: NextRequest) {
 							user: {
 								select: {
 									id: true,
+									auth0Sub: true, // Include auth0Sub for frontend comparison
 									name: true,
 									email: true,
 									picture: true,
 								},
 							},
+						},
+					},
+					owner: { // Include owner user data
+						select: {
+							id: true,
+							auth0Sub: true,
+							name: true,
+							email: true,
+							picture: true,
 						},
 					},
 					holiday: {
@@ -201,10 +211,10 @@ export async function GET(request: NextRequest) {
 					return {
 						shareId: share.id,
 						holidayKey: holidayDisplayNameToKey[share.holiday.holidayType] || share.holiday.holidayType.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''),
-						ownerUserId: share.ownerUserId,
-						memberUserIds: share.members.map((m: any) => m.userId), // Keep for backward compatibility
+						ownerUserId: share.owner.auth0Sub, // Use Auth0 sub instead of internal ID
+						memberUserIds: share.members.map((m: any) => m.user.auth0Sub), // Use Auth0 subs for backward compatibility
 						members: share.members.map((m: any) => ({
-							userId: m.userId,
+							userId: m.user.auth0Sub, // Use Auth0 sub instead of internal ID
 							name: m.user.name,
 							email: m.user.email,
 							picture: m.user.picture,
