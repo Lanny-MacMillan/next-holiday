@@ -11,13 +11,34 @@ export async function POST(request: NextRequest) {
 		if (!holidayKey || !ownerUserId) {
 			return NextResponse.json(
 				{ error: "Missing required fields: holidayKey, ownerUserId" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
-		// First, find the holiday by holidayType (holidayKey)
+		// Convert holidayKey to display name for database lookup
+		const holidayKeyToDisplayName: Record<string, string> = {
+			"christmas": "Christmas",
+			"hanukkah": "Hanukkah", 
+			"kwanzaa": "Kwanzaa",
+			"new-year": "New Year",
+			"valentines": "Valentine's Day",
+			"easter": "Easter",
+			"halloween": "Halloween",
+			"thanksgiving": "Thanksgiving",
+			"mothers-day": "Mother's Day",
+			"fathers-day": "Father's Day",
+			"fourth-of-july": "Fourth of July",
+			"birthday": "Birthday",
+			"anniversary": "Anniversary",
+			"graduation": "Graduation",
+			"baby-shower": "Baby Shower",
+		};
+
+		const holidayDisplayName = holidayKeyToDisplayName[holidayKey] || holidayKey;
+
+		// First, find the holiday by holidayType (using display name)
 		const holiday = await prisma.holiday.findFirst({
-			where: { holidayType: holidayKey },
+			where: { holidayType: holidayDisplayName },
 		});
 
 		if (!holiday) {
@@ -41,7 +62,7 @@ export async function POST(request: NextRequest) {
 		if (!ownerUser) {
 			return NextResponse.json(
 				{ error: "Owner user not found" },
-				{ status: 404 }
+				{ status: 404 },
 			);
 		}
 
@@ -66,7 +87,7 @@ export async function POST(request: NextRequest) {
 		console.error("Error creating share:", error);
 		return NextResponse.json(
 			{ error: "Failed to create share" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -99,24 +120,132 @@ export async function GET(request: NextRequest) {
 		}
 
 		if (userId) {
+			// Look up the actual user ID from the Auth0 sub
+			const user = await prisma.user.findUnique({
+				where: { auth0Sub: userId },
+			});
+
+			if (!user) {
+				return NextResponse.json([]);
+			}
+
 			// Find all shares where user is owner or member
 			const shares = await prisma.share.findMany({
 				where: {
-					OR: [{ ownerUserId: userId }, { members: { some: { userId } } }],
+					OR: [
+						{ ownerUserId: user.id },
+						{ members: { some: { userId: user.id } } },
+					],
+				},
+				include: {
+					members: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									auth0Sub: true, // Include auth0Sub for frontend comparison
+									name: true,
+									email: true,
+									picture: true,
+								},
+							},
+						},
+					},
+					owner: { // Include owner user data
+						select: {
+							id: true,
+							auth0Sub: true,
+							name: true,
+							email: true,
+							picture: true,
+						},
+					},
+					holiday: {
+						select: {
+							id: true,
+							holidayType: true,
+							name: true,
+						},
+					},
+					invites: {
+						select: {
+							id: true,
+							status: true,
+							toEmail: true,
+						},
+					},
 				},
 			});
-			return NextResponse.json(shares);
+
+			// Transform the shares to include member user information
+			const holidayDisplayNameToKey: Record<string, string> = {
+				"Christmas": "christmas",
+				"Hanukkah": "hanukkah", 
+				"Kwanzaa": "kwanzaa",
+				"New Year": "new-year",
+				"Valentine's Day": "valentines",
+				"Easter": "easter",
+				"Halloween": "halloween",
+				"Thanksgiving": "thanksgiving",
+				"Mother's Day": "mothers-day",
+				"Father's Day": "fathers-day",
+				"Fourth of July": "fourth-of-july",
+				"Birthday": "birthday",
+				"Anniversary": "anniversary",
+				"Graduation": "graduation",
+				"Baby Shower": "baby-shower",
+			};
+
+			const transformedShares = shares
+				.map((share: any) => {
+					// Check if this share has any pending invites
+					const pendingInvites = share.invites.filter((invite: any) => invite.status === 'pending');
+					const hasPendingInvites = pendingInvites.length > 0;
+					
+					// If this share only has 1 member (the owner) and no pending invites, don't include it
+					// This filters out shares where invites have been declined or expired
+					if (share.members.length === 1 && !hasPendingInvites) {
+						return null;
+					}
+
+					return {
+						shareId: share.id,
+						holidayKey: holidayDisplayNameToKey[share.holiday.holidayType] || share.holiday.holidayType.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''),
+						ownerUserId: share.owner.auth0Sub, // Use Auth0 sub instead of internal ID
+						memberUserIds: share.members.map((m: any) => m.user.auth0Sub), // Use Auth0 subs for backward compatibility
+						members: share.members.map((m: any) => ({
+							userId: m.user.auth0Sub, // Use Auth0 sub instead of internal ID
+							name: m.user.name,
+							email: m.user.email,
+							picture: m.user.picture,
+							joinedAt: m.joinedAt?.toISOString(),
+						})),
+						hasPendingInvites,
+						pendingInviteCount: pendingInvites.length,
+						createdAt: share.createdAt.toISOString(),
+						updatedAt: share.updatedAt.toISOString(),
+					};
+				})
+				.filter(Boolean); // Remove null entries
+
+			console.log('📤 API Shares Response:', {
+				userId,
+				shareCount: transformedShares.length,
+				shares: transformedShares
+			});
+
+			return NextResponse.json(transformedShares);
 		}
 
 		return NextResponse.json(
 			{ error: "Missing query parameters" },
-			{ status: 400 }
+			{ status: 400 },
 		);
 	} catch (error) {
 		console.error("Error fetching shares:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch shares" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

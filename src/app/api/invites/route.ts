@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 					error:
 						"Missing required fields: shareId, fromUserId, holidayKey, and either toUserId or toEmail",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -47,6 +47,14 @@ export async function POST(request: NextRequest) {
 				message,
 				status: "pending",
 			},
+			include: {
+				fromUser: {
+					select: {
+						name: true,
+						email: true,
+					},
+				},
+			},
 		});
 
 		return NextResponse.json(invite);
@@ -54,7 +62,7 @@ export async function POST(request: NextRequest) {
 		console.error("Error creating invite:", error);
 		return NextResponse.json(
 			{ error: "Failed to create invite" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -78,7 +86,7 @@ export async function GET(request: NextRequest) {
 				userEmail = user?.email || null;
 			} catch (error) {
 				console.log(
-					"Could not find user by Auth0 sub, continuing with userId search"
+					"Could not find user by Auth0 sub, continuing with userId search",
 				);
 			}
 
@@ -114,7 +122,7 @@ export async function GET(request: NextRequest) {
 				internalUserId = user?.id || null;
 			} catch (error) {
 				console.log(
-					"Could not find user by Auth0 sub, continuing with userId search"
+					"Could not find user by Auth0 sub, continuing with userId search",
 				);
 			}
 
@@ -122,10 +130,11 @@ export async function GET(request: NextRequest) {
 				return NextResponse.json({ error: "User not found" }, { status: 404 });
 			}
 
-			// Search for outgoing invites by internal userId
+			// Search for outgoing invites by internal userId (exclude dismissed ones)
 			const invites = await prisma.invite.findMany({
 				where: {
 					fromUserId: internalUserId,
+					senderDismissedAt: null, // Only get non-dismissed invites
 				},
 				include: {
 					fromUser: {
@@ -151,7 +160,7 @@ export async function GET(request: NextRequest) {
 				userEmail = user?.email || null;
 			} catch (error) {
 				console.log(
-					"Could not find user by Auth0 sub, continuing with userId search"
+					"Could not find user by Auth0 sub, continuing with userId search",
 				);
 			}
 
@@ -179,13 +188,13 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.json(
 			{ error: "Missing query parameters" },
-			{ status: 400 }
+			{ status: 400 },
 		);
 	} catch (error) {
 		console.error("Error fetching invites:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch invites" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

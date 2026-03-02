@@ -3,7 +3,8 @@
 import Link from "next/link";
 import CountdownTimer from "@/components/common/CountdownTimer";
 import CountdownWithInviteCompact from "@/components/common/CountdownWithInviteCompact";
-import SharedIndicatorCompact from "@/components/common/SharedIndicatorCompact";
+import SharedIndicatorEnhanced from "@/components/common/SharedIndicatorEnhanced";
+import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
 import BouncingShape from "@/components/animations/BouncingShape";
 import { useAppSelector } from "@/store/hooks";
 import { getCardStyling } from "@/utils/cardShadows";
@@ -126,6 +127,18 @@ export default function HolidayCard({
 		settings.displayMode === "gamified";
 	const isDarkMode = preferences?.theme === "dark" || settings.theme === "dark";
 
+	// Check if this holiday is shared
+	const isShared = useAppSelector((state) =>
+		selectIsHolidayShared(state, id)
+	);
+
+	console.log('🎄 HolidayCard Debug:', {
+		holidayId: id,
+		holidayName: name,
+		isShared,
+		sharesInState: useAppSelector((state: any) => state.shares?.shares || [])
+	});
+
 	const incompleteItems = totalItems - completedItems;
 
 	// Use provided background color, holiday-specific gradient, or fallback to default
@@ -139,7 +152,9 @@ export default function HolidayCard({
 		return (
 			<li>
 				<div
-					className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white`}
+					className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white ${
+						isShared ? "ring-2 ring-blue-400 dark:ring-blue-500 ring-opacity-50" : ""
+					}`}
 					style={getCardStyling({
 						isDarkMode,
 						isGamified: true,
@@ -171,7 +186,6 @@ export default function HolidayCard({
 									<h3 className="text-base sm:text-lg font-bold text-white">
 										{name}
 									</h3>
-									<SharedIndicatorCompact holidayKey={id} />
 								</div>
 								<p className="text-white opacity-90 text-xs sm:text-sm">
 									{description}
@@ -223,9 +237,21 @@ export default function HolidayCard({
 					>
 						<span className="sr-only">Go to {name} page</span>
 					</Link>
+				{/* Shared Indicator - positioned outside Link coverage */}
+				{isShared && (
+					<div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20">
+						<SharedIndicatorEnhanced
+							holidayKey={id}
+							size="xs"
+							maxVisibleMembers={5}
+							showLabel={false}
+							className="opacity-90"
+						/>
+					</div>
+				)}
 
-					{/* Countdown Timer with Invite Button - positioned outside Link coverage */}
-					<div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+				{/* Countdown Timer with Invite Button - positioned outside Link coverage */}
+				<div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
 						<CountdownWithInviteCompact
 							className="text-white"
 							holiday={name}
@@ -243,7 +269,9 @@ export default function HolidayCard({
 	return (
 		<li>
 			<div
-				className="relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden"
+				className={`relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden ${
+					isShared ? "ring-2 ring-blue-300 dark:ring-blue-600 ring-opacity-40" : ""
+				}`}
 				style={
 					{
 						...getCardStyling({
@@ -252,6 +280,9 @@ export default function HolidayCard({
 							intensity: "medium",
 						}),
 						"--holiday-color": color.light,
+						...(isShared && {
+							borderLeft: `4px solid ${color.light}`,
+						}),
 					} as React.CSSProperties
 				}
 			>
@@ -305,7 +336,6 @@ export default function HolidayCard({
 								<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">
 									{name}
 								</h3>
-								<SharedIndicatorCompact holidayKey={id} />
 							</div>
 							<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
 								{description}
@@ -318,15 +348,28 @@ export default function HolidayCard({
 								</p>
 							)}
 						</div>
-						{/* Countdown Timer with Invite Button - positioned on the right */}
+						{/* Right side controls: SharedIndicator and Countdown Timer with Invite Button */}
 						<div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
-							<CountdownWithInviteCompact
-								className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
-								holiday={name}
-								holidayKey={id}
-								holidayId={holidayId}
-								countdownTimer={countdownTimer}
-							/>
+							<div className="flex items-end gap-2">
+								{/* SharedIndicator positioned to the left of invite button in professional mode */}
+								{isShared && (
+									<div className="flex items-center">
+										<SharedIndicatorEnhanced
+											holidayKey={id}
+											size="sm"
+											maxVisibleMembers={3}
+											showLabel={false}
+										/>
+									</div>
+								)}
+								<CountdownWithInviteCompact
+									className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
+									holiday={name}
+									holidayKey={id}
+									holidayId={holidayId}
+									countdownTimer={countdownTimer}
+								/>
+							</div>
 							<span className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
 								→
 							</span>
@@ -350,13 +393,15 @@ export default function HolidayCard({
 						</span>
 					</div>
 				</div>
-				<Link
-					href={route}
-					className="absolute inset-0 z-10"
-					aria-label={`Go to ${name} page`}
-				>
-					<span className="sr-only">Go to {name} page</span>
-				</Link>
+			
+			{/* Link component for navigation */}
+			<Link
+				href={route}
+				className="absolute inset-0 z-10"
+				aria-label={`Go to ${name} page`}
+			>
+				<span className="sr-only">Go to {name} page</span>
+			</Link>
 			</div>
 		</li>
 	);

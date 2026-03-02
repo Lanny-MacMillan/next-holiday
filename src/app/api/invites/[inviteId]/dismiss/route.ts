@@ -19,27 +19,19 @@ export async function POST(
 			return NextResponse.json({ error: "Invite not found" }, { status: 404 });
 		}
 
-		if (invite.status !== "pending") {
-			return NextResponse.json(
-				{ error: "Invite is not pending" },
-				{ status: 400 },
-			);
-		}
-
-		// Update invite status to declined
+		// Update invite to mark as dismissed by sender
 		const updatedInvite = await prisma.invite.update({
 			where: { id: inviteId },
 			data: {
-				status: "declined",
-				respondedAt: new Date(),
+				senderDismissedAt: new Date(),
 			},
 		});
 
 		return NextResponse.json(updatedInvite);
 	} catch (error) {
-		console.error("Error declining invite:", error);
+		console.error("Error dismissing invite:", error);
 		return NextResponse.json(
-			{ error: "Failed to decline invite" },
+			{ error: "Failed to dismiss invite" },
 			{ status: 500 },
 		);
 	}

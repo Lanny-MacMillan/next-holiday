@@ -5,11 +5,22 @@ import {
 	createSelector,
 } from "@reduxjs/toolkit";
 
+export interface ShareMember {
+	userId: string;
+	name?: string | null;
+	email?: string | null;
+	picture?: string | null;
+	joinedAt?: string;
+}
+
 export interface HolidayShare {
 	shareId: string;
 	holidayKey: string;
 	ownerUserId: string;
-	memberUserIds: string[];
+	memberUserIds: string[]; // Keep for backward compatibility
+	members?: ShareMember[]; // Enhanced member info with user details
+	hasPendingInvites?: boolean; // Whether this share has pending invites
+	pendingInviteCount?: number; // Number of pending invites
 	createdAt: string;
 	updatedAt: string;
 }
@@ -31,7 +42,7 @@ const initialState: SharesState = {
 // Async thunks
 export const fetchShares = createAsyncThunk(
 	"shares/fetchShares",
-	async (_, { getState }) => {
+	async (userId: string, { getState }) => {
 		const state = getState() as any;
 		const currentShares = state.shares.shares;
 		const isInitialized = state.shares.initialized;
@@ -40,20 +51,29 @@ export const fetchShares = createAsyncThunk(
 			return currentShares;
 		}
 
-		// Simulate API call
-		const response = await new Promise<HolidayShare[]>((resolve) => {
-			setTimeout(() => {
-				resolve([]);
-			}, 500);
+		// Fetch shares from API
+		const response = await fetch(`/api/shares?userId=${userId}`);
+
+		if (!response.ok) {
+			throw new Error("Failed to fetch shares");
+		}
+
+		const data = await response.json();
+		console.log('📥 Fetched Shares Data:', {
+			userId,
+			responseOk: response.ok,
+			dataLength: data?.length || 0,
+			data
 		});
-		return response;
-	}
+
+		return data;
+	},
 );
 
 export const createShare = createAsyncThunk(
 	"shares/createShare",
 	async (
-		shareData: Omit<HolidayShare, "shareId" | "createdAt" | "updatedAt">
+		shareData: Omit<HolidayShare, "shareId" | "createdAt" | "updatedAt">,
 	) => {
 		const response = await fetch("/api/shares", {
 			method: "POST",
@@ -68,7 +88,7 @@ export const createShare = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const updateShare = createAsyncThunk(
@@ -87,7 +107,7 @@ export const updateShare = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
 );
 
 export const addMemberToShare = createAsyncThunk(
@@ -106,7 +126,45 @@ export const addMemberToShare = createAsyncThunk(
 		}
 
 		return await response.json();
-	}
+	},
+);
+
+export const removeMemberFromShare = createAsyncThunk(
+	"shares/removeMemberFromShare",
+	async ({ shareId, userId }: { shareId: string; userId: string }) => {
+		const response = await fetch(`/api/shares/${shareId}/members?userId=${encodeURIComponent(userId)}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to remove member from share");
+		}
+
+		return await response.json();
+	},
+);
+
+export const leaveShare = createAsyncThunk(
+	"shares/leaveShare",
+	async ({ shareId, userId }: { shareId: string; userId: string }) => {
+		const response = await fetch(`/api/shares/${shareId}/members?userId=${encodeURIComponent(userId)}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to leave share");
+		}
+
+		return await response.json();
+	},
 );
 
 const sharesSlice = createSlice({
@@ -121,7 +179,7 @@ const sharesSlice = createSlice({
 		},
 		updateShareInState: (state, action: PayloadAction<HolidayShare>) => {
 			const index = state.shares.findIndex(
-				(share) => share.shareId === action.payload.shareId
+				(share) => share.shareId === action.payload.shareId,
 			);
 			if (index !== -1) {
 				state.shares[index] = action.payload;
@@ -139,6 +197,11 @@ const sharesSlice = createSlice({
 				state.loading = false;
 				state.shares = action.payload;
 				state.initialized = true;
+				console.log('✅ Redux: Shares stored in state:', {
+					sharesCount: action.payload?.length || 0,
+					shares: action.payload,
+					stateShares: state.shares
+				});
 			})
 			.addCase(fetchShares.rejected, (state, action) => {
 				state.loading = false;
@@ -165,7 +228,7 @@ const sharesSlice = createSlice({
 			.addCase(updateShare.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.shares.findIndex(
-					(share) => share.shareId === action.payload.shareId
+					(share) => share.shareId === action.payload.shareId,
 				);
 				if (index !== -1) {
 					state.shares[index] = action.payload;
@@ -183,7 +246,7 @@ const sharesSlice = createSlice({
 			.addCase(addMemberToShare.fulfilled, (state, action) => {
 				state.loading = false;
 				const index = state.shares.findIndex(
-					(share) => share.shareId === action.payload.shareId
+					(share) => share.shareId === action.payload.shareId,
 				);
 				if (index !== -1) {
 					state.shares[index] = action.payload;
@@ -192,6 +255,42 @@ const sharesSlice = createSlice({
 			.addCase(addMemberToShare.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to add member to share";
+			})
+			// Remove member from share
+			.addCase(removeMemberFromShare.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(removeMemberFromShare.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.shares.findIndex(
+					(share) => share.shareId === action.payload.shareId,
+				);
+				if (index !== -1) {
+					state.shares[index] = action.payload;
+				}
+			})
+			.addCase(removeMemberFromShare.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to remove member from share";
+			})
+			// Leave share (same as remove member but different semantics)
+			.addCase(leaveShare.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(leaveShare.fulfilled, (state, action) => {
+				state.loading = false;
+				const index = state.shares.findIndex(
+					(share) => share.shareId === action.payload.shareId,
+				);
+				if (index !== -1) {
+					state.shares[index] = action.payload;
+				}
+			})
+			.addCase(leaveShare.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to leave share";
 			});
 	},
 });
@@ -201,23 +300,49 @@ export default sharesSlice.reducer;
 
 // Selectors
 export const selectShareByHolidayKey = createSelector(
-	(state: any, holidayKey: string) => state.shares.shares,
-	(holidayKey: string) => holidayKey,
-	(shares, holidayKey) =>
-		shares.find((share: HolidayShare) => share.holidayKey === holidayKey)
+	(state: any) => state.shares.shares,
+	(state: any, holidayKey: string) => holidayKey,
+	(shares, holidayKey) => {
+		// Normalize holiday key for comparison (handle "new-year" vs "New Year")
+		const normalizeKey = (key: string | null | undefined) => {
+			if (!key || typeof key !== 'string') return '';
+			return key.toLowerCase().replace(/[-\s]/g, '').replace(/'/g, '');
+		};
+		
+		const normalizedSearchKey = normalizeKey(holidayKey);
+		console.log('🔍 Redux Selector Debug:', {
+			searchingFor: holidayKey,
+			normalizedSearch: normalizedSearchKey,
+			totalSharesInState: shares?.length || 0,
+			sharesArray: shares,
+			availableShares: shares?.map((s: any) => ({
+				holidayKey: s.holidayKey,
+				normalized: normalizeKey(s.holidayKey),
+				matches: normalizeKey(s.holidayKey) === normalizedSearchKey
+			})) || []
+		});
+		
+		const found = shares?.find((share: HolidayShare) => {
+			const normalizedShareKey = normalizeKey(share.holidayKey);
+			return normalizedShareKey === normalizedSearchKey;
+		});
+		
+		console.log('🎯 Found share:', found ? 'YES' : 'NO', found);
+		return found;
+	},
 );
 
 export const selectShareById = createSelector(
 	(state: any, shareId: string) => state.shares.shares,
 	(shareId: string) => shareId,
 	(shares, shareId) =>
-		shares.find((share: HolidayShare) => share.shareId === shareId)
+		shares.find((share: HolidayShare) => share.shareId === shareId),
 );
 
 export const selectMembers = createSelector(
 	(state: any, shareId: string) =>
 		state.shares.shares.find((s: HolidayShare) => s.shareId === shareId),
-	(share) => (share ? share.memberUserIds : [])
+	(share) => (share ? share.memberUserIds : []),
 );
 
 export const selectHolidayShareId = createSelector(
@@ -227,17 +352,38 @@ export const selectHolidayShareId = createSelector(
 		const share = shares.find(
 			(s: HolidayShare) =>
 				s.holidayKey === holidayKey &&
-				(s.ownerUserId === userId || s.memberUserIds.includes(userId))
+				(s.ownerUserId === userId || s.memberUserIds.includes(userId)),
 		);
 		return share ? share.shareId : undefined;
-	}
+	},
 );
 
 export const selectIsHolidayShared = createSelector(
-	(state: any, holidayKey: string) => state.shares.shares,
-	(holidayKey: string) => holidayKey,
-	(shares, holidayKey) =>
-		shares.some((share: HolidayShare) => share.holidayKey === holidayKey)
+	(state: any) => state.shares.shares,
+	(state: any, holidayKey: string) => holidayKey,
+	(shares, holidayKey) => {
+		// Normalize holiday key for comparison (handle "new-year" vs "New Year")
+		const normalizeKey = (key: string | null | undefined) => {
+			if (!key || typeof key !== 'string') return '';
+			return key.toLowerCase().replace(/[-\s]/g, '').replace(/'/g, '');
+		};
+		
+		const normalizedSearchKey = normalizeKey(holidayKey);
+		
+		const isShared = shares?.some((share: HolidayShare) => {
+			const normalizedShareKey = normalizeKey(share.holidayKey);
+			return normalizedShareKey === normalizedSearchKey;
+		});
+		
+		console.log('🎯 selectIsHolidayShared:', {
+			holidayKey,
+			normalizedSearchKey,
+			sharesCount: shares?.length || 0,
+			isShared
+		});
+		
+		return isShared || false;
+	},
 );
 
 export const selectIsUserInShare = createSelector(
@@ -248,5 +394,37 @@ export const selectIsUserInShare = createSelector(
 		return share
 			? share.ownerUserId === userId || share.memberUserIds.includes(userId)
 			: false;
-	}
+	},
+);
+
+export const selectIsUserOwner = createSelector(
+	(state: any, shareId: string, userId: string) => state.shares.shares,
+	(shareId: string, userId: string) => ({ shareId, userId }),
+	(shares, { shareId, userId }) => {
+		const share = shares.find((s: HolidayShare) => s.shareId === shareId);
+		return share ? share.ownerUserId === userId : false;
+	},
+);
+
+export const selectIsOwnerByHolidayKey = createSelector(
+	(state: any, holidayKey: string, userId: string) => state.shares.shares,
+	(holidayKey: string, userId: string) => ({ holidayKey, userId }),
+	(shares, { holidayKey, userId }) => {
+		// Normalize holiday key for comparison
+		const normalizeKey = (key: string | null | undefined) => {
+			if (!key || typeof key !== 'string') return '';
+			return key.toLowerCase().replace(/[-\s]/g, '').replace(/'/g, '');
+		};
+		
+		const normalizedSearchKey = normalizeKey(holidayKey);
+		
+		const share = shares?.find((share: HolidayShare) => {
+			const normalizedShareKey = normalizeKey(share.holidayKey);
+			return normalizedShareKey === normalizedSearchKey;
+		});
+		
+		// If no share exists, user can be considered the owner (they can create it)
+		// If share exists, check if user is the actual owner
+		return share ? share.ownerUserId === userId : true;
+	},
 );
