@@ -322,3 +322,35 @@ export const selectIsUserInShare = createSelector(
 			: false;
 	},
 );
+
+export const selectIsUserOwner = createSelector(
+	(state: any, shareId: string, userId: string) => state.shares.shares,
+	(shareId: string, userId: string) => ({ shareId, userId }),
+	(shares, { shareId, userId }) => {
+		const share = shares.find((s: HolidayShare) => s.shareId === shareId);
+		return share ? share.ownerUserId === userId : false;
+	},
+);
+
+export const selectIsOwnerByHolidayKey = createSelector(
+	(state: any, holidayKey: string, userId: string) => state.shares.shares,
+	(holidayKey: string, userId: string) => ({ holidayKey, userId }),
+	(shares, { holidayKey, userId }) => {
+		// Normalize holiday key for comparison
+		const normalizeKey = (key: string | null | undefined) => {
+			if (!key || typeof key !== 'string') return '';
+			return key.toLowerCase().replace(/[-\s]/g, '').replace(/'/g, '');
+		};
+		
+		const normalizedSearchKey = normalizeKey(holidayKey);
+		
+		const share = shares?.find((share: HolidayShare) => {
+			const normalizedShareKey = normalizeKey(share.holidayKey);
+			return normalizedShareKey === normalizedSearchKey;
+		});
+		
+		// If no share exists, user can be considered the owner (they can create it)
+		// If share exists, check if user is the actual owner
+		return share ? share.ownerUserId === userId : true;
+	},
+);

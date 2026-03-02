@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { createShare } from "@/store/slices/sharesSlice";
+import { createShare, ShareMember } from "@/store/slices/sharesSlice";
 import {
 	createInvite,
 	fetchOutgoingInvites,
@@ -11,8 +11,11 @@ import {
 import {
 	selectShareByHolidayKey,
 	selectIsUserInShare,
+	selectIsOwnerByHolidayKey,
 } from "@/store/slices/sharesSlice";
 import FormModal from "../modals/FormModal";
+import Toast from "./Toast";
+import { createPortal } from "react-dom";
 
 interface InviteButtonProps {
 	holidayKey: string;
@@ -29,6 +32,9 @@ export default function InviteButton({
 	const dispatch = useAppDispatch();
 	const [showInviteModal, setShowInviteModal] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const [toastMessage, setToastMessage] = useState("");
+	const [showToast, setShowToast] = useState(false);
+	const [toastType, setToastType] = useState<"success" | "error" | "info">("error");
 
 	// Get current user's share for this holiday
 	const share = useAppSelector((state) =>
@@ -37,6 +43,9 @@ export default function InviteButton({
 	const isUserInShare = useAppSelector((state) =>
 		share ? selectIsUserInShare(state, share.shareId, user?.sub || "") : false,
 	);
+	const isUserOwner = useAppSelector((state) =>
+		selectIsOwnerByHolidayKey(state, holidayKey, user?.sub || ""),
+	);
 
 	const handleInviteClick = () => {
 		setShowInviteModal(true);
@@ -44,6 +53,66 @@ export default function InviteButton({
 
 	const handleSendInvite = async (values: Record<string, any>) => {
 		if (!user?.sub) return;
+
+		const inviteEmail = values.email.trim().toLowerCase();
+
+		// Helper function to show toast messages
+		const showToastMessage = (message: string, type: "success" | "error" | "info" = "error") => {
+			// Close modal first, then show toast for better visibility
+			setShowInviteModal(false);
+			setTimeout(() => {
+				setToastMessage(message);
+				setToastType(type);
+				setShowToast(true);
+			}, 100); // Small delay to let modal close first
+		};
+
+		// Validation 1: Prevent self-invite by email
+		if (user.email && inviteEmail === user.email.toLowerCase()) {
+			showToastMessage("You cannot invite yourself!");
+			return;
+		}
+
+		// Validation 2: Prevent self-invite by user ID (if they enter their Auth0 sub)
+		if (inviteEmail === user.sub) {
+			showToastMessage("You cannot invite yourself!");
+			return;
+		}
+
+		// Validation 3: Prevent inviting existing members
+		if (share?.members) {
+			const existingMemberByEmail = share.members.find(
+				(member: ShareMember) => member.email?.toLowerCase() === inviteEmail
+			);
+			if (existingMemberByEmail) {
+				showToastMessage("This person is already a member of this holiday!");
+				return;
+			}
+
+			// Also check by userId for Auth0 sub invitations
+			const existingMemberByUserId = share.members.find(
+				(member: ShareMember) => member.userId === inviteEmail
+			);
+			if (existingMemberByUserId) {
+				showToastMessage("This person is already a member of this holiday!");
+				return;
+			}
+		}
+
+		// Additional fallback: Check against memberUserIds array for backward compatibility
+		if (share?.memberUserIds) {
+			if (share.memberUserIds.includes(inviteEmail)) {
+				showToastMessage("This person is already a member of this holiday!");
+				return;
+			}
+			if (share.memberUserIds.includes(user.sub)) {
+				// Prevent inviting self via memberUserIds
+				if (inviteEmail === user.sub) {
+					showToastMessage("You cannot invite yourself!");
+					return;
+				}
+			}
+		}
 
 		setIsLoading(true);
 		try {
@@ -76,17 +145,18 @@ export default function InviteButton({
 			await dispatch(fetchOutgoingInvites(user.sub));
 
 			setShowInviteModal(false);
-			// Show success toast (you can implement this)
-			console.log("Invite sent");
+			// Show success toast
+			showToastMessage(`Invite sent to ${values.email} successfully!`, "success");
 		} catch (error) {
 			console.error("Failed to send invite:", error);
+			showToastMessage("Failed to send invite. Please try again.");
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	// Don't show invite button if user is not in the share
-	if (share && !isUserInShare) {
+	// Only show invite button if user is the owner (or no share exists yet)
+	if (!isUserOwner) {
 		return null;
 	}
 
@@ -127,6 +197,17 @@ export default function InviteButton({
 				submitText="Send Invite"
 				cancelText="Cancel"
 			/>
+
+			{/* Modern Toast Notifications - Rendered via Portal to escape parent containers */}
+			{typeof window !== "undefined" && createPortal(
+				<Toast
+					message={toastMessage}
+					isVisible={showToast}
+					onClose={() => setShowToast(false)}
+					type={toastType}
+				/>,
+				document.body
+			)}
 		</>
 	);
 }

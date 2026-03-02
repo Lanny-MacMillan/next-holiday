@@ -186,15 +186,6 @@ export default function HolidayCard({
 									<h3 className="text-base sm:text-lg font-bold text-white">
 										{name}
 									</h3>
-								{isShared && (
-									<SharedIndicatorEnhanced
-										holidayKey={id}
-										size="xs"
-										maxVisibleMembers={2}
-										showLabel={false}
-										className="opacity-90"
-									/>
-								)}
 								</div>
 								<p className="text-white opacity-90 text-xs sm:text-sm">
 									{description}
@@ -246,9 +237,21 @@ export default function HolidayCard({
 					>
 						<span className="sr-only">Go to {name} page</span>
 					</Link>
+				{/* Shared Indicator - positioned outside Link coverage */}
+				{isShared && (
+					<div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20">
+						<SharedIndicatorEnhanced
+							holidayKey={id}
+							size="xs"
+							maxVisibleMembers={5}
+							showLabel={false}
+							className="opacity-90"
+						/>
+					</div>
+				)}
 
-					{/* Countdown Timer with Invite Button - positioned outside Link coverage */}
-					<div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+				{/* Countdown Timer with Invite Button - positioned outside Link coverage */}
+				<div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
 						<CountdownWithInviteCompact
 							className="text-white"
 							holiday={name}
@@ -333,13 +336,6 @@ export default function HolidayCard({
 								<h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">
 									{name}
 								</h3>
-								{/* Force show for debugging - remove isShared check temporarily */}
-								<SharedIndicatorEnhanced
-									holidayKey={id}
-									size="sm"
-									maxVisibleMembers={2}
-									showLabel={true}
-								/>
 							</div>
 							<p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
 								{description}
@@ -384,13 +380,27 @@ export default function HolidayCard({
 						</span>
 					</div>
 				</div>
-				<Link
-					href={route}
-					className="absolute inset-0 z-10"
-					aria-label={`Go to ${name} page`}
-				>
-					<span className="sr-only">Go to {name} page</span>
-				</Link>
+			
+			{/* Shared Indicator - positioned outside Link coverage */}
+			{isShared && (
+				<div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30">
+					<SharedIndicatorEnhanced
+						holidayKey={id}
+						size="sm"
+						maxVisibleMembers={5}
+						showLabel={true}
+					/>
+				</div>
+			)}
+
+			{/* Link component for navigation */}
+			<Link
+				href={route}
+				className="absolute inset-0 z-10"
+				aria-label={`Go to ${name} page`}
+			>
+				<span className="sr-only">Go to {name} page</span>
+			</Link>
 			</div>
 		</li>
 	);
