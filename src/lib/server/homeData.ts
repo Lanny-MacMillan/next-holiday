@@ -101,11 +101,9 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 		const sharedHolidays = await prisma.holiday.findMany({
 			where: {
 				shares: {
-					some: {
-						members: {
-							some: {
-								userId: user.id,
-							},
+					members: {
+						some: {
+							userId: user.id,
 						},
 					},
 				},

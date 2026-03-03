@@ -6,6 +6,9 @@ export interface User {
 	name?: string;
 	picture?: string;
 	isInDb: boolean;
+	subscriptionPlan?: "free" | "plus";
+	subscriptionStartDate?: string;
+	subscriptionEndDate?: string;
 }
 
 interface UserState {
@@ -51,6 +54,37 @@ export const addUserToDb = createAsyncThunk(
 	}
 );
 
+// Async thunk to upgrade user subscription
+export const upgradeUser = createAsyncThunk(
+	"user/upgradeUser",
+	async ({
+		auth0Sub,
+		plan = "plus",
+	}: {
+		auth0Sub: string;
+		plan?: "free" | "plus";
+	}) => {
+		const response = await fetch("/api/upgrade-user", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				auth0Sub,
+				plan,
+			}),
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to upgrade user");
+		}
+
+		const result = await response.json();
+		return result.user;
+	}
+);
+
 const userSlice = createSlice({
 	name: "user",
 	initialState,
@@ -65,6 +99,20 @@ const userSlice = createSlice({
 		},
 		clearError: (state) => {
 			state.error = null;
+		},
+		updateSubscription: (
+			state,
+			action: PayloadAction<{
+				subscriptionPlan: "free" | "plus";
+				subscriptionStartDate?: string;
+				subscriptionEndDate?: string;
+			}>
+		) => {
+			if (state.user) {
+				state.user.subscriptionPlan = action.payload.subscriptionPlan;
+				state.user.subscriptionStartDate = action.payload.subscriptionStartDate;
+				state.user.subscriptionEndDate = action.payload.subscriptionEndDate;
+			}
 		},
 	},
 	extraReducers: (builder) => {
@@ -96,9 +144,26 @@ const userSlice = createSlice({
 			.addCase(addUserToDb.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.error.message || "Failed to add user to DB";
+			})
+			// Upgrade user
+			.addCase(upgradeUser.pending, (state) => {
+				state.loading = true;
+				state.error = null;
+			})
+			.addCase(upgradeUser.fulfilled, (state, action) => {
+				state.loading = false;
+				if (state.user) {
+					state.user.subscriptionPlan = action.payload.subscriptionPlan;
+					state.user.subscriptionStartDate = action.payload.subscriptionStartDate;
+					state.user.subscriptionEndDate = action.payload.subscriptionEndDate;
+				}
+			})
+			.addCase(upgradeUser.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.error.message || "Failed to upgrade user";
 			});
 	},
 });
 
-export const { setUser, clearUser, clearError } = userSlice.actions;
+export const { setUser, clearUser, clearError, updateSubscription } = userSlice.actions;
 export default userSlice.reducer;

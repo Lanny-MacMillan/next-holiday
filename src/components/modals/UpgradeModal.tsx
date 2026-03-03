@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { upgradeUser } from "@/store/slices/userSlice";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export interface UpgradeModalProps {
 	isOpen: boolean;
@@ -22,12 +25,17 @@ export default function UpgradeModal({
 		"features"
 	);
 	const [isLoading, setIsLoading] = useState(false);
+	const [isTestMode, setIsTestMode] = useState(true); // Enable test mode by default
 	const [formData, setFormData] = useState<CreditCardForm>({
 		cardNumber: "",
 		expiryDate: "",
 		cvv: "",
 		cardholderName: "",
 	});
+
+	const dispatch = useAppDispatch();
+	const { user: auth0User } = useAuth0();
+	const userState = useAppSelector((state) => state.user);
 
 	// Reset modal state when it opens
 	useEffect(() => {
@@ -58,12 +66,12 @@ export default function UpgradeModal({
 			label: "Assignments",
 			blurb: "Delegate to‑dos to specific people and track ownership.",
 		},
-		{
-			key: "customHolidays",
-			title: "Custom Holidays",
-			label: "Custom Events",
-			blurb: "Create your own events with dates, colors, and sections.",
-		},
+		// {
+		// 	key: "customHolidays",
+		// 	title: "Custom Holidays",
+		// 	label: "Custom Events",
+		// 	blurb: "Create your own events with dates, colors, and sections.",
+		// },
 		{
 			key: "budget",
 			title: "Budget Tracker",
@@ -77,11 +85,23 @@ export default function UpgradeModal({
 			blurb: "Collect guest responses and headcounts in one place.",
 		},
 		{
-			key: "smsInvites",
-			title: "Text Invites + Reply Tracking",
-			label: "Text Invites",
-			blurb: "Send SMS invites and capture replies automatically.",
+			key: "gamefication",
+			title: "Gamification",
+			label: "Gamification",
+			blurb: "Earn points for completing tasks and engaging with the app.",
 		},
+		{
+			key: "leaderboard",
+			title: "Leaderboard",
+			label: "Leaderboards",
+			blurb: "Check the leaderboards and compete with friends and family to make holiday planning fun and rewarding!",
+		},
+		// {
+		// 	key: "smsInvites",
+		// 	title: "Text Invites + Reply Tracking",
+		// 	label: "Text Invites",
+		// 	blurb: "Send SMS invites and capture replies automatically.",
+		// },
 	];
 
 	const handleUpgradeClick = () => {
@@ -131,52 +151,66 @@ export default function UpgradeModal({
 	const handleSubmitPayment = async () => {
 		setIsLoading(true);
 		try {
-			// First API call to charge the card
-			const paymentResponse = await fetch("/api/charge-card", {
+			if (!auth0User?.sub) {
+				throw new Error("User not authenticated");
+			}
+
+			// Step 1: Process payment (in test mode, this always succeeds)
+			const paymentResponse = await fetch("/api/payment", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					cardNumber: formData.cardNumber.replace(/\s/g, ""),
-					expiryDate: formData.expiryDate,
-					cvv: formData.cvv,
+					cardNumber: isTestMode ? "4111111111111111" : formData.cardNumber.replace(/\s/g, ""),
+					expiryDate: isTestMode ? "12/25" : formData.expiryDate,
+					cvv: isTestMode ? "123" : formData.cvv,
 					cardholderName: formData.cardholderName,
-					amount: 299, // $9.99 in cents
+					amount: 299, // $2.99 in cents
 				}),
 			});
 
-			if (paymentResponse.ok) {
-				// Second API call to update user status in DB
-				const userUpdateResponse = await fetch("/api/upgrade-user", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						userId: "current-user-id",
+			const paymentResult = await paymentResponse.json();
+
+			if (paymentResponse.ok && paymentResult.success) {
+				// Step 2: Update user subscription in database via Redux
+				const upgradeResult = await dispatch(
+					upgradeUser({
+						auth0Sub: auth0User.sub,
 						plan: "plus",
-					}),
+					})
+				).unwrap();
+
+				// Success!
+				console.log("Upgrade successful:", {
+					payment: paymentResult,
+					upgrade: upgradeResult,
 				});
 
-				if (userUpdateResponse.ok) {
-					onUpgrade();
-					onClose();
-				} else {
-					throw new Error("Failed to update user status");
-				}
+				onUpgrade();
+				onClose();
 			} else {
-				throw new Error("Payment failed");
+				throw new Error(paymentResult.error || "Payment failed");
 			}
 		} catch (error) {
 			console.error("Payment error:", error);
-			alert("Payment failed. Please try again.");
+			alert(
+				`Payment failed: ${
+					error instanceof Error ? error.message : "Unknown error"
+				}. Please try again.`
+			);
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
 	const isFormValid = () => {
+		if (isTestMode) {
+			// In test mode, just require cardholder name to be filled
+			return formData.cardholderName.trim().length > 0;
+		}
+		
+		// Full validation for production mode
 		return (
 			formData.cardNumber.replace(/\s/g, "").length >= 13 &&
 			formData.expiryDate.length === 5 &&
@@ -217,7 +251,7 @@ export default function UpgradeModal({
 								What you get with Plus:
 							</h4>
 							<ul className="space-y-3 sm:space-y-4">
-								{features.map((feature, index) => (
+								{features.map((feature) => (
 									<li key={feature.key} className="flex items-start space-x-3">
 										<span className="text-green-500 text-base sm:text-lg mt-0.5">
 											✓
@@ -276,32 +310,64 @@ export default function UpgradeModal({
 					</div>
 				) : (
 					<div className="space-y-4 sm:space-y-6">
+						{/* Test Mode Toggle */}
+						<div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+							<div>
+								<div className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+									Test Mode
+								</div>
+								<div className="text-xs text-yellow-600 dark:text-yellow-300">
+									{isTestMode 
+										? "Payment validation disabled for testing" 
+										: "Full payment validation enabled"
+									}
+								</div>
+							</div>
+							<button
+								onClick={() => setIsTestMode(!isTestMode)}
+								className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+									isTestMode 
+										? "bg-yellow-500" 
+										: "bg-gray-300 dark:bg-gray-600"
+								}`}
+							>
+								<span
+									className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+										isTestMode ? "translate-x-6" : "translate-x-1"
+									}`}
+								/>
+							</button>
+						</div>
+
 						{/* Credit Card Form */}
 						<div className="space-y-3 sm:space-y-4">
 							<div>
 								<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Card Number
-								</label>
-								<input
-									type="text"
-									value={formData.cardNumber}
-									onChange={(e) =>
-										handleInputChange(
-											"cardNumber",
-											formatCardNumber(e.target.value)
-										)
-									}
-									placeholder="1234 5678 9012 3456"
-									className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
-									maxLength={19}
-									style={{ borderStyle: "solid" }}
+								Card Number {isTestMode && <span className="text-yellow-600">(disabled in test mode)</span>}
+							</label>
+							<input
+								type="text"
+								value={formData.cardNumber}
+								onChange={(e) =>
+									handleInputChange(
+										"cardNumber",
+										formatCardNumber(e.target.value)
+									)
+								}
+								placeholder={isTestMode ? "Test Mode - Not Required" : "1234 5678 9012 3456"}
+								disabled={isTestMode}
+								className={`w-full px-3 py-2 border-2 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base ${
+									isTestMode 
+										? "border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-500" 
+										: "border-gray-600 dark:border-gray-400"
+								}`}
 								/>
 							</div>
 
 							<div className="grid grid-cols-2 gap-3 sm:gap-4">
 								<div>
 									<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										Expiry Date
+										Expiry Date {isTestMode && <span className="text-yellow-600">(disabled)</span>}
 									</label>
 									<input
 										type="text"
@@ -312,15 +378,20 @@ export default function UpgradeModal({
 												formatExpiryDate(e.target.value)
 											)
 										}
-										placeholder="MM/YY"
-										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
+										placeholder={isTestMode ? "Test" : "MM/YY"}
+										disabled={isTestMode}
+										className={`w-full px-3 py-2 border-2 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base ${
+											isTestMode 
+												? "border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-500" 
+												: "border-gray-600 dark:border-gray-400"
+										}`}
 										maxLength={5}
 										style={{ borderStyle: "solid" }}
 									/>
 								</div>
 								<div>
 									<label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										CVV
+										CVV {isTestMode && <span className="text-yellow-600">(disabled)</span>}
 									</label>
 									<input
 										type="text"
@@ -331,8 +402,13 @@ export default function UpgradeModal({
 												e.target.value.replace(/\D/g, "")
 											)
 										}
-										placeholder="123"
-										className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
+										placeholder={isTestMode ? "Test" : "123"}
+										disabled={isTestMode}
+										className={`w-full px-3 py-2 border-2 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base ${
+											isTestMode 
+												? "border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-500" 
+												: "border-gray-600 dark:border-gray-400"
+										}`}
 										maxLength={4}
 										style={{ borderStyle: "solid" }}
 									/>
@@ -384,7 +460,12 @@ export default function UpgradeModal({
 								disabled={!isFormValid() || isLoading}
 								className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-3 sm:px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								{isLoading ? "Processing..." : "Submit Payment"}
+								{isLoading 
+									? "Processing..." 
+									: isTestMode 
+										? "Test Upgrade (No Charge)" 
+										: "Submit Payment"
+								}
 							</button>
 						</div>
 					</div>

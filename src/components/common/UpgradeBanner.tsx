@@ -6,6 +6,7 @@ import UpgradeModal from "../modals/UpgradeModal";
 export default function UpgradeBanner() {
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 	const [isDarkMode, setIsDarkMode] = useState(false);
+	const [isDismissed, setIsDismissed] = useState(false);
 
 	// Check if dark mode is enabled
 	useEffect(() => {
@@ -29,10 +30,15 @@ export default function UpgradeBanner() {
 		setShowUpgradeModal(false);
 	};
 
+	// Don't render if dismissed
+	if (isDismissed) {
+		return null;
+	}
+
 	return (
 		<>
 			<div
-				className="text-white shadow-lg w-full"
+				className="text-white shadow-lg w-full relative"
 				style={{
 					background: isDarkMode
 						? "linear-gradient(to right, #9333ea, #2563eb)"
@@ -52,14 +58,26 @@ export default function UpgradeBanner() {
 								</p>
 							</div>
 						</div>
-						<button
-							onClick={() => setShowUpgradeModal(true)}
-							className="bg-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium hover:bg-gray-100 transition-colors text-xs sm:text-sm flex-shrink-0 ml-2"
-							style={{ color: "#000000" }}
-						>
-							<span className="hidden sm:inline">Upgrade Now</span>
-							<span className="sm:hidden">Upgrade</span>
-						</button>
+						<div className="flex items-center space-x-2">
+							<button
+								onClick={() => setShowUpgradeModal(true)}
+								className="bg-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium hover:bg-gray-100 transition-colors text-xs sm:text-sm flex-shrink-0"
+								style={{ color: "#000000" }}
+							>
+								<span className="hidden sm:inline">Upgrade Now</span>
+								<span className="sm:hidden">Upgrade</span>
+							</button>
+							{/* Close Button */}
+							<button
+								onClick={() => setIsDismissed(true)}
+								className="text-gray-200 hover:text-white transition-colors duration-200 p-1"
+								aria-label="Close upgrade banner"
+							>
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
