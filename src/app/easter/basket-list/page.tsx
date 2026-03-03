@@ -112,14 +112,6 @@ export default function EasterBasketListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
-	// Debug contacts loading
-	useEffect(() => {
-		console.log("Contacts in Easter basket list:", contacts);
-		console.log("Contacts length:", contacts?.length);
-		console.log("Home data:", homeData);
-		console.log("Home initialized:", homeInitialized);
-		console.log("Home contacts:", homeData?.contacts);
-	}, [contacts, homeData, homeInitialized]);
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
@@ -167,7 +159,7 @@ export default function EasterBasketListPage() {
 		try {
 			// Find the current gift to get its completion status from Redux data
 			const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
-			if (!currentGift) return;
+			if (!currentGift || !auth0User) return;
 
 			// Toggle the completion status
 			const newIsCompleted = !currentGift.isCompleted;
@@ -206,7 +198,7 @@ export default function EasterBasketListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !holidayId) return;
+		if (!giftToDelete || !holidayId || !auth0User) return;
 
 		setDeleteLoading(true);
 		try {
@@ -250,7 +242,7 @@ export default function EasterBasketListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+		if (!selectedGift || !holidayId || !auth0User) return;
 
 		setEditLoading(true);
 		try {
@@ -357,14 +349,6 @@ export default function EasterBasketListPage() {
 			console.error("Error refreshing home data:", error);
 		}
 	};
-
-	// Debug: Log gift data
-	useEffect(() => {
-		console.log("Easter basket list - holidayId:", holidayId);
-		console.log("Easter basket list - holidayData:", holidayData);
-		console.log("Easter basket list - homeInitialized:", homeInitialized);
-		console.log("Easter basket list - displayGifts:", displayGifts);
-	}, [holidayId, holidayData, homeInitialized, displayGifts]);
 
 	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);

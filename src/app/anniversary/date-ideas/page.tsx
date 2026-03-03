@@ -53,15 +53,6 @@ export default function AnniversaryDateIdeasPage() {
 	const dateIdeas = holidayData?.tasks?.filter((task: any) => task.category === "Date Ideas") || [];
 	const isLoading = !homeInitialized;
 
-	// Debug logging to understand the state
-	console.log('Anniversary Date Ideas Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		dateIdeasTasks: dateIdeas.length,
-		dateIdeas: dateIdeas.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
-	});
-
 	// Refresh home data function
 	const refreshHomeData = async () => {
 		if (!auth0User?.sub || !resolvedHolidayId) return;
@@ -178,7 +169,6 @@ export default function AnniversaryDateIdeasPage() {
 
 		try {
 			// Optimistically update Redux state first
-			console.log('Adding date idea optimistically:', newTask);
 			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 
 			// Call API - map camelCase to snake_case for API

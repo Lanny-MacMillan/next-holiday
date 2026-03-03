@@ -101,15 +101,6 @@ export default function DailyPrinciplesPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Kwanzaa Daily Principles Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		dailyPrinciplesTasks: displayTasks.length,
-		dailyPrinciples: displayTasks.map(c => ({ id: c.id, title: c.title, category: c.category, isCompleted: c.isCompleted }))
-	});
-
 	// Refresh home data function
 	const refreshHomeData = async () => {
 		if (!auth0User?.sub || !resolvedHolidayId) return;

@@ -64,13 +64,6 @@ export default function KwanzaaPage() {
 	// Get holiday data from Redux if available
 	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
-	// Debug: Log holiday data
-	useEffect(() => {
-		console.log("Kwanzaa page - holidayId:", holidayId);
-		console.log("Kwanzaa page - holidayData:", holidayData);
-		console.log("Kwanzaa page - homeInitialized:", homeInitialized);
-		console.log("Kwanzaa page - homeData:", homeData);
-	}, [holidayId, holidayData, homeInitialized, homeData]);
 
 	// Use only Redux data - no API calls on holiday pages
 

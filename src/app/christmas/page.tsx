@@ -61,29 +61,7 @@ export default function ChristmasPage() {
 	// Get holiday data from Redux if available
 	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
-	// Debug: Log all available data
-	useEffect(() => {
-		// Log the full home data structure
-		if (homeData) {
-			console.log("homeData.holidayPreferences:", homeData.holidayPreferences);
-			if (homeData.holidayPreferences) {
-				homeData.holidayPreferences.forEach((pref: any, index: number) => {
-					console.log(`holidayPreferences[${index}]:`, pref);
-					console.log(
-						`holidayPreferences[${index}].holidayId:`,
-						pref.holidayId
-					);
-					console.log(`holidayPreferences[${index}].gifts:`, pref.gifts);
-					console.log(`holidayPreferences[${index}].cards:`, pref.cards);
-					console.log(`holidayPreferences[${index}].tasks:`, pref.tasks);
-				});
-			}
-		}
-		console.log("=== END DEBUG ===");
-	}, [holidayId, holidayData, homeInitialized, homeData]);
-
 	// Use only Redux data - no API calls on holiday pages
-
 	function getProgressData(sliceKey: string): {
 		total: number;
 		completed: number;

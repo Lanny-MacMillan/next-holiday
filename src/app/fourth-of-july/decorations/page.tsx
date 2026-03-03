@@ -58,15 +58,6 @@ export default function FourthOfJulyDecorationsPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Fourth of July Decorations Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		decorationTasks: decorations.length,
-		decorations: decorations.map(d => ({ id: d.id, title: d.title, category: d.category, isCompleted: d.isCompleted }))
-	});
-
 	// Refresh home data function (like Kwanzaa)
 	const refreshHomeData = async () => {
 		if (!auth0User?.sub || !resolvedHolidayId) return;
@@ -521,7 +512,7 @@ export default function FourthOfJulyDecorationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleTask}
-							onDelete={(taskId: string, taskTitle: string) => handleDeleteTask(taskId)}
+							onDelete={(taskId: string) => handleDeleteTask(taskId)}
 							onEdit={handleEditTask}
 							theme={{
 								accentColor: "#3b82f6", // Blue for Fourth of July
@@ -543,7 +534,7 @@ export default function FourthOfJulyDecorationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleTask}
-							onDelete={(taskId: string, taskTitle: string) => handleDeleteTask(taskId)}
+							onDelete={(taskId: string) => handleDeleteTask(taskId)}
 							onEdit={handleEditTask}
 							className="opacity-60"
 							theme={{
@@ -563,19 +554,19 @@ export default function FourthOfJulyDecorationsPage() {
 				fields={[
 					{
 						id: "title",
-						type: "text",
+						type: "text" as const,
 						placeholder: "Decoration Task*",
 						required: true,
 					},
 					{
 						id: "description",
-						type: "textarea",
+						type: "textarea" as const,
 						placeholder: "Description",
 						rows: 2,
 					},
 					{
 						id: "priority",
-						type: "select",
+						type: "select" as const,
 						placeholder: "Priority",
 						options: [
 							{ value: "low", label: "Low Priority" },
@@ -583,8 +574,8 @@ export default function FourthOfJulyDecorationsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
-					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text" as const, placeholder: "Assigned To" }] : []),
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
 				]}
 				initialValues={{
 					title: "",
@@ -607,19 +598,19 @@ export default function FourthOfJulyDecorationsPage() {
 				fields={[
 					{
 						id: "title",
-						type: "text",
+						type: "text" as const,
 						placeholder: "Decoration Task*",
 						required: true,
 					},
 					{
 						id: "description",
-						type: "textarea",
+						type: "textarea" as const,
 						placeholder: "Description",
 						rows: 2,
 					},
 					{
 						id: "priority",
-						type: "select",
+						type: "select" as const,
 						placeholder: "Priority",
 						options: [
 							{ value: "low", label: "Low Priority" },
@@ -627,8 +618,8 @@ export default function FourthOfJulyDecorationsPage() {
 							{ value: "high", label: "High Priority" },
 						],
 					},
-					...(isHolidayShared ? [{ id: "assignedTo", type: "text", placeholder: "Assigned To" }] : []),
-					{ id: "dueDate", type: "date", placeholder: "Due Date" },
+					...(isHolidayShared ? [{ id: "assignedTo", type: "text" as const, placeholder: "Assigned To" }] : []),
+					{ id: "dueDate", type: "date" as const, placeholder: "Due Date" },
 				]}
 				initialValues={editingTask ? {
 					title: editingTask.title || "",

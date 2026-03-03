@@ -148,16 +148,6 @@ export default function HanukkahGiftListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
-	// Debug contacts loading
-	useEffect(() => {
-		console.log("Contacts in Hanukkah gift list:", contacts);
-		console.log("Contacts length:", contacts?.length);
-		console.log("Home data:", homeData);
-		console.log("Home initialized:", homeInitialized);
-		console.log("Holiday data:", holidayData);
-		console.log("Gifts:", gifts);
-	}, [contacts, homeData, homeInitialized, holidayData, gifts]);
-
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
 		if (!holidayId || !mutation) return;
@@ -395,7 +385,7 @@ export default function HanukkahGiftListPage() {
 							onToggle={handleToggleGift}
 							onEdit={handleEditGift}
 							onDelete={handleDeleteGift}
-							loading={loading || updateLoading}
+							loading={loading || !!updateLoading}
 							theme={{
 								accentColor: "#3b82f6", // Blue for Hanukkah
 							}}
@@ -419,7 +409,7 @@ export default function HanukkahGiftListPage() {
 							onToggle={handleToggleGift}
 							onEdit={handleEditGift}
 							onDelete={handleDeleteGift}
-							loading={loading || updateLoading}
+							loading={loading || !!updateLoading}
 							theme={{
 								accentColor: "#3b82f6", // Blue for Hanukkah
 							}}

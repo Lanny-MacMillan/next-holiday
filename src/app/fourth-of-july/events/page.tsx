@@ -58,14 +58,6 @@ export default function FourthOfJulyEventsPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Fourth of July Events Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		eventTasks: events.length,
-		events: events.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
-	});
 
 	// Refresh home data function (like Kwanzaa)
 	const refreshHomeData = async () => {
