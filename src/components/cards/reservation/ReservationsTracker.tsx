@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { useSubscription } from '@/hooks/useSubscription';
 import { getCardStyling } from '@/utils/cardShadows';
 
 interface Guest {
@@ -28,9 +27,6 @@ const ReservationsTracker: React.FC<ReservationsTrackerProps> = ({
 }) => {
   // Get display mode from Redux settings (fallback to prop)
   const { settings } = useAppSelector((state: any) => state.theme);
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   const isGamifiedMode = gamified || settings.displayMode === 'gamified';
   const isDarkMode = settings.theme === 'dark';
@@ -61,8 +57,6 @@ const ReservationsTracker: React.FC<ReservationsTrackerProps> = ({
 
   const completionPercentage =
     totalItems > 0 ? Math.round((confirmedItems / totalItems) * 100) : 0;
-
-  if (!isAuthorizedForSharing) return;
 
   if (isGamifiedMode) {
     // Gamified mode design

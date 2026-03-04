@@ -184,7 +184,7 @@ export default function GiftListCard({
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+  const isAuthorizedPlusMember = hasSubscription && isUserPlusMember;
 
   const isGamifiedMode =
     preferences?.displayMode === 'gamified' || settings.displayMode === 'gamified';
@@ -200,7 +200,6 @@ export default function GiftListCard({
 
   const finalBudget = budget || holidayData?.budget;
   const finalGiftList = giftList || holidayData?.giftList;
-
   // Calculate budget status if not provided by holidayData
   const finalBudgetStatus =
     holidayData?.budgetStatus ||
@@ -279,7 +278,7 @@ export default function GiftListCard({
         {/* Main card content */}
         <div className="p-3 sm:p-4 relative z-10">
           {/* TODO: lift state into new reusable component - Budget Section */}
-          {isAuthorizedForSharing && (
+          {isAuthorizedPlusMember && (
             <div className="mb-4 sm:mb-6">
               <div className="flex justify-between items-start mb-3 sm:mb-4">
                 <h3 className="font-bold text-white text-base sm:text-lg">
@@ -342,7 +341,7 @@ export default function GiftListCard({
           )}
 
           {/* Gift List Section */}
-          <div className="mt-4 sm:mt-6">
+          <div className={isAuthorizedPlusMember ? 'mt-4 sm:mt-6' : ''}>
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-bold text-white text-base sm:text-lg">
                 {holiday === 'Thanksgiving'
@@ -415,52 +414,55 @@ export default function GiftListCard({
       {/* Main card content */}
       <div className="p-3 sm:p-4">
         {/* Budget Section */}
-        <div className="mb-4 sm:mb-6">
-          <div className="flex justify-between items-start mb-3 sm:mb-4">
-            <h3 className="font-bold text-gray-900 text-base sm:text-lg">
-              {holiday === 'Thanksgiving'
-                ? `${displayHolidayName} Shopping Budget`
-                : `${displayHolidayName} Budget`}
-            </h3>
-            <div className="text-xs sm:text-sm text-gray-600 text-right">
-              {finalBudgetStatus}
-            </div>
-          </div>
-
-          <div className="mb-3 sm:mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-xs sm:text-sm text-gray-600">
-                Spent:{' '}
-                <span className="font-bold">${finalBudget.spent.toFixed(2)}</span>
-              </div>
-              <div className="text-xs sm:text-sm text-gray-600">
-                Remaining: <span className="font-bold">${remaining.toFixed(2)}</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-xs sm:text-sm text-gray-600">
-                Budget: ${finalBudget.total.toFixed(2)}
-              </div>
+        {isAuthorizedPlusMember && (
+          <div className="mb-4 sm:mb-6">
+            <div className="flex justify-between items-start mb-3 sm:mb-4">
+              <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                {holiday === 'Thanksgiving'
+                  ? `${displayHolidayName} Shopping Budget`
+                  : `${displayHolidayName} Budget`}
+              </h3>
               <div className="text-xs sm:text-sm text-gray-600 text-right">
-                {budgetPercentage.toFixed(1)}% used
+                {finalBudgetStatus}
               </div>
             </div>
-          </div>
 
-          {/* Budget Progress bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-            <div
-              className="h-2 rounded-full transition-all duration-300"
-              style={{
-                width: `${Math.min(budgetPercentage, 100)}%`,
-                backgroundColor: primaryColor,
-              }}
-            ></div>
+            <div className="mb-3 sm:mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-xs sm:text-sm text-gray-600">
+                  Spent:{' '}
+                  <span className="font-bold">${finalBudget.spent.toFixed(2)}</span>
+                </div>
+                <div className="text-xs sm:text-sm text-gray-600">
+                  Remaining:{' '}
+                  <span className="font-bold">${remaining.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-xs sm:text-sm text-gray-600">
+                  Budget: ${finalBudget.total.toFixed(2)}
+                </div>
+                <div className="text-xs sm:text-sm text-gray-600 text-right">
+                  {budgetPercentage.toFixed(1)}% used
+                </div>
+              </div>
+            </div>
+
+            {/* Budget Progress bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div
+                className="h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min(budgetPercentage, 100)}%`,
+                  backgroundColor: primaryColor,
+                }}
+              ></div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Gift List Section */}
-        <div className="mt-4 sm:mt-6">
+        <div className={isAuthorizedPlusMember ? 'mt-4 sm:mt-6' : ''}>
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-bold text-gray-900 text-base sm:text-lg">
               {getHolidayGiftListConfig(holiday).displayText}

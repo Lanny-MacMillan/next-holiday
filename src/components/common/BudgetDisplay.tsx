@@ -162,7 +162,7 @@ export function BudgetDisplay({
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+  const isAuthorizedPlusMember = hasSubscription && isUserPlusMember;
 
   const isGamified =
     preferences?.displayMode === 'gamified' || settings.displayMode === 'gamified';
@@ -170,7 +170,7 @@ export function BudgetDisplay({
   // No early return - always render but conditionally show content
   const displayTitle = holiday ? `${holiday} Budget` : 'Gift Budget';
 
-  if (!isAuthorizedForSharing) return;
+  if (!isAuthorizedPlusMember) return;
   // Don't render anything if no budget is set
   if (budgetInfo.budgetLimit === 0) {
     return null;

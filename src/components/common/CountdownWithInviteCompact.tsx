@@ -45,7 +45,7 @@ export default function CountdownWithInviteCompact({
     return holiday ? holidayMap[holiday] || holiday.toLowerCase() : '';
   };
   const { isUserPlusMember, hasSubscription } = useSubscription();
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+  const isAuthorizedPlusMember = hasSubscription && isUserPlusMember;
 
   const currentHolidayKey = getHolidayKey();
 
@@ -56,7 +56,7 @@ export default function CountdownWithInviteCompact({
         holidayId={holidayId}
         initialCountdownTimer={countdownTimer}
       />
-      {isAuthorizedForSharing && currentHolidayKey && (
+      {isAuthorizedPlusMember && currentHolidayKey && (
         <InviteButton
           holidayKey={currentHolidayKey}
           holidayName={holiday || currentHolidayKey}
