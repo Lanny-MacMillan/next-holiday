@@ -2,6 +2,12 @@
 
 import { useAuth0 } from "@auth0/auth0-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { 
+	selectUser, 
+	selectUserSubscriptionPlan, 
+	selectIsUserPlusMember,
+	selectUserSubscriptionData 
+} from "@/store/slices/userSlice";
 import { updateSettings } from "@/store/slices/themeSlice";
 import { updateUserPreferences } from "@/store/slices/userPreferencesSlice";
 import { saveHolidayPreferences } from "@/store/slices/holidayPreferencesSlice";
@@ -37,9 +43,11 @@ export default function SettingsPage() {
 	// Upgrade modal state
 	const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 	
-	// Get user subscription status from Redux
-	const userState = useAppSelector((state) => state.user);
-	const currentUser = userState?.user;
+	// Get user subscription status from Redux using selectors
+	const currentUser = useAppSelector(selectUser);
+	const subscriptionPlan = useAppSelector(selectUserSubscriptionPlan);
+	const isUserPlusMember = useAppSelector(selectIsUserPlusMember);
+	const subscriptionData = useAppSelector(selectUserSubscriptionData);
 
 	// Reset image error when user changes
 	useEffect(() => {
@@ -405,106 +413,6 @@ export default function SettingsPage() {
 					</div>
 				</div>
 
-				{/* Subscription Management */}
-				<div className="card card-settings rounded-lg p-6">
-					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-						💎 Subscription
-					</h2>
-					<div className="space-y-4">
-						{currentUser?.subscriptionPlan === "plus" ? (
-							<>
-								{/* Plus Member Status */}
-								<div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
-									<div className="flex items-center justify-between">
-										<div>
-											<div className="flex items-center gap-2">
-												<span className="text-purple-600 dark:text-purple-400 font-semibold">
-													✨ Plus Member
-												</span>
-											</div>
-											<div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-												$2.99/month • Active subscription
-											</div>
-											{currentUser.subscriptionEndDate && (
-												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-													Next billing: {new Date(currentUser.subscriptionEndDate).toLocaleDateString()}
-												</div>
-											)}
-										</div>
-										<button
-											onClick={() => setCancelModalOpen(true)}
-											className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors duration-200"
-										>
-											Cancel Subscription
-										</button>
-									</div>
-								</div>
-								
-								{/* Plus Benefits */}
-								<div>
-									<div className="text-sm font-medium text-gray-800 dark:text-gray-300 mb-2">
-										Your Plus Benefits
-									</div>
-									<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-										<li className="flex items-center gap-2">
-											<span className="text-green-500">✓</span>
-											Unlimited holiday invites
-										</li>
-										<li className="flex items-center gap-2">
-											<span className="text-green-500">✓</span>
-											Advanced sharing & collaboration
-										</li>
-										<li className="flex items-center gap-2">
-											<span className="text-green-500">✓</span>
-											Premium holiday templates
-										</li>
-										<li className="flex items-center gap-2">
-											<span className="text-green-500">✓</span>
-											Priority customer support
-										</li>
-									</ul>
-								</div>
-							</>
-						) : (
-							<>
-								{/* Free Member Status */}
-								<div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-									<div className="flex items-center justify-between">
-										<div>
-											<div className="flex items-center gap-2">
-												<span className="text-gray-600 dark:text-gray-400 font-semibold">
-													Free Member
-												</span>
-											</div>
-											<div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-												Limited features available
-											</div>
-										</div>
-									</div>
-								</div>
-								
-								{/* Upgrade Prompt */}
-								<div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
-									<div className="text-center">
-										<div className="text-purple-600 dark:text-purple-400 font-semibold mb-1">
-											Upgrade to Plus
-										</div>
-										<div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-											Get unlimited invites, premium templates, and more for just $2.99/month
-										</div>
-										<button 
-											onClick={() => setUpgradeModalOpen(true)}
-											className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity duration-200"
-										>
-											Upgrade Now
-										</button>
-									</div>
-								</div>
-							</>
-						)}
-					</div>
-				</div>
-
 				{/* Theme Settings */}
 				<div className="card card-settings rounded-lg p-6">
 					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
@@ -760,6 +668,106 @@ export default function SettingsPage() {
 								/>
 							</button>
 						</div>
+					</div>
+				</div>
+
+				{/* Subscription Management */}
+				<div className="card card-settings rounded-lg p-6">
+					<h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+						💎 Subscription
+					</h2>
+					<div className="space-y-4">
+						{isUserPlusMember ? (
+							<>
+								{/* Plus Member Status */}
+								<div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+									<div className="flex items-center justify-between">
+										<div>
+											<div className="flex items-center gap-2">
+												<span className="text-purple-600 dark:text-purple-400 font-semibold">
+													✨ Plus Member
+												</span>
+											</div>
+											<div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+												$2.99/month • Active subscription
+											</div>
+											{subscriptionData.endDate && (
+												<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+													Next billing: {new Date(subscriptionData.endDate).toLocaleDateString()}
+												</div>
+											)}
+										</div>
+										<button
+											onClick={() => setCancelModalOpen(true)}
+											className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors duration-200"
+										>
+											Cancel Subscription
+										</button>
+									</div>
+								</div>
+								
+								{/* Plus Benefits */}
+								<div>
+									<div className="text-sm font-medium text-gray-800 dark:text-gray-300 mb-2">
+										Your Plus Benefits
+									</div>
+									<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+										<li className="flex items-center gap-2">
+											<span className="text-green-500">✓</span>
+											Unlimited holiday invites
+										</li>
+										<li className="flex items-center gap-2">
+											<span className="text-green-500">✓</span>
+											Advanced sharing & collaboration
+										</li>
+										<li className="flex items-center gap-2">
+											<span className="text-green-500">✓</span>
+											Premium holiday templates
+										</li>
+										<li className="flex items-center gap-2">
+											<span className="text-green-500">✓</span>
+											Priority customer support
+										</li>
+									</ul>
+								</div>
+							</>
+						) : (
+							<>
+								{/* Free Member Status */}
+								<div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+									<div className="flex items-center justify-between">
+										<div>
+											<div className="flex items-center gap-2">
+												<span className="text-gray-600 dark:text-gray-400 font-semibold">
+													Free Member
+												</span>
+											</div>
+											<div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+												Limited features available
+											</div>
+										</div>
+									</div>
+								</div>
+								
+								{/* Upgrade Prompt */}
+								<div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+									<div className="text-center">
+										<div className="text-purple-600 dark:text-purple-400 font-semibold mb-1">
+											Upgrade to Plus
+										</div>
+										<div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+											Get unlimited invites, premium templates, and more for just $2.99/month
+										</div>
+										<button 
+											onClick={() => setUpgradeModalOpen(true)}
+											className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity duration-200"
+										>
+											Upgrade Now
+										</button>
+									</div>
+								</div>
+							</>
+						)}
 					</div>
 				</div>
 

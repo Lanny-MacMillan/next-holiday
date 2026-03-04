@@ -49,6 +49,9 @@ export interface AuthUser {
 	email?: string | null;
 	name?: string | null;
 	picture?: string | null;
+	subscriptionPlan?: "free" | "plus";
+	subscriptionStartDate?: Date | null;
+	subscriptionEndDate?: Date | null;
 }
 
 /**
@@ -69,6 +72,16 @@ export async function getCurrentUser(
 		// Find user in database (don't create/update here to avoid race conditions)
 		const user = await prisma.user.findUnique({
 			where: { auth0Sub: session.user.sub },
+			select: {
+				id: true,
+				auth0Sub: true,
+				email: true,
+				name: true,
+				picture: true,
+				subscriptionPlan: true,
+				subscriptionStartDate: true,
+				subscriptionEndDate: true,
+			},
 		});
 
 		return user;
@@ -100,6 +113,16 @@ export async function getUserByAuth0Sub(
 	try {
 		return await prisma.user.findUnique({
 			where: { auth0Sub },
+			select: {
+				id: true,
+				auth0Sub: true,
+				email: true,
+				name: true,
+				picture: true,
+				subscriptionPlan: true,
+				subscriptionStartDate: true,
+				subscriptionEndDate: true,
+			},
 		});
 	} catch (error) {
 		console.error("Error getting user by Auth0 sub:", error);

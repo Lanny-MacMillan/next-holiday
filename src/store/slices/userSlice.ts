@@ -166,4 +166,24 @@ const userSlice = createSlice({
 });
 
 export const { setUser, clearUser, clearError, updateSubscription } = userSlice.actions;
+
+// Selectors
+export const selectUser = (state: { user: UserState }) => state.user.user;
+
+export const selectUserSubscriptionPlan = (state: { user: UserState }) => 
+	state.user.user?.subscriptionPlan || "free";
+
+export const selectIsUserPlusMember = (state: { user: UserState }) => 
+	state.user.user?.subscriptionPlan === "plus";
+
+export const selectUserSubscriptionData = (state: { user: UserState }) => ({
+	plan: state.user.user?.subscriptionPlan || "free",
+	startDate: state.user.user?.subscriptionStartDate,
+	endDate: state.user.user?.subscriptionEndDate,
+});
+
+export const selectUserLoading = (state: { user: UserState }) => state.user.loading;
+export const selectUserError = (state: { user: UserState }) => state.user.error;
+export const selectUserInitialized = (state: { user: UserState }) => state.user.initialized;
+
 export default userSlice.reducer;

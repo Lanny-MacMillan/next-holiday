@@ -4,6 +4,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect, useState, useCallback } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { setHomeData as setHomeDataAction } from "@/store/slices/homeSlice";
+import { setUser } from "@/store/slices/userSlice";
 import { setMany as setBudgets } from "@/store/slices/budgetsSlice";
 import HomeContent from "@/components/HomeContent";
 import UserSetupHandler from "@/components/UserSetupHandler";
@@ -55,6 +56,20 @@ export default function HomePageWrapper() {
 				setHomeData(data);
 				// Also dispatch to Redux store for access throughout the app
 				dispatch(setHomeDataAction(data));
+
+				// Dispatch user data to Redux store with subscription info
+				if (data?.user) {
+					dispatch(setUser({
+						sub: data.user.id,
+						email: data.user.email,
+						name: data.user.name,
+						picture: data.user.picture,
+						isInDb: true, // If we have homeData, user is in DB
+						subscriptionPlan: data.user.subscriptionPlan || "free",
+						subscriptionStartDate: data.user.subscriptionStartDate,
+						subscriptionEndDate: data.user.subscriptionEndDate,
+					}));
+				}
 
 				// Also populate budgets slice with budget data from home data
 				if (data?.holidayPreferences?.length) {
