@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import CountdownTimer from '@/components/common/CountdownTimer';
+// import CountdownTimer from '@/components/common/CountdownTimer';
 import CountdownWithInviteCompact from '@/components/common/CountdownWithInviteCompact';
 import SharedIndicatorEnhanced from '@/components/common/SharedIndicatorEnhanced';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import BouncingShape from '@/components/animations/BouncingShape';
 import { useAppSelector } from '@/store/hooks';
+import { useSubscription } from '@/hooks/useSubscription';
 import { getCardStyling } from '@/utils/cardShadows';
 import { getGamifiedBackgroundColor } from '@/utils/gamifiedUtils';
 
@@ -124,6 +125,7 @@ export default function HolidayCard({
     preferences?.displayMode === 'gamified' ||
     settings.displayMode === 'gamified';
   const isDarkMode = preferences?.theme === 'dark' || settings.theme === 'dark';
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Check if this holiday is shared
   const isShared = useAppSelector(state => selectIsHolidayShared(state, id));
@@ -227,7 +229,7 @@ export default function HolidayCard({
             <span className="sr-only">Go to {name} page</span>
           </Link>
           {/* Shared Indicator - positioned outside Link coverage */}
-          {isShared && (
+          {hasSubscription && isUserPlusMember && isShared && (
             <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20">
               <SharedIndicatorEnhanced
                 holidayKey={id}
@@ -340,7 +342,7 @@ export default function HolidayCard({
             <div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
               <div className="flex items-end gap-2">
                 {/* SharedIndicator positioned to the left of invite button in professional mode */}
-                {isShared && (
+                {hasSubscription && isUserPlusMember && isShared && (
                   <div className="flex items-center">
                     <SharedIndicatorEnhanced
                       holidayKey={id}
