@@ -1,206 +1,202 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useAppSelector } from "@/store/hooks";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useEffect } from 'react';
+import { useAppSelector } from '@/store/hooks';
+import { useAuth0 } from '@auth0/auth0-react';
 // Removed RTK Query imports - using only Redux data
-import { BudgetDisplay } from "@/components/common/BudgetDisplay";
-import GiftListCard from "@/components/cards/gift/GiftListCard";
-import HolidayTaskCard from "@/components/cards/holiday-task/HolidayTaskCard";
-import HolidayHeader from "@/components/common/HolidayHeader";
-import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
-import { getHolidayDataFromRedux } from "@/utils/holidayData";
+import { BudgetDisplay } from '@/components/common/BudgetDisplay';
+import GiftListCard from '@/components/cards/gift/GiftListCard';
+import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
+import HolidayHeader from '@/components/common/HolidayHeader';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import {
-	selectHolidayPreferences,
-	selectHomeInitialized,
-	selectHomeData,
-} from "@/store/selectors/home";
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+  selectHolidayPrefById,
+} from '@/store/selectors/home';
 
 const subsections = [
-	{
-		name: "Gift List",
-		description: "Track your gift ideas",
-		href: "/christmas/gift-list",
-		sliceKey: "giftList",
-		type: "gift-list",
-	},
-	{
-		name: "Cards",
-		description: "Track your holiday cards",
-		href: "/christmas/cards",
-		sliceKey: "cards",
-		type: "task",
-	},
-	{
-		name: "Tasks",
-		description: "Stay on top of your holiday to-dos",
-		href: "/christmas/tasks",
-		sliceKey: "tasks",
-		type: "task",
-	},
+  {
+    name: 'Gift List',
+    description: 'Track your gift ideas',
+    href: '/christmas/gift-list',
+    sliceKey: 'giftList',
+    type: 'gift-list',
+  },
+  {
+    name: 'Cards',
+    description: 'Track your holiday cards',
+    href: '/christmas/cards',
+    sliceKey: 'cards',
+    type: 'task',
+  },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/christmas/tasks',
+    sliceKey: 'tasks',
+    type: 'task',
+  },
 ];
 
 export default function ChristmasPage() {
-	const { user: auth0User } = useAuth0();
-	const holidayPreferences = useAppSelector(selectHolidayPreferences);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
+  const { user: auth0User } = useAuth0();
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
 
-	// Get holiday ID for Christmas - try to resolve from home data, fallback to route-based resolution
-	const holidayId = homeInitialized
-		? getHolidayIdFromRoute("/christmas", holidayPreferences)
-		: getHolidayIdFromRoute("/christmas", holidayPreferences); // Allow fallback for cold entry
+  // Get holiday ID for Christmas - try to resolve from home data, fallback to route-based resolution
+  const holidayId = homeInitialized
+    ? getHolidayIdFromRoute('/christmas', holidayPreferences)
+    : getHolidayIdFromRoute('/christmas', holidayPreferences); // Allow fallback for cold entry
 
-	// Get data from Redux home state first, fallback to RTK Query if needed
-	const homeData = useAppSelector(selectHomeData);
+  // Get data from Redux home state first, fallback to RTK Query if needed
+  const homeData = useAppSelector(selectHomeData);
 
-	// Get current Redux state for skip logic
-	const currentState = useAppSelector((state: any) => state);
+  // Get holiday data from Redux using memoized selector
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
 
-	// Holiday ID resolved from route and preferences
+  // Use only Redux data - no API calls on holiday pages
+  function getProgressData(sliceKey: string): {
+    total: number;
+    completed: number;
+    progress: number;
+  } {
+    let total = 0;
+    let completed = 0;
 
-	// Get holiday data from Redux if available
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+    // Use only Redux data - no fallback to API calls
+    if (!holidayData || !homeInitialized) {
+      return { total: 0, completed: 0, progress: 0 };
+    }
 
-	// Use only Redux data - no API calls on holiday pages
-	function getProgressData(sliceKey: string): {
-		total: number;
-		completed: number;
-		progress: number;
-	} {
-		let total = 0;
-		let completed = 0;
+    switch (sliceKey) {
+      case 'cards':
+        if (holidayData.cards) {
+          total = holidayData.cards.length;
+          completed = holidayData.cards.filter(
+            (card: any) => card.isCompleted,
+          ).length;
+        }
+        break;
+      case 'giftList':
+        if (holidayData.gifts) {
+          total = holidayData.gifts.length;
+          completed = holidayData.gifts.filter(
+            (gift: any) => gift.isCompleted,
+          ).length;
+        }
+        break;
+      case 'tasks':
+        if (holidayData.tasks) {
+          total = holidayData.tasks.length;
+          completed = holidayData.tasks.filter(
+            (task: any) => task.isCompleted,
+          ).length;
+        }
+        break;
+      default:
+        total = 0;
+        completed = 0;
+    }
 
-		// Use only Redux data - no fallback to API calls
-		if (!holidayData || !homeInitialized) {
-			return { total: 0, completed: 0, progress: 0 };
-		}
+    const progress = total > 0 ? completed / total : 0;
 
-		switch (sliceKey) {
-			case "cards":
-				if (holidayData.cards) {
-					total = holidayData.cards.length;
-					completed = holidayData.cards.filter(
-						(card: any) => card.isCompleted
-					).length;
-				}
-				break;
-			case "giftList":
-				if (holidayData.gifts) {
-					total = holidayData.gifts.length;
-					completed = holidayData.gifts.filter(
-						(gift: any) => gift.isCompleted
-					).length;
-				}
-				break;
-			case "tasks":
-				if (holidayData.tasks) {
-					total = holidayData.tasks.length;
-					completed = holidayData.tasks.filter(
-						(task: any) => task.isCompleted
-					).length;
-				}
-				break;
-			default:
-				total = 0;
-				completed = 0;
-		}
+    return { total, completed, progress };
+  }
 
-		const progress = total > 0 ? completed / total : 0;
+  return (
+    <div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      <HolidayHeader
+        holidayName="Christmas"
+        description="Plan your Christmas with ease!"
+      />
+      <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
+        <ul className="flex flex-col gap-4">
+          {subsections.map(section => {
+            const { total, completed, progress } = getProgressData(section.sliceKey);
 
-		return { total, completed, progress };
-	}
+            // Determine which card component to use based on type
+            if (section.type === 'gift-list') {
+              // Calculate budget data from Redux
+              const budgetLimit = holidayData?.budget || 0;
+              const gifts = holidayData?.gifts || [];
 
-	return (
-		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<HolidayHeader
-				holidayName="Christmas"
-				description="Plan your Christmas with ease!"
-			/>
-			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
-				<ul className="flex flex-col gap-4">
-					{subsections.map((section) => {
-						const { total, completed, progress } = getProgressData(
-							section.sliceKey
-						);
+              // Calculate spent amount from completed gifts
+              const totalSpent = gifts.reduce((sum: number, gift: any) => {
+                const price = parseFloat(gift.price) || 0;
+                return gift.isCompleted ? sum + price : sum;
+              }, 0);
 
-						// Determine which card component to use based on type
-						if (section.type === "gift-list") {
-							// Calculate budget data from Redux
-							const budgetLimit = holidayData?.budget || 0;
-							const gifts = holidayData?.gifts || [];
+              // Calculate total planned (all gifts with prices)
+              const totalPlanned = gifts.reduce((sum: number, gift: any) => {
+                return sum + (parseFloat(gift.price) || 0);
+              }, 0);
 
-							// Calculate spent amount from completed gifts
-							const totalSpent = gifts.reduce((sum: number, gift: any) => {
-								const price = parseFloat(gift.price) || 0;
-								return gift.isCompleted ? sum + price : sum;
-							}, 0);
+              const remaining = budgetLimit - totalSpent;
+              const budgetPercentage =
+                budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
 
-							// Calculate total planned (all gifts with prices)
-							const totalPlanned = gifts.reduce((sum: number, gift: any) => {
-								return sum + (parseFloat(gift.price) || 0);
-							}, 0);
+              const getBudgetStatus = () => {
+                if (budgetPercentage >= 80) return 'Budget nearly exhausted';
+                if (budgetPercentage >= 60) return 'Moderate budget remaining';
+                return 'Plenty of budget left';
+              };
 
-							const remaining = budgetLimit - totalSpent;
-							const budgetPercentage =
-								budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
-
-							const getBudgetStatus = () => {
-								if (budgetPercentage >= 80) return "Budget nearly exhausted";
-								if (budgetPercentage >= 60) return "Moderate budget remaining";
-								return "Plenty of budget left";
-							};
-
-							return (
-								<li key={section.name}>
-									<GiftListCard
-										holiday="Christmas"
-										href={section.href}
-										budget={{
-											spent: totalSpent,
-											planned: totalPlanned,
-											total: budgetLimit,
-											remaining,
-											percentage: budgetPercentage,
-										}}
-										giftList={{
-											totalItems: total,
-											completedItems: completed,
-										}}
-										theme={{
-											primaryColor: "#22c55e", // Green for Christmas
-											accentColor: "#22c55e", // Green accent
-										}}
-										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
-									/>
-								</li>
-							);
-						} else {
-							// Use HolidayTaskCard for tasks and other sections
-							return (
-								<li key={section.name}>
-									<HolidayTaskCard
-										holidayName="Christmas"
-										sectionName={section.name}
-										description={section.description}
-										href={section.href}
-										totalItems={total}
-										completedItems={completed}
-										theme={{
-											primaryColor: "#22c55e", // Green for Christmas
-											accentColor: "#22c55e", // Green accent
-											progressColor: "#22c55e", // Green for progress bar
-										}}
-										gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
-									/>
-								</li>
-							);
-						}
-					})}
-				</ul>
-			</main>
-			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-				&copy; {new Date().getFullYear()} Next Holiday
-			</footer>
-		</div>
-	);
+              return (
+                <li key={section.name}>
+                  <GiftListCard
+                    holiday="Christmas"
+                    href={section.href}
+                    budget={{
+                      spent: totalSpent,
+                      planned: totalPlanned,
+                      total: budgetLimit,
+                      remaining,
+                      percentage: budgetPercentage,
+                    }}
+                    giftList={{
+                      totalItems: total,
+                      completedItems: completed,
+                    }}
+                    theme={{
+                      primaryColor: '#22c55e', // Green for Christmas
+                      accentColor: '#22c55e', // Green accent
+                    }}
+                    gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+                  />
+                </li>
+              );
+            } else {
+              // Use HolidayTaskCard for tasks and other sections
+              return (
+                <li key={section.name}>
+                  <HolidayTaskCard
+                    holidayName="Christmas"
+                    sectionName={section.name}
+                    description={section.description}
+                    href={section.href}
+                    totalItems={total}
+                    completedItems={completed}
+                    theme={{
+                      primaryColor: '#22c55e', // Green for Christmas
+                      accentColor: '#22c55e', // Green accent
+                      progressColor: '#22c55e', // Green for progress bar
+                    }}
+                    gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
+                  />
+                </li>
+              );
+            }
+          })}
+        </ul>
+      </main>
+      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
+        &copy; {new Date().getFullYear()} Next Holiday
+      </footer>
+    </div>
+  );
 }

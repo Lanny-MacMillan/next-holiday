@@ -12,6 +12,7 @@ import {
 	selectHolidayPreferences,
 	selectHomeInitialized,
 	selectHomeData,
+	selectHolidayPrefById,
 } from "@/store/selectors/home";
 
 const subsections = [
@@ -60,11 +61,8 @@ export default function GraduationPage() {
 	// Get data from Redux home state first, fallback to RTK Query if needed
 	const homeData = useAppSelector(selectHomeData);
 
-	// Get current Redux state for skip logic
-	const currentState = useAppSelector((state: any) => state);
-
-	// Get holiday data from Redux if available
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+	// Get holiday data from Redux using memoized selector
+	const holidayData = useAppSelector((state) => selectHolidayPrefById(state, holidayId));
 
 	// Use only Redux data - no API calls on holiday pages
 

@@ -15,6 +15,7 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { getHolidayDataFromRedux } from '@/utils/holidayData';
 
@@ -62,14 +63,10 @@ export default function FourthOfJulyPage() {
   // Get data from Redux home state first, fallback to RTK Query if needed
   const homeData = useAppSelector(selectHomeData);
 
-  // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
-
-  // Get holiday data from Redux if available
-  const holidayData = getHolidayDataFromRedux(holidayId, currentState);
-
-  // Use only Redux data - no API calls on holiday pages
-
+  // Get holiday data from Redux using memoized selector
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
   // Show message if holiday doesn't exist
   if (!holidayId) {
     return (
@@ -210,7 +207,7 @@ export default function FourthOfJulyPage() {
                     }}
                     theme={{
                       primaryColor: '#dc2626', // Red for Fourth of July
-                      accentColor: '#dc2626', // Red accent
+                      accentColor: '##f87171', // Red accent
                     }}
                     gamifiedBackgroundColor="bg-gradient-to-br from-red-400 to-red-600"
                   />
