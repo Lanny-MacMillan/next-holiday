@@ -1,255 +1,255 @@
-"use client";
+'use client';
 
-import { useAuth0 } from "@auth0/auth0-react";
-import { useEffect, useState, useCallback } from "react";
-import { useAppDispatch } from "@/store/hooks";
-import { setHomeData as setHomeDataAction } from "@/store/slices/homeSlice";
-import { setUser } from "@/store/slices/userSlice";
-import { setMany as setBudgets } from "@/store/slices/budgetsSlice";
-import HomeContent from "@/components/HomeContent";
-import UserSetupHandler from "@/components/UserSetupHandler";
-import { HomeData } from "@/types/home";
+import { useAuth0 } from '@auth0/auth0-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useAppDispatch } from '@/store/hooks';
+import { setHomeData as setHomeDataAction } from '@/store/slices/homeSlice';
+import { setUser } from '@/store/slices/userSlice';
+import { setMany as setBudgets } from '@/store/slices/budgetsSlice';
+import HomeContent from '@/components/HomeContent';
+import UserSetupHandler from '@/components/UserSetupHandler';
+import { HomeData } from '@/types/home';
 
 export default function HomePageWrapper() {
-	const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
-	const dispatch = useAppDispatch();
-	const [homeData, setHomeData] = useState<HomeData | null>(null);
-	const [isLoadingData, setIsLoadingData] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+  const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
+  const dispatch = useAppDispatch();
+  const [homeData, setHomeData] = useState<HomeData | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fetchingRef = useRef(false); // Prevent multiple simultaneous fetches
 
-	// Memoize the setup complete callback to prevent useEffect re-runs
-	const handleSetupComplete = useCallback(() => {
-		// Trigger a re-fetch of the data
-		window.location.reload();
-	}, []);
+  // Memoize the setup complete callback to prevent useEffect re-runs
+  const handleSetupComplete = useCallback(() => {
+    // Trigger a re-fetch of the data
+    window.location.reload();
+  }, []);
 
-	useEffect(() => {
-		async function fetchHomeData() {
-			if (!isAuthenticated || !auth0User) {
-				setIsLoadingData(false);
-				return;
-			}
+  useEffect(() => {
+    async function fetchHomeData() {
+      if (!isAuthenticated || !auth0User || fetchingRef.current) {
+        setIsLoadingData(false);
+        return;
+      }
 
-			try {
-				setIsLoadingData(true);
-				setError(null);
+      try {
+        fetchingRef.current = true; // Prevent multiple simultaneous calls
+        setIsLoadingData(true);
+        setError(null);
 
-				// Call the API endpoint instead of the server function directly
-				const response = await fetch("/api/home", {
-					headers: {
-						"Content-Type": "application/json",
-						"x-test-user": JSON.stringify({
-							sub: auth0User.sub,
-							email: auth0User.email,
-							name: auth0User.name,
-							picture: auth0User.picture,
-						}),
-					},
-				});
+        // Call the API endpoint instead of the server function directly
+        const response = await fetch('/api/home', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+        });
 
-				if (!response.ok) {
-					throw new Error("Failed to fetch home data");
-				}
+        if (!response.ok) {
+          throw new Error('Failed to fetch home data');
+        }
 
-				const result = await response.json();
-				const data = result.data;
-				setHomeData(data);
-				// Also dispatch to Redux store for access throughout the app
-				dispatch(setHomeDataAction(data));
+        const result = await response.json();
 
-				// Dispatch user data to Redux store with subscription info
-				if (data?.user) {
-					dispatch(setUser({
-						sub: data.user.id,
-						email: data.user.email,
-						name: data.user.name,
-						picture: data.user.picture,
-						isInDb: true, // If we have homeData, user is in DB
-						subscriptionPlan: data.user.subscriptionPlan || "free",
-						subscriptionStartDate: data.user.subscriptionStartDate,
-						subscriptionEndDate: data.user.subscriptionEndDate,
-					}));
-				}
+        const data = result.data;
+        setHomeData(data);
+        // Also dispatch to Redux store for access throughout the app
+        dispatch(setHomeDataAction(data));
 
-				// Also populate budgets slice with budget data from home data
-				if (data?.holidayPreferences?.length) {
-					const budgets = data.holidayPreferences
-						.filter((pref: any) => pref.budget !== undefined)
-						.map((pref: any) => ({
-							holidayId: pref.holidayId,
-							targetAmount: pref.budget,
-							spentAmount: 0, // TODO: Calculate from gifts/tasks
-							updatedAt: new Date().toISOString(),
-						}));
+        // Dispatch user data to Redux store with subscription info
+        if (data?.user) {
+          dispatch(
+            setUser({
+              sub: data.user.auth0Sub || auth0User.sub, // Fallback to auth0User.sub if API doesn't have it
+              email: data.user.email,
+              name: data.user.name,
+              picture: data.user.picture,
+              isInDb: true, // If we have homeData, user is in DB
+              subscriptionPlan: data.user.subscriptionPlan || 'free',
+              subscriptionStartDate: data.user.subscriptionStartDate,
+              subscriptionEndDate: data.user.subscriptionEndDate,
+            }),
+          );
+        }
 
-					if (budgets.length > 0) {
-						dispatch(setBudgets(budgets));
-					}
-				}
+        // Also populate budgets slice with budget data from home data
+        if (data?.holidayPreferences?.length) {
+          const budgets = data.holidayPreferences
+            .filter((pref: any) => pref.budget !== undefined)
+            .map((pref: any) => ({
+              holidayId: pref.holidayId,
+              targetAmount: pref.budget,
+              spentAmount: 0, // TODO: Calculate from gifts/tasks
+              updatedAt: new Date().toISOString(),
+            }));
 
-				// Prefill RTK Query cache with home data to prevent duplicate fetches
-				if (data?.holidayPreferences?.length) {
-					// Import the API slice to access util methods
-					const { api } = await import("@/store/api");
+          if (budgets.length > 0) {
+            dispatch(setBudgets(budgets));
+          }
+        }
 
-					// Extract all gifts, cards, and tasks from home data
-					// This ensures RTK Query hooks resolve from cache without firing network requests
-					const allGifts = data.holidayPreferences.flatMap(
-						(pref: any) => pref.gifts || []
-					);
-					const allCards = data.holidayPreferences.flatMap(
-						(pref: any) => pref.cards || []
-					);
-					const allTasks = data.holidayPreferences.flatMap(
-						(pref: any) => pref.tasks || []
-					);
+        // Prefill RTK Query cache with home data to prevent duplicate fetches
+        if (data?.holidayPreferences?.length) {
+          // Import the API slice to access util methods
+          const { api } = await import('@/store/api');
 
-					// Upsert into RTK Query cache for each endpoint
-					dispatch(
-						api.util.upsertQueryData("getAllGifts", { auth0User }, allGifts)
-					);
-					dispatch(
-						api.util.upsertQueryData("getAllCards", { auth0User }, allCards)
-					);
-					dispatch(
-						api.util.upsertQueryData("getAllTasks", { auth0User }, allTasks)
-					);
+          // Extract all gifts, cards, and tasks from home data
+          // This ensures RTK Query hooks resolve from cache without firing network requests
+          const allGifts = data.holidayPreferences.flatMap(
+            (pref: any) => pref.gifts || [],
+          );
+          const allCards = data.holidayPreferences.flatMap(
+            (pref: any) => pref.cards || [],
+          );
+          const allTasks = data.holidayPreferences.flatMap(
+            (pref: any) => pref.tasks || [],
+          );
 
-					// Also upsert per-holiday data to prevent individual holiday page fetches
-					data.holidayPreferences.forEach((pref: any) => {
-						if (pref.holidayId) {
-							dispatch(
-								api.util.upsertQueryData(
-									"getGifts",
-									{ holidayId: pref.holidayId, auth0User },
-									pref.gifts || []
-								)
-							);
-							dispatch(
-								api.util.upsertQueryData(
-									"getCards",
-									{ holidayId: pref.holidayId, auth0User },
-									pref.cards || []
-								)
-							);
-							dispatch(
-								api.util.upsertQueryData(
-									"getTasks",
-									{ holidayId: pref.holidayId, auth0User },
-									pref.tasks || []
-								)
-							);
+          // Upsert into RTK Query cache for each endpoint
+          dispatch(api.util.upsertQueryData('getAllGifts', { auth0User }, allGifts));
+          dispatch(api.util.upsertQueryData('getAllCards', { auth0User }, allCards));
+          dispatch(api.util.upsertQueryData('getAllTasks', { auth0User }, allTasks));
 
-							// Cache filtered task categories
-							if (pref.events) {
-								dispatch(
-									api.util.upsertQueryData(
-										"getEvents",
-										{ holidayId: pref.holidayId, auth0User },
-										pref.events
-									)
-								);
-							}
-							if (pref.decorations) {
-								dispatch(
-									api.util.upsertQueryData(
-										"getDecorations",
-										{ holidayId: pref.holidayId, auth0User },
-										pref.decorations
-									)
-								);
-							}
-							if (pref.kwanzaaPrinciples) {
-								dispatch(
-									api.util.upsertQueryData(
-										"getKwanzaaPrinciples",
-										{ holidayId: pref.holidayId, auth0User },
-										pref.kwanzaaPrinciples
-									)
-								);
-							}
-						}
-					});
-				}
-			} catch (err) {
-				console.error("Error fetching home data:", err);
-				setError("Failed to load page data");
-			} finally {
-				setIsLoadingData(false);
-			}
-		}
+          // Also upsert per-holiday data to prevent individual holiday page fetches
+          data.holidayPreferences.forEach((pref: any) => {
+            if (pref.holidayId) {
+              dispatch(
+                api.util.upsertQueryData(
+                  'getGifts',
+                  { holidayId: pref.holidayId, auth0User },
+                  pref.gifts || [],
+                ),
+              );
+              dispatch(
+                api.util.upsertQueryData(
+                  'getCards',
+                  { holidayId: pref.holidayId, auth0User },
+                  pref.cards || [],
+                ),
+              );
+              dispatch(
+                api.util.upsertQueryData(
+                  'getTasks',
+                  { holidayId: pref.holidayId, auth0User },
+                  pref.tasks || [],
+                ),
+              );
 
-		fetchHomeData();
-	}, [isAuthenticated, auth0User, dispatch]);
+              // Cache filtered task categories
+              if (pref.events) {
+                dispatch(
+                  api.util.upsertQueryData(
+                    'getEvents',
+                    { holidayId: pref.holidayId, auth0User },
+                    pref.events,
+                  ),
+                );
+              }
+              if (pref.decorations) {
+                dispatch(
+                  api.util.upsertQueryData(
+                    'getDecorations',
+                    { holidayId: pref.holidayId, auth0User },
+                    pref.decorations,
+                  ),
+                );
+              }
+              if (pref.kwanzaaPrinciples) {
+                dispatch(
+                  api.util.upsertQueryData(
+                    'getKwanzaaPrinciples',
+                    { holidayId: pref.holidayId, auth0User },
+                    pref.kwanzaaPrinciples,
+                  ),
+                );
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching home data:', err);
+        setError('Failed to load page data');
+      } finally {
+        setIsLoadingData(false);
+        fetchingRef.current = false; // Reset fetching flag
+      }
+    }
 
-	// Show loading state while Auth0 is loading
-	if (isLoading) {
-		return (
-			<div className="min-h-screen christmas-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading...</p>
-				</div>
-			</div>
-		);
-	}
+    fetchHomeData();
+  }, [isAuthenticated, auth0User?.sub]); // Remove dispatch from dependencies
 
-	// Show loading state while fetching data
-	if (isLoadingData) {
-		return (
-			<div className="min-h-screen christmas-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">
-						Loading your holiday data...
-					</p>
-				</div>
-			</div>
-		);
-	}
+  // Show loading state while Auth0 is loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen christmas-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-	// Show error state
-	if (error) {
-		return (
-			<div className="min-h-screen christmas-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="text-red-500 mb-4">
-						<p className="text-lg font-semibold">Error Loading Page</p>
-						<p className="text-sm">{error}</p>
-					</div>
-					<button
-						onClick={() => window.location.reload()}
-						className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-					>
-						Refresh Page
-					</button>
-				</div>
-			</div>
-		);
-	}
+  // Show loading state while fetching data
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen christmas-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">
+            Loading your holiday data...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-	// Show user setup handler if needed
-	if (homeData?.needsUserSetup) {
-		return (
-			<UserSetupHandler
-				needsUserSetup={homeData.needsUserSetup}
-				onSetupComplete={handleSetupComplete}
-			/>
-		);
-	}
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen christmas-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">
+            <p className="text-lg font-semibold">Error Loading Page</p>
+            <p className="text-sm">{error}</p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-	// Show main content
-	if (homeData) {
-		return <HomeContent homeData={homeData} />;
-	}
+  // Show user setup handler if needed
+  if (homeData?.needsUserSetup) {
+    return (
+      <UserSetupHandler
+        needsUserSetup={homeData.needsUserSetup}
+        onSetupComplete={handleSetupComplete}
+      />
+    );
+  }
 
-	// Fallback loading state
-	return (
-		<div className="min-h-screen christmas-gradient flex items-center justify-center">
-			<div className="text-center">
-				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-				<p className="text-gray-600 dark:text-gray-300">Loading...</p>
-			</div>
-		</div>
-	);
+  // Show main content
+  if (homeData) {
+    return <HomeContent homeData={homeData} />;
+  }
+
+  // Fallback loading state
+  return (
+    <div className="min-h-screen christmas-gradient flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+      </div>
+    </div>
+  );
 }

@@ -16,8 +16,7 @@ export default function Header() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  const { isUserPlusMember } = useSubscription();
-  console.log('isUserPlusMember', isUserPlusMember);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   useEffect(() => {
     const checkTheme = () => {
@@ -120,7 +119,7 @@ export default function Header() {
                       >
                         Address Book
                       </button>
-                      {!isUserPlusMember && (
+                      {hasSubscription && !isUserPlusMember && (
                         <button
                           onClick={() => {
                             setShowUpgradeModal(true);
@@ -170,7 +169,7 @@ export default function Header() {
           <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
         )}
       </header>
-      {!isUserPlusMember && <UpgradeBanner />}
+      {hasSubscription && !isUserPlusMember && <UpgradeBanner />}
 
       <UpgradeModal
         isOpen={showUpgradeModal}
