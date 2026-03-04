@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const { settings } = useAppSelector((state: any) => state.theme);
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
   const { data: homeData } = useAppSelector((state: any) => state.home);
+
   const [localSettings, setLocalSettings] = useState(settings);
   const [localHolidayPreferences, setLocalHolidayPreferences] = useState<any[]>([]);
   const [imageError, setImageError] = useState(false);
@@ -433,37 +434,39 @@ export default function SettingsPage() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Display Mode
-                </label>
-                <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Choose between professional and gamified card styles
-                </p>
-              </div>
-              <button
-                onClick={() =>
-                  handleSettingChange(
-                    'displayMode',
-                    currentDisplayMode === 'professional'
-                      ? 'gamified'
-                      : 'professional',
-                  )
-                }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  currentDisplayMode === 'gamified' ? 'bg-blue-600' : 'bg-gray-400'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    currentDisplayMode === 'gamified'
-                      ? 'translate-x-6'
-                      : 'translate-x-1'
+            {isUserPlusMember && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                    Display Mode
+                  </label>
+                  <p className="text-xs text-gray-800 dark:text-gray-400">
+                    Choose between professional and gamified card styles
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    handleSettingChange(
+                      'displayMode',
+                      currentDisplayMode === 'professional'
+                        ? 'gamified'
+                        : 'professional',
+                    )
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    currentDisplayMode === 'gamified' ? 'bg-blue-600' : 'bg-gray-400'
                   }`}
-                />
-              </button>
-            </div>
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      currentDisplayMode === 'gamified'
+                        ? 'translate-x-6'
+                        : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}{' '}
           </div>
         </div>
 
@@ -535,7 +538,7 @@ export default function SettingsPage() {
                             {holiday}
                           </span>
                         </div>
-                        {isSelected && (
+                        {isUserPlusMember && isSelected && (
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-gray-600 dark:text-gray-400">
                               Budget:

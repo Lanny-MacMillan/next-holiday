@@ -126,6 +126,7 @@ export default function HolidayCard({
     settings.displayMode === 'gamified';
   const isDarkMode = preferences?.theme === 'dark' || settings.theme === 'dark';
   const { isUserPlusMember, hasSubscription } = useSubscription();
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // Check if this holiday is shared
   const isShared = useAppSelector(state => selectIsHolidayShared(state, id));
@@ -137,13 +138,15 @@ export default function HolidayCard({
     getGamifiedBackgroundColor(id) ||
     'bg-gradient-to-br from-gray-400 to-gray-600';
 
-  if (isGamifiedMode) {
+  if (isUserPlusMember && isGamifiedMode) {
     // Gamified mode design
     return (
       <li>
         <div
           className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white ${
-            isShared ? 'ring-2 ring-blue-400 dark:ring-blue-500 ring-opacity-50' : ''
+            isAuthorizedForSharing && isShared
+              ? 'ring-2 ring-blue-400 dark:ring-blue-500 ring-opacity-50'
+              : ''
           }`}
           style={getCardStyling({
             isDarkMode,
@@ -229,7 +232,7 @@ export default function HolidayCard({
             <span className="sr-only">Go to {name} page</span>
           </Link>
           {/* Shared Indicator - positioned outside Link coverage */}
-          {hasSubscription && isUserPlusMember && isShared && (
+          {isAuthorizedForSharing && isShared && (
             <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20">
               <SharedIndicatorEnhanced
                 holidayKey={id}
@@ -261,7 +264,9 @@ export default function HolidayCard({
     <li>
       <div
         className={`relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden ${
-          isShared ? 'ring-2 ring-blue-300 dark:ring-blue-600 ring-opacity-40' : ''
+          isAuthorizedForSharing && isShared
+            ? 'ring-2 ring-blue-300 dark:ring-blue-600 ring-opacity-40'
+            : ''
         }`}
         style={
           {
@@ -271,9 +276,7 @@ export default function HolidayCard({
               intensity: 'medium',
             }),
             '--holiday-color': color.light,
-            ...(isShared && {
-              borderLeft: `4px solid ${color.light}`,
-            }),
+            borderLeft: `4px solid ${color.light}`, // Always show holiday color accent
           } as React.CSSProperties
         }
       >
@@ -331,7 +334,7 @@ export default function HolidayCard({
               <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
                 {description}
               </p>
-              {isGamifiedMode && incompleteItems > 0 && (
+              {isUserPlusMember && isGamifiedMode && incompleteItems > 0 && (
                 <p className="text-xs text-red-500 dark:text-red-400 mt-1">
                   {incompleteItems} task{incompleteItems !== 1 ? 's' : ''} remaining!
                   {incompleteItems > 5 && " Let's clean up those tasks!"}
@@ -342,7 +345,7 @@ export default function HolidayCard({
             <div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
               <div className="flex items-end gap-2">
                 {/* SharedIndicator positioned to the left of invite button in professional mode */}
-                {hasSubscription && isUserPlusMember && isShared && (
+                {isAuthorizedForSharing && isShared && (
                   <div className="flex items-center">
                     <SharedIndicatorEnhanced
                       holidayKey={id}

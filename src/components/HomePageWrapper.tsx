@@ -180,7 +180,7 @@ export default function HomePageWrapper() {
     }
 
     fetchHomeData();
-  }, [isAuthenticated, auth0User?.sub]); // Remove dispatch from dependencies
+  }, [isAuthenticated, auth0User?.sub]);
 
   // Show loading state while Auth0 is loading
   if (isLoading) {
