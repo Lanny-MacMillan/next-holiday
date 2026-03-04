@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useRouter } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
 import ThemeToggle from '../ThemeToggle';
+import DisplayModeToggle from '../DisplayModeToggle';
 import UpgradeModal from '../modals/UpgradeModal';
 import UpgradeBanner from './UpgradeBanner';
 import AlertsBell from './AlertsBell';
@@ -17,6 +18,7 @@ export default function Header() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const { isUserPlusMember, hasSubscription } = useSubscription();
+  const isAuthorizedPlusMember = hasSubscription && isUserPlusMember;
 
   useEffect(() => {
     const checkTheme = () => {
@@ -64,9 +66,10 @@ export default function Header() {
               </h1>
             </div>
 
-            {/* Right side - Alerts bell, Theme toggle and burger menu */}
+            {/* Right side - Alerts bell, Display mode toggle, Theme toggle and burger menu */}
             <div className="flex items-center space-x-2">
               <AlertsBell />
+              {isAuthorizedPlusMember && <DisplayModeToggle />}
               <ThemeToggle />
 
               <div className="relative">
@@ -169,7 +172,7 @@ export default function Header() {
           <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
         )}
       </header>
-      {hasSubscription && !isUserPlusMember && <UpgradeBanner />}
+      {!isAuthorizedPlusMember && <UpgradeBanner />}
 
       <UpgradeModal
         isOpen={showUpgradeModal}

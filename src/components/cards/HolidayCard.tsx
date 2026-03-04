@@ -334,34 +334,33 @@ export default function HolidayCard({
               <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm line-clamp-2">
                 {description}
               </p>
-              {isUserPlusMember && isGamifiedMode && incompleteItems > 0 && (
-                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                  {incompleteItems} task{incompleteItems !== 1 ? 's' : ''} remaining!
-                  {incompleteItems > 5 && " Let's clean up those tasks!"}
-                </p>
+              {/* SharedIndicator positioned right after description */}
+              {isAuthorizedForSharing && isShared && (
+                <div className="flex justify-start mt-2 mb-1 relative z-20">
+                  <SharedIndicatorEnhanced
+                    holidayKey={id}
+                    size="xs"
+                    maxVisibleMembers={5}
+                    showLabel={true}
+                    className="flex-row"
+                  />
+                </div>
               )}
+              {/* SharedIndicator positioned inline with holiday title in professional mode */}
             </div>
-            {/* Right side controls: SharedIndicator and Countdown Timer with Invite Button */}
+
+            {/* Right side controls: Countdown Timer with Invite Button */}
             <div className="flex flex-col items-end gap-2 z-30 relative flex-shrink-0 ml-2">
-              <div className="flex items-end gap-2">
-                {/* SharedIndicator positioned to the left of invite button in professional mode */}
-                {isAuthorizedForSharing && isShared && (
-                  <div className="flex items-center">
-                    <SharedIndicatorEnhanced
-                      holidayKey={id}
-                      size="sm"
-                      maxVisibleMembers={3}
-                      showLabel={false}
-                    />
-                  </div>
-                )}
-                <CountdownWithInviteCompact
-                  className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
-                  holiday={name}
-                  holidayKey={id}
-                  holidayId={holidayId}
-                  countdownTimer={countdownTimer}
-                />
+              <div className="flex items-center gap-2 min-h-[20px]">
+                <div className="flex items-center justify-end">
+                  <CountdownWithInviteCompact
+                    className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm"
+                    holiday={name}
+                    holidayKey={id}
+                    holidayId={holidayId}
+                    countdownTimer={countdownTimer}
+                  />
+                </div>
               </div>
               <span className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-600 transition-colors duration-200 group-hover:text-[var(--holiday-color)]">
                 →

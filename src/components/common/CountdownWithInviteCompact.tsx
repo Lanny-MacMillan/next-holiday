@@ -50,12 +50,14 @@ export default function CountdownWithInviteCompact({
   const currentHolidayKey = getHolidayKey();
 
   return (
-    <div className={`flex flex-col items-end gap-1 ${className}`}>
-      <CountdownTimer
-        holiday={holiday}
-        holidayId={holidayId}
-        initialCountdownTimer={countdownTimer}
-      />
+    <div className={`flex flex-col items-end gap-1 min-h-[20px] ${className}`}>
+      <div className="flex items-center justify-end">
+        <CountdownTimer
+          holiday={holiday}
+          holidayId={holidayId}
+          initialCountdownTimer={countdownTimer}
+        />
+      </div>
       {isAuthorizedPlusMember && currentHolidayKey && (
         <InviteButton
           holidayKey={currentHolidayKey}

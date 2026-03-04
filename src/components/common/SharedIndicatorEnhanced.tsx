@@ -59,6 +59,7 @@ export default function SharedIndicatorEnhanced({
   // Get members from the enhanced share data, fallback to memberUserIds for backward compatibility
   const members: ShareMember[] = useMemo(() => {
     if (!share) return [];
+
     return (
       share.members ||
       share.memberUserIds.map((userId: string) => ({
@@ -151,29 +152,9 @@ export default function SharedIndicatorEnhanced({
     <>
       <button
         onClick={handleContainerClick}
-        className={`flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-row-reverse ${className}`}
+        className={`flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity ${className}`}
         title="Click to view all shared members"
       >
-        {/* Member count info - positioned on the right */}
-        {members.length >= 1 && (
-          <span className="text-xs text-white ml-1 flex-shrink-0">
-            {members.length} member{members.length !== 1 ? 's' : ''}
-            {members.length === 1 && share.hasPendingInvites
-              ? ' (invite pending)'
-              : ''}
-          </span>
-        )}
-
-        {/* User avatars list - will expand to the left */}
-        <SharedUserList
-          members={members}
-          maxVisible={maxVisibleMembers}
-          size={size}
-          showSharedIcon={!showLabel}
-          onOpenModal={() => setShowMembersModal(true)}
-          className="flex-row-reverse"
-        />
-
         {/* Shared label with icon - positioned on the left */}
         {showLabel && (
           <span
@@ -197,6 +178,26 @@ export default function SharedIndicatorEnhanced({
               : share.hasPendingInvites
                 ? 'Invite Pending'
                 : 'Shareable'}
+          </span>
+        )}
+
+        {/* User avatars list using SharedUserList */}
+        <SharedUserList
+          members={members}
+          maxVisible={maxVisibleMembers}
+          size={size}
+          showSharedIcon={false}
+          onOpenModal={() => setShowMembersModal(true)}
+          className=""
+        />
+
+        {/* Member count info - positioned on the right */}
+        {members.length >= 1 && (
+          <span className="text-xs text-white ml-1 flex-shrink-0">
+            {members.length} member{members.length !== 1 ? 's' : ''}
+            {members.length === 1 && share.hasPendingInvites
+              ? ' (invite pending)'
+              : ''}
           </span>
         )}
       </button>
