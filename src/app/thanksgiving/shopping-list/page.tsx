@@ -153,7 +153,7 @@ export default function ThanksgivingShoppingListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!holidayId) return;
+		if (!holidayId || !auth0User) return;
 
 		try {
 			// Find the current gift to get its completion status from Redux data
@@ -197,7 +197,7 @@ export default function ThanksgivingShoppingListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !holidayId) return;
+		if (!giftToDelete || !holidayId || !auth0User) return;
 
 		setDeleteLoading(true);
 		try {
@@ -241,7 +241,7 @@ export default function ThanksgivingShoppingListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+		if (!selectedGift || !holidayId || !auth0User) return;
 
 		setEditLoading(true);
 		try {
@@ -347,14 +347,6 @@ export default function ThanksgivingShoppingListPage() {
 		}
 	};
 
-	// Debug: Log gift data
-	useEffect(() => {
-		console.log("Thanksgiving gift list - holidayId:", holidayId);
-		console.log("Thanksgiving gift list - holidayData:", holidayData);
-		console.log("Thanksgiving gift list - homeInitialized:", homeInitialized);
-		console.log("Thanksgiving gift list - displayGifts:", displayGifts);
-	}, [holidayId, holidayData, homeInitialized, displayGifts]);
-
 	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
@@ -440,7 +432,7 @@ export default function ThanksgivingShoppingListPage() {
 
 		// Find the contact that matches this gift's recipient
 		const matchingContact = contacts.find(
-			(contact) => contact.name === selectedGift.recipient
+			(contact: any) => contact.name === selectedGift.recipient
 		);
 
 		return {

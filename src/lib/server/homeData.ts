@@ -65,6 +65,9 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 					email: user.email,
 					name: user.name,
 					picture: user.picture,
+					subscriptionPlan: user.subscriptionPlan,
+					subscriptionStartDate: user.subscriptionStartDate?.toISOString(),
+					subscriptionEndDate: user.subscriptionEndDate?.toISOString(),
 				},
 				account: null,
 				holidayPreferences: null,
@@ -101,11 +104,9 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 		const sharedHolidays = await prisma.holiday.findMany({
 			where: {
 				shares: {
-					some: {
-						members: {
-							some: {
-								userId: user.id,
-							},
+					members: {
+						some: {
+							userId: user.id,
 						},
 					},
 				},
@@ -230,6 +231,9 @@ export async function getHomeData(request: Request): Promise<HomeData> {
 				email: user.email,
 				name: user.name,
 				picture: user.picture,
+				subscriptionPlan: user.subscriptionPlan,
+				subscriptionStartDate: user.subscriptionStartDate?.toISOString(),
+				subscriptionEndDate: user.subscriptionEndDate?.toISOString(),
 			},
 			account: toPlain(account),
 			holidayPreferences,

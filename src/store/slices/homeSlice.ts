@@ -1,485 +1,581 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { HomeData } from "@/types/home";
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import { HomeData } from '@/types/home';
+import { leaveShare } from './sharesSlice';
+import { acceptInvite } from './invitesSlice';
+
+// Async thunk to refresh home data
+export const refreshHomeData = createAsyncThunk(
+  'home/refreshHomeData',
+  async (auth0User: any) => {
+    const response = await fetch('/api/home', {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': JSON.stringify({
+          sub: auth0User?.sub,
+          email: auth0User?.email,
+          name: auth0User?.name,
+          picture: auth0User?.picture,
+        }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch home data');
+    }
+
+    const result = await response.json();
+    return result.data;
+  },
+);
 
 interface HomeState {
-	data: HomeData | null;
-	loading: boolean;
-	error: string | null;
-	initialized: boolean;
+  data: HomeData | null;
+  loading: boolean;
+  error: string | null;
+  initialized: boolean;
 }
 
 const initialState: HomeState = {
-	data: null,
-	loading: false,
-	error: null,
-	initialized: false,
+  data: null,
+  loading: false,
+  error: null,
+  initialized: false,
 };
 
 const homeSlice = createSlice({
-	name: "home",
-	initialState,
-	reducers: {
-		setHomeData: (state, action: PayloadAction<HomeData>) => {
-			state.data = action.payload;
-			state.initialized = true;
-			state.loading = false;
-			state.error = null;
-		},
-		setLoading: (state, action: PayloadAction<boolean>) => {
-			state.loading = action.payload;
-		},
-		setError: (state, action: PayloadAction<string | null>) => {
-			state.error = action.payload;
-			state.loading = false;
-		},
-		clearHomeData: (state) => {
-			state.data = null;
-			state.initialized = false;
-			state.loading = false;
-			state.error = null;
-		},
-		updateGiftInHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				giftId: string;
-				updates: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+  name: 'home',
+  initialState,
+  reducers: {
+    setHomeData: (state, action: PayloadAction<HomeData>) => {
+      state.data = action.payload;
+      state.initialized = true;
+      state.loading = false;
+      state.error = null;
+    },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+      state.loading = false;
+    },
+    clearHomeData: state => {
+      state.data = null;
+      state.initialized = false;
+      state.loading = false;
+      state.error = null;
+    },
+    updateGiftInHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        giftId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, giftId, updates } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, giftId, updates } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.gifts) {
-				const giftIndex = holidayPref.gifts.findIndex(
-					(gift: any) => gift.id === giftId
-				);
-				if (giftIndex !== -1) {
-					holidayPref.gifts[giftIndex] = {
-						...holidayPref.gifts[giftIndex],
-						...updates,
-					};
-				}
-			}
-		},
-		updateCardInHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				cardId: string;
-				updates: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.gifts) {
+        const giftIndex = holidayPref.gifts.findIndex(
+          (gift: any) => gift.id === giftId,
+        );
+        if (giftIndex !== -1) {
+          holidayPref.gifts[giftIndex] = {
+            ...holidayPref.gifts[giftIndex],
+            ...updates,
+          };
+        }
+      }
+    },
+    updateCardInHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        cardId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, cardId, updates } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, cardId, updates } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.cards) {
-				const cardIndex = holidayPref.cards.findIndex(
-					(card: any) => card.id === cardId
-				);
-				if (cardIndex !== -1) {
-					holidayPref.cards[cardIndex] = {
-						...holidayPref.cards[cardIndex],
-						...updates,
-					};
-				}
-			}
-		},
-		updateTaskInHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				taskId: string;
-				updates: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.cards) {
+        const cardIndex = holidayPref.cards.findIndex(
+          (card: any) => card.id === cardId,
+        );
+        if (cardIndex !== -1) {
+          holidayPref.cards[cardIndex] = {
+            ...holidayPref.cards[cardIndex],
+            ...updates,
+          };
+        }
+      }
+    },
+    updateTaskInHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        taskId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, taskId, updates } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, taskId, updates } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.tasks) {
-				const taskIndex = holidayPref.tasks.findIndex(
-					(task: any) => task.id === taskId
-				);
-				if (taskIndex !== -1) {
-					holidayPref.tasks[taskIndex] = {
-						...holidayPref.tasks[taskIndex],
-						...updates,
-					};
-				}
-			}
-		},
-		addGiftToHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				gift: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.tasks) {
+        const taskIndex = holidayPref.tasks.findIndex(
+          (task: any) => task.id === taskId,
+        );
+        if (taskIndex !== -1) {
+          holidayPref.tasks[taskIndex] = {
+            ...holidayPref.tasks[taskIndex],
+            ...updates,
+          };
+        }
+      }
+    },
+    addGiftToHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        gift: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, gift } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, gift } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref) {
-				if (!holidayPref.gifts) holidayPref.gifts = [];
-				holidayPref.gifts.push(gift);
-			}
-		},
-		removeGiftFromHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				giftId: string;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref) {
+        if (!holidayPref.gifts) holidayPref.gifts = [];
+        holidayPref.gifts.push(gift);
+      }
+    },
+    removeGiftFromHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        giftId: string;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, giftId } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, giftId } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.gifts) {
-				holidayPref.gifts = holidayPref.gifts.filter(
-					(gift: any) => gift.id !== giftId
-				);
-			}
-		},
-		addTaskToHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				task: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.gifts) {
+        holidayPref.gifts = holidayPref.gifts.filter(
+          (gift: any) => gift.id !== giftId,
+        );
+      }
+    },
+    addTaskToHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        task: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, task } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, task } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref) {
-				if (!holidayPref.tasks) holidayPref.tasks = [];
-				holidayPref.tasks.push(task);
-			}
-		},
-		removeTaskFromHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				taskId: string;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref) {
+        if (!holidayPref.tasks) holidayPref.tasks = [];
+        holidayPref.tasks.push(task);
+      }
+    },
+    removeTaskFromHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        taskId: string;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, taskId } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, taskId } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.tasks) {
-				holidayPref.tasks = holidayPref.tasks.filter(
-					(task: any) => task.id !== taskId
-				);
-			}
-		},
-		addEventToHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				event: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.tasks) {
+        holidayPref.tasks = holidayPref.tasks.filter(
+          (task: any) => task.id !== taskId,
+        );
+      }
+    },
+    addEventToHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        event: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, event } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, event } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref) {
-				if (!holidayPref.events) holidayPref.events = [];
-				holidayPref.events.push(event);
-			}
-		},
-		removeEventFromHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				eventId: string;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref) {
+        if (!holidayPref.events) holidayPref.events = [];
+        holidayPref.events.push(event);
+      }
+    },
+    removeEventFromHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        eventId: string;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, eventId } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, eventId } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.events) {
-				holidayPref.events = holidayPref.events.filter(
-					(event: any) => event.id !== eventId
-				);
-			}
-		},
-		updateEventInHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				eventId: string;
-				updates: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.events) {
+        holidayPref.events = holidayPref.events.filter(
+          (event: any) => event.id !== eventId,
+        );
+      }
+    },
+    updateEventInHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        eventId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, eventId, updates } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, eventId, updates } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.events) {
-				const eventIndex = holidayPref.events.findIndex(
-					(event: any) => event.id === eventId
-				);
-				if (eventIndex !== -1) {
-					holidayPref.events[eventIndex] = {
-						...holidayPref.events[eventIndex],
-						...updates,
-					};
-				}
-			}
-		},
-		addDecorationToHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				decoration: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.events) {
+        const eventIndex = holidayPref.events.findIndex(
+          (event: any) => event.id === eventId,
+        );
+        if (eventIndex !== -1) {
+          holidayPref.events[eventIndex] = {
+            ...holidayPref.events[eventIndex],
+            ...updates,
+          };
+        }
+      }
+    },
+    addDecorationToHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        decoration: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, decoration } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, decoration } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref) {
-				if (!holidayPref.decorations) holidayPref.decorations = [];
-				holidayPref.decorations.push(decoration);
-			}
-		},
-		removeDecorationFromHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				decorationId: string;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref) {
+        if (!holidayPref.decorations) holidayPref.decorations = [];
+        holidayPref.decorations.push(decoration);
+      }
+    },
+    removeDecorationFromHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        decorationId: string;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, decorationId } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, decorationId } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.decorations) {
-				holidayPref.decorations = holidayPref.decorations.filter(
-					(decoration: any) => decoration.id !== decorationId
-				);
-			}
-		},
-		updateDecorationInHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				decorationId: string;
-				updates: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.decorations) {
+        holidayPref.decorations = holidayPref.decorations.filter(
+          (decoration: any) => decoration.id !== decorationId,
+        );
+      }
+    },
+    updateDecorationInHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        decorationId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, decorationId, updates } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, decorationId, updates } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.decorations) {
-				const decorationIndex = holidayPref.decorations.findIndex(
-					(decoration: any) => decoration.id === decorationId
-				);
-				if (decorationIndex !== -1) {
-					holidayPref.decorations[decorationIndex] = {
-						...holidayPref.decorations[decorationIndex],
-						...updates,
-					};
-				}
-			}
-		},
-		addCardToHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				card: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.decorations) {
+        const decorationIndex = holidayPref.decorations.findIndex(
+          (decoration: any) => decoration.id === decorationId,
+        );
+        if (decorationIndex !== -1) {
+          holidayPref.decorations[decorationIndex] = {
+            ...holidayPref.decorations[decorationIndex],
+            ...updates,
+          };
+        }
+      }
+    },
+    addCardToHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        card: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, card } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, card } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref) {
-				if (!holidayPref.cards) holidayPref.cards = [];
-				holidayPref.cards.push(card);
-			}
-		},
-		removeCardFromHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				cardId: string;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref) {
+        if (!holidayPref.cards) holidayPref.cards = [];
+        holidayPref.cards.push(card);
+      }
+    },
+    removeCardFromHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        cardId: string;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, cardId } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, cardId } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.cards) {
-				holidayPref.cards = holidayPref.cards.filter(
-					(card: any) => card.id !== cardId
-				);
-			}
-		},
-		addGuestToHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				guest: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.cards) {
+        holidayPref.cards = holidayPref.cards.filter(
+          (card: any) => card.id !== cardId,
+        );
+      }
+    },
+    addGuestToHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        guest: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, guest } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, guest } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref) {
-				if (!holidayPref.guestLists) holidayPref.guestLists = [];
-				holidayPref.guestLists.push(guest);
-			}
-		},
-		removeGuestFromHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				guestId: string;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref) {
+        if (!holidayPref.guestLists) holidayPref.guestLists = [];
+        holidayPref.guestLists.push(guest);
+      }
+    },
+    removeGuestFromHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        guestId: string;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, guestId } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, guestId } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.guestLists) {
-				holidayPref.guestLists = holidayPref.guestLists.filter(
-					(guest: any) => guest.id !== guestId
-				);
-			}
-		},
-		updateGuestInHomeData: (
-			state,
-			action: PayloadAction<{
-				holidayId: string;
-				guestId: string;
-				updates: any;
-			}>
-		) => {
-			if (!state.data?.holidayPreferences) return;
+      if (holidayPref?.guestLists) {
+        holidayPref.guestLists = holidayPref.guestLists.filter(
+          (guest: any) => guest.id !== guestId,
+        );
+      }
+    },
+    updateGuestInHomeData: (
+      state,
+      action: PayloadAction<{
+        holidayId: string;
+        guestId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
 
-			const { holidayId, guestId, updates } = action.payload;
-			const holidayPref = state.data.holidayPreferences.find(
-				(pref) => pref.holidayId === holidayId
-			);
+      const { holidayId, guestId, updates } = action.payload;
+      const holidayPref = state.data.holidayPreferences.find(
+        pref => pref.holidayId === holidayId,
+      );
 
-			if (holidayPref?.guestLists) {
-				const guestIndex = holidayPref.guestLists.findIndex(
-					(guest: any) => guest.id === guestId
-				);
-				if (guestIndex !== -1) {
-					holidayPref.guestLists[guestIndex] = {
-						...holidayPref.guestLists[guestIndex],
-						...updates,
-					};
-				}
-			}
-		},
-	},
+      if (holidayPref?.guestLists) {
+        const guestIndex = holidayPref.guestLists.findIndex(
+          (guest: any) => guest.id === guestId,
+        );
+        if (guestIndex !== -1) {
+          holidayPref.guestLists[guestIndex] = {
+            ...holidayPref.guestLists[guestIndex],
+            ...updates,
+          };
+        }
+      }
+    },
+    removeSharedHolidayData: (
+      state,
+      action: PayloadAction<{ holidayId: string }>,
+    ) => {
+      if (!state.data?.holidayPreferences) return;
+
+      const { holidayId } = action.payload;
+      // Remove the holiday preference completely for shared holidays the user no longer has access to
+      state.data.holidayPreferences = state.data.holidayPreferences.filter(
+        pref => pref.holidayId !== holidayId,
+      );
+    },
+  },
+  extraReducers: builder => {
+    // Listen to share actions to automatically update home data
+    builder
+      .addCase(leaveShare.fulfilled, (state, action: any) => {
+        // When a user successfully leaves a share, check if we need to remove holiday data
+        if (!state.data?.holidayPreferences) {
+          return;
+        }
+
+        const { userLeftShare, holidayKey } = action.payload;
+
+        if (userLeftShare && holidayKey) {
+          const initialLength = state.data.holidayPreferences.length;
+
+          // Find and remove the holiday preference for the left share
+          const normalizeKey = (key: string) =>
+            key.toLowerCase().replace(/[-\s']/g, '');
+          const normalizedHolidayKey = normalizeKey(holidayKey);
+
+          // Log all current holidays for debugging
+          state.data.holidayPreferences.forEach((pref, index) => {
+            const normalizedPrefHoliday = normalizeKey(pref.holiday || '');
+          });
+
+          state.data.holidayPreferences = state.data.holidayPreferences.filter(
+            pref => {
+              const normalizedPrefHoliday = normalizeKey(pref.holiday || '');
+              const shouldKeep = normalizedPrefHoliday !== normalizedHolidayKey;
+              return shouldKeep;
+            },
+          );
+
+          const finalLength = state.data.holidayPreferences.length;
+        } else {
+          console.log('🏠 HomeSlice: Not removing holiday data', {
+            userLeftShare,
+            holidayKey,
+          });
+        }
+      })
+      // Listen to accept invite actions to refresh home data
+      .addCase(acceptInvite.fulfilled, (state, action: any) => {
+        // Mark loading state so UI shows that refresh is happening
+        state.loading = true;
+      })
+      // Handle home data refresh results
+      .addCase(refreshHomeData.fulfilled, (state, action) => {
+        state.data = action.payload;
+        state.loading = false;
+        state.error = null;
+        state.initialized = true;
+      })
+      .addCase(refreshHomeData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to refresh home data';
+      });
+  },
 });
 
 // Selectors
 export const selectHomeData = (state: { home: HomeState }) => state.home.data;
 export const selectHolidayPreferences = (state: { home: HomeState }) =>
-	state.home.data?.holidayPreferences || [];
+  state.home.data?.holidayPreferences || [];
 export const selectContacts = (state: { home: HomeState }) =>
-	state.home.data?.contacts || [];
-export const selectHomeLoading = (state: { home: HomeState }) =>
-	state.home.loading;
+  state.home.data?.contacts || [];
+export const selectHomeLoading = (state: { home: HomeState }) => state.home.loading;
 export const selectHomeError = (state: { home: HomeState }) => state.home.error;
 export const selectHomeInitialized = (state: { home: HomeState }) =>
-	state.home.initialized;
+  state.home.initialized;
 
 // Selector for guest lists by holiday ID
 export const selectGuestListsByHoliday =
-	(holidayId: string) => (state: { home: HomeState }) => {
-		const holidayPref = state.home.data?.holidayPreferences?.find(
-			(pref) => pref.holidayId === holidayId
-		);
-		return holidayPref?.guestLists || [];
-	};
+  (holidayId: string) => (state: { home: HomeState }) => {
+    const holidayPref = state.home.data?.holidayPreferences?.find(
+      pref => pref.holidayId === holidayId,
+    );
+    return holidayPref?.guestLists || [];
+  };
 
 export const {
-	setHomeData,
-	setLoading,
-	setError,
-	clearHomeData,
-	updateGiftInHomeData,
-	updateCardInHomeData,
-	updateTaskInHomeData,
-	addGiftToHomeData,
-	removeGiftFromHomeData,
-	addTaskToHomeData,
-	removeTaskFromHomeData,
-	addEventToHomeData,
-	removeEventFromHomeData,
-	updateEventInHomeData,
-	addDecorationToHomeData,
-	removeDecorationFromHomeData,
-	updateDecorationInHomeData,
-	addCardToHomeData,
-	removeCardFromHomeData,
-	addGuestToHomeData,
-	removeGuestFromHomeData,
-	updateGuestInHomeData,
+  setHomeData,
+  setLoading,
+  setError,
+  clearHomeData,
+  updateGiftInHomeData,
+  updateCardInHomeData,
+  updateTaskInHomeData,
+  addGiftToHomeData,
+  removeGiftFromHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+  addEventToHomeData,
+  removeEventFromHomeData,
+  updateEventInHomeData,
+  addDecorationToHomeData,
+  removeDecorationFromHomeData,
+  updateDecorationInHomeData,
+  addCardToHomeData,
+  removeCardFromHomeData,
+  addGuestToHomeData,
+  removeGuestFromHomeData,
+  updateGuestInHomeData,
+  removeSharedHolidayData,
 } = homeSlice.actions;
 export default homeSlice.reducer;

@@ -228,12 +228,7 @@ export async function GET(request: NextRequest) {
 				})
 				.filter(Boolean); // Remove null entries
 
-			console.log('📤 API Shares Response:', {
-				userId,
-				shareCount: transformedShares.length,
-				shares: transformedShares
-			});
-
+		
 			return NextResponse.json(transformedShares);
 		}
 

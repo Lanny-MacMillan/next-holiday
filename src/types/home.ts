@@ -4,6 +4,9 @@ export interface HomeData {
 		email?: string | null;
 		name?: string | null;
 		picture?: string | null;
+		subscriptionPlan?: "free" | "plus";
+		subscriptionStartDate?: string;
+		subscriptionEndDate?: string;
 	} | null;
 	account: {
 		id: string;

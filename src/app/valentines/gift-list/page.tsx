@@ -110,14 +110,6 @@ export default function ValentinesGiftListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
-	// Debug contacts loading
-	useEffect(() => {
-		console.log("Contacts in Valentines gift list:", contacts);
-		console.log("Contacts length:", contacts?.length);
-		console.log("Home data:", homeData);
-		console.log("Home initialized:", homeInitialized);
-		console.log("Home contacts:", homeData?.contacts);
-	}, [contacts, homeData, homeInitialized]);
 
 	// Function to refresh home data from server
 	const refreshHomeData = async () => {
@@ -182,7 +174,7 @@ export default function ValentinesGiftListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!holidayId) return;
+		if (!holidayId || !auth0User) return;
 
 		try {
 			// Find the current gift to get its completion status from Redux data
@@ -226,7 +218,7 @@ export default function ValentinesGiftListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !holidayId) return;
+		if (!giftToDelete || !holidayId || !auth0User) return;
 
 		setDeleteLoading(true);
 		try {
@@ -270,7 +262,7 @@ export default function ValentinesGiftListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+		if (!selectedGift || !holidayId || !auth0User) return;
 
 		setEditLoading(true);
 		try {
@@ -352,13 +344,6 @@ export default function ValentinesGiftListPage() {
 			? holidayData.gifts
 			: [];
 
-	// Debug: Log gift data
-	useEffect(() => {
-		console.log("Valentines gift list - holidayId:", holidayId);
-		console.log("Valentines gift list - holidayData:", holidayData);
-		console.log("Valentines gift list - homeInitialized:", homeInitialized);
-		console.log("Valentines gift list - displayGifts:", displayGifts);
-	}, [holidayId, holidayData, homeInitialized, displayGifts]);
 
 	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift) => !gift.isCompleted);
@@ -413,7 +398,7 @@ export default function ValentinesGiftListPage() {
 
 		// Find the contact that matches this gift's recipient
 		const matchingContact = contacts.find(
-			(contact) => contact.name === selectedGift.recipient
+			(contact: any) => contact.name === selectedGift.recipient
 		);
 
 		return {

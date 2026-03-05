@@ -115,14 +115,6 @@ export default function GiftListPage() {
 		}
 	}, [dispatch, homeInitialized]);
 
-	// Debug contacts loading
-	useEffect(() => {
-		console.log("Contacts in Halloween gift list:", contacts);
-		console.log("Contacts length:", contacts?.length);
-		console.log("Home data:", homeData);
-		console.log("Home initialized:", homeInitialized);
-		console.log("Home contacts:", homeData?.contacts);
-	}, [contacts, homeData, homeInitialized]);
 
 	async function handleAddGift(values: Record<string, any>) {
 		if (!values.giftName?.trim() || !values.recipient?.trim()) return;
@@ -161,7 +153,7 @@ export default function GiftListPage() {
 	}
 
 	async function handleToggleGift(giftId: string) {
-		if (!holidayId) return;
+		if (!holidayId || !auth0User) return;
 
 		try {
 			// Find the current gift to get its completion status from Redux data
@@ -205,7 +197,7 @@ export default function GiftListPage() {
 	}
 
 	async function confirmDelete() {
-		if (!giftToDelete || !holidayId) return;
+		if (!giftToDelete || !holidayId || !auth0User) return;
 
 		setDeleteLoading(true);
 		try {
@@ -249,7 +241,7 @@ export default function GiftListPage() {
 	}
 
 	async function handleUpdateGift(values: Record<string, any>) {
-		if (!selectedGift || !holidayId) return;
+		if (!selectedGift || !holidayId || !auth0User) return;
 
 		setEditLoading(true);
 		try {
@@ -355,14 +347,6 @@ export default function GiftListPage() {
 		}
 	};
 
-	// Debug: Log gift data
-	useEffect(() => {
-		console.log("Halloween gift list - holidayId:", holidayId);
-		console.log("Halloween gift list - holidayData:", holidayData);
-		console.log("Halloween gift list - homeInitialized:", homeInitialized);
-		console.log("Halloween gift list - displayGifts:", displayGifts);
-	}, [holidayId, holidayData, homeInitialized, displayGifts]);
-
 	const sortedGifts = sortGifts(displayGifts || []);
 	const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
 	const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
@@ -450,7 +434,7 @@ export default function GiftListPage() {
 
 		// Find the contact that matches this gift's recipient
 		const matchingContact = contacts.find(
-			(contact) => contact.name === selectedGift.recipient
+			(contact: any) => contact.name === selectedGift.recipient
 		);
 
 		return {

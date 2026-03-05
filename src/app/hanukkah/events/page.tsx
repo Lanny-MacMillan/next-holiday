@@ -44,15 +44,6 @@ export default function HanukkahEventsPage() {
 	const events = holidayData?.tasks?.filter((task: any) => task.category === "Events") || [];
 	const isLoading = !homeInitialized;
 
-	// Debug logging to understand the state (like Kwanzaa)
-	console.log('Hanukkah Events Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		eventTasks: events.length,
-		events: events.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
-	});
-
 	// Sharing status (for conditional form fields)
 	const isHolidayShared = useAppSelector((state: any) =>
 		selectIsHolidayShared(state, "hanukkah")
@@ -493,7 +484,7 @@ export default function HanukkahEventsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string) => handleDelete(taskId, task.title)}
 							onEdit={handleEditEvent}
 							theme={{
 								accentColor: "#3b82f6", // Blue for Hanukkah
@@ -517,7 +508,7 @@ export default function HanukkahEventsPage() {
 								key={task.id}
 								task={task}
 								onToggleComplete={handleToggleCompletion}
-								onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+								onDelete={(taskId: string) => handleDelete(taskId, task.title)}
 								onEdit={handleEditEvent}
 								className="opacity-60"
 								theme={{
@@ -567,10 +558,11 @@ export default function HanukkahEventsPage() {
 			{/* Delete Modal */}
 			<DeleteModal
 				isOpen={showDeleteModal}
-				onClose={cancelDelete}
+				onCancel={cancelDelete}
 				onConfirm={confirmDelete}
 				title="Delete Event"
 				message={`Are you sure you want to delete "${eventToDelete?.title}"?`}
+				loading={isDeleting}
 			/>
 
 			{/* Sort Modal */}
@@ -582,8 +574,9 @@ export default function HanukkahEventsPage() {
 					{ value: "title", label: "Title A-Z" },
 					{ value: "completed", label: "Completion Status" },
 				]}
-				currentSort={sortBy}
-				onSortChange={setSortBy}
+				sortBy={sortBy}
+				onSortChange={(sortOption: string) => setSortBy(sortOption)}
+				title="Sort Events"
 			/>
 		</div>
 	);

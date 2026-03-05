@@ -91,14 +91,6 @@ export default function EasterDecorationsPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Easter Decorations Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		decorationTasks: decorations.length,
-		decorations: decorations.map(d => ({ id: d.id, title: d.title, category: d.category, isCompleted: d.isCompleted }))
-	});
 
 	// Refresh home data function (like gift-list)
 	const refreshHomeData = async () => {
@@ -165,8 +157,6 @@ export default function EasterDecorationsPage() {
 
 		try {
 			// Optimistically update Redux state first (like Kwanzaa)
-			console.log('Adding decoration task optimistically:', newTask);
-			console.log('Holiday ID for addition:', resolvedHolidayId);
 			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 			console.log('Task added to Redux, making API call...');
 
@@ -180,9 +170,7 @@ export default function EasterDecorationsPage() {
 				due_date: values.dueDate || undefined, // snake_case for API
 				isCompleted: false,
 			};
-			
-			console.log('🐛 [EasterDecorationsAdd] API payload:', apiPayload);
-			
+						
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
 				method: "POST",
 				headers: {
@@ -328,8 +316,6 @@ export default function EasterDecorationsPage() {
 				isCompleted: editingTask.isCompleted,
 			};
 
-			console.log('🐛 [EasterDecorationsEdit] API payload:', apiPayload);
-
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`, {
 				method: "PATCH",
 				headers: {
@@ -425,8 +411,8 @@ export default function EasterDecorationsPage() {
 		return [...tasks].sort((a, b) => {
 			switch (sortBy) {
 				case "priority":
-					const priorityOrder = { high: 3, medium: 2, low: 1 };
-					return priorityOrder[b.priority] - priorityOrder[a.priority];
+					const priorityOrder: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
+					return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
 				case "dateDue":
 					if (!a.dueDate) return 1;
 					if (!b.dueDate) return -1;
@@ -530,7 +516,7 @@ export default function EasterDecorationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string) => handleDelete(taskId, task.title)}
 							onEdit={handleEditDecoration}
 							theme={{
 								accentColor: "#a855f7", // Purple for Easter
@@ -552,7 +538,7 @@ export default function EasterDecorationsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string) => handleDelete(taskId, task.title)}
 							onEdit={handleEditDecoration}
 							theme={{
 								accentColor: "#a855f7", // Purple for Easter

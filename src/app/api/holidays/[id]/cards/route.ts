@@ -68,20 +68,16 @@ export async function PUT(
 		if (forbidden) return forbidden;
 
 		const json = await request.json();
-		console.log("PUT request body:", json);
 
 		const parsed = updateBodySchema.safeParse(json);
 		if (!parsed.success) {
-			console.log("Validation error:", parsed.error.issues);
 			return badRequest(parsed.error.issues);
 		}
 
 		const data = parsed.data;
-		console.log("Parsed data:", data);
 
 		// Handle different actions
 		if (data.action === "delete") {
-			console.log("Deleting card with ID:", data.id);
 			// Delete the card
 			await prisma.card.delete({
 				where: {
@@ -90,7 +86,6 @@ export async function PUT(
 			});
 			return ok({ success: true });
 		} else if (data.action === "update" || data.action === "toggle") {
-			console.log("Updating card with ID:", data.id);
 			// Update the card
 			const updateData: any = {
 				recipient: data.recipient,
@@ -103,15 +98,12 @@ export async function PUT(
 				updateData.isCompleted = data.isCompleted;
 			}
 
-			console.log("Update data:", updateData);
-
 			// First check if the card exists
 			const existingCard = await prisma.card.findUnique({
 				where: { id: data.id },
 			});
 
 			if (!existingCard) {
-				console.log("Card not found with ID:", data.id);
 				return badRequest("Card not found");
 			}
 
@@ -122,7 +114,6 @@ export async function PUT(
 				data: updateData,
 			});
 
-			console.log("Updated card:", card);
 			return ok(card, {
 				"Cache-Control": "private, max-age=5, stale-while-revalidate=60",
 			});
@@ -153,15 +144,12 @@ export async function DELETE(
 			return badRequest("Card ID is required");
 		}
 
-		console.log("DELETE request - cardId:", cardId);
-
 		// Check if card exists
 		const existingCard = await prisma.card.findUnique({
 			where: { id: cardId },
 		});
 
 		if (!existingCard) {
-			console.log("Card not found with ID:", cardId);
 			return badRequest("Card not found");
 		}
 
@@ -172,7 +160,6 @@ export async function DELETE(
 			},
 		});
 
-		console.log("Card deleted successfully");
 		return ok({ success: true });
 	} catch (error) {
 		console.error("Error deleting card:", error);

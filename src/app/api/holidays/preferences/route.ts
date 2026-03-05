@@ -68,11 +68,9 @@ export async function POST(request: NextRequest) {
 		const user = await requireAuth(request);
 		// Parse and validate request body
 		const body = await request.json();
-		console.log("Received body:", JSON.stringify(body, null, 2));
 		const validation = SaveHolidayPreferencesSchema.safeParse(body);
 
 		if (!validation.success) {
-			console.log("Validation failed:", validation.error.issues);
 			return badRequest(validation.error.issues);
 		}
 
@@ -102,7 +100,6 @@ export async function POST(request: NextRequest) {
 			return acc;
 		}, [] as typeof validPreferences);
 
-		console.log(`Processing ${deduplicatedPreferences.length} unique holidays (filtered from ${preferences.length} total)`);
 
 		// Process preferences in a transaction with increased timeout
 		const results = await prisma.$transaction(async (tx) => {
@@ -124,8 +121,6 @@ export async function POST(request: NextRequest) {
 			const holidaysToRemove = currentHolidays.filter(
 				(h) => !newHolidayTypes.has(h.holidayType)
 			);
-
-			console.log(`Removing ${holidaysToRemove.length} holidays, processing ${deduplicatedPreferences.length} preferences`);
 
 			// Remove holidays that are no longer selected (this will cascade delete budgets, tasks, etc.)
 			for (const holiday of holidaysToRemove) {

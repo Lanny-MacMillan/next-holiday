@@ -58,14 +58,6 @@ export default function FathersDayEventsPage() {
 	const isLoading = !homeInitialized;
 	const error = null;
 
-	// Debug logging to understand the state
-	console.log('Father\'s Day Events Debug:', {
-		resolvedHolidayId,
-		holidayData: holidayData ? { ...holidayData, tasks: holidayData.tasks?.length || 0 } : null,
-		allTasks: holidayData?.tasks?.length || 0,
-		eventTasks: events.length,
-		events: events.map(e => ({ id: e.id, title: e.title, category: e.category, isCompleted: e.isCompleted }))
-	});
 
 	// Refresh home data function (like gift-list)
 	const refreshHomeData = async () => {
@@ -133,7 +125,6 @@ export default function FathersDayEventsPage() {
 		try {
 			// Optimistically update Redux state first (like Kwanzaa)
 			console.log('Adding task optimistically:', newTask);
-			console.log('Holiday ID for addition:', resolvedHolidayId);
 			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 			console.log('Task added to Redux, making API call...');
 
@@ -148,7 +139,6 @@ export default function FathersDayEventsPage() {
 				isCompleted: false,
 			};
 			
-			console.log('🐛 [FathersDayAdd] API payload:', apiPayload);
 			
 			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
 				method: "POST",
@@ -216,7 +206,6 @@ export default function FathersDayEventsPage() {
 
 			// Call API directly instead of using custom hook
 			const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-			console.log('Toggle API URL:', apiUrl); // Debug logging
 			const response = await fetch(apiUrl, {
 				method: "PATCH",
 				headers: {
@@ -488,8 +477,8 @@ export default function FathersDayEventsPage() {
 		{ value: "category", label: "Category" },
 	];
 
-	const handleSortChange = (newSortBy: SortOption) => {
-		setSortBy(newSortBy);
+	const handleSortChange = (newSortBy: string) => {
+		setSortBy(newSortBy as SortOption);
 		setShowSortModal(false);
 	};
 
@@ -523,7 +512,7 @@ export default function FathersDayEventsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string) => handleDelete(taskId, task.title)}
 							onEdit={handleEditEvent}
 							theme={{
 								accentColor: "#3b82f6", // Blue for Father's Day
@@ -545,7 +534,7 @@ export default function FathersDayEventsPage() {
 							key={task.id}
 							task={task}
 							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string, taskTitle: string) => handleDelete(taskId, taskTitle)}
+							onDelete={(taskId: string) => handleDelete(taskId, task.title)}
 							onEdit={handleEditEvent}
 							theme={{
 								accentColor: "#3b82f6", // Blue for Father's Day
