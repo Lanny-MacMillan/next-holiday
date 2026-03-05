@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { createShare, ShareMember } from '@/store/slices/sharesSlice';
+import { createShare, ShareMember, refreshShares } from '@/store/slices/sharesSlice';
 import { createInvite, fetchOutgoingInvites } from '@/store/slices/invitesSlice';
 import {
   selectShareByHolidayKey,
@@ -147,6 +147,9 @@ export default function InviteButton({
 
       // Refetch outgoing invites to update the alerts bell
       await dispatch(fetchOutgoingInvites(user.sub));
+
+      // Refetch shares to update the sharing status indicators
+      await dispatch(refreshShares(user.sub));
 
       setShowInviteModal(false);
       // Show success toast

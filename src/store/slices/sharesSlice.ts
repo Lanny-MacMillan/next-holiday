@@ -64,6 +64,23 @@ export const fetchShares = createAsyncThunk(
   },
 );
 
+// Force refresh shares - bypasses initialization check
+export const refreshShares = createAsyncThunk(
+  'shares/refreshShares',
+  async (userId: string) => {
+    // Fetch shares from API without checking initialization
+    const response = await fetch(`/api/shares?userId=${userId}`);
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh shares');
+    }
+
+    const data = await response.json();
+
+    return data;
+  },
+);
+
 export const createShare = createAsyncThunk(
   'shares/createShare',
   async (shareData: Omit<HolidayShare, 'shareId' | 'createdAt' | 'updatedAt'>) => {
@@ -145,7 +162,15 @@ export const removeMemberFromShare = createAsyncThunk(
 
 export const leaveShare = createAsyncThunk(
   'shares/leaveShare',
-  async ({ shareId, userId }: { shareId: string; userId: string }) => {
+  async ({
+    shareId,
+    userId,
+    holidayKey,
+  }: {
+    shareId: string;
+    userId: string;
+    holidayKey?: string;
+  }) => {
     const response = await fetch(
       `/api/shares/${shareId}/members?userId=${encodeURIComponent(userId)}`,
       {
@@ -161,7 +186,21 @@ export const leaveShare = createAsyncThunk(
       throw new Error(errorData.error || 'Failed to leave share');
     }
 
-    return await response.json();
+    const updatedShare = await response.json();
+
+    // Check if the user who left is still in the updated members list
+    const userStillInShare =
+      updatedShare.members &&
+      updatedShare.members.some((member: any) => member.userId === userId);
+
+    const result = {
+      ...updatedShare,
+      shareId: shareId, // Ensure shareId is present for Redux matching
+      userLeftShare: !userStillInShare, // Flag to indicate the user left
+      holidayKey: holidayKey, // Include holidayKey for home slice to use
+    };
+
+    return result;
   },
 );
 
@@ -199,6 +238,20 @@ const sharesSlice = createSlice({
       .addCase(fetchShares.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch shares';
+      })
+      // Refresh shares (force fetch)
+      .addCase(refreshShares.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(refreshShares.fulfilled, (state, action) => {
+        state.loading = false;
+        state.shares = action.payload;
+        state.initialized = true;
+      })
+      .addCase(refreshShares.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to refresh shares';
       })
       // Create share
       .addCase(createShare.pending, state => {
@@ -256,11 +309,15 @@ const sharesSlice = createSlice({
       })
       .addCase(removeMemberFromShare.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.shares.findIndex(
-          share => share.shareId === action.payload.shareId,
+        // When a member is removed, check if it affects the current user's access
+        const updatedShare = action.payload;
+        const shareIndex = state.shares.findIndex(
+          share => share.shareId === updatedShare.shareId,
         );
-        if (index !== -1) {
-          state.shares[index] = action.payload;
+
+        if (shareIndex !== -1) {
+          // Update the share with new member list
+          state.shares[shareIndex] = updatedShare;
         }
       })
       .addCase(removeMemberFromShare.rejected, (state, action) => {
@@ -274,11 +331,22 @@ const sharesSlice = createSlice({
       })
       .addCase(leaveShare.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.shares.findIndex(
-          share => share.shareId === action.payload.shareId,
+
+        const { userLeftShare, holidayKey, ...updatedShare } = action.payload;
+        const shareIndex = state.shares.findIndex(
+          share => share.shareId === updatedShare.shareId,
         );
-        if (index !== -1) {
-          state.shares[index] = action.payload;
+
+        if (shareIndex !== -1) {
+          if (userLeftShare) {
+            // User is no longer a member, remove the share from local state
+            state.shares.splice(shareIndex, 1);
+          } else {
+            // User is still a member (shouldn't normally happen for leaveShare), update the share
+            state.shares[shareIndex] = updatedShare;
+          }
+        } else {
+          console.error('❌ SharesSlice: Share not found in local state');
         }
       })
       .addCase(leaveShare.rejected, (state, action) => {

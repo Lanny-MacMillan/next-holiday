@@ -345,14 +345,9 @@ export default invitesSlice.reducer;
 // Selectors
 export const selectPendingInvites = createSelector(
   (state: any, userId: string, userEmail?: string) => state.invites.invites,
-  (userId: string, userEmail?: string) => ({ userId, userEmail }),
-  (invites, { userId, userEmail }) => {
-    console.log('🔍 Selector Debug:', {
-      invites,
-      userId,
-      userEmail,
-      inviteCount: invites.length,
-    });
+  (state: any, userId: string, userEmail?: string) => ({ userId, userEmail }),
+  (invites, params) => {
+    const { userId, userEmail } = params;
 
     const filtered = invites.filter((invite: Invite) => {
       const matches =
@@ -361,20 +356,9 @@ export const selectPendingInvites = createSelector(
           (userEmail && invite.toEmail === userEmail)) &&
         invite.status === 'pending';
 
-      console.log('🔍 Invite Filter:', {
-        inviteId: invite.id,
-        inviteToUserId: invite.toUserId,
-        inviteToEmail: invite.toEmail,
-        inviteStatus: invite.status,
-        userId,
-        userEmail,
-        matches,
-      });
-
       return matches;
     });
 
-    console.log('🔍 Selector Result:', filtered);
     return filtered;
   },
 );

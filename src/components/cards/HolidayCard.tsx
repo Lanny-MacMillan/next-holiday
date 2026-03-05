@@ -5,9 +5,11 @@ import Link from 'next/link';
 import CountdownWithInviteCompact from '@/components/common/CountdownWithInviteCompact';
 import SharedIndicatorEnhanced from '@/components/common/SharedIndicatorEnhanced';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import { selectPendingInvites } from '@/store/slices/invitesSlice';
 import BouncingShape from '@/components/animations/BouncingShape';
 import { useAppSelector } from '@/store/hooks';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth0 } from '@auth0/auth0-react';
 import { getCardStyling } from '@/utils/cardShadows';
 import { getGamifiedBackgroundColor } from '@/utils/gamifiedUtils';
 
@@ -127,9 +129,21 @@ export default function HolidayCard({
   const isDarkMode = preferences?.theme === 'dark' || settings.theme === 'dark';
   const { isUserPlusMember, hasSubscription } = useSubscription();
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+  const { user } = useAuth0();
 
   // Check if this holiday is shared
   const isShared = useAppSelector(state => selectIsHolidayShared(state, id));
+
+  // Check if user has pending invites for this holiday
+  const pendingInvites = useAppSelector(state =>
+    user?.sub ? selectPendingInvites(state, user.sub, user.email) : [],
+  );
+  const hasPendingInviteForHoliday = pendingInvites.some(
+    (invite: any) => invite.holidayKey === id,
+  );
+
+  // Show sharing indicator if there's a share OR a pending invite
+  const shouldShowSharingIndicator = isShared || hasPendingInviteForHoliday;
   const incompleteItems = totalItems - completedItems;
 
   // Use provided background color, holiday-specific gradient, or fallback to default
@@ -144,15 +158,17 @@ export default function HolidayCard({
       <li>
         <div
           className={`relative card rounded-2xl p-3 sm:p-5 transition hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white ${
-            isAuthorizedForSharing && isShared
+            isAuthorizedForSharing && shouldShowSharingIndicator
               ? 'ring-2 ring-blue-400 dark:ring-blue-500 ring-opacity-50'
               : ''
           }`}
-          style={getCardStyling({
-            isDarkMode,
-            isGamified: true,
-            intensity: 'heavy',
-          })}
+          style={
+            getCardStyling({
+              isDarkMode,
+              isGamified: true,
+              intensity: 'heavy',
+            }) as React.CSSProperties
+          }
         >
           {/* Background texture overlay */}
           <div className="absolute inset-0 opacity-10">
@@ -232,7 +248,7 @@ export default function HolidayCard({
             <span className="sr-only">Go to {name} page</span>
           </Link>
           {/* Shared Indicator - positioned outside Link coverage */}
-          {isAuthorizedForSharing && isShared && (
+          {isAuthorizedForSharing && shouldShowSharingIndicator && (
             <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20">
               <SharedIndicatorEnhanced
                 holidayKey={id}
@@ -264,7 +280,7 @@ export default function HolidayCard({
     <li>
       <div
         className={`relative card rounded-2xl p-3 sm:p-5 flex items-center gap-3 sm:gap-4 transition hover:scale-[1.02] active:scale-100 group overflow-hidden ${
-          isAuthorizedForSharing && isShared
+          isAuthorizedForSharing && shouldShowSharingIndicator
             ? 'ring-2 ring-blue-300 dark:ring-blue-600 ring-opacity-40'
             : ''
         }`}
@@ -276,7 +292,9 @@ export default function HolidayCard({
               intensity: 'medium',
             }),
             '--holiday-color': color.light,
-            borderLeft: `4px solid ${color.light}`, // Always show holiday color accent
+            borderLeftWidth: '4px',
+            borderLeftStyle: 'solid',
+            borderLeftColor: color.light, // Always show holiday color accent
           } as React.CSSProperties
         }
       >
@@ -335,7 +353,7 @@ export default function HolidayCard({
                 {description}
               </p>
               {/* SharedIndicator positioned right after description */}
-              {isAuthorizedForSharing && isShared && (
+              {isAuthorizedForSharing && shouldShowSharingIndicator && (
                 <div className="flex justify-start mt-2 mb-1 relative z-20">
                   <SharedIndicatorEnhanced
                     holidayKey={id}

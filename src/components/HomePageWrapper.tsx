@@ -2,7 +2,7 @@
 
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setHomeData as setHomeDataAction } from '@/store/slices/homeSlice';
 import { setUser } from '@/store/slices/userSlice';
 import { setMany as setBudgets } from '@/store/slices/budgetsSlice';
@@ -13,6 +13,7 @@ import { HomeData } from '@/types/home';
 export default function HomePageWrapper() {
   const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector(state => state.user.user);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,16 @@ export default function HomePageWrapper() {
 
         // Dispatch user data to Redux store with subscription info
         if (data?.user) {
+          // Check if user was recently downgraded (within last 30 seconds)
+          const wasRecentlyDowngraded =
+            currentUser?.subscriptionPlan === 'free' &&
+            currentUser?.lastUpdated &&
+            Date.now() - new Date(currentUser.lastUpdated).getTime() < 30000;
+
+          const subscriptionPlan = wasRecentlyDowngraded
+            ? 'free' // Preserve recent downgrade
+            : data.user.subscriptionPlan || 'free';
+
           dispatch(
             setUser({
               sub: data.user.auth0Sub || auth0User.sub, // Fallback to auth0User.sub if API doesn't have it
@@ -69,9 +80,16 @@ export default function HomePageWrapper() {
               name: data.user.name,
               picture: data.user.picture,
               isInDb: true, // If we have homeData, user is in DB
-              subscriptionPlan: data.user.subscriptionPlan || 'free',
-              subscriptionStartDate: data.user.subscriptionStartDate,
-              subscriptionEndDate: data.user.subscriptionEndDate,
+              subscriptionPlan: subscriptionPlan,
+              subscriptionStartDate: wasRecentlyDowngraded
+                ? undefined
+                : data.user.subscriptionStartDate,
+              subscriptionEndDate: wasRecentlyDowngraded
+                ? undefined
+                : data.user.subscriptionEndDate,
+              lastUpdated: wasRecentlyDowngraded
+                ? currentUser.lastUpdated
+                : new Date().toISOString(),
             }),
           );
         }

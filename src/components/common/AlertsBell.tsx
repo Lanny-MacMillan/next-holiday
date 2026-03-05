@@ -11,7 +11,7 @@ import {
   declineInvite,
   dismissInvite,
 } from '@/store/slices/invitesSlice';
-import { addShare, fetchShares } from '@/store/slices/sharesSlice';
+import { addShare, fetchShares, refreshShares } from '@/store/slices/sharesSlice';
 import { Invite } from '@/store/slices/invitesSlice';
 import { migrateHolidayDataToShare } from '@/utils/shareMigration';
 import { selectHolidayPreferences } from '@/store/selectors/home';
@@ -141,12 +141,11 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
 
       // Refresh shares
       if (user?.sub) {
-        await dispatch(fetchShares(user.sub));
+        // Don't call fetchShares here since we already called refreshShares above
+        // await dispatch(fetchShares(user.sub));
       }
-
-      console.log('Home data refreshed successfully');
     } catch (error) {
-      console.error('Failed to refresh home data:', error);
+      console.log('Failed to refresh home data:', error);
       throw error;
     }
   };
@@ -157,48 +156,7 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
 
     setAcceptingInvite(true);
     try {
-      // If user chose to delete their existing data, do that first
-      if (deleteExisting && confirmInvite.hasExistingHoliday) {
-        setDeletingExistingData(true);
-        const holidayDisplayName = getHolidayDisplayName(
-          confirmInvite.invite.holidayKey,
-        );
-
-        // Find the user's existing holiday for this type
-        const existingHoliday = holidayPreferences.find(
-          pref => pref.holiday === holidayDisplayName,
-        );
-
-        if (existingHoliday?.holidayId) {
-          console.log('Deleting existing holiday:', existingHoliday.holidayId);
-
-          // Call the delete API
-          const deleteResponse = await fetch(
-            `/api/holidays/${existingHoliday.holidayId}`,
-            {
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-test-user': JSON.stringify({
-                  sub: user?.sub,
-                  email: user?.email,
-                  name: user?.name,
-                  picture: user?.picture,
-                }),
-              },
-            },
-          );
-
-          if (!deleteResponse.ok) {
-            throw new Error('Failed to delete existing holiday');
-          }
-
-          console.log('Existing holiday deleted successfully');
-        }
-        setDeletingExistingData(false);
-      }
-
-      // Now accept the invite
+      // Accept the invite FIRST to avoid cascade delete issues
       const result = await dispatch(
         acceptInvite({ inviteId: confirmInvite.invite.id, auth0User: user }),
       ).unwrap();
@@ -213,18 +171,88 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
         dispatch,
       );
 
-      setConfirmInvite(null);
-      console.log("You're now sharing this holiday");
+      // THEN, if user chose to delete their existing data, do that after accepting
+      if (deleteExisting && confirmInvite.hasExistingHoliday) {
+        setDeletingExistingData(true);
+        const holidayDisplayName = getHolidayDisplayName(
+          confirmInvite.invite.holidayKey,
+        );
 
-      // Refresh home data to update UI
+        // Find the user's existing holiday for this type
+        const existingHoliday = holidayPreferences.find(
+          pref => pref.holiday === holidayDisplayName,
+        );
+
+        if (existingHoliday?.holidayId) {
+          // 🔥 FIX: Instead of deleting the entire holiday, just clear the existing data
+          // The user is now part of the shared holiday, so we don't need their old data
+          // But we should NOT delete the holiday record itself - that breaks everything
+
+          try {
+            // Clear tasks, gifts, and cards for this holiday
+            const clearDataResponse = await fetch(
+              `/api/holidays/${existingHoliday.holidayId}/clear-data`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-test-user': JSON.stringify({
+                    sub: user?.sub,
+                    email: user?.email,
+                    name: user?.name,
+                    picture: user?.picture,
+                  }),
+                },
+              },
+            );
+
+            if (!clearDataResponse.ok) {
+              console.error(
+                'Failed to clear existing holiday data, but invite was accepted successfully. User will see both shared and personal data.',
+              );
+            } else {
+              console.log('Existing holiday data cleared successfully');
+            }
+          } catch (error) {
+            console.error('Error clearing holiday data:', error);
+            // Continue - invite was still accepted successfully
+          }
+        }
+        setDeletingExistingData(false);
+      }
+
+      setConfirmInvite(null);
+
+      // 🔥 FIX: Use existing refreshHomeData function that already works
+      // The issue was timing, not the Redux pattern
       await refreshHomeData();
-    } catch (error) {
+
+      // Refresh shares data to include the newly joined share
+      if (user?.sub) {
+        await dispatch(refreshShares(user.sub));
+
+        await dispatch(fetchInboxInvites(user.sub));
+      }
+
+      // End loading state only after ALL operations complete
+      setAcceptingInvite(false);
+      setDeletingExistingData(false);
+    } catch (error: any) {
       console.error('Failed to accept invite:', error);
-      alert('Failed to accept invite. Please try again.');
-    } finally {
+      // More specific error messages
+      if (error.message?.includes('Invite not found')) {
+        alert(
+          'This invite is no longer available. It may have already been accepted or the sender may have cancelled it.',
+        );
+      } else {
+        alert(`Failed to accept invite: ${error.message || 'Please try again.'}`);
+      }
+
+      // End loading state on error too
       setAcceptingInvite(false);
       setDeletingExistingData(false);
     }
+    // Remove finally block since we're handling loading state explicitly
   };
 
   const handleAcceptInvite = async (inviteId: string) => {
@@ -243,7 +271,10 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
         dispatch,
       );
 
-      console.log("You're now sharing this holiday");
+      // Refresh shares data to update the UI after accepting
+      if (user?.sub) {
+        await dispatch(fetchShares(user.sub));
+      }
     } catch (error) {
       console.error('Failed to accept invite:', error);
     }
@@ -252,7 +283,11 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
   const handleDeclineInvite = async (inviteId: string) => {
     try {
       await dispatch(declineInvite({ inviteId, auth0User: user })).unwrap();
-      console.log('Invite declined');
+
+      // Refresh shares data to update the UI after declining
+      if (user?.sub) {
+        await dispatch(refreshShares(user.sub)); // Use refreshShares instead of fetchShares
+      }
     } catch (error) {
       console.error('Failed to decline invite:', error);
     }
@@ -262,7 +297,6 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
     try {
       setDismissingInviteId(inviteId);
       await dispatch(dismissInvite({ inviteId, auth0User: user })).unwrap();
-      console.log('Invite dismissed from database and UI');
     } catch (error) {
       console.error('Failed to dismiss invite:', error);
     } finally {

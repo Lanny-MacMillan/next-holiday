@@ -10,8 +10,13 @@ import {
   removeMemberFromShare,
   leaveShare,
   fetchShares,
+  refreshShares,
 } from '@/store/slices/sharesSlice';
-import { selectOutgoingInvites } from '@/store/slices/invitesSlice';
+import {
+  selectOutgoingInvites,
+  selectPendingInvites,
+} from '@/store/slices/invitesSlice';
+import { setHomeData, removeSharedHolidayData } from '@/store/slices/homeSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import SharedUserList from './SharedUserList';
 import UserAvatar from './UserAvatar';
@@ -45,16 +50,30 @@ export default function SharedIndicatorEnhanced({
 
   const share = useAppSelector(state => selectShareByHolidayKey(state, holidayKey));
 
+  // Get home data to find holidayId for immediate removal on leave
+  const homeData = useAppSelector(state => state.home.data);
+
+  // Check if user has pending invites for this holiday
+  const pendingInvites = useAppSelector(state =>
+    user?.sub ? selectPendingInvites(state, user.sub, user.email) : [],
+  );
+
+  // Debug: Also get ALL invites to see what's in the store
+  const allInvites = useAppSelector(state => state.invites.invites || []);
+  const fullInvitesState = useAppSelector(state => state.invites);
+  const outgoingInvites = useAppSelector(state =>
+    user?.sub ? selectOutgoingInvites(state, user.sub) : [],
+  );
+
+  const hasPendingInviteForHoliday = useMemo(() => {
+    return pendingInvites.some((invite: any) => invite.holidayKey === holidayKey);
+  }, [pendingInvites, holidayKey]);
+
   const isCurrentUserOwner = useMemo(() => {
     if (!user?.sub) return false;
     if (!share) return true; // No share exists, user can be considered owner
     return share.ownerUserId === user.sub;
   }, [share, user?.sub]);
-
-  if (!share) {
-    console.log('❌ No share found for:', holidayKey);
-    return null;
-  }
 
   // Get members from the enhanced share data, fallback to memberUserIds for backward compatibility
   const members: ShareMember[] = useMemo(() => {
@@ -71,10 +90,27 @@ export default function SharedIndicatorEnhanced({
     );
   }, [share]);
 
+  // If user has a pending invite for this holiday, show "invite pending" indicator
+  if (hasPendingInviteForHoliday) {
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border-2 flex-shrink-0 bg-yellow-500 text-white border-yellow-300 ${className}`}
+      >
+        <svg className="w-2.5 h-2.5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Invite Pending</span>
+      </span>
+    );
+  }
+
+  if (!share) {
+    return null;
+  }
+
   // Show all shares that exist (even with just the owner)
   // This allows users to see shareable holidays and invite others
   if (members.length < 1) {
-    console.log('⚠️ Not showing - no members found');
     return null;
   }
 
@@ -104,14 +140,40 @@ export default function SharedIndicatorEnhanced({
 
     setIsLoading(true);
     setError(null);
+
     try {
       if (actionToConfirm.type === 'leave') {
-        await dispatch(
+        const result = await dispatch(
           leaveShare({
             shareId: share.shareId,
             userId: actionToConfirm.userId,
+            holidayKey: holidayKey,
           }),
         ).unwrap();
+
+        // Immediately remove the shared holiday data from Redux for better UX
+        // Find the holidayId for this holidayKey
+        const holidayPref = homeData?.holidayPreferences?.find(pref => {
+          // Normalize both keys for comparison
+          const normalizeKey = (key: string) =>
+            key.toLowerCase().replace(/[-\s']/g, '');
+          return (
+            normalizeKey(pref.holiday) === normalizeKey(holidayKey) ||
+            normalizeKey(pref.holidayId) === normalizeKey(holidayKey)
+          );
+        });
+
+        if (holidayPref?.holidayId) {
+          dispatch(removeSharedHolidayData({ holidayId: holidayPref.holidayId }));
+        } else {
+          console.error('❌ SharedIndicator: Could not find holiday to remove', {
+            holidayKey,
+            availableHolidays: homeData?.holidayPreferences?.map(p => ({
+              holiday: p.holiday,
+              holidayId: p.holidayId,
+            })),
+          });
+        }
       } else {
         await dispatch(
           removeMemberFromShare({
@@ -121,13 +183,49 @@ export default function SharedIndicatorEnhanced({
         ).unwrap();
       }
 
-      // Refresh shares data to update the homepage
+      // Small delay to ensure backend operations are completed
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Refresh all data to update the homepage
       if (user?.sub) {
-        await dispatch(fetchShares(user.sub));
+        await dispatch(refreshShares(user.sub)); // Use refreshShares instead of fetchShares
+
+        // Also refresh home data to ensure holiday cards update properly
+        try {
+          const response = await fetch('/api/home', {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-test-user': JSON.stringify({
+                sub: user.sub,
+                email: user.email,
+                name: user.name,
+                picture: user.picture,
+              }),
+            },
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            const data = result.data;
+
+            // Update Redux store with fresh home data
+            dispatch(setHomeData(data));
+          }
+        } catch (refreshError) {
+          console.error(
+            'Failed to refresh home data after share operation:',
+            refreshError,
+          );
+        }
       }
 
       setShowConfirmModal(false);
       setActionToConfirm(null);
+
+      // If user left the share, also close the members modal since they're no longer part of it
+      if (actionToConfirm.type === 'leave') {
+        setShowMembersModal(false);
+      }
     } catch (error: any) {
       console.error('Error performing action:', error);
       setError(error.message || 'Failed to perform action');
@@ -175,8 +273,8 @@ export default function SharedIndicatorEnhanced({
             </svg>
             {members.length > 1
               ? 'Shared'
-              : share.hasPendingInvites
-                ? 'Invite Pending'
+              : share.hasPendingInvites && isCurrentUserOwner
+                ? 'Invite Sent'
                 : 'Shareable'}
           </span>
         )}
@@ -195,8 +293,8 @@ export default function SharedIndicatorEnhanced({
         {members.length >= 1 && (
           <span className="text-xs text-white ml-1 flex-shrink-0">
             {members.length} member{members.length !== 1 ? 's' : ''}
-            {members.length === 1 && share.hasPendingInvites
-              ? ' (invite pending)'
+            {members.length === 1 && share.hasPendingInvites && isCurrentUserOwner
+              ? ' (invite sent)'
               : ''}
           </span>
         )}
