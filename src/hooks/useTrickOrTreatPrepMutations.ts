@@ -1,65 +1,63 @@
-import { usePathname } from "next/navigation";
-import { useAppSelector } from "@/store/hooks";
-import { useAuth0 } from "@auth0/auth0-react";
+import { usePathname } from 'next/navigation';
+import { useAppSelector } from '@/store/hooks';
+import { useAuth0 } from '@auth0/auth0-react';
 import {
-	useGetTrickOrTreatPrepQuery,
-	useCreateTrickOrTreatPrepMutation,
-	useUpdateTrickOrTreatPrepMutation,
-	useEditTrickOrTreatPrepMutation,
-	useDeleteTrickOrTreatPrepMutation,
-} from "@/store/api";
-import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+  useGetTrickOrTreatPrepQuery,
+  useCreateTrickOrTreatPrepMutation,
+  useUpdateTrickOrTreatPrepMutation,
+  useEditTrickOrTreatPrepMutation,
+  useDeleteTrickOrTreatPrepMutation,
+} from '@/store/api';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 
 export function useTrickOrTreatPrepMutations() {
-	const pathname = usePathname();
-	const { user: auth0User } = useAuth0();
-	const holidayPreferences = useAppSelector(
-		(state: any) => state.home.data?.holidayPreferences || []
-	);
-	const homeInitialized = useAppSelector(
-		(state: any) => state.home.initialized
-	);
+  const pathname = usePathname();
+  const { user: auth0User } = useAuth0();
+  const holidayPreferences = useAppSelector(
+    (state: any) => state.home.data?.holidayPreferences || [],
+  );
+  const homeInitialized = useAppSelector((state: any) => state.home.initialized);
 
-	// Only resolve holidayId if home data is initialized
-	const holidayId = homeInitialized
-		? getHolidayIdFromRoute(pathname, holidayPreferences)
-		: null;
+  // Only resolve holidayId if home data is initialized
+  const holidayId = homeInitialized
+    ? getHolidayIdFromRoute(pathname, holidayPreferences)
+    : null;
 
-	// Get all trick or treat prep mutations
-	const [createTrickOrTreatPrep, createTrickOrTreatPrepState] =
-		useCreateTrickOrTreatPrepMutation();
-	const [updateTrickOrTreatPrep, updateTrickOrTreatPrepState] =
-		useUpdateTrickOrTreatPrepMutation();
-	const [editTrickOrTreatPrep, editTrickOrTreatPrepState] =
-		useEditTrickOrTreatPrepMutation();
-	const [deleteTrickOrTreatPrep, deleteTrickOrTreatPrepState] =
-		useDeleteTrickOrTreatPrepMutation();
+  // Get all trick or treat prep mutations
+  const [createTrickOrTreatPrep, createTrickOrTreatPrepState] =
+    useCreateTrickOrTreatPrepMutation();
+  const [updateTrickOrTreatPrep, updateTrickOrTreatPrepState] =
+    useUpdateTrickOrTreatPrepMutation();
+  const [editTrickOrTreatPrep, editTrickOrTreatPrepState] =
+    useEditTrickOrTreatPrepMutation();
+  const [deleteTrickOrTreatPrep, deleteTrickOrTreatPrepState] =
+    useDeleteTrickOrTreatPrepMutation();
 
-	// Get trick or treat prep query
-	const {
-		data: trickOrTreatPrep = [],
-		isLoading: loading,
-		error,
-		isSuccess: initialized,
-	} = useGetTrickOrTreatPrepQuery(
-		{ holidayId: holidayId || "", auth0User },
-		{ skip: !holidayId || !auth0User }
-	);
+  // Get trick or treat prep query
+  const {
+    data: trickOrTreatPrep = [],
+    isLoading: loading,
+    error,
+    isSuccess: initialized,
+  } = useGetTrickOrTreatPrepQuery(
+    { holidayId: holidayId || '', auth0User },
+    { skip: !holidayId || !auth0User },
+  );
 
-	return {
-		holidayId,
-		auth0User,
-		trickOrTreatPrep,
-		loading,
-		error,
-		initialized,
-		createTrickOrTreatPrep,
-		updateTrickOrTreatPrep,
-		editTrickOrTreatPrep,
-		deleteTrickOrTreatPrep,
-		createTrickOrTreatPrepState,
-		updateTrickOrTreatPrepState,
-		editTrickOrTreatPrepState,
-		deleteTrickOrTreatPrepState,
-	};
+  return {
+    holidayId,
+    auth0User,
+    trickOrTreatPrep,
+    loading,
+    error,
+    initialized,
+    createTrickOrTreatPrep,
+    updateTrickOrTreatPrep,
+    editTrickOrTreatPrep,
+    deleteTrickOrTreatPrep,
+    createTrickOrTreatPrepState,
+    updateTrickOrTreatPrepState,
+    editTrickOrTreatPrepState,
+    deleteTrickOrTreatPrepState,
+  };
 }

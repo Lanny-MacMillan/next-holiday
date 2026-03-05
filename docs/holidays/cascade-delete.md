@@ -182,9 +182,9 @@ DELETE_HOLIDAY_ROW_THRESHOLD=1000
 
 ```typescript
 const result = await deleteHolidayData({
-	accountId: "account-123",
-	holidayId: "holiday-456",
-	dryRun: true,
+  accountId: 'account-123',
+  holidayId: 'holiday-456',
+  dryRun: true,
 });
 
 console.log(result.totals);
@@ -208,10 +208,10 @@ console.log(result.totals);
 
 ```typescript
 const result = await deleteHolidayData({
-	accountId: "account-123",
-	holidayId: "holiday-456",
-	dryRun: false,
-	force: false, // Will fail if > threshold
+  accountId: 'account-123',
+  holidayId: 'holiday-456',
+  dryRun: false,
+  force: false, // Will fail if > threshold
 });
 ```
 

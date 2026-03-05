@@ -1,269 +1,260 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
 export interface GraduationGuest {
-	id: string;
-	name: string;
-	email?: string;
-	phone?: string;
-	address?: string;
-	rsvpStatus: "pending" | "confirmed" | "declined";
-	numberOfGuests: number;
-	dietaryRestrictions?: string;
-	bringingDish?: string;
-	notes?: string;
-	isCompleted: boolean;
-	completedDate?: string;
-	createdAt: string;
-	updatedAt: string;
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  rsvpStatus: 'pending' | 'confirmed' | 'declined';
+  numberOfGuests: number;
+  dietaryRestrictions?: string;
+  bringingDish?: string;
+  notes?: string;
+  isCompleted: boolean;
+  completedDate?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface GraduationGuestListState {
-	guests: GraduationGuest[];
-	loading: boolean;
-	error: string | null;
-	selectedGuest: GraduationGuest | null;
-	initialized: boolean;
+  guests: GraduationGuest[];
+  loading: boolean;
+  error: string | null;
+  selectedGuest: GraduationGuest | null;
+  initialized: boolean;
 }
 
 const initialState: GraduationGuestListState = {
-	guests: [],
-	loading: false,
-	error: null,
-	selectedGuest: null,
-	initialized: false,
+  guests: [],
+  loading: false,
+  error: null,
+  selectedGuest: null,
+  initialized: false,
 };
 
 // Async thunks
 export const fetchGraduationGuests = createAsyncThunk(
-	"graduationGuestList/fetchGraduationGuests",
-	async (_, { getState }) => {
-		// Get current state to check if we already have data
-		const state = getState() as any;
-		const currentGuests = state.graduationGuestList.guests;
-		const isInitialized = state.graduationGuestList.initialized;
+  'graduationGuestList/fetchGraduationGuests',
+  async (_, { getState }) => {
+    // Get current state to check if we already have data
+    const state = getState() as any;
+    const currentGuests = state.graduationGuestList.guests;
+    const isInitialized = state.graduationGuestList.initialized;
 
-		// Only fetch if we haven't initialized yet
-		if (isInitialized) {
-			return currentGuests;
-		}
+    // Only fetch if we haven't initialized yet
+    if (isInitialized) {
+      return currentGuests;
+    }
 
-		// Simulate API call
-		const response = await new Promise<GraduationGuest[]>((resolve) => {
-			setTimeout(() => {
-				resolve([
-					{
-						id: "1",
-						name: "Sarah Johnson",
-						email: "sarah.johnson@email.com",
-						phone: "555-0123",
-						address: "456 Maple Ave, Anytown, CA 90210",
-						rsvpStatus: "confirmed",
-						numberOfGuests: 3,
-						dietaryRestrictions: "Vegetarian",
-						bringingDish: "Graduation Cake",
-						notes: "Will arrive around 2 PM",
-						isCompleted: false,
-						createdAt: new Date().toISOString(),
-						updatedAt: new Date().toISOString(),
-					},
-					{
-						id: "2",
-						name: "Mike and Lisa Chen",
-						email: "mike.chen@email.com",
-						phone: "555-0456",
-						address: "789 Oak Street, Anytown, CA 90210",
-						rsvpStatus: "pending",
-						numberOfGuests: 2,
-						bringingDish: "Graduation Cookies",
-						notes: "Checking their schedule",
-						isCompleted: false,
-						createdAt: new Date().toISOString(),
-						updatedAt: new Date().toISOString(),
-					},
-				]);
-			}, 1000);
-		});
-		return response;
-	}
+    // Simulate API call
+    const response = await new Promise<GraduationGuest[]>(resolve => {
+      setTimeout(() => {
+        resolve([
+          {
+            id: '1',
+            name: 'Sarah Johnson',
+            email: 'sarah.johnson@email.com',
+            phone: '555-0123',
+            address: '456 Maple Ave, Anytown, CA 90210',
+            rsvpStatus: 'confirmed',
+            numberOfGuests: 3,
+            dietaryRestrictions: 'Vegetarian',
+            bringingDish: 'Graduation Cake',
+            notes: 'Will arrive around 2 PM',
+            isCompleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: '2',
+            name: 'Mike and Lisa Chen',
+            email: 'mike.chen@email.com',
+            phone: '555-0456',
+            address: '789 Oak Street, Anytown, CA 90210',
+            rsvpStatus: 'pending',
+            numberOfGuests: 2,
+            bringingDish: 'Graduation Cookies',
+            notes: 'Checking their schedule',
+            isCompleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ]);
+      }, 1000);
+    });
+    return response;
+  },
 );
 
 export const addGraduationGuest = createAsyncThunk(
-	"graduationGuestList/addGraduationGuest",
-	async (guest: Omit<GraduationGuest, "id" | "createdAt" | "updatedAt">) => {
-		// Simulate API call
-		const response = await new Promise<GraduationGuest>((resolve) => {
-			setTimeout(() => {
-				const newGuest: GraduationGuest = {
-					...guest,
-					id: Date.now().toString(),
-					createdAt: new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
-				};
-				resolve(newGuest);
-			}, 500);
-		});
-		return response;
-	}
+  'graduationGuestList/addGraduationGuest',
+  async (guest: Omit<GraduationGuest, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Simulate API call
+    const response = await new Promise<GraduationGuest>(resolve => {
+      setTimeout(() => {
+        const newGuest: GraduationGuest = {
+          ...guest,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        resolve(newGuest);
+      }, 500);
+    });
+    return response;
+  },
 );
 
 export const updateGraduationGuest = createAsyncThunk(
-	"graduationGuestList/updateGraduationGuest",
-	async (guest: GraduationGuest) => {
-		// Simulate API call
-		const response = await new Promise<GraduationGuest>((resolve) => {
-			setTimeout(() => {
-				const updatedGuest: GraduationGuest = {
-					...guest,
-					updatedAt: new Date().toISOString(),
-				};
-				resolve(updatedGuest);
-			}, 500);
-		});
-		return response;
-	}
+  'graduationGuestList/updateGraduationGuest',
+  async (guest: GraduationGuest) => {
+    // Simulate API call
+    const response = await new Promise<GraduationGuest>(resolve => {
+      setTimeout(() => {
+        const updatedGuest: GraduationGuest = {
+          ...guest,
+          updatedAt: new Date().toISOString(),
+        };
+        resolve(updatedGuest);
+      }, 500);
+    });
+    return response;
+  },
 );
 
 export const deleteGraduationGuest = createAsyncThunk(
-	"graduationGuestList/deleteGraduationGuest",
-	async (guestId: string) => {
-		// Simulate API call
-		await new Promise<void>((resolve) => {
-			setTimeout(() => {
-				resolve();
-			}, 500);
-		});
-		return guestId;
-	}
+  'graduationGuestList/deleteGraduationGuest',
+  async (guestId: string) => {
+    // Simulate API call
+    await new Promise<void>(resolve => {
+      setTimeout(() => {
+        resolve();
+      }, 500);
+    });
+    return guestId;
+  },
 );
 
 export const toggleGraduationGuestCompletion = createAsyncThunk(
-	"graduationGuestList/toggleGraduationGuestCompletion",
-	async (guestId: string, { getState }) => {
-		const state = getState() as any;
-		const guest = state.graduationGuestList.guests.find(
-			(g: GraduationGuest) => g.id === guestId
-		);
+  'graduationGuestList/toggleGraduationGuestCompletion',
+  async (guestId: string, { getState }) => {
+    const state = getState() as any;
+    const guest = state.graduationGuestList.guests.find(
+      (g: GraduationGuest) => g.id === guestId,
+    );
 
-		if (!guest) {
-			throw new Error("Guest not found");
-		}
+    if (!guest) {
+      throw new Error('Guest not found');
+    }
 
-		// Simulate API call
-		const response = await new Promise<GraduationGuest>((resolve) => {
-			setTimeout(() => {
-				const updatedGuest: GraduationGuest = {
-					...guest,
-					isCompleted: !guest.isCompleted,
-					completedDate: !guest.isCompleted
-						? new Date().toISOString()
-						: undefined,
-					updatedAt: new Date().toISOString(),
-				};
-				resolve(updatedGuest);
-			}, 500);
-		});
-		return response;
-	}
+    // Simulate API call
+    const response = await new Promise<GraduationGuest>(resolve => {
+      setTimeout(() => {
+        const updatedGuest: GraduationGuest = {
+          ...guest,
+          isCompleted: !guest.isCompleted,
+          completedDate: !guest.isCompleted ? new Date().toISOString() : undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        resolve(updatedGuest);
+      }, 500);
+    });
+    return response;
+  },
 );
 
 const graduationGuestListSlice = createSlice({
-	name: "graduationGuestList",
-	initialState,
-	reducers: {
-		setSelectedGuest: (
-			state,
-			action: PayloadAction<GraduationGuest | null>
-		) => {
-			state.selectedGuest = action.payload;
-		},
-		clearError: (state) => {
-			state.error = null;
-		},
-	},
-	extraReducers: (builder) => {
-		builder
-			// Fetch guests
-			.addCase(fetchGraduationGuests.pending, (state) => {
-				state.loading = true;
-				state.error = null;
-			})
-			.addCase(fetchGraduationGuests.fulfilled, (state, action) => {
-				state.loading = false;
-				state.guests = action.payload;
-				state.initialized = true;
-			})
-			.addCase(fetchGraduationGuests.rejected, (state, action) => {
-				state.loading = false;
-				state.error = action.error.message || "Failed to fetch guests";
-			})
-			// Add guest
-			.addCase(addGraduationGuest.pending, (state) => {
-				state.loading = true;
-				state.error = null;
-			})
-			.addCase(addGraduationGuest.fulfilled, (state, action) => {
-				state.loading = false;
-				state.guests.push(action.payload);
-			})
-			.addCase(addGraduationGuest.rejected, (state, action) => {
-				state.loading = false;
-				state.error = action.error.message || "Failed to add guest";
-			})
-			// Update guest
-			.addCase(updateGraduationGuest.pending, (state) => {
-				state.loading = true;
-				state.error = null;
-			})
-			.addCase(updateGraduationGuest.fulfilled, (state, action) => {
-				state.loading = false;
-				const index = state.guests.findIndex(
-					(guest) => guest.id === action.payload.id
-				);
-				if (index !== -1) {
-					state.guests[index] = action.payload;
-				}
-			})
-			.addCase(updateGraduationGuest.rejected, (state, action) => {
-				state.loading = false;
-				state.error = action.error.message || "Failed to update guest";
-			})
-			// Delete guest
-			.addCase(deleteGraduationGuest.pending, (state) => {
-				state.loading = true;
-				state.error = null;
-			})
-			.addCase(deleteGraduationGuest.fulfilled, (state, action) => {
-				state.loading = false;
-				state.guests = state.guests.filter(
-					(guest) => guest.id !== action.payload
-				);
-			})
-			.addCase(deleteGraduationGuest.rejected, (state, action) => {
-				state.loading = false;
-				state.error = action.error.message || "Failed to delete guest";
-			})
-			// Toggle guest completion
-			.addCase(toggleGraduationGuestCompletion.pending, (state) => {
-				state.loading = true;
-				state.error = null;
-			})
-			.addCase(toggleGraduationGuestCompletion.fulfilled, (state, action) => {
-				state.loading = false;
-				const index = state.guests.findIndex(
-					(guest) => guest.id === action.payload.id
-				);
-				if (index !== -1) {
-					state.guests[index] = action.payload;
-				}
-			})
-			.addCase(toggleGraduationGuestCompletion.rejected, (state, action) => {
-				state.loading = false;
-				state.error =
-					action.error.message || "Failed to toggle guest completion";
-			});
-	},
+  name: 'graduationGuestList',
+  initialState,
+  reducers: {
+    setSelectedGuest: (state, action: PayloadAction<GraduationGuest | null>) => {
+      state.selectedGuest = action.payload;
+    },
+    clearError: state => {
+      state.error = null;
+    },
+  },
+  extraReducers: builder => {
+    builder
+      // Fetch guests
+      .addCase(fetchGraduationGuests.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchGraduationGuests.fulfilled, (state, action) => {
+        state.loading = false;
+        state.guests = action.payload;
+        state.initialized = true;
+      })
+      .addCase(fetchGraduationGuests.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch guests';
+      })
+      // Add guest
+      .addCase(addGraduationGuest.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addGraduationGuest.fulfilled, (state, action) => {
+        state.loading = false;
+        state.guests.push(action.payload);
+      })
+      .addCase(addGraduationGuest.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to add guest';
+      })
+      // Update guest
+      .addCase(updateGraduationGuest.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateGraduationGuest.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.guests.findIndex(
+          guest => guest.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.guests[index] = action.payload;
+        }
+      })
+      .addCase(updateGraduationGuest.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to update guest';
+      })
+      // Delete guest
+      .addCase(deleteGraduationGuest.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteGraduationGuest.fulfilled, (state, action) => {
+        state.loading = false;
+        state.guests = state.guests.filter(guest => guest.id !== action.payload);
+      })
+      .addCase(deleteGraduationGuest.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to delete guest';
+      })
+      // Toggle guest completion
+      .addCase(toggleGraduationGuestCompletion.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(toggleGraduationGuestCompletion.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.guests.findIndex(
+          guest => guest.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.guests[index] = action.payload;
+        }
+      })
+      .addCase(toggleGraduationGuestCompletion.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to toggle guest completion';
+      });
+  },
 });
 
-export const { setSelectedGuest, clearError } =
-	graduationGuestListSlice.actions;
+export const { setSelectedGuest, clearError } = graduationGuestListSlice.actions;
 export default graduationGuestListSlice.reducer;

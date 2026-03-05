@@ -1,1 +1,1 @@
-export { default as DecorationsListItem } from "./DecorationsListItem";
+export { default as DecorationsListItem } from './DecorationsListItem';

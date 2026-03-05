@@ -16,28 +16,28 @@ A reusable delete confirmation modal component that can be used across all holid
 ### Basic Usage
 
 ```tsx
-import DeleteModal from "@/components/modals/DeleteModal";
+import DeleteModal from '@/components/modals/DeleteModal';
 
 // In your component
 const [showDeleteModal, setShowDeleteModal] = useState(false);
 
 const handleConfirmDelete = () => {
-	// Handle deletion
-	console.log("Item deleted");
-	setShowDeleteModal(false);
+  // Handle deletion
+  console.log('Item deleted');
+  setShowDeleteModal(false);
 };
 
 const handleCancelDelete = () => {
-	setShowDeleteModal(false);
+  setShowDeleteModal(false);
 };
 
 <DeleteModal
-	isOpen={showDeleteModal}
-	title="Confirm Delete"
-	message="Are you sure you want to delete this item? This action cannot be undone."
-	onConfirm={handleConfirmDelete}
-	onCancel={handleCancelDelete}
-	loading={loading}
+  isOpen={showDeleteModal}
+  title="Confirm Delete"
+  message="Are you sure you want to delete this item? This action cannot be undone."
+  onConfirm={handleConfirmDelete}
+  onCancel={handleCancelDelete}
+  loading={loading}
 />;
 ```
 
@@ -45,26 +45,26 @@ const handleCancelDelete = () => {
 
 ```tsx
 <DeleteModal
-	isOpen={showDeleteModal}
-	title="Delete Task?"
-	itemName={task.title}
-	onConfirm={handleConfirmDelete}
-	onCancel={handleCancelDelete}
-	loading={loading}
+  isOpen={showDeleteModal}
+  title="Delete Task?"
+  itemName={task.title}
+  onConfirm={handleConfirmDelete}
+  onCancel={handleCancelDelete}
+  loading={loading}
 />
 ```
 
 ### Using Configuration
 
 ```tsx
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 <DeleteModal
-	isOpen={showDeleteModal}
-	{...getDeleteConfig("cards")}
-	onConfirm={handleConfirmDelete}
-	onCancel={handleCancelDelete}
-	loading={loading}
+  isOpen={showDeleteModal}
+  {...getDeleteConfig('cards')}
+  onConfirm={handleConfirmDelete}
+  onCancel={handleCancelDelete}
+  loading={loading}
 />;
 ```
 
@@ -91,14 +91,12 @@ The component uses predefined delete configurations from `src/config/deleteModal
 ### Available Configurations
 
 - **Cards**: `getDeleteConfig("cards")`
-
   - Title: "Confirm Delete"
   - Message: "Are you sure you want to delete this card? This action cannot be undone."
   - Card class: "card card-cards"
   - Red confirm button
 
 - **Tasks**: `getDeleteConfig("tasks")`
-
   - Title: "Delete Task?"
   - Message: "Are you sure you want to delete this task? This action cannot be undone."
   - Card class: "bg-white dark:bg-gray-800"
@@ -117,31 +115,31 @@ The component uses predefined delete configurations from `src/config/deleteModal
 ```tsx
 // In a page component
 const [deleteConfirm, setDeleteConfirm] = useState({
-	show: false,
-	itemId: null,
+  show: false,
+  itemId: null,
 });
 
 const handleDelete = (itemId: string) => {
-	setDeleteConfirm({ show: true, itemId });
+  setDeleteConfirm({ show: true, itemId });
 };
 
 const confirmDelete = () => {
-	if (deleteConfirm.itemId) {
-		dispatch(deleteItem(deleteConfirm.itemId));
-		setDeleteConfirm({ show: false, itemId: null });
-	}
+  if (deleteConfirm.itemId) {
+    dispatch(deleteItem(deleteConfirm.itemId));
+    setDeleteConfirm({ show: false, itemId: null });
+  }
 };
 
 const cancelDelete = () => {
-	setDeleteConfirm({ show: false, itemId: null });
+  setDeleteConfirm({ show: false, itemId: null });
 };
 
 <DeleteModal
-	isOpen={deleteConfirm.show}
-	{...getDeleteConfig("cards")}
-	onConfirm={confirmDelete}
-	onCancel={cancelDelete}
-	loading={loading}
+  isOpen={deleteConfirm.show}
+  {...getDeleteConfig('cards')}
+  onConfirm={confirmDelete}
+  onCancel={cancelDelete}
+  loading={loading}
 />;
 ```
 
@@ -152,25 +150,25 @@ const cancelDelete = () => {
 const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 const handleDelete = (e: React.MouseEvent) => {
-	e.stopPropagation();
-	setShowDeleteConfirm(true);
+  e.stopPropagation();
+  setShowDeleteConfirm(true);
 };
 
 const confirmDelete = () => {
-	onDelete(item.id);
-	setShowDeleteConfirm(false);
+  onDelete(item.id);
+  setShowDeleteConfirm(false);
 };
 
 const cancelDelete = () => {
-	setShowDeleteConfirm(false);
+  setShowDeleteConfirm(false);
 };
 
 <DeleteModal
-	isOpen={showDeleteConfirm}
-	{...getDeleteConfig("tasks")}
-	itemName={item.title}
-	onConfirm={confirmDelete}
-	onCancel={cancelDelete}
+  isOpen={showDeleteConfirm}
+  {...getDeleteConfig('tasks')}
+  itemName={item.title}
+  onConfirm={confirmDelete}
+  onCancel={cancelDelete}
 />;
 ```
 
@@ -178,19 +176,19 @@ const cancelDelete = () => {
 
 ```tsx
 const customDeleteConfig = {
-	title: "Remove Item",
-	message: "This action will permanently remove the item from your list.",
-	cardClassName: "card custom-card",
-	confirmText: "Remove",
-	cancelText: "Keep",
-	confirmButtonColor: "#dc2626",
+  title: 'Remove Item',
+  message: 'This action will permanently remove the item from your list.',
+  cardClassName: 'card custom-card',
+  confirmText: 'Remove',
+  cancelText: 'Keep',
+  confirmButtonColor: '#dc2626',
 };
 
 <DeleteModal
-	isOpen={showDeleteModal}
-	{...customDeleteConfig}
-	onConfirm={handleConfirmDelete}
-	onCancel={handleCancelDelete}
+  isOpen={showDeleteModal}
+  {...customDeleteConfig}
+  onConfirm={handleConfirmDelete}
+  onCancel={handleCancelDelete}
 />;
 ```
 

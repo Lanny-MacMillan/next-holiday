@@ -1,1161 +1,1370 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-	/* Font families */
-	--font-family-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-		"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-	--font-family-display: "Luckiest Guy", "Comic Sans MS", "Chalkboard SE",
-		"Comic Neue", cursive, sans-serif;
-	--font-family-fredoka: "Fredoka", "Inter", system-ui, -apple-system,
-		BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-	/* Cursor Light Theme Colors with Christmas touches */
-	--color-background: 250 245 255; /* Very light purple with Christmas warmth */
-	--color-foreground: 28 28 28;
+  /* Font families */
+  --font-family-sans:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-family-display:
+    'Luckiest Guy', 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive,
+    sans-serif;
+  --font-family-fredoka:
+    'Fredoka', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Cursor Light Theme Colors with Christmas touches */
+  --color-background: 250 245 255; /* Very light purple with Christmas warmth */
+  --color-foreground: 28 28 28;
 
-	/* Card backgrounds - pure white for contrast */
-	--color-card-background: 255 255 255;
-	--color-card-border: 230 230 230;
+  /* Card backgrounds - pure white for contrast */
+  --color-card-background: 255 255 255;
+  --color-card-border: 230 230 230;
 
-	/* Gray scale - Cursor's subtle grays */
-	--color-gray-50: 250 250 250;
-	--color-gray-100: 245 245 245;
-	--color-gray-200: 235 235 235;
-	--color-gray-300: 220 220 220;
-	--color-gray-400: 180 180 180;
-	--color-gray-500: 120 120 120;
-	--color-gray-600: 80 80 80;
-	--color-gray-700: 60 60 60;
-	--color-gray-800: 40 40 40;
-	--color-gray-900: 20 20 20;
+  /* Gray scale - Cursor's subtle grays */
+  --color-gray-50: 250 250 250;
+  --color-gray-100: 245 245 245;
+  --color-gray-200: 235 235 235;
+  --color-gray-300: 220 220 220;
+  --color-gray-400: 180 180 180;
+  --color-gray-500: 120 120 120;
+  --color-gray-600: 80 80 80;
+  --color-gray-700: 60 60 60;
+  --color-gray-800: 40 40 40;
+  --color-gray-900: 20 20 20;
 
-	/* Blue - Cursor's signature blue */
-	--color-blue-400: 59 130 246;
-	--color-blue-500: 37 99 235;
-	--color-blue-600: 29 78 216;
+  /* Blue - Cursor's signature blue */
+  --color-blue-400: 59 130 246;
+  --color-blue-500: 37 99 235;
+  --color-blue-600: 29 78 216;
 
-	/* Green - Christmas green */
-	--color-green-400: 34 197 94;
-	--color-green-500: 22 163 74;
-	--color-green-600: 21 128 61;
+  /* Green - Christmas green */
+  --color-green-400: 34 197 94;
+  --color-green-500: 22 163 74;
+  --color-green-600: 21 128 61;
 
-	/* Red - Christmas red */
-	--color-red-400: 239 68 68;
-	--color-red-500: 220 38 38;
-	--color-red-600: 185 28 28;
+  /* Red - Christmas red */
+  --color-red-400: 239 68 68;
+  --color-red-500: 220 38 38;
+  --color-red-600: 185 28 28;
 
-	/* Purple - Cursor's accent purple */
-	--color-purple-300: 196 181 253;
-	--color-purple-400: 167 139 250;
-	--color-purple-500: 147 51 234;
-	--color-purple-600: 126 34 206;
-	--color-purple-800: 107 33 168;
+  /* Purple - Cursor's accent purple */
+  --color-purple-300: 196 181 253;
+  --color-purple-400: 167 139 250;
+  --color-purple-500: 147 51 234;
+  --color-purple-600: 126 34 206;
+  --color-purple-800: 107 33 168;
 
-	/* Orange - Christmas orange */
-	--color-orange-300: 253 186 116;
-	--color-orange-400: 251 146 60;
-	--color-orange-500: 249 115 22;
-	--color-orange-600: 234 88 12;
-	--color-orange-800: 194 65 12;
+  /* Orange - Christmas orange */
+  --color-orange-300: 253 186 116;
+  --color-orange-400: 251 146 60;
+  --color-orange-500: 249 115 22;
+  --color-orange-600: 234 88 12;
+  --color-orange-800: 194 65 12;
 
-	/* Yellow - Christmas gold */
-	--color-yellow-500: 234 179 8;
-	--color-yellow-600: 202 138 4;
+  /* Yellow - Christmas gold */
+  --color-yellow-500: 234 179 8;
+  --color-yellow-600: 202 138 4;
 
-	/* Pink - Cursor's accent pink */
-	--color-pink-500: 236 72 153;
-	--color-pink-600: 219 39 119;
+  /* Pink - Cursor's accent pink */
+  --color-pink-500: 236 72 153;
+  --color-pink-600: 219 39 119;
 }
 
 /* Font classes */
 .font-sans {
-	font-family: var(--font-family-sans);
+  font-family: var(--font-family-sans);
 }
 
 .font-display {
-	font-family: var(--font-family-display);
+  font-family: var(--font-family-display);
 }
 
 .font-fredoka {
-	font-family: var(--font-family-fredoka);
+  font-family: var(--font-family-fredoka);
 }
 
 /* Line clamp utilities for text truncation */
 .line-clamp-1 {
-	overflow: hidden;
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 .line-clamp-2 {
-	overflow: hidden;
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .line-clamp-3 {
-	overflow: hidden;
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 /* Cursor Dark Theme Colors with Christmas touches */
 .dark {
-	--color-background: 10 8 15; /* Deep dark with subtle Christmas purple */
-	--color-foreground: 245 245 245;
+  --color-background: 10 8 15; /* Deep dark with subtle Christmas purple */
+  --color-foreground: 245 245 245;
 
-	/* Card backgrounds - dark gray for contrast */
-	--color-card-background: 20 20 20;
-	--color-card-border: 40 40 40;
+  /* Card backgrounds - dark gray for contrast */
+  --color-card-background: 20 20 20;
+  --color-card-border: 40 40 40;
 
-	/* Gray scale - Cursor's dark grays */
-	--color-gray-50: 20 20 20;
-	--color-gray-100: 30 30 30;
-	--color-gray-200: 45 45 45;
-	--color-gray-300: 60 60 60;
-	--color-gray-400: 80 80 80;
-	--color-gray-500: 120 120 120;
-	--color-gray-600: 160 160 160;
-	--color-gray-700: 180 180 180;
-	--color-gray-800: 200 200 200;
-	--color-gray-900: 220 220 220;
+  /* Gray scale - Cursor's dark grays */
+  --color-gray-50: 20 20 20;
+  --color-gray-100: 30 30 30;
+  --color-gray-200: 45 45 45;
+  --color-gray-300: 60 60 60;
+  --color-gray-400: 80 80 80;
+  --color-gray-500: 120 120 120;
+  --color-gray-600: 160 160 160;
+  --color-gray-700: 180 180 180;
+  --color-gray-800: 200 200 200;
+  --color-gray-900: 220 220 220;
 
-	/* Blue - Cursor's dark blue */
-	--color-blue-400: 96 165 250;
-	--color-blue-500: 59 130 246;
-	--color-blue-600: 37 99 235;
+  /* Blue - Cursor's dark blue */
+  --color-blue-400: 96 165 250;
+  --color-blue-500: 59 130 246;
+  --color-blue-600: 37 99 235;
 
-	/* Green - Christmas green (brighter in dark mode) */
-	--color-green-400: 74 222 128;
-	--color-green-500: 34 197 94;
-	--color-green-600: 22 163 74;
+  /* Green - Christmas green (brighter in dark mode) */
+  --color-green-400: 74 222 128;
+  --color-green-500: 34 197 94;
+  --color-green-600: 22 163 74;
 
-	/* Red - Christmas red (brighter in dark mode) */
-	--color-red-400: 248 113 113;
-	--color-red-500: 239 68 68;
-	--color-red-600: 220 38 38;
+  /* Red - Christmas red (brighter in dark mode) */
+  --color-red-400: 248 113 113;
+  --color-red-500: 239 68 68;
+  --color-red-600: 220 38 38;
 
-	/* Purple - Cursor's dark purple */
-	--color-purple-300: 196 181 253;
-	--color-purple-400: 167 139 250;
-	--color-purple-500: 147 51 234;
-	--color-purple-600: 126 34 206;
-	--color-purple-800: 107 33 168;
+  /* Purple - Cursor's dark purple */
+  --color-purple-300: 196 181 253;
+  --color-purple-400: 167 139 250;
+  --color-purple-500: 147 51 234;
+  --color-purple-600: 126 34 206;
+  --color-purple-800: 107 33 168;
 
-	/* Orange - Christmas orange (brighter in dark mode) */
-	--color-orange-300: 253 186 116;
-	--color-orange-400: 251 146 60;
-	--color-orange-500: 249 115 22;
-	--color-orange-600: 234 88 12;
-	--color-orange-800: 194 65 12;
+  /* Orange - Christmas orange (brighter in dark mode) */
+  --color-orange-300: 253 186 116;
+  --color-orange-400: 251 146 60;
+  --color-orange-500: 249 115 22;
+  --color-orange-600: 234 88 12;
+  --color-orange-800: 194 65 12;
 
-	/* Yellow - Christmas gold (brighter in dark mode) */
-	--color-yellow-500: 234 179 8;
-	--color-yellow-600: 202 138 4;
+  /* Yellow - Christmas gold (brighter in dark mode) */
+  --color-yellow-500: 234 179 8;
+  --color-yellow-600: 202 138 4;
 
-	/* Pink - Cursor's dark pink */
-	--color-pink-500: 236 72 153;
-	--color-pink-600: 219 39 119;
+  /* Pink - Cursor's dark pink */
+  --color-pink-500: 236 72 153;
+  --color-pink-600: 219 39 119;
 }
 
 body {
-	background: rgb(var(--color-background));
-	color: rgb(var(--color-foreground));
-	font-family: Arial, Helvetica, sans-serif;
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-foreground));
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Ensure text colors have proper contrast */
 .text-gray-800 {
-	color: rgb(31, 41, 55) !important;
+  color: rgb(31, 41, 55) !important;
 }
 
 .dark .text-gray-800 {
-	color: rgb(229, 231, 235) !important;
+  color: rgb(229, 231, 235) !important;
 }
 
 .text-gray-600 {
-	color: rgb(75, 85, 99) !important;
+  color: rgb(75, 85, 99) !important;
 }
 
 .dark .text-gray-600 {
-	color: rgb(156, 163, 175) !important;
+  color: rgb(156, 163, 175) !important;
 }
 
 .text-gray-500 {
-	color: rgb(107, 114, 128) !important;
+  color: rgb(107, 114, 128) !important;
 }
 
 .dark .text-gray-500 {
-	color: rgb(156, 163, 175) !important;
+  color: rgb(156, 163, 175) !important;
 }
 
 /* Toggle button background overrides */
 .bg-gray-400 {
-	background-color: rgb(156, 163, 175) !important;
+  background-color: rgb(156, 163, 175) !important;
 }
 
 .dark .bg-gray-400 {
-	background-color: rgb(156, 163, 175) !important;
+  background-color: rgb(156, 163, 175) !important;
 }
 
 .bg-blue-600 {
-	background-color: rgb(37, 99, 235) !important;
+  background-color: rgb(37, 99, 235) !important;
 }
 
 .dark .bg-blue-600 {
-	background-color: rgb(37, 99, 235) !important;
+  background-color: rgb(37, 99, 235) !important;
 }
 
 /* Gamified card background colors */
 .bg-red-600 {
-	background-color: rgb(185, 28, 28) !important;
+  background-color: rgb(185, 28, 28) !important;
 }
 
 .dark .bg-red-600 {
-	background-color: rgb(220, 38, 38) !important;
+  background-color: rgb(220, 38, 38) !important;
 }
 
 .bg-pink-300 {
-	background-color: rgb(249, 168, 212) !important;
+  background-color: rgb(249, 168, 212) !important;
 }
 
 .dark .bg-pink-300 {
-	background-color: rgb(249, 168, 212) !important;
+  background-color: rgb(249, 168, 212) !important;
 }
 
 .bg-pink-400 {
-	background-color: rgb(236, 72, 153) !important;
+  background-color: rgb(236, 72, 153) !important;
 }
 
 .dark .bg-pink-400 {
-	background-color: rgb(244, 114, 182) !important;
+  background-color: rgb(244, 114, 182) !important;
 }
 
 .bg-pink-500 {
-	background-color: rgb(236, 72, 153) !important;
+  background-color: rgb(236, 72, 153) !important;
 }
 
 .dark .bg-pink-500 {
-	background-color: rgb(236, 72, 153) !important;
+  background-color: rgb(236, 72, 153) !important;
 }
 
 /* Fix for pink button hover effects */
 .bg-pink-300:hover {
-	background-color: rgb(236, 72, 153) !important;
+  background-color: rgb(236, 72, 153) !important;
 }
 
 .dark .bg-pink-300:hover {
-	background-color: rgb(236, 72, 153) !important;
+  background-color: rgb(236, 72, 153) !important;
 }
 
 .bg-purple-400 {
-	background-color: rgb(167, 139, 250) !important;
+  background-color: rgb(167, 139, 250) !important;
 }
 
 .dark .bg-purple-400 {
-	background-color: rgb(196, 181, 253) !important;
+  background-color: rgb(196, 181, 253) !important;
 }
 
 .bg-orange-600 {
-	background-color: rgb(234, 88, 12) !important;
+  background-color: rgb(234, 88, 12) !important;
 }
 
 .dark .bg-orange-600 {
-	background-color: rgb(251, 146, 60) !important;
+  background-color: rgb(251, 146, 60) !important;
 }
 
 .bg-amber-600 {
-	background-color: rgb(217, 119, 6) !important;
+  background-color: rgb(217, 119, 6) !important;
 }
 
 .dark .bg-amber-600 {
-	background-color: rgb(245, 158, 11) !important;
+  background-color: rgb(245, 158, 11) !important;
 }
 
 .bg-blue-400 {
-	background-color: rgb(59, 130, 246) !important;
+  background-color: rgb(59, 130, 246) !important;
 }
 
 .dark .bg-blue-400 {
-	background-color: rgb(96, 165, 250) !important;
+  background-color: rgb(96, 165, 250) !important;
 }
 
 .bg-yellow-400 {
-	background-color: rgb(250, 204, 21) !important;
+  background-color: rgb(250, 204, 21) !important;
 }
 
 .dark .bg-yellow-400 {
-	background-color: rgb(250, 204, 21) !important;
+  background-color: rgb(250, 204, 21) !important;
 }
 
 .bg-cyan-400 {
-	background-color: rgb(34, 211, 238) !important;
+  background-color: rgb(34, 211, 238) !important;
 }
 
 .dark .bg-cyan-400 {
-	background-color: rgb(34, 211, 238) !important;
+  background-color: rgb(34, 211, 238) !important;
 }
 
 /* Gamified card gradient backgrounds */
 .bg-gradient-to-br {
-	background-image: linear-gradient(
-		to bottom right,
-		var(--tw-gradient-stops)
-	) !important;
+  background-image: linear-gradient(
+    to bottom right,
+    var(--tw-gradient-stops)
+  ) !important;
 }
 
 .from-red-400 {
-	--tw-gradient-from: rgb(248, 113, 113) !important;
-	--tw-gradient-to: rgb(248, 113, 113 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(248, 113, 113) !important;
+  --tw-gradient-to: rgb(248, 113, 113 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-red-600 {
-	--tw-gradient-to: rgb(220, 38, 38) !important;
+  --tw-gradient-to: rgb(220, 38, 38) !important;
 }
 
 .from-blue-400 {
-	--tw-gradient-from: rgb(96, 165, 250) !important;
-	--tw-gradient-to: rgb(96, 165, 250 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(96, 165, 250) !important;
+  --tw-gradient-to: rgb(96, 165, 250 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-blue-600 {
-	--tw-gradient-to: rgb(37, 99, 235) !important;
+  --tw-gradient-to: rgb(37, 99, 235) !important;
 }
 
 .from-yellow-400 {
-	--tw-gradient-from: rgb(250, 204, 21) !important;
-	--tw-gradient-to: rgb(250, 204, 21 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(250, 204, 21) !important;
+  --tw-gradient-to: rgb(250, 204, 21 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-yellow-600 {
-	--tw-gradient-to: rgb(202, 138, 4) !important;
+  --tw-gradient-to: rgb(202, 138, 4) !important;
 }
 
 .from-pink-300 {
-	--tw-gradient-from: rgb(244, 114, 182) !important;
-	--tw-gradient-to: rgb(244, 114, 182 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(244, 114, 182) !important;
+  --tw-gradient-to: rgb(244, 114, 182 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-pink-500 {
-	--tw-gradient-to: rgb(236, 72, 153) !important;
+  --tw-gradient-to: rgb(236, 72, 153) !important;
 }
 
 .from-purple-300 {
-	--tw-gradient-from: rgb(196, 181, 253) !important;
-	--tw-gradient-to: rgb(196, 181, 253 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(196, 181, 253) !important;
+  --tw-gradient-to: rgb(196, 181, 253 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-purple-500 {
-	--tw-gradient-to: rgb(147, 51, 234) !important;
+  --tw-gradient-to: rgb(147, 51, 234) !important;
 }
 
 .from-orange-400 {
-	--tw-gradient-from: rgb(251, 146, 60) !important;
-	--tw-gradient-to: rgb(251, 146, 60 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(251, 146, 60) !important;
+  --tw-gradient-to: rgb(251, 146, 60 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-orange-600 {
-	--tw-gradient-to: rgb(234, 88, 12) !important;
+  --tw-gradient-to: rgb(234, 88, 12) !important;
 }
 
 .from-amber-400 {
-	--tw-gradient-from: rgb(251, 191, 36) !important;
-	--tw-gradient-to: rgb(251, 191, 36 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(251, 191, 36) !important;
+  --tw-gradient-to: rgb(251, 191, 36 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-amber-600 {
-	--tw-gradient-to: rgb(217, 119, 6) !important;
+  --tw-gradient-to: rgb(217, 119, 6) !important;
 }
 
 .from-blue-300 {
-	--tw-gradient-from: rgb(147, 197, 253) !important;
-	--tw-gradient-to: rgb(147, 197, 253 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(147, 197, 253) !important;
+  --tw-gradient-to: rgb(147, 197, 253 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-blue-500 {
-	--tw-gradient-to: rgb(59, 130, 246) !important;
+  --tw-gradient-to: rgb(59, 130, 246) !important;
 }
 
 .from-yellow-300 {
-	--tw-gradient-from: rgb(253, 224, 71) !important;
-	--tw-gradient-to: rgb(253, 224, 71 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(253, 224, 71) !important;
+  --tw-gradient-to: rgb(253, 224, 71 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-yellow-500 {
-	--tw-gradient-to: rgb(234, 179, 8) !important;
+  --tw-gradient-to: rgb(234, 179, 8) !important;
 }
 
 .from-cyan-300 {
-	--tw-gradient-from: rgb(103, 232, 249) !important;
-	--tw-gradient-to: rgb(103, 232, 249 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(103, 232, 249) !important;
+  --tw-gradient-to: rgb(103, 232, 249 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-cyan-500 {
-	--tw-gradient-to: rgb(6, 182, 212) !important;
+  --tw-gradient-to: rgb(6, 182, 212) !important;
 }
 
 .from-gray-400 {
-	--tw-gradient-from: rgb(156, 163, 175) !important;
-	--tw-gradient-to: rgb(156, 163, 175 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(156, 163, 175) !important;
+  --tw-gradient-to: rgb(156, 163, 175 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-gray-600 {
-	--tw-gradient-to: rgb(75, 85, 99) !important;
+  --tw-gradient-to: rgb(75, 85, 99) !important;
 }
 
 .from-gray-800 {
-	--tw-gradient-from: rgb(31, 41, 55) !important;
-	--tw-gradient-to: rgb(31, 41, 55 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(31, 41, 55) !important;
+  --tw-gradient-to: rgb(31, 41, 55 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-black {
-	--tw-gradient-to: rgb(0, 0, 0) !important;
+  --tw-gradient-to: rgb(0, 0, 0) !important;
 }
 
 .from-green-400 {
-	--tw-gradient-from: rgb(34, 197, 94) !important;
-	--tw-gradient-to: rgb(34, 197, 94 / 0) !important;
-	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  --tw-gradient-from: rgb(34, 197, 94) !important;
+  --tw-gradient-to: rgb(34, 197, 94 / 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 .to-green-600 {
-	--tw-gradient-to: rgb(21, 128, 61) !important;
+  --tw-gradient-to: rgb(21, 128, 61) !important;
 }
 
 /* Modal and button overrides for light mode visibility */
 .bg-red-500 {
-	background-color: rgb(239, 68, 68) !important;
+  background-color: rgb(239, 68, 68) !important;
 }
 
 .bg-red-600 {
-	background-color: rgb(220, 38, 38) !important;
+  background-color: rgb(220, 38, 38) !important;
 }
 
 .bg-yellow-500 {
-	background-color: rgb(234, 179, 8) !important;
+  background-color: rgb(234, 179, 8) !important;
 }
 
 .bg-green-500 {
-	background-color: rgb(34, 197, 94) !important;
+  background-color: rgb(34, 197, 94) !important;
 }
 
 .bg-blue-500 {
-	background-color: rgb(59, 130, 246) !important;
+  background-color: rgb(59, 130, 246) !important;
 }
 
 .bg-purple-300 {
-	background-color: rgb(196, 181, 253) !important;
+  background-color: rgb(196, 181, 253) !important;
 }
 
 .bg-purple-500 {
-	background-color: rgb(147, 51, 234) !important;
+  background-color: rgb(147, 51, 234) !important;
 }
 
 .bg-purple-600 {
-	background-color: rgb(126, 34, 206) !important;
+  background-color: rgb(126, 34, 206) !important;
 }
 
 /* Hover styles for buttons */
 .hover\:bg-green-500:hover {
-	background-color: rgb(34, 197, 94) !important;
+  background-color: rgb(34, 197, 94) !important;
 }
 
 .dark .hover\:bg-green-500:hover {
-	background-color: rgb(74, 222, 128) !important;
+  background-color: rgb(74, 222, 128) !important;
 }
 
 .hover\:bg-red-600:hover {
-	background-color: rgb(220, 38, 38) !important;
+  background-color: rgb(220, 38, 38) !important;
 }
 
 .dark .hover\:bg-red-600:hover {
-	background-color: rgb(239, 68, 68) !important;
+  background-color: rgb(239, 68, 68) !important;
 }
 
 /* Invite button specific overrides */
 .invite-accept-btn {
-	background-color: rgb(34, 197, 94) !important;
-	color: white !important;
+  background-color: rgb(34, 197, 94) !important;
+  color: white !important;
 }
 
 .invite-accept-btn:hover {
-	background-color: rgb(22, 163, 74) !important;
-	opacity: 0.9 !important;
+  background-color: rgb(22, 163, 74) !important;
+  opacity: 0.9 !important;
 }
 
 .invite-decline-btn {
-	background-color: rgb(220, 38, 38) !important;
-	color: white !important;
+  background-color: rgb(220, 38, 38) !important;
+  color: white !important;
 }
 
 .invite-decline-btn:hover {
-	background-color: rgb(185, 28, 28) !important;
-	opacity: 0.9 !important;
+  background-color: rgb(185, 28, 28) !important;
+  opacity: 0.9 !important;
 }
 
 .hover\:bg-purple-500:hover {
-	background-color: rgb(147, 51, 234) !important;
+  background-color: rgb(147, 51, 234) !important;
 }
 
 .dark .hover\:bg-purple-500:hover {
-	background-color: rgb(167, 139, 250) !important;
+  background-color: rgb(167, 139, 250) !important;
 }
 
 /* Additional purple hover rules for better specificity */
 button.hover\:bg-purple-500:hover {
-	background-color: rgb(147, 51, 234) !important;
+  background-color: rgb(147, 51, 234) !important;
 }
 
 button.dark .hover\:bg-purple-500:hover {
-	background-color: rgb(167, 139, 250) !important;
+  background-color: rgb(167, 139, 250) !important;
 }
 
 /* Direct purple hover override */
 .bg-purple-300:hover {
-	background-color: rgb(147, 51, 234) !important;
+  background-color: rgb(147, 51, 234) !important;
 }
 
 .dark .bg-purple-300:hover {
-	background-color: rgb(167, 139, 250) !important;
+  background-color: rgb(167, 139, 250) !important;
 }
 
 .hover\:bg-purple-600:hover {
-	background-color: rgb(126, 34, 206) !important;
+  background-color: rgb(126, 34, 206) !important;
 }
 
 .dark .hover\:bg-purple-600:hover {
-	background-color: rgb(147, 51, 234) !important;
+  background-color: rgb(147, 51, 234) !important;
 }
 
 .hover\:text-white:hover {
-	color: rgb(255, 255, 255) !important;
+  color: rgb(255, 255, 255) !important;
 }
 
 /* Text color overrides for countdown timer */
 .text-red-500 {
-	color: rgb(239, 68, 68) !important;
+  color: rgb(239, 68, 68) !important;
 }
 
 .dark .text-red-500 {
-	color: rgb(248, 113, 113) !important;
+  color: rgb(248, 113, 113) !important;
 }
 
 .text-yellow-500 {
-	color: rgb(234, 179, 8) !important;
+  color: rgb(234, 179, 8) !important;
 }
 
 .dark .text-yellow-500 {
-	color: rgb(234, 179, 8) !important;
+  color: rgb(234, 179, 8) !important;
 }
 
 .text-green-500 {
-	color: rgb(34, 197, 94) !important;
+  color: rgb(34, 197, 94) !important;
 }
 
 .dark .text-green-500 {
-	color: rgb(74, 222, 128) !important;
+  color: rgb(74, 222, 128) !important;
 }
 
 .text-blue-500 {
-	color: rgb(59, 130, 246) !important;
+  color: rgb(59, 130, 246) !important;
 }
 
 .dark .text-blue-400 {
-	color: rgb(96, 165, 250) !important;
+  color: rgb(96, 165, 250) !important;
 }
 
 /* Modal text color overrides */
 .text-gray-600 {
-	color: rgb(75, 85, 99) !important;
+  color: rgb(75, 85, 99) !important;
 }
 
 .dark .text-gray-600 {
-	color: rgb(156, 163, 175) !important;
+  color: rgb(156, 163, 175) !important;
 }
 
 /* Modal close button and form text overrides */
 .text-gray-900 {
-	color: rgb(17, 24, 39) !important;
+  color: rgb(17, 24, 39) !important;
 }
 
 .dark .text-gray-900 {
-	color: rgb(243, 244, 246) !important;
+  color: rgb(243, 244, 246) !important;
 }
 
 /* Placeholder text overrides */
 .placeholder-gray-500::placeholder {
-	color: rgb(107, 114, 128) !important;
+  color: rgb(107, 114, 128) !important;
 }
 
 .dark .placeholder-gray-500::placeholder {
-	color: rgb(156, 163, 175) !important;
+  color: rgb(156, 163, 175) !important;
 }
 
 /* Card styling for that Radix UI layered effect */
 .card {
-	background: rgb(var(--color-card-background));
-	border: 1px solid rgb(var(--color-card-border));
-	border-radius: 8px;
-	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  background: rgb(var(--color-card-background));
+  border: 1px solid rgb(var(--color-card-border));
+  border-radius: 8px;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .dark .card {
-	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.3),
+    0 1px 2px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* Page-specific card accents */
 .card-cards {
-	border-left: 4px solid rgb(var(--color-green-500));
+  border-left: 4px solid rgb(var(--color-green-500));
 }
 
 /* Remove green border in gamified mode - now handled by component */
 .gamified-mode .card-cards {
-	/* Border handling moved to component level */
+  /* Border handling moved to component level */
 }
 
 .gamified-mode .card-events-christmas {
-	border-left: none !important;
+  border-left: none !important;
 }
 
 /* Override white backgrounds in gamified mode */
 .gamified-mode .card-tasks {
-	background: none !important;
+  background: none !important;
 }
 
 .gamified-mode .card-events-easter {
-	background: none !important;
+  background: none !important;
 }
 
 .gamified-mode .card-events-fourth-of-july {
-	background: none !important;
+  background: none !important;
 }
 
 /* Removed .card-gifts - now controlled by component props */
 
 .card-tasks {
-	border-left: 4px solid rgb(var(--color-blue-500));
-	background: rgb(255, 255, 255) !important;
+  border-left: 4px solid rgb(var(--color-blue-500));
 }
 
 .card-tasks-kwanzaa {
-	border-left: 4px solid rgb(var(--color-red-500));
+  border-left: 4px solid rgb(var(--color-red-500));
 }
 
 .card-address {
-	border-left: 4px solid rgb(var(--color-pink-500));
+  border-left: 4px solid rgb(var(--color-pink-500));
 }
 
 .card-settings {
-	border-left: 4px solid rgb(var(--color-purple-500));
+  border-left: 4px solid rgb(var(--color-purple-500));
 }
 
 .card-valentines {
-	border-left: 4px solid rgb(var(--color-pink-500));
+  border-left: 4px solid rgb(var(--color-pink-500));
 }
 
 /* Holiday Events Card Classes */
 .card-events-christmas {
-	border-left: 4px solid rgb(var(--color-green-500));
+  border-left: 4px solid rgb(var(--color-green-500));
 }
 
 .card-events-hanukkah {
-	border-left: 4px solid rgb(var(--color-blue-500));
+  border-left: 4px solid rgb(var(--color-blue-500));
 }
 
 .card-events-kwanzaa {
-	border-left: 4px solid rgb(var(--color-red-500));
+  border-left: 4px solid rgb(var(--color-red-500));
 }
 
 .card-events-new-year {
-	border-left: 4px solid rgb(var(--color-orange-500));
+  border-left: 4px solid rgb(var(--color-orange-500));
 }
 
 .card-events-easter {
-	border-left: 4px solid rgb(var(--color-purple-500));
-	background: rgb(255, 255, 255) !important;
+  border-left: 4px solid rgb(var(--color-purple-500));
+  background: rgb(255, 255, 255) !important;
+}
+
+.card-events-graduation {
+  border-left: 4px solid rgb(var(--color-purple-500));
 }
 
 .card-events-valentines {
-	border-left: 4px solid rgb(var(--color-pink-500));
+  border-left: 4px solid rgb(var(--color-pink-500));
 }
 
 .card-events-fourth-of-july {
-	border-left: 4px solid rgb(var(--color-red-500));
-	background: rgb(255, 255, 255) !important;
+  border-left: 4px solid rgb(var(--color-red-500));
+  background: rgb(255, 255, 255) !important;
+}
+
+.card-events-fathers-day {
+  border-left: 4px solid rgb(var(--color-blue-500));
+}
+
+.card-events-birthday {
+  border-left: 4px solid rgb(var(--color-yellow-500));
 }
 
 /* Modal overlay styles to prevent background hover effects */
 .modal-open {
-	overflow: hidden;
+  overflow: hidden;
 }
 
 .modal-open .card {
-	transition: none !important;
-	transform: none !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 .modal-open .card:hover {
-	transform: none !important;
+  transform: none !important;
 }
 
 /* Christmas-themed gradient backgrounds */
 .christmas-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(250, 245, 255) 0%,
-		rgb(255, 250, 255) 50%,
-		rgb(250, 245, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(250, 245, 255) 0%,
+    rgb(255, 250, 255) 50%,
+    rgb(250, 245, 255) 100%
+  );
 }
 
 .dark .christmas-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(10, 8, 15) 0%,
-		rgb(15, 10, 20) 50%,
-		rgb(10, 8, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(10, 8, 15) 0%,
+    rgb(15, 10, 20) 50%,
+    rgb(10, 8, 15) 100%
+  );
 }
 
 /* Page-specific Christmas gradients */
 .christmas-cards-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 250, 255) 0%,
-		rgb(250, 245, 255) 50%,
-		rgb(255, 250, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 250, 255) 0%,
+    rgb(250, 245, 255) 50%,
+    rgb(255, 250, 255) 100%
+  );
 }
 
 .dark .christmas-cards-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(15, 10, 20) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(15, 10, 20) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(15, 10, 20) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(15, 10, 20) 100%
+  );
 }
 
 .christmas-gifts-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 250, 245) 0%,
-		rgb(250, 245, 250) 50%,
-		rgb(255, 250, 245) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 250, 245) 0%,
+    rgb(250, 245, 250) 50%,
+    rgb(255, 250, 245) 100%
+  );
 }
 
 .dark .christmas-gifts-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 15) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(20, 10, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 15) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(20, 10, 15) 100%
+  );
 }
 
 .christmas-tasks-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(245, 255, 250) 0%,
-		rgb(250, 245, 255) 50%,
-		rgb(245, 255, 250) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(245, 255, 250) 0%,
+    rgb(250, 245, 255) 50%,
+    rgb(245, 255, 250) 100%
+  );
 }
 
 .dark .christmas-tasks-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(10, 20, 15) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(10, 20, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(10, 20, 15) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(10, 20, 15) 100%
+  );
 }
 
 .address-book-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 245, 250) 0%,
-		rgb(250, 245, 255) 50%,
-		rgb(255, 245, 250) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 245, 250) 0%,
+    rgb(250, 245, 255) 50%,
+    rgb(255, 245, 250) 100%
+  );
 }
 
 .dark .address-book-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 15) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(20, 10, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 15) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(20, 10, 15) 100%
+  );
 }
 
 .christmas-settings-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(250, 250, 255) 0%,
-		rgb(245, 250, 255) 50%,
-		rgb(250, 250, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(250, 250, 255) 0%,
+    rgb(245, 250, 255) 50%,
+    rgb(250, 250, 255) 100%
+  );
 }
 
 .dark .christmas-settings-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(15, 15, 20) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(15, 15, 20) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(15, 15, 20) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(15, 15, 20) 100%
+  );
 }
 
 /* Rainbow gradient border for gamified mode settings cards */
 .rainbow-gradient-border {
-	position: relative;
-	border-left: none !important;
+  position: relative;
+  border-left: none !important;
 }
 
 .rainbow-gradient-border::before {
-	content: "";
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	width: 4px;
-	background: linear-gradient(
-		to bottom,
-		#ff0000,
-		/* Red */ #ff8000,
-		/* Orange */ #ffff00,
-		/* Yellow */ #00ff00,
-		/* Green */ #0080ff,
-		/* Blue */ #8000ff,
-		/* Indigo */ #ff0080 /* Violet */
-	);
-	border-radius: 2px 0 0 2px;
-	z-index: 1;
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(
+    to bottom,
+    #ff0000,
+    /* Red */ #ff8000,
+    /* Orange */ #ffff00,
+    /* Yellow */ #00ff00,
+    /* Green */ #0080ff,
+    /* Blue */ #8000ff,
+    /* Indigo */ #ff0080 /* Violet */
+  );
+  border-radius: 2px 0 0 2px;
+  z-index: 1;
 }
 
 /* Hanukkah-themed gradient backgrounds */
 .hanukkah-cards-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(250, 250, 255) 0%,
-		rgb(245, 250, 255) 50%,
-		rgb(250, 250, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(250, 250, 255) 0%,
+    rgb(245, 250, 255) 50%,
+    rgb(250, 250, 255) 100%
+  );
 }
 
 .dark .hanukkah-cards-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(15, 15, 20) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(15, 15, 20) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(15, 15, 20) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(15, 15, 20) 100%
+  );
 }
 
 .hanukkah-gifts-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(250, 245, 250) 0%,
-		rgb(245, 250, 255) 50%,
-		rgb(250, 245, 250) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(250, 245, 250) 0%,
+    rgb(245, 250, 255) 50%,
+    rgb(250, 245, 250) 100%
+  );
 }
 
 .dark .hanukkah-gifts-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 15) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(20, 10, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 15) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(20, 10, 15) 100%
+  );
 }
 
 .hanukkah-tasks-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(245, 255, 250) 0%,
-		rgb(250, 245, 255) 50%,
-		rgb(245, 255, 250) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(245, 255, 250) 0%,
+    rgb(250, 245, 255) 50%,
+    rgb(245, 255, 250) 100%
+  );
 }
 
 .dark .hanukkah-tasks-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(10, 20, 15) 0%,
-		rgb(10, 8, 15) 50%,
-		rgb(10, 20, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(10, 20, 15) 0%,
+    rgb(10, 8, 15) 50%,
+    rgb(10, 20, 15) 100%
+  );
 }
 
 /* Kwanzaa-themed gradient backgrounds */
 .kwanzaa-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(254, 242, 242) 0%,
-		rgb(254, 226, 226) 50%,
-		rgb(254, 242, 242) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(254, 242, 242) 0%,
+    rgb(254, 226, 226) 50%,
+    rgb(254, 242, 242) 100%
+  );
 }
 
 .dark .kwanzaa-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 10) 0%,
-		rgb(15, 8, 8) 50%,
-		rgb(20, 10, 10) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 10) 0%,
+    rgb(15, 8, 8) 50%,
+    rgb(20, 10, 10) 100%
+  );
 }
 
 /* New Year-themed gradient backgrounds */
 .new-year-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 251, 235) 0%,
-		rgb(254, 243, 199) 50%,
-		rgb(255, 251, 235) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 251, 235) 0%,
+    rgb(254, 243, 199) 50%,
+    rgb(255, 251, 235) 100%
+  );
 }
 
 .dark .new-year-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 15, 8) 0%,
-		rgb(15, 10, 5) 50%,
-		rgb(20, 15, 8) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 15, 8) 0%,
+    rgb(15, 10, 5) 50%,
+    rgb(20, 15, 8) 100%
+  );
 }
 
 /* Valentine's Day-themed gradient backgrounds */
 .valentines-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(253, 242, 248) 0%,
-		rgb(252, 231, 243) 50%,
-		rgb(253, 242, 248) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(253, 242, 248) 0%,
+    rgb(252, 231, 243) 50%,
+    rgb(253, 242, 248) 100%
+  );
 }
 
 .dark .valentines-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 15) 0%,
-		rgb(15, 8, 12) 50%,
-		rgb(20, 10, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 15) 0%,
+    rgb(15, 8, 12) 50%,
+    rgb(20, 10, 15) 100%
+  );
 }
 
 /* Easter-themed gradient backgrounds */
 .easter-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(250, 245, 255) 0%,
-		rgb(245, 240, 250) 50%,
-		rgb(250, 245, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(250, 245, 255) 0%,
+    rgb(245, 240, 250) 50%,
+    rgb(250, 245, 255) 100%
+  );
 }
 
 .dark .easter-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 15, 25) 0%,
-		rgb(15, 10, 20) 50%,
-		rgb(20, 15, 25) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 15, 25) 0%,
+    rgb(15, 10, 20) 50%,
+    rgb(20, 15, 25) 100%
+  );
 }
 
 /* Halloween-themed gradient backgrounds */
 .halloween-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 245, 235) 0%,
-		rgb(255, 250, 240) 50%,
-		rgb(255, 245, 235) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 245, 235) 0%,
+    rgb(255, 250, 240) 50%,
+    rgb(255, 245, 235) 100%
+  );
 }
 
 .dark .halloween-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 5) 0%,
-		rgb(25, 15, 10) 50%,
-		rgb(20, 10, 5) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 5) 0%,
+    rgb(25, 15, 10) 50%,
+    rgb(20, 10, 5) 100%
+  );
 }
 
 /* Thanksgiving-themed gradient backgrounds */
 .thanksgiving-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 250, 240) 0%,
-		rgb(255, 245, 235) 50%,
-		rgb(255, 250, 240) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 250, 240) 0%,
+    rgb(255, 245, 235) 50%,
+    rgb(255, 250, 240) 100%
+  );
 }
 
 .dark .thanksgiving-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(25, 15, 10) 0%,
-		rgb(20, 10, 5) 50%,
-		rgb(25, 15, 10) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(25, 15, 10) 0%,
+    rgb(20, 10, 5) 50%,
+    rgb(25, 15, 10) 100%
+  );
 }
 
 /* Mother's Day-themed gradient backgrounds */
 .mothers-day-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(253, 242, 248) 0%,
-		rgb(252, 231, 243) 50%,
-		rgb(253, 242, 248) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(253, 242, 248) 0%,
+    rgb(252, 231, 243) 50%,
+    rgb(253, 242, 248) 100%
+  );
 }
 
 .dark .mothers-day-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 15) 0%,
-		rgb(15, 8, 12) 50%,
-		rgb(20, 10, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 15) 0%,
+    rgb(15, 8, 12) 50%,
+    rgb(20, 10, 15) 100%
+  );
 }
 
 /* Father's Day-themed gradient backgrounds */
 .fathers-day-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(239, 246, 255) 0%,
-		rgb(219, 234, 254) 50%,
-		rgb(239, 246, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(239, 246, 255) 0%,
+    rgb(219, 234, 254) 50%,
+    rgb(239, 246, 255) 100%
+  );
 }
 
 .dark .fathers-day-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(15, 20, 30) 0%,
-		rgb(10, 15, 25) 50%,
-		rgb(15, 20, 30) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(15, 20, 30) 0%,
+    rgb(10, 15, 25) 50%,
+    rgb(15, 20, 30) 100%
+  );
 }
 
 /* Fourth of July-themed gradient backgrounds */
 .fourth-of-july-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(254, 242, 242) 0%,
-		rgb(254, 226, 226) 50%,
-		rgb(254, 242, 242) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(254, 242, 242) 0%,
+    rgb(254, 226, 226) 50%,
+    rgb(254, 242, 242) 100%
+  );
 }
 
 .dark .fourth-of-july-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(30, 10, 10) 0%,
-		rgb(25, 8, 8) 50%,
-		rgb(30, 10, 10) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(30, 10, 10) 0%,
+    rgb(25, 8, 8) 50%,
+    rgb(30, 10, 10) 100%
+  );
 }
 
 /* Birthday-themed gradient backgrounds */
 .birthday-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(255, 251, 235) 0%,
-		rgb(254, 243, 199) 50%,
-		rgb(255, 251, 235) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(255, 251, 235) 0%,
+    rgb(254, 243, 199) 50%,
+    rgb(255, 251, 235) 100%
+  );
 }
 
 .dark .birthday-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(25, 15, 5) 0%,
-		rgb(20, 10, 3) 50%,
-		rgb(25, 15, 5) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(25, 15, 5) 0%,
+    rgb(20, 10, 3) 50%,
+    rgb(25, 15, 5) 100%
+  );
 }
 
 /* Anniversary-themed gradient backgrounds */
 .anniversary-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(253, 242, 248) 0%,
-		rgb(252, 231, 243) 50%,
-		rgb(253, 242, 248) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(253, 242, 248) 0%,
+    rgb(252, 231, 243) 50%,
+    rgb(253, 242, 248) 100%
+  );
 }
 
 .dark .anniversary-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 15) 0%,
-		rgb(15, 8, 12) 50%,
-		rgb(20, 10, 15) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 15) 0%,
+    rgb(15, 8, 12) 50%,
+    rgb(20, 10, 15) 100%
+  );
 }
 
 /* Graduation-themed gradient backgrounds */
 .graduation-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(250, 245, 255) 0%,
-		rgb(243, 232, 255) 50%,
-		rgb(250, 245, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(250, 245, 255) 0%,
+    rgb(243, 232, 255) 50%,
+    rgb(250, 245, 255) 100%
+  );
 }
 
 .dark .graduation-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(20, 10, 25) 0%,
-		rgb(15, 8, 20) 50%,
-		rgb(20, 10, 25) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(20, 10, 25) 0%,
+    rgb(15, 8, 20) 50%,
+    rgb(20, 10, 25) 100%
+  );
 }
 
 /* Baby Shower-themed gradient backgrounds */
 .baby-shower-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(236, 254, 255) 0%,
-		rgb(207, 250, 254) 50%,
-		rgb(236, 254, 255) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(236, 254, 255) 0%,
+    rgb(207, 250, 254) 50%,
+    rgb(236, 254, 255) 100%
+  );
 }
 
 .dark .baby-shower-gradient {
-	background: linear-gradient(
-		135deg,
-		rgb(10, 20, 25) 0%,
-		rgb(8, 15, 20) 50%,
-		rgb(10, 20, 25) 100%
-	);
+  background: linear-gradient(
+    135deg,
+    rgb(10, 20, 25) 0%,
+    rgb(8, 15, 20) 50%,
+    rgb(10, 20, 25) 100%
+  );
 }
 
 /* Countdown timer hover effects for professional mode */
 .countdown-timer-professional {
-	color: var(--holiday-color) !important;
+  color: var(--holiday-color) !important;
 }
 
 .countdown-timer-professional:hover {
-	color: var(--holiday-color-dark) !important;
+  color: var(--holiday-color-dark) !important;
+}
+
+/* Bouncing animation keyframes for gamified mode shapes */
+@keyframes bounce-diagonal-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1));
+  }
+  25% {
+    transform: translate(50px, -30px) scale(var(--shape-scale, 1)) rotate(90deg);
+  }
+  50% {
+    transform: translate(100px, 40px) scale(var(--shape-scale, 1)) rotate(180deg);
+  }
+  75% {
+    transform: translate(20px, 60px) scale(var(--shape-scale, 1)) rotate(270deg);
+  }
+}
+
+@keyframes bounce-diagonal-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1));
+  }
+  25% {
+    transform: translate(-40px, 50px) scale(var(--shape-scale, 1)) rotate(-90deg);
+  }
+  50% {
+    transform: translate(80px, -20px) scale(var(--shape-scale, 1)) rotate(-180deg);
+  }
+  75% {
+    transform: translate(-30px, -40px) scale(var(--shape-scale, 1)) rotate(-270deg);
+  }
+}
+
+@keyframes bounce-horizontal {
+  0%,
+  100% {
+    transform: translateX(0) scale(var(--shape-scale, 1));
+  }
+  25% {
+    transform: translateX(60px) scale(var(--shape-scale, 1)) rotateY(180deg);
+  }
+  50% {
+    transform: translateX(-30px) scale(var(--shape-scale, 1)) rotateY(360deg);
+  }
+  75% {
+    transform: translateX(40px) scale(var(--shape-scale, 1)) rotateY(180deg);
+  }
+}
+
+@keyframes bounce-vertical {
+  0%,
+  100% {
+    transform: translateY(0) scale(var(--shape-scale, 1));
+  }
+  25% {
+    transform: translateY(-50px) scale(var(--shape-scale, 1)) rotateX(180deg);
+  }
+  50% {
+    transform: translateY(40px) scale(var(--shape-scale, 1)) rotateX(360deg);
+  }
+  75% {
+    transform: translateY(-20px) scale(var(--shape-scale, 1)) rotateX(180deg);
+  }
+}
+
+@keyframes bounce-circular {
+  0% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(0deg);
+  }
+  25% {
+    transform: translate(40px, -40px) scale(var(--shape-scale, 1)) rotate(90deg);
+  }
+  50% {
+    transform: translate(0, -80px) scale(var(--shape-scale, 1)) rotate(180deg);
+  }
+  75% {
+    transform: translate(-40px, -40px) scale(var(--shape-scale, 1)) rotate(270deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(360deg);
+  }
+}
+
+@keyframes bounce-figure-eight {
+  0% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(0deg);
+  }
+  12.5% {
+    transform: translate(20px, -15px) scale(var(--shape-scale, 1)) rotate(45deg);
+  }
+  25% {
+    transform: translate(30px, 0) scale(var(--shape-scale, 1)) rotate(90deg);
+  }
+  37.5% {
+    transform: translate(20px, 15px) scale(var(--shape-scale, 1)) rotate(135deg);
+  }
+  50% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(180deg);
+  }
+  62.5% {
+    transform: translate(-20px, 15px) scale(var(--shape-scale, 1)) rotate(225deg);
+  }
+  75% {
+    transform: translate(-30px, 0) scale(var(--shape-scale, 1)) rotate(270deg);
+  }
+  87.5% {
+    transform: translate(-20px, -15px) scale(var(--shape-scale, 1)) rotate(315deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(360deg);
+  }
+}
+
+/* Bouncing animation classes */
+.bounce-diagonal-1 {
+  animation-name: bounce-diagonal-1;
+  animation-duration: 4s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.bounce-diagonal-2 {
+  animation-name: bounce-diagonal-2;
+  animation-duration: 5s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.bounce-horizontal {
+  animation-name: bounce-horizontal;
+  animation-duration: 3.5s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.bounce-vertical {
+  animation-name: bounce-vertical;
+  animation-duration: 4.5s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.bounce-circular {
+  animation-name: bounce-circular;
+  animation-duration: 6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.bounce-figure-eight {
+  animation-name: bounce-figure-eight;
+  animation-duration: 5.5s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 640px) {
+  @keyframes bounce-diagonal-1 {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(var(--shape-scale, 1));
+    }
+    25% {
+      transform: translate(25px, -15px) scale(var(--shape-scale, 1)) rotate(90deg);
+    }
+    50% {
+      transform: translate(50px, 20px) scale(var(--shape-scale, 1)) rotate(180deg);
+    }
+    75% {
+      transform: translate(10px, 30px) scale(var(--shape-scale, 1)) rotate(270deg);
+    }
+  }
+
+  @keyframes bounce-diagonal-2 {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(var(--shape-scale, 1));
+    }
+    25% {
+      transform: translate(-20px, 25px) scale(var(--shape-scale, 1)) rotate(-90deg);
+    }
+    50% {
+      transform: translate(40px, -10px) scale(var(--shape-scale, 1)) rotate(-180deg);
+    }
+    75% {
+      transform: translate(-15px, -20px) scale(var(--shape-scale, 1)) rotate(-270deg);
+    }
+  }
 }

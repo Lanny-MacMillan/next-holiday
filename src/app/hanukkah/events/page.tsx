@@ -1,444 +1,645 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
-import SortModal from "@/components/modals/SortModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import FormModal from "@/components/modals/FormModal";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import { useEventMutations } from "@/hooks/useEventMutations";
+import { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAuth0 } from '@auth0/auth0-react';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  updateTaskInHomeData,
+  setHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+} from '@/store/slices/homeSlice';
+import {
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+} from '@/store/selectors/home';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 
-type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
-
-const defaultEventTasks = [
-	{
-		title: "Hanukkah Party Planning",
-		description: "Plan the main Hanukkah celebration",
-		category: "Events",
-		priority: "high" as const,
-	},
-	{
-		title: "Dreidel Game Setup",
-		description: "Prepare dreidel games for guests",
-		category: "Events",
-		priority: "medium" as const,
-	},
-	{
-		title: "Latke Making",
-		description: "Prepare traditional potato latkes",
-		category: "Events",
-		priority: "high" as const,
-	},
-	{
-		title: "Sufganiyot Preparation",
-		description: "Make or order jelly donuts",
-		category: "Events",
-		priority: "medium" as const,
-	},
-	{
-		title: "Guest List Finalization",
-		description: "Confirm all invited guests",
-		category: "Events",
-		priority: "high" as const,
-	},
-	{
-		title: "Music Playlist",
-		description: "Create Hanukkah music playlist",
-		category: "Events",
-		priority: "low" as const,
-	},
-];
+import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import TaskSection from '@/components/common/TaskSection';
+import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import SortModal from '@/components/modals/SortModal';
+import AddButton from '@/components/common/AddButton';
 
 export default function HanukkahEventsPage() {
-	const dispatch = useAppDispatch();
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { user: auth0User } = useAuth0();
 
-	// Use the new event mutations hook
-	const {
-		holidayId,
-		auth0User,
-		events,
-		loading,
-		error,
-		initialized,
-		createEvent,
-		updateEvent,
-		editEvent,
-		deleteEvent,
-		createEventState,
-		updateEventState,
-		editEventState,
-		deleteEventState,
-	} = useEventMutations();
+  // Get Redux data
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
+  const currentState = useAppSelector((state: any) => state);
 
-	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [showForm, setShowForm] = useState(false);
-	const [showEditModal, setShowEditModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<any>(null);
-	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+  // Holiday ID resolution
+  const resolvedHolidayId = homeInitialized
+    ? getHolidayIdFromRoute('/hanukkah', holidayPreferences)
+    : getHolidayIdFromRoute('/hanukkah', holidayPreferences);
 
-	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+  // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
+  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const events =
+    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+  const isLoading = !homeInitialized;
 
-	// Check if default event tasks exist
-	useEffect(() => {
-		const eventTasks = events.filter((task: any) => task.category === "Events");
-		if (eventTasks.length === 0 && initialized) {
-			setShowDefaultTasks(true);
-		}
-	}, [events, initialized]);
+  // Sharing status (for conditional form fields)
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'hanukkah'),
+  );
 
-	async function handleAddTask(values: Record<string, any>) {
-		if (!values.title?.trim()) return;
-		if (!holidayId || !auth0User) return;
+  // State management
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<any>(null);
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('datetime');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-		const payload = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			category: "Events",
-			dueDate: values.dueDate || undefined,
-			isCompleted: false,
-		};
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
-		await createEvent({ holidayId, payload, auth0User });
-		setShowForm(false);
-	}
+  // Check if default event tasks exist
+  useEffect(() => {
+    if (events.length === 0 && homeInitialized) {
+      // Could add default tasks here if needed
+    }
+  }, [events, homeInitialized]);
 
-	async function addDefaultEventTasks() {
-		for (const task of defaultEventTasks) {
-			const payload = {
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				assignedTo: undefined,
-				category: task.category,
-				dueDate: undefined,
-				isCompleted: false,
-			};
-			await createEvent({ holidayId, payload, auth0User });
-		}
-		setShowDefaultTasks(false);
-	}
+  // Refresh home data function
+  const refreshHomeData = async () => {
+    if (!auth0User?.sub || !resolvedHolidayId) return;
 
-	function openForm() {
-		setShowForm(true);
-	}
+    try {
+      const response = await fetch('/api/home', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        dispatch(setHomeData(result.data));
+      }
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    }
+  };
 
-	function closeForm() {
-		setShowForm(false);
-	}
+  // CRUD Operations Pattern (like Kwanzaa)
+  async function handleAddEvent(values: Record<string, any>) {
+    if (!values.title?.trim()) return;
+    if (!resolvedHolidayId || !auth0User) return;
 
-	async function handleToggleTask(taskId: string) {
-		if (!holidayId || !auth0User) return;
+    const newTask = {
+      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+      title: values.title,
+      description: values.description || undefined,
+      priority: values.priority as 'low' | 'medium' | 'high',
+      assignedTo: values.assignedTo || undefined,
+      category: 'Events',
+      dueDate: values.dueDate || undefined,
+      isCompleted: false,
+      holidayId: resolvedHolidayId,
+    };
 
-		const task = events.find((t: any) => t.id === taskId);
-		if (task) {
-			await updateEvent({
-				holidayId,
-				taskId,
-				isCompleted: !task.isCompleted,
-				auth0User,
-			});
-		}
-	}
+    try {
+      // Optimistically update Redux state first (like Kwanzaa)
+      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 
-	async function handleDeleteTask(taskId: string) {
-		if (!holidayId || !auth0User) return;
+      // Call API - map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        category: 'Events',
+        due_date: values.dueDate || undefined, // snake_case for API
+        isCompleted: false,
+      };
 
-		await deleteEvent({
-			holidayId,
-			taskId,
-			auth0User,
-		});
-	}
+      console.log('🐛 [HanukkahAdd] API payload:', apiPayload);
 
-	const handleEditTask = (task: any) => {
-		setEditingTask(task);
-		setShowEditModal(true);
-	};
+      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+        body: JSON.stringify(apiPayload),
+      });
 
-	async function handleEditTaskSubmit(values: Record<string, any>) {
-		if (!editingTask || !holidayId || !auth0User) return;
+      if (response.ok) {
+        // Replace temporary task with real task from API (like Kwanzaa)
+        const result = await response.json();
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
 
-		await editEvent({
-			holidayId,
-			taskId: editingTask.id,
-			payload: {
-				title: values.title,
-				description: values.description || undefined,
-				priority: values.priority as "low" | "medium" | "high",
-				assignedTo: values.assignedTo || undefined,
-				category: "Events",
-				dueDate: values.dueDate || undefined,
-			},
-			auth0User,
-		});
-		setShowEditModal(false);
-		setEditingTask(null);
-	}
+        // Also refresh home data like Kwanzaa does
+        await refreshHomeData();
+      } else {
+        // Remove optimistic update on error
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        console.error('Failed to add task:', response.status, response.statusText);
+      }
 
-	function closeEditModal() {
-		setShowEditModal(false);
-		setEditingTask(null);
-	}
+      setShowFormModal(false);
+    } catch (error) {
+      // Remove optimistic update on error (like Kwanzaa)
+      dispatch(
+        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
+      );
+      console.error('Error creating event:', error);
+    }
+  }
 
-	function sortTasks(tasksToSort: any[]): any[] {
-		switch (sortBy) {
-			case "priority":
-				const priorityOrder: { [key: string]: number } = {
-					high: 3,
-					medium: 2,
-					low: 1,
-				};
-				return [...tasksToSort].sort(
-					(a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
-				);
-			case "dateDue":
-				return [...tasksToSort].sort((a, b) => {
-					if (!a.dueDate && !b.dueDate) return 0;
-					if (!a.dueDate) return 1;
-					if (!b.dueDate) return -1;
-					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-				});
-			case "assignedTo":
-				return [...tasksToSort].sort((a, b) =>
-					(a.assignedTo || "").localeCompare(b.assignedTo || "")
-				);
-			case "category":
-				return [...tasksToSort].sort((a, b) =>
-					(a.category || "").localeCompare(b.category || "")
-				);
-			default:
-				return tasksToSort;
-		}
-	}
+  async function handleToggleCompletion(eventId: string) {
+    if (!resolvedHolidayId || !auth0User) return;
 
-	if (loading && !initialized) {
-		return (
-			<div className="min-h-screen hanukkah-tasks-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading events...</p>
-				</div>
-			</div>
-		);
-	}
+    const event = events.find((e: any) => e.id === eventId);
+    if (!event) return;
 
-	const eventTasks = events.filter((task: any) => task.category === "Events");
-	const sortedTasks = sortTasks(eventTasks);
-	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
-	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+    // Optimistic update
+    dispatch(
+      updateTaskInHomeData({
+        holidayId: resolvedHolidayId,
+        taskId: eventId,
+        updates: { isCompleted: !event.isCompleted },
+      }),
+    );
 
-	return (
-		<div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<HolidayPageHeader
-				title="Hanukkah Events"
-				backHref="/hanukkah"
-				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort tasks"
-				description="Plan your Hanukkah events and celebrations!"
-				holidayColor="blue-500"
-				error={error ? "API Error" : undefined}
-			/>
-			<main className="w-full max-w-4xl flex flex-col gap-6">
-				{/* Default Tasks Prompt */}
-				{showDefaultTasks && (
-					<div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-						<h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-							🎉 Set Up Hanukkah Events
-						</h3>
-						<p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
-							Would you like to add some common Hanukkah event planning tasks?
-						</p>
-						<div className="flex gap-2">
-							<button
-								onClick={addDefaultEventTasks}
-								className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
-							>
-								Add Default Tasks
-							</button>
-							<button
-								onClick={() => setShowDefaultTasks(false)}
-								className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-							>
-								Skip
-							</button>
-						</div>
-					</div>
-				)}
+    try {
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${eventId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify({ isCompleted: !event.isCompleted }),
+        },
+      );
 
-				<AddButton title="Event Task" onClick={openForm} color="blue" />
-				<div className="flex items-center justify-center">
-					{sortBy !== "none" && (
-						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "priority" && "Sorted by Priority"}
-							{sortBy === "dateDue" && "Sorted by Date Due"}
-							{sortBy === "assignedTo" && "Sorted by Assigned To"}
-							{sortBy === "category" && "Sorted by Category"}
-						</div>
-					)}
-				</div>
+      if (!response.ok) {
+        // Revert on error
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: eventId,
+            updates: { isCompleted: event.isCompleted },
+          }),
+        );
+        console.error(
+          'Failed to toggle event:',
+          response.status,
+          response.statusText,
+        );
+      }
+    } catch (error) {
+      // Revert on error
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: eventId,
+          updates: { isCompleted: event.isCompleted },
+        }),
+      );
+      console.error('Error toggling event:', error);
+    }
+  }
 
-				<TaskSection
-					title="Incomplete"
-					items={incompleteTasks}
-					isCompleted={false}
-					emptyMessage="All events planned! 🎉"
-					completedMessage=""
-					renderItem={(task: any) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleTask}
-							onDelete={handleDeleteTask}
-							onEdit={handleEditTask}
-							theme={{
-								accentColor: "#3b82f6", // Blue for Hanukkah
-							}}
-							borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
-							disableInternalModal={true}
-						/>
-					)}
-				/>
+  function handleEditEvent(event: any) {
+    setSelectedEvent(event);
+    setShowFormModal(true);
+  }
 
-				<TaskSection
-					title="Completed"
-					items={completedTasks}
-					isCompleted={true}
-					emptyMessage="No completed tasks yet."
-					completedMessage="No completed tasks yet."
-					renderItem={(task: any) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleTask}
-							onDelete={handleDeleteTask}
-							onEdit={handleEditTask}
-							className="opacity-60"
-							theme={{
-								accentColor: "#3b82f6", // Blue for Hanukkah
-							}}
-							borderColor="rgb(var(--color-blue-500))" // Blue border for Hanukkah
-							disableInternalModal={true}
-						/>
-					)}
-				/>
-			</main>
+  async function handleEditSubmit(values: Record<string, any>) {
+    if (!selectedEvent || !resolvedHolidayId || !auth0User) return;
 
-			{/* Form Modal */}
-			<FormModal
-				isOpen={showForm}
-				title="Add New Event Task"
-				fields={[
-					{
-						id: "title",
-						type: "text",
-						placeholder: "Task Title*",
-						required: true,
-					},
-					{
-						id: "description",
-						type: "textarea",
-						placeholder: "Description",
-						rows: 2,
-					},
-					{
-						id: "priority",
-						type: "select",
-						placeholder: "Priority",
-						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
-						],
-					},
-					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
-					{ id: "dueDate", type: "date", placeholder: "Due Date" },
-				]}
-				initialValues={{
-					title: "",
-					description: "",
-					priority: "medium",
-					assignedTo: "",
-					dueDate: "",
-				}}
-				onSubmit={handleAddTask}
-				onClose={closeForm}
-				loading={loading}
-				submitText="Add Task"
-				cardClassName="card-tasks"
-			/>
+    setIsUpdating(true);
+    const updates = {
+      title: values.title,
+      description: values.description || undefined,
+      priority: values.priority as 'low' | 'medium' | 'high',
+      assignedTo: values.assignedTo || undefined,
+      dueDate: values.dueDate || undefined,
+    };
 
-			{/* Edit Modal */}
-			<FormModal
-				isOpen={showEditModal}
-				title="Edit Event Task"
-				fields={[
-					{
-						id: "title",
-						type: "text",
-						placeholder: "Task Title*",
-						required: true,
-					},
-					{
-						id: "description",
-						type: "textarea",
-						placeholder: "Description",
-						rows: 2,
-					},
-					{
-						id: "priority",
-						type: "select",
-						placeholder: "Priority",
-						options: [
-							{ value: "low", label: "Low Priority" },
-							{ value: "medium", label: "Medium Priority" },
-							{ value: "high", label: "High Priority" },
-						],
-					},
-					{ id: "assignedTo", type: "text", placeholder: "Assigned To" },
-					{ id: "dueDate", type: "date", placeholder: "Due Date" },
-				]}
-				initialValues={{
-					title: editingTask?.title || "",
-					description: editingTask?.description || "",
-					priority: editingTask?.priority || "medium",
-					assignedTo: editingTask?.assignedTo || "",
-					dueDate: editingTask?.dueDate || "",
-				}}
-				onSubmit={handleEditTaskSubmit}
-				onClose={closeEditModal}
-				loading={editEventState.isLoading}
-				submitText="Update Task"
-				cardClassName="card-tasks"
-			/>
+    try {
+      // Optimistic update
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: selectedEvent.id,
+          updates,
+        }),
+      );
 
-			{/* Sort Modal */}
-			<SortModal
-				isOpen={showSortModal}
-				onClose={() => setShowSortModal(false)}
-				sortBy={sortBy}
-				onSortChange={(sortOption: string) =>
-					setSortBy(sortOption as SortOption)
-				}
-				sortOptions={[
-					{ value: "none", label: "None" },
-					{ value: "priority", label: "Priority" },
-					{ value: "dateDue", label: "Date Due" },
-					{ value: "assignedTo", label: "Assigned To" },
-					{ value: "category", label: "Category" },
-				]}
-				title="Sort Tasks"
-			/>
-		</div>
-	);
+      // Map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        due_date: values.dueDate || undefined, // snake_case for API
+      };
+
+      console.log('🐛 [HanukkahEdit] API payload:', apiPayload);
+
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${selectedEvent.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify(apiPayload),
+        },
+      );
+
+      if (!response.ok) {
+        // Revert on error
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: selectedEvent.id,
+            updates: selectedEvent,
+          }),
+        );
+        console.error(
+          'Failed to update event:',
+          response.status,
+          response.statusText,
+        );
+      }
+
+      setShowFormModal(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      // Revert on error
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: selectedEvent.id,
+          updates: selectedEvent,
+        }),
+      );
+      console.error('Error updating event:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  function handleDeleteEvent(event: any) {
+    setEventToDelete(event);
+    setShowDeleteModal(true);
+  }
+
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = events.find((e: any) => e.id === taskId);
+    if (task) {
+      setEventToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!eventToDelete || !resolvedHolidayId || !auth0User) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${eventToDelete.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+        },
+      );
+
+      if (response.ok) {
+        // Remove from Redux state on success
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: eventToDelete.id,
+          }),
+        );
+      } else {
+        console.error(
+          'Failed to delete event:',
+          response.status,
+          response.statusText,
+        );
+      }
+
+      setShowDeleteModal(false);
+      setEventToDelete(null);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function openForm() {
+    setShowFormModal(true);
+    setSelectedEvent(null);
+  }
+
+  function closeForm() {
+    setShowFormModal(false);
+    setSelectedEvent(null);
+  }
+
+  function cancelDelete() {
+    setShowDeleteModal(false);
+    setEventToDelete(null);
+  }
+
+  // Event data sorting
+  const sortedEvents = [...events].sort((a, b) => {
+    switch (sortBy) {
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'completed':
+        return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
+      case 'datetime':
+        return (
+          new Date(a.datetime || 0).getTime() - new Date(b.datetime || 0).getTime()
+        );
+      default:
+        return 0;
+    }
+  });
+
+  const incompleteEvents = sortedEvents.filter((event: any) => !event.isCompleted);
+  const completedEvents = sortedEvents.filter((event: any) => event.isCompleted);
+
+  // Contact options for assigned to field
+  const contactOptions = contacts.map((contact: any) => ({
+    value: contact.id,
+    label: contact.name,
+  }));
+
+  // Form field configuration
+  const formFields = [
+    {
+      id: 'title',
+      type: 'text' as const,
+      placeholder: 'Task Title*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'textarea' as const,
+      placeholder: 'Description',
+      rows: 2,
+    },
+    {
+      id: 'priority',
+      type: 'select' as const,
+      placeholder: 'Priority',
+      options: [
+        { value: 'low', label: 'Low Priority' },
+        { value: 'medium', label: 'Medium Priority' },
+        { value: 'high', label: 'High Priority' },
+      ],
+    },
+    // CONDITIONAL: Only show when isHolidayShared is true
+    ...(isHolidayShared
+      ? [
+          {
+            id: 'assignedTo',
+            type: 'text' as const,
+            placeholder: 'Assigned To',
+          },
+        ]
+      : []),
+    {
+      id: 'dueDate',
+      type: 'date' as const,
+      placeholder: 'Due Date',
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen hanukkah-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading events...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen hanukkah-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      <HolidayPageHeader
+        title="Hanukkah Events"
+        backHref="/hanukkah"
+        description="Plan your Hanukkah celebrations!"
+      />
+
+      <div className="w-full max-w-4xl mt-8">
+        {/* Event Status */}
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 mb-6 shadow-lg border border-blue-200/30">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {events.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Total Events
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {completedEvents.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Completed
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                {incompleteEvents.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Upcoming
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Add Button - positioned above tasks like other implementations */}
+        <div className="w-full">
+          <div className="w-full">
+            <AddButton title="Event" onClick={openForm} color="blue" />
+          </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <TaskSection
+          title="Upcoming Events"
+          items={incompleteEvents}
+          isCompleted={false}
+          emptyMessage="No events planned yet."
+          completedMessage="All events completed!"
+          renderItem={(task: any) => (
+            <ToDoCard
+              key={task.id}
+              task={task}
+              onToggleComplete={handleToggleCompletion}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              onEdit={handleEditEvent}
+              theme={{
+                accentColor: '#3b82f6', // Blue for Hanukkah
+              }}
+              borderColor="rgb(59 130 246)" // Blue border for Hanukkah
+              disableInternalModal={true}
+            />
+          )}
+        />
+
+        {/* Completed Events */}
+        {completedEvents.length > 0 && (
+          <TaskSection
+            title="Completed Events"
+            items={completedEvents}
+            isCompleted={true}
+            emptyMessage=""
+            completedMessage=""
+            renderItem={(task: any) => (
+              <ToDoCard
+                key={task.id}
+                task={task}
+                onToggleComplete={handleToggleCompletion}
+                onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+                onEdit={handleEditEvent}
+                className="opacity-60"
+                theme={{
+                  accentColor: '#3b82f6', // Blue for Hanukkah
+                }}
+                borderColor="rgb(59 130 246)" // Blue border for Hanukkah
+                disableInternalModal={true}
+              />
+            )}
+          />
+        )}
+      </div>
+
+      {/* Add Modal */}
+      <FormModal
+        isOpen={showFormModal && !selectedEvent}
+        onClose={closeForm}
+        title="Add New Event Task"
+        fields={formFields}
+        onSubmit={handleAddEvent}
+        submitText="Add Task"
+        submitButtonColor="#3b82f6"
+        initialValues={{
+          title: '',
+          description: '',
+          priority: 'medium',
+          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          dueDate: '',
+        }}
+      />
+
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showFormModal && !!selectedEvent}
+        onClose={closeForm}
+        title="Edit Event Task"
+        fields={formFields}
+        onSubmit={handleEditSubmit}
+        submitText="Update Task"
+        submitButtonColor="#3b82f6"
+        initialValues={
+          selectedEvent
+            ? {
+                ...selectedEvent,
+                dueDate: selectedEvent.dueDate
+                  ? new Date(selectedEvent.dueDate).toISOString().split('T')[0]
+                  : '',
+              }
+            : {}
+        }
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Event"
+        message={`Are you sure you want to delete "${eventToDelete?.title}"?`}
+        loading={isDeleting}
+      />
+
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortOptions={[
+          { value: 'datetime', label: 'Date & Time' },
+          { value: 'title', label: 'Title A-Z' },
+          { value: 'completed', label: 'Completion Status' },
+        ]}
+        sortBy={sortBy}
+        onSortChange={(sortOption: string) => setSortBy(sortOption)}
+        title="Sort Events"
+      />
+    </div>
+  );
 }

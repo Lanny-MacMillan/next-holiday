@@ -8,7 +8,7 @@
  * @returns true if the value is empty, false otherwise
  */
 export function isEmptyString(value: any): boolean {
-	return !value || (typeof value === "string" && !value.trim());
+  return !value || (typeof value === 'string' && !value.trim());
 }
 
 /**
@@ -17,7 +17,7 @@ export function isEmptyString(value: any): boolean {
  * @returns true if the value is empty, false otherwise
  */
 export function isEmptyNumber(value: any): boolean {
-	return value === undefined || value === null || value === "";
+  return value === undefined || value === null || value === '';
 }
 
 /**
@@ -27,18 +27,18 @@ export function isEmptyNumber(value: any): boolean {
  * @returns Array of missing field IDs
  */
 export function validateRequiredFields(
-	formValues: Record<string, any>,
-	requiredFields: Array<{ id: string; type?: string }>
+  formValues: Record<string, any>,
+  requiredFields: Array<{ id: string; type?: string }>,
 ): string[] {
-	return requiredFields
-		.filter((field) => {
-			const value = formValues[field.id];
-			if (field.type === "number") {
-				return isEmptyNumber(value);
-			}
-			return isEmptyString(value);
-		})
-		.map((field) => field.id);
+  return requiredFields
+    .filter(field => {
+      const value = formValues[field.id];
+      if (field.type === 'number') {
+        return isEmptyNumber(value);
+      }
+      return isEmptyString(value);
+    })
+    .map(field => field.id);
 }
 
 /**
@@ -48,10 +48,10 @@ export function validateRequiredFields(
  * @returns true if all required fields are filled, false otherwise
  */
 export function hasAllRequiredFields(
-	formValues: Record<string, any>,
-	requiredFields: Array<{ id: string; type?: string }>
+  formValues: Record<string, any>,
+  requiredFields: Array<{ id: string; type?: string }>,
 ): boolean {
-	return validateRequiredFields(formValues, requiredFields).length === 0;
+  return validateRequiredFields(formValues, requiredFields).length === 0;
 }
 
 /**
@@ -60,9 +60,9 @@ export function hasAllRequiredFields(
  * @returns true if email is valid, false otherwise
  */
 export function isValidEmail(email: string): boolean {
-	if (!email || typeof email !== "string") return false;
+  if (!email || typeof email !== 'string') return false;
 
-	// Basic email regex pattern
-	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	return emailRegex.test(email.trim());
+  // Basic email regex pattern
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
 }

@@ -1,462 +1,447 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
-	selectHolidayPreferences,
-	selectHomeInitialized,
-	selectHomeData,
-} from "@/store/selectors/home";
-import {
-	shouldSkipHolidayQueryWithColdEntry,
-	getHolidayDataFromRedux,
-} from "@/utils/holidayData";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { RootState } from "@/store";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { updateCardInHomeData } from "@/store/slices/homeSlice";
-import { useFormModalMutation } from "@/hooks/useFormModalMutation";
-import { useGetCardsQuery } from "@/store/api";
-import { transformCardPayload } from "@/utils/formTransformers";
-import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
-import FormModal from "@/components/modals/FormModal";
-import AddButton from "@/components/common/AddButton";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import MailCardStatus from "@/components/cards/MailCardStatus";
-import MailCard from "@/components/cards/MailCard";
-import TaskSection from "@/components/common/TaskSection";
-import SortModal from "@/components/modals/SortModal";
-import DeleteModal from "@/components/modals/DeleteModal";
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+} from '@/store/selectors/home';
+import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { transformCardPayload } from '@/utils/formTransformers';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import FormModal from '@/components/modals/FormModal';
+import AddButton from '@/components/common/AddButton';
+import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import MailCardStatus from '@/components/cards/MailCardStatus';
+import MailCard from '@/components/cards/MailCard';
+import TaskSection from '@/components/common/TaskSection';
+import SortModal from '@/components/modals/SortModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 
 export default function ChristmasCardsPage() {
-	const dispatch = useAppDispatch();
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
-	const {
-		holidayId,
-		mutation,
-		isLoading: mutationLoading,
-		error: mutationError,
-		auth0User,
-	} = useFormModalMutation();
+  const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
 
-	// Get Redux selectors
-	const holidayPreferences = useAppSelector(selectHolidayPreferences);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const homeData = useAppSelector(selectHomeData);
+  // Get Redux selectors
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
+  const homeData = useAppSelector(selectHomeData);
 
-	// Get current Redux state for skip logic
-	const currentState = useAppSelector((state: any) => state);
+  // Get current Redux state for skip logic
+  const currentState = useAppSelector((state: any) => state);
 
-	// Get holiday ID for Christmas - try to resolve from home data, fallback to route-based resolution
-	const resolvedHolidayId = homeInitialized
-		? getHolidayIdFromRoute("/christmas", holidayPreferences)
-		: getHolidayIdFromRoute("/christmas", holidayPreferences); // Allow fallback for cold entry
+  // Get holiday ID for Christmas - try to resolve from home data, fallback to route-based resolution
+  const resolvedHolidayId = homeInitialized
+    ? getHolidayIdFromRoute('/christmas', holidayPreferences)
+    : getHolidayIdFromRoute('/christmas', holidayPreferences); // Allow fallback for cold entry
 
-	// Get holiday data from Redux if available
-	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  // Get holiday data from Redux - single source of truth
+  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
 
-	// Use Redux data first, fallback to RTK Query if needed
-	const cards = holidayData?.cards || [];
+  // Use Redux data directly - no individual API calls needed
+  const cards = holidayData?.cards || [];
+  const isLoading = !homeInitialized;
+  const error = null; // Error handling through home data loading
 
-	// Fetch cards using RTK Query as fallback (only when Redux data is not available)
-	const {
-		data: fallbackCards = [],
-		isLoading: loading,
-		error: cardsError,
-	} = useGetCardsQuery(
-		{ holidayId: resolvedHolidayId || "", auth0User },
-		{
-			skip:
-				shouldSkipHolidayQueryWithColdEntry(
-					resolvedHolidayId,
-					auth0User,
-					currentState,
-					true
-				) || !!holidayData?.cards, // Skip if we have Redux data
-		}
-	);
+  const [showForm, setShowForm] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState<any>(null);
+  const [cardToEdit, setCardToEdit] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [sortBy, setSortBy] = useState('recipient');
 
-	// Use Redux data if available, otherwise use fallback from RTK Query
-	const finalCards = cards.length > 0 ? cards : fallbackCards;
+  // Function to refresh home data after mutations
+  async function refreshHomeData() {
+    if (!auth0User) return;
 
-	// Debug logging
-	useEffect(() => {
-		console.log("=== CHRISTMAS CARDS PAGE DEBUG ===");
-		console.log("resolvedHolidayId:", resolvedHolidayId);
-		console.log("holidayData:", holidayData);
-		console.log("holidayData?.cards:", holidayData?.cards);
-		console.log("cards from Redux:", cards);
-		console.log("fallbackCards from RTK Query:", fallbackCards);
-		console.log("finalCards:", finalCards);
-		console.log("loading:", loading);
-		console.log("cardsError:", cardsError);
-		console.log("=== END DEBUG ===");
-	}, [
-		resolvedHolidayId,
-		holidayData,
-		cards,
-		fallbackCards,
-		finalCards,
-		loading,
-		cardsError,
-	]);
+    try {
+      const response = await fetch('/api/home', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+      });
 
-	const [showForm, setShowForm] = useState(false);
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [cardToDelete, setCardToDelete] = useState<any>(null);
-	const [cardToEdit, setCardToEdit] = useState<any>(null);
-	const [showEditModal, setShowEditModal] = useState(false);
-	const [sortBy, setSortBy] = useState("recipient");
+      if (response.ok) {
+        const result = await response.json();
+        dispatch(setHomeData(result.data));
+      }
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    }
+  }
 
-	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
-	async function handleAddCard(values: Record<string, any>) {
-		if (!values.recipient?.trim() || !values.message?.trim()) return;
-		if (!resolvedHolidayId || !mutation) return;
+  async function handleAddCard(values: Record<string, any>) {
+    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!resolvedHolidayId || !mutation) return;
 
-		try {
-			const payload = transformCardPayload(values, contacts);
-			await mutation({
-				holidayId: resolvedHolidayId || "",
-				payload,
-				auth0User,
-			}).unwrap();
-			setShowForm(false);
-		} catch (error) {
-			console.error("Error creating card:", error);
-			// Handle error (could show a toast notification)
-		}
-	}
+    try {
+      const payload = transformCardPayload(values, contacts);
+      await mutation({
+        holidayId: resolvedHolidayId || '',
+        payload,
+        auth0User,
+      }).unwrap();
 
-	function openForm() {
-		setShowForm(true);
-	}
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData();
 
-	function closeForm() {
-		setShowForm(false);
-	}
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error creating card:', error);
+      // Handle error (could show a toast notification)
+    }
+  }
 
-	const handleDeleteCard = async (cardId: string) => {
-		const card = finalCards.find((c) => c.id === cardId);
-		setCardToDelete(card);
-		setShowDeleteModal(true);
-	};
+  function openForm() {
+    setShowForm(true);
+  }
 
-	const handleEditCard = async (card: any) => {
-		setCardToEdit(card);
-		setShowEditModal(true);
-	};
+  function closeForm() {
+    setShowForm(false);
+  }
 
-	const confirmDelete = async () => {
-		if (cardToDelete && mutation) {
-			try {
-				await mutation({
-					holidayId: resolvedHolidayId || "",
-					payload: {
-						id: cardToDelete.id,
-						action: "delete",
-						recipient: cardToDelete.recipient,
-						message: cardToDelete.message || "",
-						address: cardToDelete.address || "",
-					},
-					auth0User,
-				}).unwrap();
-				setShowDeleteModal(false);
-				setCardToDelete(null);
-			} catch (error) {
-				console.error("Error deleting card:", error);
-			}
-		}
-	};
+  const handleDeleteCard = async (cardId: string) => {
+    const card = cards.find(c => c.id === cardId);
+    setCardToDelete(card);
+    setShowDeleteModal(true);
+  };
 
-	const handleEditSubmit = async (values: Record<string, any>) => {
-		if (cardToEdit && mutation) {
-			try {
-				const payload = {
-					...transformCardPayload(values, contacts),
-					id: cardToEdit.id,
-					action: "update",
-				};
+  const handleEditCard = async (card: any) => {
+    setCardToEdit(card);
+    setShowEditModal(true);
+  };
 
-				// Optimistically update the Redux home data
-				dispatch(
-					updateCardInHomeData({
-						holidayId: resolvedHolidayId || "",
-						cardId: cardToEdit.id,
-						updates: {
-							recipient: values.recipient,
-							message: values.message,
-							address: values.address,
-						},
-					})
-				);
+  const confirmDelete = async () => {
+    if (cardToDelete && mutation) {
+      try {
+        await mutation({
+          holidayId: resolvedHolidayId || '',
+          payload: {
+            id: cardToDelete.id,
+            action: 'delete',
+            recipient: cardToDelete.recipient,
+            message: cardToDelete.message || '',
+            address: cardToDelete.address || '',
+          },
+          auth0User,
+        }).unwrap();
 
-				await mutation({
-					holidayId: resolvedHolidayId || "",
-					payload,
-					auth0User,
-				}).unwrap();
-				setShowEditModal(false);
-				setCardToEdit(null);
-			} catch (error) {
-				console.error("Error updating card:", error);
-				// Revert the optimistic update on error
-				dispatch(
-					updateCardInHomeData({
-						holidayId: resolvedHolidayId || "",
-						cardId: cardToEdit.id,
-						updates: {
-							recipient: cardToEdit.recipient,
-							message: cardToEdit.message,
-							address: cardToEdit.address,
-						},
-					})
-				);
-			}
-		}
-	};
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData();
 
-	const handleToggleCompletion = async (cardId: string) => {
-		if (mutation) {
-			try {
-				const card = finalCards.find((c) => c.id === cardId);
-				if (card) {
-					const payload = {
-						id: cardId,
-						action: "update",
-						isCompleted: !card.isCompleted,
-						recipient: card.recipient,
-						message: card.message || "",
-						address: card.address || "",
-					};
+        setShowDeleteModal(false);
+        setCardToDelete(null);
+      } catch (error) {
+        console.error('Error deleting card:', error);
+      }
+    }
+  };
 
-					// Optimistically update the Redux home data
-					dispatch(
-						updateCardInHomeData({
-							holidayId: resolvedHolidayId || "",
-							cardId: cardId,
-							updates: { isCompleted: !card.isCompleted },
-						})
-					);
+  const handleEditSubmit = async (values: Record<string, any>) => {
+    if (cardToEdit && mutation) {
+      try {
+        const payload = {
+          ...transformCardPayload(values, contacts),
+          id: cardToEdit.id,
+          action: 'update',
+        };
 
-					await mutation({
-						holidayId: resolvedHolidayId || "",
-						payload,
-						auth0User,
-					}).unwrap();
-				}
-			} catch (error) {
-				console.error("Error toggling card completion:", error);
-				// Revert the optimistic update on error
-				const card = finalCards.find((c) => c.id === cardId);
-				if (card) {
-					dispatch(
-						updateCardInHomeData({
-							holidayId: resolvedHolidayId || "",
-							cardId: cardId,
-							updates: { isCompleted: card.isCompleted },
-						})
-					);
-				}
-			}
-		}
-	};
+        // Optimistically update the Redux home data
+        dispatch(
+          updateCardInHomeData({
+            holidayId: resolvedHolidayId || '',
+            cardId: cardToEdit.id,
+            updates: {
+              recipient: values.recipient,
+              message: values.message,
+              address: values.address,
+            },
+          }),
+        );
 
-	const sortedCards = [...finalCards].sort((a, b) => {
-		switch (sortBy) {
-			case "recipient":
-				return a.recipient.localeCompare(b.recipient);
-			case "completed":
-				return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
-			case "message":
-				return (a.message || "").localeCompare(b.message || "");
-			default:
-				return 0;
-		}
-	});
+        await mutation({
+          holidayId: resolvedHolidayId || '',
+          payload,
+          auth0User,
+        }).unwrap();
 
-	const completedCards = finalCards.filter((card) => card.isCompleted);
-	const incompleteCards = finalCards.filter((card) => !card.isCompleted);
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData();
 
-	// Form fields configuration for cards
-	const formFields = [
-		{
-			id: "recipient",
-			type: "text" as const,
-			label: "Recipient",
-			placeholder: "Recipient's name",
-			required: true,
-		},
-		{
-			id: "message",
-			type: "textarea" as const,
-			label: "Message",
-			placeholder: "Write your holiday message here...",
-			rows: 3,
-		},
-		{
-			id: "address",
-			type: "textarea" as const,
-			label: "Address",
-			placeholder: "Recipient's address...",
-			rows: 2,
-		},
-	];
+        setShowEditModal(false);
+        setCardToEdit(null);
+      } catch (error) {
+        console.error('Error updating card:', error);
+        // Revert the optimistic update on error
+        dispatch(
+          updateCardInHomeData({
+            holidayId: resolvedHolidayId || '',
+            cardId: cardToEdit.id,
+            updates: {
+              recipient: cardToEdit.recipient,
+              message: cardToEdit.message,
+              address: cardToEdit.address,
+            },
+          }),
+        );
+      }
+    }
+  };
 
-	return (
-		<div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<HolidayPageHeader
-				title="Christmas Cards"
-				backHref="/christmas"
-				onSortClick={() => setShowSortModal(true)}
-				description="Keep track of your cards!"
-				holidayColor="red-500"
-				error={mutationError ? "API Error" : undefined}
-				sortTitle="Sort Cards"
-			/>
+  const handleToggleCompletion = async (cardId: string) => {
+    if (mutation) {
+      try {
+        const card = cards.find(c => c.id === cardId);
+        if (card) {
+          const payload = {
+            id: cardId,
+            action: 'update',
+            isCompleted: !card.isCompleted,
+            recipient: card.recipient,
+            message: card.message || '',
+            address: card.address || '',
+          };
 
-			<main className="w-full max-w-4xl flex flex-col gap-6">
-				{/* Summary Stats */}
-				<MailCardStatus
-					totalCards={finalCards.length}
-					completedCards={completedCards.length}
-					incompleteCards={incompleteCards.length}
-					holidayColor="bg-gradient-to-br from-red-300 to-red-500"
-				/>
+          // Optimistically update the Redux home data
+          dispatch(
+            updateCardInHomeData({
+              holidayId: resolvedHolidayId || '',
+              cardId: cardId,
+              updates: { isCompleted: !card.isCompleted },
+            }),
+          );
 
-				<AddButton title="Card" onClick={openForm} color="red" />
+          await mutation({
+            holidayId: resolvedHolidayId || '',
+            payload,
+            auth0User,
+          }).unwrap();
+        }
+      } catch (error) {
+        console.error('Error toggling card completion:', error);
+        // Revert the optimistic update on error
+        const card = cards.find(c => c.id === cardId);
+        if (card) {
+          dispatch(
+            updateCardInHomeData({
+              holidayId: resolvedHolidayId || '',
+              cardId: cardId,
+              updates: { isCompleted: card.isCompleted },
+            }),
+          );
+        }
+      }
+    }
+  };
 
-				{/* Card List */}
-				{loading && !holidayData?.cards ? (
-					<div className="text-center py-8">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
-						<p className="text-gray-600 dark:text-gray-400 mt-2">
-							Loading cards...
-						</p>
-					</div>
-				) : cardsError && !holidayData?.cards ? (
-					<div className="text-center text-red-500 py-8">
-						<p>Error loading cards: {cardsError.toString()}</p>
-					</div>
-				) : sortedCards.length === 0 ? (
-					<div className="text-center py-8">
-						<p className="text-gray-600 dark:text-gray-400">
-							No cards added yet.
-						</p>
-						<button
-							onClick={() => setShowForm(true)}
-							className="mt-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-						>
-							Add your first card
-						</button>
-					</div>
-				) : (
-					<div className="space-y-6">
-						<TaskSection
-							title="Cards to Send"
-							items={incompleteCards}
-							isCompleted={false}
-							emptyMessage="No cards to send yet."
-							completedMessage="All cards sent!"
-							renderItem={(card) => (
-								<MailCard
-									key={card.id}
-									card={card}
-									onToggleCompletion={handleToggleCompletion}
-									onEditCard={handleEditCard}
-									onDeleteCard={handleDeleteCard}
-									holidayColor="bg-gradient-to-br from-red-300 to-red-500"
-								/>
-							)}
-						/>
+  const sortedCards = [...cards].sort((a, b) => {
+    switch (sortBy) {
+      case 'recipient':
+        return a.recipient.localeCompare(b.recipient);
+      case 'completed':
+        return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
+      case 'message':
+        return (a.message || '').localeCompare(b.message || '');
+      default:
+        return 0;
+    }
+  });
 
-						<TaskSection
-							title="Sent Cards"
-							items={completedCards}
-							isCompleted={true}
-							emptyMessage="No cards sent yet."
-							completedMessage="No sent cards to display."
-							renderItem={(card) => (
-								<MailCard
-									key={card.id}
-									card={card}
-									onToggleCompletion={handleToggleCompletion}
-									onEditCard={handleEditCard}
-									onDeleteCard={handleDeleteCard}
-									holidayColor="bg-gradient-to-br from-red-300 to-red-500"
-								/>
-							)}
-						/>
-					</div>
-				)}
-			</main>
+  const completedCards = cards.filter(card => card.isCompleted);
+  const incompleteCards = cards.filter(card => !card.isCompleted);
 
-			{/* Form Modal */}
-			<FormModal
-				isOpen={showForm}
-				title="Add New Card"
-				fields={formFields}
-				onSubmit={handleAddCard}
-				onClose={closeForm}
-				submitText="Add Card"
-				cancelText="Cancel"
-				cardClassName="card card-valentines"
-				submitButtonColor="#ef4444"
-				showAddressBook={true}
-				contacts={contacts}
-			/>
+  // Form fields configuration for cards
+  const formFields = [
+    {
+      id: 'recipient',
+      type: 'text' as const,
+      label: 'Recipient',
+      placeholder: "Recipient's name",
+      required: true,
+    },
+    {
+      id: 'message',
+      type: 'textarea' as const,
+      label: 'Message',
+      placeholder: 'Write your holiday message here...',
+      rows: 3,
+    },
+    {
+      id: 'address',
+      type: 'textarea' as const,
+      label: 'Address',
+      placeholder: "Recipient's address...",
+      rows: 2,
+    },
+  ];
 
-			{/* Edit Modal */}
-			<FormModal
-				isOpen={showEditModal}
-				title="Edit Card"
-				fields={formFields}
-				initialValues={cardToEdit}
-				onSubmit={handleEditSubmit}
-				onClose={() => {
-					setShowEditModal(false);
-					setCardToEdit(null);
-				}}
-				submitText="Update Card"
-				cancelText="Cancel"
-				cardClassName="card card-valentines"
-				submitButtonColor="#ef4444"
-			/>
+  return (
+    <div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      <HolidayPageHeader
+        title="Christmas Cards"
+        backHref="/christmas"
+        onSortClick={() => setShowSortModal(true)}
+        description="Keep track of your cards!"
+        holidayColor="red-500"
+        error={mutationError ? 'API Error' : undefined}
+        sortTitle="Sort Cards"
+      />
 
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				title="Delete Card"
-				itemName={cardToDelete?.recipient}
-				onConfirm={confirmDelete}
-				onCancel={() => {
-					setShowDeleteModal(false);
-					setCardToDelete(null);
-				}}
-				cardClassName="card card-valentines"
-				confirmButtonColor="#ef4444"
-			/>
+      <main className="w-full max-w-4xl flex flex-col gap-6">
+        {/* Summary Stats */}
+        <MailCardStatus
+          totalCards={cards.length}
+          completedCards={completedCards.length}
+          incompleteCards={incompleteCards.length}
+          holidayColor="bg-gradient-to-br from-red-300 to-red-500"
+        />
 
-			{/* Sort Modal */}
-			<SortModal
-				isOpen={showSortModal}
-				onClose={() => setShowSortModal(false)}
-				sortBy={sortBy}
-				onSortChange={setSortBy}
-				sortOptions={[
-					{ value: "recipient", label: "Recipient" },
-					{ value: "completed", label: "Completion Status" },
-					{ value: "message", label: "Message" },
-				]}
-				title="Sort Cards"
-			/>
+        <AddButton title="Card" onClick={openForm} color="red" />
 
-			<footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-				&copy; {new Date().getFullYear()} Next Holiday
-			</footer>
-		</div>
-	);
+        {/* Card List */}
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">Loading cards...</p>
+          </div>
+        ) : sortedCards.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600 dark:text-gray-400">No cards added yet.</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="mt-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            >
+              Add your first card
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <TaskSection
+              title="Cards to Send"
+              items={incompleteCards}
+              isCompleted={false}
+              emptyMessage="No cards to send yet."
+              completedMessage="All cards sent!"
+              renderItem={card => (
+                <MailCard
+                  key={card.id}
+                  card={card}
+                  onToggleCompletion={handleToggleCompletion}
+                  onEditCard={handleEditCard}
+                  onDeleteCard={handleDeleteCard}
+                  holidayColor="bg-gradient-to-br from-red-300 to-red-500"
+                />
+              )}
+            />
+
+            <TaskSection
+              title="Sent Cards"
+              items={completedCards}
+              isCompleted={true}
+              emptyMessage="No cards sent yet."
+              completedMessage="No sent cards to display."
+              renderItem={card => (
+                <MailCard
+                  key={card.id}
+                  card={card}
+                  onToggleCompletion={handleToggleCompletion}
+                  onEditCard={handleEditCard}
+                  onDeleteCard={handleDeleteCard}
+                  holidayColor="bg-gradient-to-br from-red-300 to-red-500"
+                />
+              )}
+            />
+          </div>
+        )}
+      </main>
+
+      {/* Form Modal */}
+      <FormModal
+        isOpen={showForm}
+        title="Add New Card"
+        fields={formFields}
+        onSubmit={handleAddCard}
+        onClose={closeForm}
+        submitText="Add Card"
+        cancelText="Cancel"
+        cardClassName="card card-valentines"
+        submitButtonColor="#ef4444"
+        showAddressBook={true}
+        contacts={contacts}
+      />
+
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Card"
+        fields={formFields}
+        initialValues={cardToEdit}
+        onSubmit={handleEditSubmit}
+        onClose={() => {
+          setShowEditModal(false);
+          setCardToEdit(null);
+        }}
+        submitText="Update Card"
+        cancelText="Cancel"
+        cardClassName="card card-valentines"
+        submitButtonColor="#ef4444"
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Card"
+        itemName={cardToDelete?.recipient}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setCardToDelete(null);
+        }}
+        cardClassName="card card-valentines"
+        confirmButtonColor="#ef4444"
+      />
+
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        sortOptions={[
+          { value: 'recipient', label: 'Recipient' },
+          { value: 'completed', label: 'Completion Status' },
+          { value: 'message', label: 'Message' },
+        ]}
+        title="Sort Cards"
+      />
+
+      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
+        &copy; {new Date().getFullYear()} Next Holiday
+      </footer>
+    </div>
+  );
 }

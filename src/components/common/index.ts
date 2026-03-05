@@ -1,1 +1,1 @@
-export { default as RSVPSection } from "./RSVPSection";
+export { default as RSVPSection } from './RSVPSection';

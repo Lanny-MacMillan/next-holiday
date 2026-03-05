@@ -1,406 +1,612 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAuth0 } from '@auth0/auth0-react';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-	selectHolidayPreferences,
-	selectHomeInitialized,
-	selectHomeData,
-} from "@/store/selectors/home";
-import { getHolidayDataFromRedux } from "@/utils/holidayData";
-import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
+  updateTaskInHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+  setHomeData,
+} from '@/store/slices/homeSlice';
 import {
-	updateTaskInHomeData,
-	addTaskToHomeData,
-	removeTaskFromHomeData,
-} from "@/store/slices/homeSlice";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
-import FormModal from "@/components/modals/FormModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import SortModal from "@/components/modals/SortModal";
-import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { useDateIdeasMutations } from "@/hooks/useDateIdeasMutations";
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+} from '@/store/selectors/home';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import SortModal from '@/components/modals/SortModal';
+import FormModal from '@/components/modals/FormModal';
+import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import AddButton from '@/components/common/AddButton';
+import TaskSection from '@/components/common/TaskSection';
+import ToDoCard from '@/components/cards/to-do/ToDoCard';
 
 export default function AnniversaryDateIdeasPage() {
-	const dispatch = useAppDispatch();
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { user: auth0User } = useAuth0();
 
-	// Get current Redux state for skip logic
-	const currentState = useAppSelector((state: any) => state);
+  // Get Redux data
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
+  const homeData = useAppSelector(selectHomeData);
 
-	// Get home data and holiday data from Redux
-	const homeData = useAppSelector(selectHomeData);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  // Get current Redux state for data access
+  const currentState = useAppSelector((state: any) => state);
 
-	// Get holiday ID for Anniversary
-	const holidayId = homeInitialized
-		? getHolidayIdFromRoute("/anniversary", holidayPreferences)
-		: getHolidayIdFromRoute("/anniversary", holidayPreferences);
+  // Holiday ID resolution
+  const resolvedHolidayId = homeInitialized
+    ? getHolidayIdFromRoute('/anniversary', holidayPreferences)
+    : getHolidayIdFromRoute('/anniversary', holidayPreferences);
 
-	// Get holiday data from Redux if available
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'anniversary'),
+  );
 
-	// Helper function to update Redux state after task operations
-	const updateTaskInRedux = (
-		taskData: any,
-		operation: "add" | "update" | "delete"
-	) => {
-		if (!holidayId) return;
+  // Redux data access - date ideas are stored as tasks with category "Date Ideas"
+  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const dateIdeas =
+    holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') || [];
+  const isLoading = !homeInitialized;
 
-		switch (operation) {
-			case "add":
-				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
-				break;
-			case "update":
-				dispatch(
-					updateTaskInHomeData({
-						holidayId,
-						taskId: taskData.id,
-						updates: taskData,
-					})
-				);
-				break;
-			case "delete":
-				dispatch(
-					removeTaskFromHomeData({
-						holidayId,
-						taskId: taskData.id,
-					})
-				);
-				break;
-		}
-	};
+  // Refresh home data function
+  const refreshHomeData = async () => {
+    if (!auth0User?.sub || !resolvedHolidayId) return;
 
-	// Use the new date ideas mutations hook
-	const {
-		auth0User,
-		createDateIdeas,
-		updateDateIdeas,
-		editDateIdeas,
-		deleteDateIdeas,
-		createDateIdeasState,
-		updateDateIdeasState,
-		editDateIdeasState,
-		deleteDateIdeasState,
-	} = useDateIdeasMutations();
+    try {
+      const response = await fetch('/api/home', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        dispatch(setHomeData(result.data));
+      }
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    }
+  };
 
-	// Use only Redux data - no GET API calls on holiday pages
-	const dateIdeas =
-		holidayData && homeInitialized && holidayData.tasks
-			? holidayData.tasks.filter((task: any) => task.category === "Date Ideas")
-			: [];
+  // State management
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('priority');
+  const [isAdding, setIsAdding] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-	const [showAddForm, setShowAddForm] = useState(false);
-	const [editingTask, setEditingTask] = useState<any>(null);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [taskToDelete, setTaskToDelete] = useState<any>(null);
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [sortBy, setSortBy] = useState<string>("priority");
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
-	// Sort options for date ideas
-	const sortOptions = [
-		{ value: "priority", label: "Priority" },
-		{ value: "title", label: "Title A-Z" },
-		{ value: "dueDate", label: "Due Date" },
-		{ value: "assignedTo", label: "Assigned To" },
-		{ value: "category", label: "Category" },
-	];
+  // Sort options for date ideas
+  const sortOptions = [
+    { value: 'priority', label: 'Priority' },
+    { value: 'title', label: 'Title A-Z' },
+    { value: 'dueDate', label: 'Due Date' },
+    { value: 'assignedTo', label: 'Assigned To' },
+    { value: 'category', label: 'Category' },
+  ];
 
-	// Sort function
-	const sortTasks = (tasks: any[], sortOption: string) => {
-		const sortedTasks = [...tasks];
-		switch (sortOption) {
-			case "title":
-				return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
-			case "priority":
-				const priorityOrder = { high: 3, medium: 2, low: 1 };
-				return sortedTasks.sort(
-					(a, b) =>
-						(priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
-						(priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
-				);
-			case "dueDate":
-				return sortedTasks.sort((a, b) => {
-					if (!a.dueDate && !b.dueDate) return 0;
-					if (!a.dueDate) return 1;
-					if (!b.dueDate) return -1;
-					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-				});
-			case "assignedTo":
-				return sortedTasks.sort((a, b) => {
-					if (!a.assignedTo && !b.assignedTo) return 0;
-					if (!a.assignedTo) return 1;
-					if (!b.assignedTo) return -1;
-					return a.assignedTo.localeCompare(b.assignedTo);
-				});
-			case "category":
-				return sortedTasks.sort((a, b) => {
-					if (!a.category && !b.category) return 0;
-					if (!a.category) return 1;
-					if (!b.category) return -1;
-					return a.category.localeCompare(b.category);
-				});
-			default:
-				return sortedTasks;
-		}
-	};
+  // Sort function
+  const sortTasks = (tasks: any[], sortOption: string) => {
+    const sortedTasks = [...tasks];
+    switch (sortOption) {
+      case 'title':
+        return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
+      case 'priority':
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return sortedTasks.sort(
+          (a, b) =>
+            (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
+            (priorityOrder[a.priority as keyof typeof priorityOrder] || 0),
+        );
+      case 'dueDate':
+        return sortedTasks.sort((a, b) => {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+      case 'assignedTo':
+        return sortedTasks.sort((a, b) => {
+          if (!a.assignedTo && !b.assignedTo) return 0;
+          if (!a.assignedTo) return 1;
+          if (!b.assignedTo) return -1;
+          return a.assignedTo.localeCompare(b.assignedTo);
+        });
+      case 'category':
+        return sortedTasks.sort((a, b) => {
+          if (!a.category && !b.category) return 0;
+          if (!a.category) return 1;
+          if (!b.category) return -1;
+          return a.category.localeCompare(b.category);
+        });
+      default:
+        return sortedTasks;
+    }
+  };
 
-	const sortedDateTasks = sortTasks(dateIdeas, sortBy);
+  const sortedDateTasks = sortTasks(dateIdeas, sortBy);
 
-	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
-	const handleSubmit = async (values: Record<string, any>) => {
-		if (!holidayId || !auth0User) return;
+  // CRUD Operations
+  async function handleAddTask(values: Record<string, any>) {
+    if (!values.title?.trim()) return;
+    if (!resolvedHolidayId || !auth0User) return;
 
-		try {
-			if (editingTask) {
-				const result = await editDateIdeas({
-					holidayId,
-					taskId: editingTask.id,
-					payload: {
-						title: values.title,
-						description: values.description || undefined,
-						priority: values.priority as "low" | "medium" | "high",
-						assignedTo: values.assignedTo || undefined,
-						category: "Date Ideas",
-						dueDate: values.dueDate || undefined,
-					},
-					auth0User,
-				}).unwrap();
+    setIsAdding(true);
 
-				// Update Redux state directly
-				updateTaskInRedux(result, "update");
-				setEditingTask(null);
-			} else {
-				const payload = {
-					title: values.title,
-					description: values.description || undefined,
-					priority: values.priority as "low" | "medium" | "high",
-					assignedTo: values.assignedTo || undefined,
-					category: "Date Ideas",
-					dueDate: values.dueDate || undefined,
-					isCompleted: false,
-				};
-				const result = await createDateIdeas({
-					holidayId,
-					payload,
-					auth0User,
-				}).unwrap();
+    const newTask = {
+      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+      title: values.title,
+      description: values.description || undefined,
+      priority: values.priority as 'low' | 'medium' | 'high',
+      assignedTo: values.assignedTo || undefined,
+      category: 'Date Ideas',
+      dueDate: values.dueDate || undefined,
+      isCompleted: false,
+      holidayId: resolvedHolidayId,
+    };
 
-				// Update Redux state directly
-				updateTaskInRedux(result, "add");
-			}
-			setShowAddForm(false);
-		} catch (error) {
-			console.error("Error saving date idea:", error);
-		}
-	};
+    try {
+      // Optimistically update Redux state first
+      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 
-	const handleEdit = (task: any) => {
-		setEditingTask(task);
-		setShowAddForm(true);
-	};
+      // Call API - map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        category: 'Date Ideas',
+        due_date: values.dueDate || undefined, // snake_case for API
+        isCompleted: false,
+      };
 
-	const handleDelete = (task: any) => {
-		setTaskToDelete(task);
-		setShowDeleteModal(true);
-	};
+      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+        body: JSON.stringify(apiPayload),
+      });
 
-	const confirmDelete = async () => {
-		if (taskToDelete && holidayId && auth0User) {
-			try {
-				await deleteDateIdeas({
-					holidayId,
-					taskId: taskToDelete.id,
-					auth0User,
-				}).unwrap();
+      if (response.ok) {
+        // Replace temporary task with real task from API
+        const result = await response.json();
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
 
-				// Update Redux state directly
-				updateTaskInRedux({ id: taskToDelete.id }, "delete");
-				setTaskToDelete(null);
-			} catch (error) {
-				console.error("Error deleting date idea:", error);
-			}
-		}
-		setShowDeleteModal(false);
-	};
+        // Refresh home data
+        await refreshHomeData();
+      } else {
+        // Remove optimistic update on error
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        console.error(
+          'Failed to add date idea:',
+          response.status,
+          response.statusText,
+        );
+      }
 
-	const handleToggleCompletion = async (taskId: string) => {
-		if (!holidayId || !auth0User) return;
+      setShowAddForm(false);
+    } catch (error) {
+      // Remove optimistic update on error
+      dispatch(
+        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
+      );
+      console.error('Failed to add date idea:', error);
+    } finally {
+      setIsAdding(false);
+    }
+  }
 
-		try {
-			const task = dateIdeas.find((t: any) => t.id === taskId);
-			if (task) {
-				const newIsCompleted = !task.isCompleted;
+  async function handleEditTaskSubmit(values: Record<string, any>) {
+    if (!editingTask || !resolvedHolidayId || !auth0User) return;
 
-				// Update Redux state directly
-				updateTaskInRedux(
-					{ id: taskId, isCompleted: newIsCompleted },
-					"update"
-				);
+    setIsUpdating(true);
+    try {
+      const updatedTask = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assignedTo: values.assignedTo || undefined,
+        category: 'Date Ideas',
+        dueDate: values.dueDate || undefined,
+      };
 
-				await updateDateIdeas({
-					holidayId,
-					taskId,
-					isCompleted: newIsCompleted,
-					auth0User,
-				}).unwrap();
-			}
-		} catch (error) {
-			console.error("Error updating date idea:", error);
-		}
-	};
+      // Optimistically update the Redux state
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: editingTask.id,
+          updates: updatedTask,
+        }),
+      );
 
-	const handleSortChange = (sortOption: string) => {
-		setSortBy(sortOption);
-	};
+      // Call API - map camelCase to snake_case
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        category: 'Date Ideas',
+        due_date: values.dueDate || undefined, // snake_case for API
+      };
 
-	// Show loading only if home data is not initialized
-	if (!homeInitialized) {
-		return (
-			<div className="min-h-screen anniversary-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">
-						Loading date ideas...
-					</p>
-				</div>
-			</div>
-		);
-	}
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify(apiPayload),
+        },
+      );
 
-	// Debug: Log date ideas data
-	useEffect(() => {
-		console.log("Anniversary date ideas - holidayId:", holidayId);
-		console.log("Anniversary date ideas - holidayData:", holidayData);
-		console.log("Anniversary date ideas - homeInitialized:", homeInitialized);
-		console.log("Anniversary date ideas - dateIdeas:", dateIdeas);
-	}, [holidayId, holidayData, homeInitialized, dateIdeas]);
+      if (!response.ok) {
+        // Revert the optimistic update on error
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: editingTask.id,
+            updates: {
+              title: editingTask.title,
+              description: editingTask.description,
+              priority: editingTask.priority,
+              assignedTo: editingTask.assignedTo,
+              category: editingTask.category,
+              dueDate: editingTask.dueDate,
+            },
+          }),
+        );
+        console.error(
+          'Failed to update date idea:',
+          response.status,
+          response.statusText,
+        );
+      }
 
-	return (
-		<div className="min-h-screen anniversary-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<HolidayPageHeader
-				title="Date Ideas"
-				backHref="/anniversary"
-				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort Date Ideas"
-				description="Plan your anniversary date ideas with style!"
-				holidayColor="pink-500"
-				error={undefined}
-			/>
+      setEditingTask(null);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to update date idea:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
-			<main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
-				<AddButton
-					title="Date Idea"
-					onClick={() => setShowAddForm(true)}
-					color="pink"
-				/>
+  const handleEdit = (task: any) => {
+    setEditingTask(task);
+    setShowAddForm(true);
+  };
 
-				<TaskSection
-					title="Incomplete"
-					items={sortedDateTasks.filter((task) => !task.isCompleted)}
-					isCompleted={false}
-					emptyMessage="All date ideas completed! 🎉"
-					completedMessage=""
-					renderItem={(task) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
-							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
-							disableInternalModal={true}
-						/>
-					)}
-				/>
+  async function handleDeleteTask(taskId: string) {
+    if (!resolvedHolidayId || !auth0User) return;
 
-				<TaskSection
-					title="Completed"
-					items={sortedDateTasks.filter((task) => task.isCompleted)}
-					isCompleted={true}
-					emptyMessage="No completed date ideas yet."
-					completedMessage="No completed date ideas yet."
-					renderItem={(task) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={handleDelete}
-							onEdit={handleEdit}
-							className="opacity-60"
-							gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
-							disableInternalModal={true}
-						/>
-					)}
-				/>
-			</main>
+    // Find the task to delete for potential rollback
+    const taskToDelete = dateIdeas.find((task: any) => task.id === taskId);
+    if (!taskToDelete) return;
 
-			{/* Sort Modal */}
-			<SortModal
-				isOpen={showSortModal}
-				onClose={() => setShowSortModal(false)}
-				sortBy={sortBy}
-				onSortChange={handleSortChange}
-				sortOptions={sortOptions}
-				title="Sort Date Ideas"
-			/>
+    setIsDeleting(true);
+    try {
+      // Optimistically update Redux state first
+      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
 
-			{/* Form Modal */}
-			<FormModal
-				isOpen={showAddForm}
-				title={editingTask ? "Edit Date Idea" : "Add New Date Idea"}
-				fields={getFormConfig("tasks", "add").fields}
-				initialValues={
-					editingTask
-						? {
-								title: editingTask.title,
-								description: editingTask.description || "",
-								priority: editingTask.priority,
-								dueDate: editingTask.dueDate
-									? editingTask.dueDate.split("T")[0]
-									: "",
-								notes: editingTask.notes || "",
-						  }
-						: { priority: "medium", category: "Date Ideas" }
-				}
-				onSubmit={handleSubmit}
-				onClose={() => {
-					setShowAddForm(false);
-					setEditingTask(null);
-				}}
-				loading={
-					editingTask
-						? editDateIdeasState.isLoading
-						: createDateIdeasState.isLoading
-				}
-				submitText={editingTask ? "Update Date Idea" : "Add Date Idea"}
-				submitButtonColor="#ec4899"
-			/>
+      // Call API directly
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+        },
+      );
 
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				{...getDeleteConfig("tasks")}
-				onConfirm={confirmDelete}
-				onCancel={() => {
-					setShowDeleteModal(false);
-					setTaskToDelete(null);
-				}}
-				loading={deleteDateIdeasState.isLoading}
-				cardClassName="card"
-				confirmText="Delete"
-				cancelText="Cancel"
-			/>
-		</div>
-	);
+      if (!response.ok) {
+        // If API failed, revert the optimistic update
+        dispatch(
+          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
+        );
+        console.error(
+          'Failed to delete date idea:',
+          response.status,
+          response.statusText,
+        );
+      }
+    } catch (error) {
+      // If API failed, revert the optimistic update
+      dispatch(
+        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
+      );
+      console.error('Failed to delete date idea:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleToggleTask(taskId: string) {
+    if (!resolvedHolidayId || !auth0User) return;
+
+    setIsToggling(true);
+    try {
+      // Find the current task to get its completion status
+      const currentTask = dateIdeas.find((task: any) => task.id === taskId);
+      if (!currentTask) {
+        console.error('Task not found:', taskId);
+        return;
+      }
+
+      // Toggle the completion status
+      const newCompletionStatus = !currentTask.isCompleted;
+
+      // Optimistically update the Redux state
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: taskId,
+          updates: { isCompleted: newCompletionStatus },
+        }),
+      );
+
+      // Call API directly
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify({
+            isCompleted: newCompletionStatus,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        // Revert the optimistic update on error
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: taskId,
+            updates: { isCompleted: currentTask.isCompleted },
+          }),
+        );
+        console.error(
+          'Failed to toggle date idea:',
+          response.status,
+          response.statusText,
+        );
+      }
+    } catch (error) {
+      console.error('Failed to toggle date idea:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  }
+
+  const handleSortChange = (sortOption: string) => {
+    setSortBy(sortOption);
+  };
+
+  const loading = isAdding || isUpdating || isDeleting || isToggling;
+
+  // Show loading only if home data is not initialized
+  if (isLoading) {
+    return (
+      <div className="min-h-screen anniversary-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading date ideas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Form configuration - matching Kwanzaa events pattern
+  const formFields = [
+    {
+      id: 'title',
+      type: 'text' as const,
+      placeholder: 'Date Idea Title*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'textarea' as const,
+      placeholder: 'Description',
+      rows: 2,
+    },
+    {
+      id: 'priority',
+      type: 'select' as const,
+      placeholder: 'Priority',
+      options: [
+        { value: 'low', label: 'Low Priority' },
+        { value: 'medium', label: 'Medium Priority' },
+        { value: 'high', label: 'High Priority' },
+      ],
+    },
+    ...(isHolidayShared
+      ? [
+          {
+            id: 'assignedTo',
+            type: 'text' as const,
+            placeholder: 'Assigned To',
+          },
+        ]
+      : []),
+    {
+      id: 'dueDate',
+      type: 'date' as const,
+      placeholder: 'Due Date',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen anniversary-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      <HolidayPageHeader
+        title="Date Ideas"
+        backHref="/anniversary"
+        onSortClick={() => setShowSortModal(true)}
+        sortTitle="Sort Date Ideas"
+        description="Plan your anniversary date ideas with style!"
+        holidayColor="pink-500"
+        error={undefined}
+      />
+
+      <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
+        <AddButton
+          title="Date Idea"
+          onClick={() => setShowAddForm(true)}
+          color="pink"
+        />
+
+        <TaskSection
+          title="Incomplete"
+          items={sortedDateTasks.filter(task => !task.isCompleted)}
+          isCompleted={false}
+          emptyMessage="All date ideas completed! 🎉"
+          completedMessage=""
+          renderItem={task => (
+            <ToDoCard
+              key={task.id}
+              task={task}
+              onToggleComplete={handleToggleTask}
+              onDelete={handleDeleteTask}
+              onEdit={handleEdit}
+              theme={{
+                accentColor: '#ec4899', // Pink for Anniversary
+                hoverColor: 'hover:bg-pink-50 dark:hover:bg-pink-900/10',
+              }}
+              borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
+              gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+              disableInternalModal={true}
+            />
+          )}
+        />
+
+        <TaskSection
+          title="Completed"
+          items={sortedDateTasks.filter(task => task.isCompleted)}
+          isCompleted={true}
+          emptyMessage="No completed date ideas yet."
+          completedMessage="No completed date ideas yet."
+          renderItem={task => (
+            <ToDoCard
+              key={task.id}
+              task={task}
+              onToggleComplete={handleToggleTask}
+              onDelete={handleDeleteTask}
+              onEdit={handleEdit}
+              className="opacity-60"
+              theme={{
+                accentColor: '#ec4899', // Pink for Anniversary
+                hoverColor: 'hover:bg-pink-50 dark:hover:bg-pink-900/10',
+              }}
+              borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
+              gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+              disableInternalModal={true}
+            />
+          )}
+        />
+      </main>
+
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortBy={sortBy}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        title="Sort Date Ideas"
+      />
+
+      {/* Form Modal */}
+      <FormModal
+        isOpen={showAddForm}
+        title={editingTask ? 'Edit Date Idea' : 'Add New Date Idea'}
+        fields={formFields}
+        initialValues={
+          editingTask
+            ? {
+                title: editingTask.title || '',
+                description: editingTask.description || '',
+                priority: editingTask.priority || 'medium',
+                ...(isHolidayShared
+                  ? { assignedTo: editingTask.assignedTo || '' }
+                  : {}),
+                dueDate: editingTask.dueDate
+                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+                  : '',
+              }
+            : { priority: 'medium' }
+        }
+        onSubmit={editingTask ? handleEditTaskSubmit : handleAddTask}
+        onClose={() => {
+          setShowAddForm(false);
+          setEditingTask(null);
+        }}
+        loading={loading}
+        submitText={editingTask ? 'Update Date Idea' : 'Add Date Idea'}
+        submitButtonColor="#ec4899"
+      />
+    </div>
+  );
 }

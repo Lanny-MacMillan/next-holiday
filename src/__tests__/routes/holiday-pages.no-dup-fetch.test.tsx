@@ -11,8 +11,8 @@ jest.mock('@auth0/auth0-react', () => ({
   useAuth0: () => ({
     user: { sub: 'test-user-123', email: 'test@example.com' },
     isAuthenticated: true,
-    isLoading: false
-  })
+    isLoading: false,
+  }),
 }));
 
 // Mock RTK Query hooks
@@ -22,9 +22,12 @@ const mockUseGetTasksQuery = jest.fn();
 
 jest.mock('@/store/api', () => ({
   ...jest.requireActual('@/store/api'),
-  useGetGiftsQuery: (params: any, options: any) => mockUseGetGiftsQuery(params, options),
-  useGetCardsQuery: (params: any, options: any) => mockUseGetCardsQuery(params, options),
-  useGetTasksQuery: (params: any, options: any) => mockUseGetTasksQuery(params, options)
+  useGetGiftsQuery: (params: any, options: any) =>
+    mockUseGetGiftsQuery(params, options),
+  useGetCardsQuery: (params: any, options: any) =>
+    mockUseGetCardsQuery(params, options),
+  useGetTasksQuery: (params: any, options: any) =>
+    mockUseGetTasksQuery(params, options),
 }));
 
 describe('Holiday Pages - No Duplicate Fetch', () => {
@@ -35,10 +38,10 @@ describe('Holiday Pages - No Duplicate Fetch', () => {
     store = configureStore({
       reducer: {
         [api.reducerPath]: api.reducer,
-        home: homeReducer
+        home: homeReducer,
       },
-      middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat(api.middleware)
+      middleware: getDefaultMiddleware =>
+        getDefaultMiddleware().concat(api.middleware),
     });
 
     mockUseGetGiftsQuery.mockReturnValue({ data: [], isLoading: false });
@@ -51,19 +54,21 @@ describe('Holiday Pages - No Duplicate Fetch', () => {
     store.dispatch({
       type: 'home/setHomeData',
       payload: {
-        holidayPreferences: [{ holiday: 'Christmas', holidayId: 'christmas-123', budget: 500 }],
+        holidayPreferences: [
+          { holiday: 'Christmas', holidayId: 'christmas-123', budget: 500 },
+        ],
         contacts: [],
         user: null,
         account: null,
         needsUserSetup: false,
-        needsHolidaySelection: false
-      }
+        needsHolidaySelection: false,
+      },
     });
 
     render(
       <Provider store={store}>
         <ChristmasPage />
-      </Provider>
+      </Provider>,
     );
 
     await waitFor(() => {
@@ -72,8 +77,11 @@ describe('Holiday Pages - No Duplicate Fetch', () => {
 
     // Verify RTK Query hooks were called with skip: true
     expect(mockUseGetGiftsQuery).toHaveBeenCalledWith(
-      { holidayId: 'christmas-123', auth0User: { sub: 'test-user-123', email: 'test@example.com' } },
-      { skip: true }
+      {
+        holidayId: 'christmas-123',
+        auth0User: { sub: 'test-user-123', email: 'test@example.com' },
+      },
+      { skip: true },
     );
   });
 });

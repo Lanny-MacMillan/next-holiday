@@ -1,538 +1,730 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
+import { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAuth0 } from '@auth0/auth0-react';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-	selectHolidayPreferences,
-	selectHomeInitialized,
-	selectHomeData,
-} from "@/store/selectors/home";
-import { getHolidayDataFromRedux } from "@/utils/holidayData";
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+} from '@/store/selectors/home';
+import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import {
-	updateTaskInHomeData,
-	addTaskToHomeData,
-	removeTaskFromHomeData,
-} from "@/store/slices/homeSlice";
-import SortModal from "@/components/modals/SortModal";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import EditTaskModal from "@/components/modals/EditTaskModal";
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import AddButton from "@/components/common/AddButton";
-import TaskSection from "@/components/common/TaskSection";
-import FormModal from "@/components/modals/FormModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import { getFormConfig } from "@/config/formConfigs";
-import { getDeleteConfig } from "@/config/deleteModalConfigs";
-import { useCostumeIdeasMutations } from "@/hooks/useCostumeIdeasMutations";
+  updateTaskInHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+  setHomeData,
+} from '@/store/slices/homeSlice';
+import SortModal from '@/components/modals/SortModal';
+import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import EditTaskModal from '@/components/modals/EditTaskModal';
+import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import AddButton from '@/components/common/AddButton';
+import TaskSection from '@/components/common/TaskSection';
+import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfig } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
-type SortOption = "priority" | "dateDue" | "assignedTo" | "category" | "none";
+type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
 // Custom form configuration for costume ideas
-const costumeFormConfig = {
-	title: "Add New Costume Task",
-	fields: [
-		{
-			id: "title",
-			type: "text" as const,
-			placeholder: "Costume Task Title*",
-			required: true,
-		},
-		{
-			id: "description",
-			type: "textarea" as const,
-			placeholder: "Description",
-			rows: 2,
-		},
-		{
-			id: "priority",
-			type: "select" as const,
-			placeholder: "Priority",
-			options: [
-				{ value: "low", label: "Low Priority" },
-				{ value: "medium", label: "Medium Priority" },
-				{ value: "high", label: "High Priority" },
-			],
-		},
-		{
-			id: "assignedTo",
-			type: "text" as const,
-			placeholder: "Recipient",
-		},
-		{
-			id: "dueDate",
-			type: "date" as const,
-			placeholder: "Due Date",
-		},
-	] as any[],
-	submitText: "Add Costume Task",
-	cancelText: "Cancel",
-	cardClassName: "card card-tasks",
-	submitButtonColor: "#f97316", // Orange for Halloween
-};
-
-const defaultCostumeTasks = [
-	{
-		title: "Plan Family Costumes",
-		description: "Coordinate costumes for the whole family",
-		category: "Costume Ideas",
-		priority: "high" as const,
-	},
-	{
-		title: "Buy Costume for Kids",
-		description: "Purchase or make costumes for children",
-		category: "Costume Ideas",
-		priority: "high" as const,
-	},
-	{
-		title: "DIY Costume Ideas",
-		description: "Research homemade costume options",
-		category: "Costume Ideas",
-		priority: "medium" as const,
-	},
-	{
-		title: "Costume Accessories",
-		description: "Get props and accessories for costumes",
-		category: "Costume Ideas",
-		priority: "medium" as const,
-	},
-];
+const costumeFormConfig = (isHolidayShared: boolean) => ({
+  title: 'Add New Costume',
+  fields: [
+    {
+      id: 'title',
+      type: 'text' as const,
+      placeholder: 'Costume*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'textarea' as const,
+      placeholder: 'Description',
+      rows: 2,
+    },
+    {
+      id: 'priority',
+      type: 'select' as const,
+      placeholder: 'Priority',
+      options: [
+        { value: 'low', label: 'Low Priority' },
+        { value: 'medium', label: 'Medium Priority' },
+        { value: 'high', label: 'High Priority' },
+      ],
+    },
+    ...(isHolidayShared
+      ? [
+          {
+            id: 'assignedTo',
+            type: 'text' as const,
+            placeholder: 'Assigned To',
+          },
+        ]
+      : []),
+    {
+      id: 'dueDate',
+      type: 'date' as const,
+      placeholder: 'Due Date',
+    },
+  ] as any[],
+  submitText: 'Add Costume',
+  cancelText: 'Cancel',
+  cardClassName: 'card card-tasks',
+  submitButtonColor: '#f97316', // Orange for Halloween
+});
 
 export default function HalloweenCostumeIdeasPage() {
-	const dispatch = useAppDispatch();
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { user: auth0User } = useAuth0();
 
-	// Get home data and holiday data from Redux
-	const homeData = useAppSelector(selectHomeData);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const currentState = useAppSelector((state: any) => state);
+  // Get Redux data
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
+  const homeData = useAppSelector(selectHomeData);
 
-	// Use the new costume ideas mutations hook
-	const {
-		holidayId,
-		auth0User,
-		loading,
-		error,
-		initialized,
-		createCostumeIdeas,
-		updateCostumeIdeas,
-		editCostumeIdeas,
-		deleteCostumeIdeas,
-		createCostumeIdeasState,
-		updateCostumeIdeasState,
-		editCostumeIdeasState,
-		deleteCostumeIdeasState,
-	} = useCostumeIdeasMutations();
+  // Get current Redux state for data access
+  const currentState = useAppSelector((state: any) => state);
 
-	// Get holiday data from Redux
-	const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+  // Holiday ID resolution
+  const resolvedHolidayId = homeInitialized
+    ? getHolidayIdFromRoute('/halloween', holidayPreferences)
+    : getHolidayIdFromRoute('/halloween', holidayPreferences);
 
-	// Helper function to update Redux state after task operations
-	const updateTaskInRedux = (
-		taskData: any,
-		operation: "add" | "update" | "delete"
-	) => {
-		if (!holidayId) return;
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'halloween'),
+  );
 
-		switch (operation) {
-			case "add":
-				dispatch(addTaskToHomeData({ holidayId, task: taskData }));
-				break;
-			case "update":
-				dispatch(
-					updateTaskInHomeData({
-						holidayId,
-						taskId: taskData.id,
-						updates: taskData,
-					})
-				);
-				break;
-			case "delete":
-				dispatch(
-					removeTaskFromHomeData({
-						holidayId,
-						taskId: taskData.id,
-					})
-				);
-				break;
-		}
-	};
+  // Redux data access - costume ideas are stored as tasks with category "Costume Ideas"
+  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const costumeIdeas =
+    holidayData?.tasks?.filter((task: any) => task.category === 'Costume Ideas') ||
+    [];
+  const isLoading = !homeInitialized;
 
-	// Get costume ideas from Redux data (filtered by category)
-	const costumeIdeas =
-		holidayData?.tasks?.filter(
-			(task: any) => task.category === "Costume Ideas"
-		) || [];
+  // Debug logging to understand the state
+  console.log('Halloween Costume Ideas Debug:', {
+    resolvedHolidayId,
+    holidayData: holidayData
+      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
+      : null,
+    allTasks: holidayData?.tasks?.length || 0,
+    costumeIdeasTasks: costumeIdeas.length,
+    costumeIdeas: costumeIdeas.map(e => ({
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      isCompleted: e.isCompleted,
+    })),
+  });
 
-	const [sortBy, setSortBy] = useState<SortOption>("none");
-	const [showForm, setShowForm] = useState(false);
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [editingTask, setEditingTask] = useState<any>(null);
-	const [deleteConfirm, setDeleteConfirm] = useState<{
-		show: boolean;
-		taskId: string | null;
-	}>({
-		show: false,
-		taskId: null,
-	});
-	const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+  // Refresh home data function (like gift-list)
+  const refreshHomeData = async () => {
+    if (!auth0User?.sub || !resolvedHolidayId) return;
 
-	useEffect(() => {
-		// Fetch contacts for address book functionality
-		// Only fetch if home data is initialized (which contains contacts)
-		if (homeInitialized) {
-			dispatch(fetchContacts());
-		}
-	}, [dispatch, homeInitialized]);
+    try {
+      const response = await fetch('/api/home', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        dispatch(setHomeData(result.data));
+      }
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    }
+  };
 
-	useEffect(() => {
-		if (costumeIdeas.length === 0 && homeInitialized) {
-			setShowDefaultTasks(true);
-		}
-	}, [costumeIdeas, homeInitialized]);
+  // State management
+  const [sortBy, setSortBy] = useState<SortOption>('none');
+  const [showForm, setShowForm] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean;
+    taskId: string | null;
+  }>({
+    show: false,
+    taskId: null,
+  });
+  const [isAdding, setIsAdding] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-	const handleAddTask = async (formValues: Record<string, any>) => {
-		if (!formValues.title?.trim() || !holidayId || !auth0User) return;
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
-		try {
-			const payload = {
-				title: formValues.title,
-				description: formValues.description || undefined,
-				priority: formValues.priority as "low" | "medium" | "high",
-				assignedTo: formValues.assignedTo || undefined,
-				category: "Costume Ideas",
-				dueDate: formValues.dueDate || undefined,
-				isCompleted: false,
-			};
+  // CRUD Operations
+  async function handleAddTask(values: Record<string, any>) {
+    if (!values.title?.trim()) return;
+    if (!resolvedHolidayId || !auth0User) return;
 
-			const result = await createCostumeIdeas({
-				holidayId,
-				payload,
-				auth0User,
-			}).unwrap();
+    setIsAdding(true);
 
-			// Update Redux state directly
-			updateTaskInRedux(result, "add");
+    const newTask = {
+      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+      title: values.title,
+      description: values.description || undefined,
+      priority: values.priority as 'low' | 'medium' | 'high',
+      assignedTo: values.assignedTo || undefined,
+      category: 'Costume Ideas',
+      dueDate: values.dueDate || undefined,
+      isCompleted: false,
+      holidayId: resolvedHolidayId,
+    };
 
-			setShowForm(false);
-		} catch (error) {
-			console.error("Error creating costume task:", error);
-		}
-	};
+    try {
+      // Optimistically update Redux state first (like Hanukkah)
+      console.log('Adding costume task optimistically:', newTask);
+      console.log('Holiday ID for addition:', resolvedHolidayId);
+      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      console.log('Task added to Redux, making API call...');
 
-	const addDefaultCostumeTasks = async () => {
-		if (!holidayId || !auth0User) return;
+      // Call API - map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        category: 'Costume Ideas',
+        due_date: values.dueDate || undefined, // snake_case for API
+        isCompleted: false,
+      };
 
-		try {
-			for (const task of defaultCostumeTasks) {
-				const payload = {
-					...task,
-					isCompleted: false,
-				};
-				const result = await createCostumeIdeas({
-					holidayId,
-					payload,
-					auth0User,
-				}).unwrap();
+      console.log('🐛 [HalloweenAdd] API payload:', apiPayload);
 
-				// Update Redux state directly
-				updateTaskInRedux(result, "add");
-			}
-			setShowDefaultTasks(false);
-		} catch (error) {
-			console.error("Error adding default costume tasks:", error);
-		}
-	};
+      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+        body: JSON.stringify(apiPayload),
+      });
 
-	function openForm() {
-		setShowForm(true);
-	}
+      if (response.ok) {
+        // Replace temporary task with real task from API (like Hanukkah)
+        const result = await response.json();
+        console.log('API success, replacing temp task with real task:', result);
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
 
-	function closeForm() {
-		setShowForm(false);
-	}
+        // Also refresh home data like gift-list does
+        await refreshHomeData();
+      } else {
+        // Remove optimistic update on error
+        console.log('API error, removing optimistic update');
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        console.error(
+          'Failed to add costume task:',
+          response.status,
+          response.statusText,
+        );
+      }
 
-	const handleToggleTask = async (taskId: string) => {
-		if (!holidayId || !auth0User) return;
+      setShowForm(false);
+    } catch (error) {
+      // Remove optimistic update on error (like Hanukkah)
+      dispatch(
+        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
+      );
+      console.error('Failed to add costume task:', error);
+    } finally {
+      setIsAdding(false);
+    }
+  }
 
-		try {
-			const task = costumeIdeas.find((t: any) => t.id === taskId);
-			if (task) {
-				const newIsCompleted = !task.isCompleted;
-				await updateCostumeIdeas({
-					holidayId,
-					taskId,
-					isCompleted: newIsCompleted,
-					auth0User,
-				}).unwrap();
+  function openForm() {
+    setShowForm(true);
+  }
 
-				// Update Redux state directly
-				updateTaskInRedux(
-					{ id: taskId, isCompleted: newIsCompleted },
-					"update"
-				);
-			}
-		} catch (error) {
-			console.error("Error updating costume task:", error);
-		}
-	};
+  function closeForm() {
+    setShowForm(false);
+  }
 
-	const handleDeleteTask = (taskId: string) => {
-		setDeleteConfirm({ show: true, taskId });
-	};
+  async function handleToggleTask(taskId: string) {
+    if (!resolvedHolidayId || !auth0User) return;
 
-	const handleEditTask = (task: any) => {
-		setEditingTask(task);
-	};
+    setIsToggling(true);
+    try {
+      // Find the current task to get its completion status
+      const currentTask = costumeIdeas.find((task: any) => task.id === taskId);
+      if (!currentTask) {
+        console.error('Costume task not found:', taskId);
+        return;
+      }
 
-	const handleSaveEdit = async (updatedTask: any) => {
-		if (editingTask && holidayId && auth0User) {
-			try {
-				const result = await editCostumeIdeas({
-					holidayId,
-					taskId: editingTask.id,
-					payload: {
-						title: updatedTask.title,
-						description: updatedTask.description || undefined,
-						priority: updatedTask.priority as "low" | "medium" | "high",
-						assignedTo: updatedTask.assignedTo || undefined,
-						category: "Costume Ideas",
-						dueDate: updatedTask.dueDate || undefined,
-					},
-					auth0User,
-				}).unwrap();
+      // Toggle the completion status
+      const newCompletionStatus = !currentTask.isCompleted;
 
-				// Update Redux state directly
-				updateTaskInRedux(result, "update");
+      // Optimistically update the Redux home data
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: taskId,
+          updates: { isCompleted: newCompletionStatus },
+        }),
+      );
 
-				setEditingTask(null);
-			} catch (error) {
-				console.error("Error updating costume task:", error);
-			}
-		}
-	};
+      // Call API directly instead of using custom hook
+      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      console.log('Toggle API URL:', apiUrl); // Debug logging
+      const response = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+        body: JSON.stringify({
+          isCompleted: newCompletionStatus,
+        }),
+      });
 
-	function handleCloseEdit() {
-		setEditingTask(null);
-	}
+      if (!response.ok) {
+        // Revert the optimistic update on error
+        const currentTask = costumeIdeas.find((task: any) => task.id === taskId);
+        if (currentTask) {
+          dispatch(
+            updateTaskInHomeData({
+              holidayId: resolvedHolidayId,
+              taskId: taskId,
+              updates: { isCompleted: currentTask.isCompleted },
+            }),
+          );
+        }
+        console.error(
+          'Failed to toggle costume task:',
+          response.status,
+          response.statusText,
+        );
+      }
+    } catch (error) {
+      console.error('Failed to toggle costume task:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  }
 
-	const confirmDelete = async () => {
-		if (deleteConfirm.taskId && holidayId && auth0User) {
-			try {
-				await deleteCostumeIdeas({
-					holidayId,
-					taskId: deleteConfirm.taskId,
-					auth0User,
-				}).unwrap();
+  const handleDeleteTask = (taskId: string) => {
+    setDeleteConfirm({ show: true, taskId });
+  };
 
-				// Update Redux state directly
-				updateTaskInRedux({ id: deleteConfirm.taskId }, "delete");
+  const handleEditTask = (task: any) => {
+    console.log('🐛 [EditTask] Opening edit modal for task:', {
+      id: task.id,
+      title: task.title,
+      dueDate: task.dueDate,
+      dueDateType: typeof task.dueDate,
+      parsedDate: task.dueDate
+        ? new Date(task.dueDate).toISOString().split('T')[0]
+        : null,
+    });
+    setEditingTask(task);
+  };
 
-				setDeleteConfirm({ show: false, taskId: null });
-			} catch (error) {
-				console.error("Error deleting costume task:", error);
-			}
-		}
-	};
+  async function handleSaveEdit(values: Record<string, any>) {
+    if (!editingTask || !resolvedHolidayId || !auth0User) return;
 
-	function cancelDelete() {
-		setDeleteConfirm({ show: false, taskId: null });
-	}
+    // Close modal immediately for better UX (optimistic)
+    setEditingTask(null);
 
-	function sortTasks(tasksToSort: any[]): any[] {
-		switch (sortBy) {
-			case "priority":
-				return [...tasksToSort].sort((a, b) => {
-					const priorityOrder = { high: 3, medium: 2, low: 1 };
-					return priorityOrder[b.priority] - priorityOrder[a.priority];
-				});
-			case "dateDue":
-				return [...tasksToSort].sort((a, b) => {
-					if (!a.dueDate && !b.dueDate) return 0;
-					if (!a.dueDate) return 1;
-					if (!b.dueDate) return -1;
-					return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-				});
-			case "assignedTo":
-				return [...tasksToSort].sort((a, b) => {
-					if (!a.assignedTo && !b.assignedTo) return 0;
-					if (!a.assignedTo) return 1;
-					if (!b.assignedTo) return -1;
-					return a.assignedTo.localeCompare(b.assignedTo);
-				});
-			case "category":
-				return [...tasksToSort].sort((a, b) => {
-					if (!a.category && !b.category) return 0;
-					if (!a.category) return 1;
-					if (!b.category) return -1;
-					return a.category.localeCompare(b.category);
-				});
-			default:
-				return tasksToSort;
-		}
-	}
+    setIsUpdating(true);
+    try {
+      const updatedTask = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assignedTo: values.assignedTo || undefined,
+        category: 'Costume Ideas',
+        dueDate: values.dueDate || undefined,
+      };
 
-	// Show loading only if home data is not initialized
-	if (!homeInitialized) {
-		return (
-			<div className="min-h-screen halloween-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading tasks...</p>
-				</div>
-			</div>
-		);
-	}
+      // Optimistically update the Redux home data
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: editingTask.id,
+          updates: updatedTask,
+        }),
+      );
 
-	const sortedTasks = sortTasks(costumeIdeas);
-	const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
-	const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+      // Call API directly - map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        category: 'Costume Ideas',
+        due_date: values.dueDate || undefined, // snake_case for API
+      };
 
-	return (
-		<div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<HolidayPageHeader
-				title="👻 Costume Ideas"
-				backHref="/halloween"
-				onSortClick={() => setShowSortModal(true)}
-				sortTitle="Sort tasks"
-				description="Keep track of costume ideas!"
-				holidayColor="orange-500"
-				error={undefined}
-			/>
-			<main className="w-full max-w-4xl flex flex-col gap-6">
-				{/* Default Tasks Modal */}
-				{showDefaultTasks && (
-					<div className="card rounded-lg p-6 mb-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700">
-						<h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">
-							🎃 Welcome to Costume Planning!
-						</h3>
-						<p className="text-gray-600 dark:text-gray-400 mb-4">
-							Let's get you started with some essential costume planning tasks.
-						</p>
-						<button
-							onClick={addDefaultCostumeTasks}
-							className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
-						>
-							Add Default Tasks
-						</button>
-					</div>
-				)}
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify(apiPayload),
+        },
+      );
 
-				<AddButton title="Task" onClick={openForm} holidayColor="orange" />
+      if (!response.ok) {
+        // Revert the optimistic update on error and reopen modal
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: editingTask.id,
+            updates: editingTask,
+          }),
+        );
+        setEditingTask(editingTask); // Reopen modal on error
+        console.error(
+          'Failed to update costume task:',
+          response.status,
+          response.statusText,
+        );
+      }
+    } catch (error) {
+      // Revert on error and reopen modal
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: editingTask.id,
+          updates: editingTask,
+        }),
+      );
+      setEditingTask(editingTask); // Reopen modal on error
+      console.error('Failed to update costume task:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
-				<div className="flex items-center justify-center">
-					{sortBy !== "none" && (
-						<div className="text-center text-sm text-gray-600 dark:text-gray-400">
-							{sortBy === "priority" && "Sorted by Priority"}
-							{sortBy === "dateDue" && "Sorted by Date Due"}
-							{sortBy === "assignedTo" && "Sorted by Recipient"}
-							{sortBy === "category" && "Sorted by Category"}
-						</div>
-					)}
-				</div>
+  function handleCloseEdit() {
+    setEditingTask(null);
+  }
 
-				<TaskSection
-					title="Incomplete"
-					items={incompleteTasks}
-					isCompleted={false}
-					emptyMessage="No costume ideas yet. Add your first costume task!"
-					completedMessage="No costume ideas yet. Add your first costume task!"
-					renderItem={(task: any) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleTask}
-							onDelete={handleDeleteTask}
-							onEdit={handleEditTask}
-							theme={{
-								accentColor: "#f97316", // Orange for Halloween
-							}}
-							borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
-							disableInternalModal={true}
-						/>
-					)}
-				/>
+  async function confirmDelete() {
+    if (!deleteConfirm.taskId || !resolvedHolidayId || !auth0User) return;
 
-				<TaskSection
-					title="Completed"
-					items={completedTasks}
-					isCompleted={true}
-					emptyMessage="No completed costume tasks yet."
-					completedMessage="No completed costume tasks yet."
-					renderItem={(task: any) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleTask}
-							onDelete={handleDeleteTask}
-							onEdit={handleEditTask}
-							className="opacity-60"
-							theme={{
-								accentColor: "#f97316", // Orange for Halloween
-							}}
-							borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
-							disableInternalModal={true}
-						/>
-					)}
-				/>
-			</main>
+    setIsDeleting(true);
+    try {
+      const taskToDelete = costumeIdeas.find(
+        (task: any) => task.id === deleteConfirm.taskId,
+      );
 
-			{/* Form Modal */}
-			<FormModal
-				isOpen={showForm}
-				title={costumeFormConfig.title}
-				fields={costumeFormConfig.fields}
-				onSubmit={handleAddTask}
-				onClose={closeForm}
-				loading={createCostumeIdeasState.isLoading}
-				submitText={
-					createCostumeIdeasState.isLoading
-						? "Adding..."
-						: costumeFormConfig.submitText
-				}
-				cancelText={costumeFormConfig.cancelText}
-				cardClassName="card"
-				submitButtonColor={costumeFormConfig.submitButtonColor}
-			/>
+      // Optimistically remove from Redux state first
+      dispatch(
+        removeTaskFromHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: deleteConfirm.taskId,
+        }),
+      );
 
-			{/* Edit Task Modal */}
-			<EditTaskModal
-				isOpen={editingTask !== null}
-				task={editingTask}
-				onClose={handleCloseEdit}
-				onSave={handleSaveEdit}
-				loading={editCostumeIdeasState.isLoading}
-			/>
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${deleteConfirm.taskId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+        },
+      );
 
-			{/* Delete Confirmation Modal */}
-			<DeleteModal
-				isOpen={deleteConfirm.show}
-				{...getDeleteConfig("tasks")}
-				onConfirm={confirmDelete}
-				onCancel={cancelDelete}
-				loading={deleteCostumeIdeasState.isLoading}
-				cardClassName="card"
-				confirmText="Delete"
-				cancelText="Cancel"
-			/>
+      if (!response.ok) {
+        // Restore the task on error
+        if (taskToDelete) {
+          dispatch(
+            addTaskToHomeData({
+              holidayId: resolvedHolidayId,
+              task: taskToDelete,
+            }),
+          );
+        }
+        console.error(
+          'Failed to delete costume task:',
+          response.status,
+          response.statusText,
+        );
+      }
 
-			{/* Sort Modal */}
-			<SortModal
-				isOpen={showSortModal}
-				onClose={() => setShowSortModal(false)}
-				sortBy={sortBy}
-				onSortChange={(sortOption: string) =>
-					setSortBy(sortOption as SortOption)
-				}
-				sortOptions={[
-					{ value: "none", label: "None" },
-					{ value: "priority", label: "Priority" },
-					{ value: "dateDue", label: "Date Due" },
-					{ value: "assignedTo", label: "Recipient" },
-					{ value: "category", label: "Category" },
-				]}
-				title="Sort Tasks"
-			/>
-		</div>
-	);
+      setDeleteConfirm({ show: false, taskId: null });
+    } catch (error) {
+      console.error('Failed to delete costume task:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function cancelDelete() {
+    setDeleteConfirm({ show: false, taskId: null });
+  }
+
+  function sortTasks(tasksToSort: any[]): any[] {
+    switch (sortBy) {
+      case 'priority':
+        return [...tasksToSort].sort((a, b) => {
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        });
+      case 'dateDue':
+        return [...tasksToSort].sort((a, b) => {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+      case 'assignedTo':
+        return [...tasksToSort].sort((a, b) => {
+          if (!a.assignedTo && !b.assignedTo) return 0;
+          if (!a.assignedTo) return 1;
+          if (!b.assignedTo) return -1;
+          return a.assignedTo.localeCompare(b.assignedTo);
+        });
+      case 'category':
+        return [...tasksToSort].sort((a, b) => {
+          if (!a.category && !b.category) return 0;
+          if (!a.category) return 1;
+          if (!b.category) return -1;
+          return a.category.localeCompare(b.category);
+        });
+      default:
+        return tasksToSort;
+    }
+  }
+
+  // Show loading only if home data is not initialized
+  if (!homeInitialized) {
+    return (
+      <div className="min-h-screen halloween-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const sortedTasks = sortTasks(costumeIdeas);
+  const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+  const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+
+  return (
+    <div className="min-h-screen halloween-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      <HolidayPageHeader
+        title="👻 Costume Ideas"
+        backHref="/halloween"
+        onSortClick={() => setShowSortModal(true)}
+        sortTitle="Sort tasks"
+        description="Keep track of costume ideas!"
+        holidayColor="orange-500"
+        error={undefined}
+      />
+      <main className="w-full max-w-4xl flex flex-col gap-6">
+        <AddButton title="Costume" onClick={openForm} holidayColor="orange" />
+
+        <div className="flex items-center justify-center">
+          {sortBy !== 'none' && (
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              {sortBy === 'priority' && 'Sorted by Priority'}
+              {sortBy === 'dateDue' && 'Sorted by Date Due'}
+              {sortBy === 'assignedTo' && 'Sorted by Recipient'}
+              {sortBy === 'category' && 'Sorted by Category'}
+            </div>
+          )}
+        </div>
+
+        <TaskSection
+          title="Incomplete"
+          items={incompleteTasks}
+          isCompleted={false}
+          emptyMessage="No costume ideas yet. Add your first costume task!"
+          completedMessage="No costume ideas yet. Add your first costume task!"
+          renderItem={(task: any) => (
+            <ToDoCard
+              key={task.id}
+              task={task}
+              onToggleComplete={handleToggleTask}
+              onDelete={handleDeleteTask}
+              onEdit={handleEditTask}
+              theme={{
+                accentColor: '#f97316', // Orange for Halloween
+              }}
+              borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+              disableInternalModal={true}
+            />
+          )}
+        />
+
+        <TaskSection
+          title="Completed"
+          items={completedTasks}
+          isCompleted={true}
+          emptyMessage="No completed costume tasks yet."
+          completedMessage="No completed costume tasks yet."
+          renderItem={(task: any) => (
+            <ToDoCard
+              key={task.id}
+              task={task}
+              onToggleComplete={handleToggleTask}
+              onDelete={handleDeleteTask}
+              onEdit={handleEditTask}
+              className="opacity-60"
+              theme={{
+                accentColor: '#f97316', // Orange for Halloween
+              }}
+              borderColor="rgb(var(--color-orange-500))" // Orange border for Halloween
+              disableInternalModal={true}
+            />
+          )}
+        />
+      </main>
+
+      {/* Form Modal */}
+      <FormModal
+        isOpen={showForm}
+        title={costumeFormConfig(isHolidayShared).title}
+        fields={costumeFormConfig(isHolidayShared).fields}
+        onSubmit={handleAddTask}
+        onClose={closeForm}
+        loading={isAdding}
+        submitText={
+          isAdding ? 'Adding...' : costumeFormConfig(isHolidayShared).submitText
+        }
+        cancelText={costumeFormConfig(isHolidayShared).cancelText}
+        cardClassName="card"
+        submitButtonColor={costumeFormConfig(isHolidayShared).submitButtonColor}
+      />
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        isOpen={editingTask !== null}
+        task={
+          editingTask
+            ? {
+                ...editingTask,
+                dueDate: editingTask.dueDate
+                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+                  : '',
+              }
+            : null
+        }
+        initialValues={(() => {
+          if (!editingTask) return {};
+
+          const initialValues = {
+            title: editingTask.title || '',
+            description: editingTask.description || '',
+            priority: editingTask.priority || 'medium',
+            ...(isHolidayShared ? { assignedTo: editingTask.assignedTo || '' } : {}),
+            dueDate: editingTask.dueDate
+              ? (() => {
+                  try {
+                    const date = new Date(editingTask.dueDate);
+                    const formattedDate = date.toISOString().split('T')[0];
+                    console.log('🐛 [EditModal] Date formatting:', {
+                      original: editingTask.dueDate,
+                      parsed: date,
+                      formatted: formattedDate,
+                    });
+                    return formattedDate;
+                  } catch (e) {
+                    console.error(
+                      '🐛 [EditModal] Date parsing error:',
+                      e,
+                      editingTask.dueDate,
+                    );
+                    return '';
+                  }
+                })()
+              : '',
+          };
+
+          console.log('🐛 [EditModal] Final initialValues:', initialValues);
+          return initialValues;
+        })()}
+        onClose={handleCloseEdit}
+        onSave={handleSaveEdit}
+        loading={isUpdating}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={deleteConfirm.show}
+        {...getDeleteConfig('tasks')}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        loading={isDeleting}
+        cardClassName="card"
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortBy={sortBy}
+        onSortChange={(sortOption: string) => setSortBy(sortOption as SortOption)}
+        sortOptions={[
+          { value: 'none', label: 'None' },
+          { value: 'priority', label: 'Priority' },
+          { value: 'dateDue', label: 'Date Due' },
+          { value: 'assignedTo', label: 'Recipient' },
+          { value: 'category', label: 'Category' },
+        ]}
+        title="Sort Tasks"
+      />
+    </div>
+  );
 }
