@@ -1,35 +1,41 @@
-import { shouldFetchHolidayData, shouldSkipHolidayQuery, getHolidayDataFromRedux, getBudgetFromRedux } from '../holidayData';
+import {
+  shouldFetchHolidayData,
+  shouldSkipHolidayQuery,
+  getHolidayDataFromRedux,
+  getBudgetFromRedux,
+} from '../holidayData';
 import { RootState } from '@/store';
 
 // Mock Redux state for testing
-const createMockState = (overrides: Partial<RootState> = {}): RootState => ({
-  home: {
-    data: {
-      holidayPreferences: [
-        {
-          holiday: 'Christmas',
-          holidayId: 'christmas-123',
-          budget: 500,
-          countdownTimer: '2024-12-25T00:00:00Z'
-        },
-        {
-          holiday: 'Hanukkah',
-          holidayId: 'hanukkah-456',
-          budget: 300,
-          countdownTimer: '2024-12-07T00:00:00Z'
-        }
-      ],
-      contacts: [],
-      user: null,
-      account: null,
-      needsUserSetup: false,
-      needsHolidaySelection: false
+const createMockState = (overrides: Partial<RootState> = {}): RootState =>
+  ({
+    home: {
+      data: {
+        holidayPreferences: [
+          {
+            holiday: 'Christmas',
+            holidayId: 'christmas-123',
+            budget: 500,
+            countdownTimer: '2024-12-25T00:00:00Z',
+          },
+          {
+            holiday: 'Hanukkah',
+            holidayId: 'hanukkah-456',
+            budget: 300,
+            countdownTimer: '2024-12-07T00:00:00Z',
+          },
+        ],
+        contacts: [],
+        user: null,
+        account: null,
+        needsUserSetup: false,
+        needsHolidaySelection: false,
+      },
+      initialized: true,
+      loading: false,
+      error: null,
     },
-    initialized: true,
-    loading: false,
-    error: null
-  }
-} as RootState);
+  }) as RootState;
 
 describe('holidayData utilities', () => {
   describe('shouldFetchHolidayData', () => {
@@ -43,8 +49,8 @@ describe('holidayData utilities', () => {
       const state = createMockState({
         home: {
           ...createMockState().home,
-          initialized: false
-        }
+          initialized: false,
+        },
       });
       expect(shouldFetchHolidayData('christmas-123', state)).toBe(true);
     });
@@ -55,9 +61,9 @@ describe('holidayData utilities', () => {
           ...createMockState().home,
           data: {
             ...createMockState().home.data,
-            holidayPreferences: []
-          }
-        }
+            holidayPreferences: [],
+          },
+        },
       });
       expect(shouldFetchHolidayData('christmas-123', state)).toBe(true);
     });
@@ -98,8 +104,8 @@ describe('holidayData utilities', () => {
       const state = createMockState({
         home: {
           ...createMockState().home,
-          initialized: false
-        }
+          initialized: false,
+        },
       });
       const auth0User = { sub: 'user-123' };
       expect(shouldSkipHolidayQuery('christmas-123', auth0User, state)).toBe(false);
@@ -117,8 +123,8 @@ describe('holidayData utilities', () => {
       const state = createMockState({
         home: {
           ...createMockState().home,
-          data: null
-        }
+          data: null,
+        },
       });
       expect(getHolidayDataFromRedux('christmas-123', state)).toBe(null);
     });
@@ -129,9 +135,9 @@ describe('holidayData utilities', () => {
           ...createMockState().home,
           data: {
             ...createMockState().home.data,
-            holidayPreferences: null
-          }
-        }
+            holidayPreferences: null,
+          },
+        },
       });
       expect(getHolidayDataFromRedux('christmas-123', state)).toBe(null);
     });
@@ -143,7 +149,7 @@ describe('holidayData utilities', () => {
         holiday: 'Christmas',
         holidayId: 'christmas-123',
         budget: 500,
-        countdownTimer: '2024-12-25T00:00:00Z'
+        countdownTimer: '2024-12-25T00:00:00Z',
       });
     });
 
@@ -172,4 +178,3 @@ describe('holidayData utilities', () => {
     });
   });
 });
-

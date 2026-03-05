@@ -115,9 +115,7 @@ The API endpoints use Auth0 sub (auth0Sub) for authentication instead of server-
 ### Accessing Preferences in Components
 
 ```typescript
-const { preferences, initialized } = useAppSelector(
-	(state) => state.userPreferences
-);
+const { preferences, initialized } = useAppSelector(state => state.userPreferences);
 
 // Use preferences from database if available
 const currentTheme = preferences?.theme || fallbackTheme;
@@ -130,14 +128,14 @@ const currentDisplayMode = preferences?.displayMode || fallbackDisplayMode;
 const dispatch = useAppDispatch();
 
 // Update single preference
-await dispatch(updateUserPreferences({ theme: "dark" })).unwrap();
+await dispatch(updateUserPreferences({ theme: 'dark' })).unwrap();
 
 // Update multiple preferences
 await dispatch(
-	updateUserPreferences({
-		theme: "dark",
-		displayMode: "gamified",
-	})
+  updateUserPreferences({
+    theme: 'dark',
+    displayMode: 'gamified',
+  }),
 ).unwrap();
 ```
 

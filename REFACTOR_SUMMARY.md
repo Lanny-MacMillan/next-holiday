@@ -20,8 +20,8 @@ This refactor addresses the identified issues with duplicate data fetching, loca
 ```tsx
 // Fallback to old localStorage logic
 if (holiday) {
-	const holidayChoice = settings.holidayChoices?.find();
-	budgetLimit = holidayChoice?.budget || 0;
+  const holidayChoice = settings.holidayChoices?.find();
+  budgetLimit = holidayChoice?.budget || 0;
 }
 ```
 
@@ -30,16 +30,14 @@ if (holiday) {
 ```tsx
 // Priority: 1. Redux home data, 2. DB budget, 3. Default
 if (holidayId) {
-	// Try to get budget from Redux home data first
-	const holidayPref = holidayPreferences.find(
-		(h: any) => h.holidayId === holidayId
-	);
-	if (holidayPref?.budget) {
-		budgetLimit = holidayPref.budget;
-	} else if (budget?.targetAmount) {
-		// Fallback to DB budget
-		budgetLimit = budget.targetAmount;
-	}
+  // Try to get budget from Redux home data first
+  const holidayPref = holidayPreferences.find((h: any) => h.holidayId === holidayId);
+  if (holidayPref?.budget) {
+    budgetLimit = holidayPref.budget;
+  } else if (budget?.targetAmount) {
+    // Fallback to DB budget
+    budgetLimit = budget.targetAmount;
+  }
 }
 ```
 
@@ -49,7 +47,7 @@ if (holidayId) {
 
 ```tsx
 if (!contactsInitialized) {
-	dispatch(fetchContacts());
+  dispatch(fetchContacts());
 }
 ```
 
@@ -58,7 +56,7 @@ if (!contactsInitialized) {
 ```tsx
 // Only fetch contacts if not initialized AND not available in home data
 if (!contactsInitialized && !homeData?.contacts?.length) {
-	dispatch(fetchContacts());
+  dispatch(fetchContacts());
 }
 ```
 
@@ -68,8 +66,8 @@ if (!contactsInitialized && !homeData?.contacts?.length) {
 
 ```tsx
 const { data: gifts = [] } = useGetGiftsQuery(
-	{ holidayId: holidayId || "", auth0User },
-	{ skip: !holidayId || !auth0User }
+  { holidayId: holidayId || '', auth0User },
+  { skip: !holidayId || !auth0User },
 );
 ```
 
@@ -80,8 +78,8 @@ const { data: gifts = [] } = useGetGiftsQuery(
 const currentState = useAppSelector((state: any) => state);
 
 const { data: gifts = [] } = useGetGiftsQuery(
-	{ holidayId: holidayId || "", auth0User },
-	{ skip: shouldSkipHolidayQuery(holidayId, auth0User, currentState) }
+  { holidayId: holidayId || '', auth0User },
+  { skip: shouldSkipHolidayQuery(holidayId, auth0User, currentState) },
 );
 ```
 
@@ -92,10 +90,10 @@ const { data: gifts = [] } = useGetGiftsQuery(
 ```tsx
 // Prefill RTK Query cache with home data to prevent duplicate fetches
 if (data?.holidayPreferences?.length) {
-	const { api } = await import("@/store/api");
-	dispatch(api.util.upsertQueryData("getAllGifts", { auth0User }, []));
-	dispatch(api.util.upsertQueryData("getAllCards", { auth0User }, []));
-	dispatch(api.util.upsertQueryData("getAllTasks", { auth0User }, []));
+  const { api } = await import('@/store/api');
+  dispatch(api.util.upsertQueryData('getAllGifts', { auth0User }, []));
+  dispatch(api.util.upsertQueryData('getAllCards', { auth0User }, []));
+  dispatch(api.util.upsertQueryData('getAllTasks', { auth0User }, []));
 }
 ```
 

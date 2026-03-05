@@ -134,9 +134,9 @@ This document summarizes the comprehensive verification and patching of the Redu
 
 ```json
 {
-	"guard:fetch": "grep -r -n \"useEffect.*fetch\\|axios\\.\" src/app src/components && echo \"Forbidden fetch/axios in client components\" && exit 1 || exit 0",
-	"guard:storage": "grep -r -n \"localStorage\\.(getItem\\|setItem)\" src/app src/components && echo \"Forbidden localStorage for canonical data\" && exit 1 || exit 0",
-	"guard:all": "npm run guard:fetch && npm run guard:storage"
+  "guard:fetch": "grep -r -n \"useEffect.*fetch\\|axios\\.\" src/app src/components && echo \"Forbidden fetch/axios in client components\" && exit 1 || exit 0",
+  "guard:storage": "grep -r -n \"localStorage\\.(getItem\\|setItem)\" src/app src/components && echo \"Forbidden localStorage for canonical data\" && exit 1 || exit 0",
+  "guard:all": "npm run guard:fetch && npm run guard:storage"
 }
 ```
 
@@ -158,19 +158,16 @@ This document summarizes the comprehensive verification and patching of the Redu
 ### Test Files Created:
 
 1. **`src/__tests__/routes/holiday-pages.cold-entry.test.tsx`**
-
    - Tests cold entry behavior for holiday pages
    - Verifies exactly one network call when Redux empty
    - Verifies zero network calls when Redux preseeded
 
 2. **`src/__tests__/store/mutation-cache-sync.test.ts`**
-
    - Tests mutation cache synchronization
    - Verifies UI updates without extra GET requests
    - Tests error handling and rollback
 
 3. **`src/__tests__/store/selector-memoization.test.ts`**
-
    - Tests selector memoization with `createSelector`
    - Verifies stable referential equality
    - Tests with unchanged inputs

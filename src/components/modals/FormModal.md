@@ -16,29 +16,29 @@ A reusable form modal component that can be configured for different holiday pag
 ### Basic Usage
 
 ```tsx
-import FormModal from "@/components/modals/FormModal";
-import { getFormConfig } from "@/config/formConfigs";
+import FormModal from '@/components/modals/FormModal';
+import { getFormConfig } from '@/config/formConfigs';
 
 // In your component
 const [showForm, setShowForm] = useState(false);
 
 const handleSubmit = (formValues: Record<string, any>) => {
-	// Handle form submission
-	console.log(formValues);
-	setShowForm(false);
+  // Handle form submission
+  console.log(formValues);
+  setShowForm(false);
 };
 
 <FormModal
-	isOpen={showForm}
-	title="Add New Item"
-	fields={getFormConfig("cards", "add").fields}
-	onSubmit={handleSubmit}
-	onClose={() => setShowForm(false)}
-	loading={loading}
-	submitText="Add Item"
-	cancelText="Cancel"
-	cardClassName="card card-cards"
-	submitButtonColor="#ef4444"
+  isOpen={showForm}
+  title="Add New Item"
+  fields={getFormConfig('cards', 'add').fields}
+  onSubmit={handleSubmit}
+  onClose={() => setShowForm(false)}
+  loading={loading}
+  submitText="Add Item"
+  cancelText="Cancel"
+  cardClassName="card card-cards"
+  submitButtonColor="#ef4444"
 />;
 ```
 
@@ -46,17 +46,17 @@ const handleSubmit = (formValues: Record<string, any>) => {
 
 ```tsx
 <FormModal
-	isOpen={showForm}
-	title="Add New Card"
-	fields={getFormConfig("cards", "add").fields}
-	onSubmit={handleSubmit}
-	onClose={() => setShowForm(false)}
-	loading={loading}
-	showAddressBook={true}
-	contacts={contacts}
-	onAddressBookSelect={(contact) => {
-		// Optional callback when address book contact is selected
-	}}
+  isOpen={showForm}
+  title="Add New Card"
+  fields={getFormConfig('cards', 'add').fields}
+  onSubmit={handleSubmit}
+  onClose={() => setShowForm(false)}
+  loading={loading}
+  showAddressBook={true}
+  contacts={contacts}
+  onAddressBookSelect={contact => {
+    // Optional callback when address book contact is selected
+  }}
 />
 ```
 
@@ -64,18 +64,18 @@ const handleSubmit = (formValues: Record<string, any>) => {
 
 ```tsx
 <FormModal
-	isOpen={showForm}
-	title="Edit Card"
-	fields={getFormConfig("cards", "edit").fields}
-	initialValues={{
-		recipient: editingCard.recipient,
-		address: editingCard.address || "",
-		message: editingCard.message,
-	}}
-	onSubmit={handleSubmit}
-	onClose={() => setShowForm(false)}
-	loading={loading}
-	submitText="Update Card"
+  isOpen={showForm}
+  title="Edit Card"
+  fields={getFormConfig('cards', 'edit').fields}
+  initialValues={{
+    recipient: editingCard.recipient,
+    address: editingCard.address || '',
+    message: editingCard.message,
+  }}
+  onSubmit={handleSubmit}
+  onClose={() => setShowForm(false)}
+  loading={loading}
+  submitText="Update Card"
 />
 ```
 
@@ -86,13 +86,11 @@ The component uses predefined form configurations from `src/config/formConfigs.t
 ### Available Configurations
 
 - **Cards**: `getFormConfig("cards", "add" | "edit")`
-
   - Fields: recipient, address, message
   - Address book integration enabled
   - Red submit button
 
 - **Tasks**: `getFormConfig("tasks", "add" | "edit")`
-
   - Fields: title, description, priority, assignedTo, category, dueDate
   - Green submit button
 
@@ -124,16 +122,16 @@ The component uses predefined form configurations from `src/config/formConfigs.t
 
 ```tsx
 interface FormField {
-	id: string;
-	type: "text" | "textarea" | "select" | "number" | "date" | "url" | "checkbox";
-	label?: string;
-	placeholder?: string;
-	required?: boolean;
-	options?: { value: string; label: string }[];
-	rows?: number;
-	step?: string;
-	className?: string;
-	style?: React.CSSProperties;
+  id: string;
+  type: 'text' | 'textarea' | 'select' | 'number' | 'date' | 'url' | 'checkbox';
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: { value: string; label: string }[];
+  rows?: number;
+  step?: string;
+  className?: string;
+  style?: React.CSSProperties;
 }
 ```
 
@@ -153,34 +151,34 @@ interface FormField {
 
 ```tsx
 const customFormConfig = {
-	title: "Custom Form",
-	fields: [
-		{
-			id: "name",
-			type: "text",
-			placeholder: "Name*",
-			required: true,
-		},
-		{
-			id: "description",
-			type: "textarea",
-			placeholder: "Description",
-			rows: 3,
-		},
-		{
-			id: "priority",
-			type: "select",
-			options: [
-				{ value: "low", label: "Low" },
-				{ value: "medium", label: "Medium" },
-				{ value: "high", label: "High" },
-			],
-		},
-	],
-	submitText: "Save",
-	cancelText: "Cancel",
-	cardClassName: "card custom-card",
-	submitButtonColor: "#3b82f6",
+  title: 'Custom Form',
+  fields: [
+    {
+      id: 'name',
+      type: 'text',
+      placeholder: 'Name*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'textarea',
+      placeholder: 'Description',
+      rows: 3,
+    },
+    {
+      id: 'priority',
+      type: 'select',
+      options: [
+        { value: 'low', label: 'Low' },
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
+    },
+  ],
+  submitText: 'Save',
+  cancelText: 'Cancel',
+  cardClassName: 'card custom-card',
+  submitButtonColor: '#3b82f6',
 };
 ```
 
@@ -188,14 +186,14 @@ const customFormConfig = {
 
 ```tsx
 <FormModal
-	isOpen={showForm}
-	title={customFormConfig.title}
-	fields={customFormConfig.fields}
-	onSubmit={handleSubmit}
-	onClose={() => setShowForm(false)}
-	submitText={customFormConfig.submitText}
-	cancelText={customFormConfig.cancelText}
-	cardClassName={customFormConfig.cardClassName}
-	submitButtonColor={customFormConfig.submitButtonColor}
+  isOpen={showForm}
+  title={customFormConfig.title}
+  fields={customFormConfig.fields}
+  onSubmit={handleSubmit}
+  onClose={() => setShowForm(false)}
+  submitText={customFormConfig.submitText}
+  cancelText={customFormConfig.cancelText}
+  cardClassName={customFormConfig.cardClassName}
+  submitButtonColor={customFormConfig.submitButtonColor}
 />
 ```

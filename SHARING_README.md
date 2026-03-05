@@ -121,22 +121,22 @@ tasks, gifts, cards, budgets, rsvps, expenses (all with share_id column)
 // 1. User clicks Invite button
 // 2. System creates share (if needed)
 const share = await dispatch(
-	createShare({
-		holidayKey: "christmas",
-		ownerUserId: user.sub,
-		memberUserIds: [user.sub],
-	})
+  createShare({
+    holidayKey: 'christmas',
+    ownerUserId: user.sub,
+    memberUserIds: [user.sub],
+  }),
 ).unwrap();
 
 // 3. System creates invite
 await dispatch(
-	createInvite({
-		shareId: share.shareId,
-		fromUserId: user.sub,
-		toEmail: "friend@example.com",
-		holidayKey: "christmas",
-		message: "Let's plan Christmas together!",
-	})
+  createInvite({
+    shareId: share.shareId,
+    fromUserId: user.sub,
+    toEmail: 'friend@example.com',
+    holidayKey: 'christmas',
+    message: "Let's plan Christmas together!",
+  }),
 ).unwrap();
 ```
 
@@ -151,9 +151,9 @@ dispatch(addShare(result.share));
 
 // 3. System migrates existing data
 await migrateHolidayDataToShare(
-	result.invite.holidayKey,
-	result.share.shareId,
-	dispatch
+  result.invite.holidayKey,
+  result.share.shareId,
+  dispatch,
 );
 ```
 
@@ -161,14 +161,12 @@ await migrateHolidayDataToShare(
 
 ```typescript
 // Get tasks for a holiday (shared or private)
-const tasks = useAppSelector((state) =>
-	selectTasksForHoliday(state, "christmas", shareId)
+const tasks = useAppSelector(state =>
+  selectTasksForHoliday(state, 'christmas', shareId),
 );
 
 // Check if holiday is shared
-const isShared = useAppSelector((state) =>
-	selectIsHolidayShared(state, "christmas")
-);
+const isShared = useAppSelector(state => selectIsHolidayShared(state, 'christmas'));
 ```
 
 ## Future Enhancements

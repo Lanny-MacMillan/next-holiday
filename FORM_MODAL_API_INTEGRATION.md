@@ -20,8 +20,8 @@ The implementation provides:
 
 ```typescript
 export async function assertHolidayAccess(
-	holidayId: string,
-	userId: string
+  holidayId: string,
+  userId: string,
 ): Promise<Response | null>;
 ```
 
@@ -51,22 +51,22 @@ export async function assertHolidayAccess(
 
 ```typescript
 export const api = createApi({
-	reducerPath: "api",
-	baseQuery: fetchBaseQuery({ baseUrl: "/api", credentials: "include" }),
-	tagTypes: ["Tasks", "Gifts", "Cards", "GuestList"],
-	endpoints: (builder) => ({
-		createTask: builder.mutation<any, { holidayId: string; payload: any }>({
-			query: ({ holidayId, payload }) => ({
-				url: `holidays/${holidayId}/tasks`,
-				method: "POST",
-				body: payload,
-			}),
-			invalidatesTags: (result, error, { holidayId }) => [
-				{ type: "Tasks", id: holidayId },
-			],
-		}),
-		// ... similar for gifts, cards, guest lists
-	}),
+  reducerPath: 'api',
+  baseQuery: fetchBaseQuery({ baseUrl: '/api', credentials: 'include' }),
+  tagTypes: ['Tasks', 'Gifts', 'Cards', 'GuestList'],
+  endpoints: builder => ({
+    createTask: builder.mutation<any, { holidayId: string; payload: any }>({
+      query: ({ holidayId, payload }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        method: 'POST',
+        body: payload,
+      }),
+      invalidatesTags: (result, error, { holidayId }) => [
+        { type: 'Tasks', id: holidayId },
+      ],
+    }),
+    // ... similar for gifts, cards, guest lists
+  }),
 });
 ```
 
@@ -81,15 +81,15 @@ export const api = createApi({
 
 ```typescript
 export function useFormModalMutation() {
-	const pathname = usePathname();
-	const holidayPreferences = useAppSelector(/* ... */);
-	const holidayId = getHolidayIdFromRoute(pathname, holidayPreferences);
+  const pathname = usePathname();
+  const holidayPreferences = useAppSelector(/* ... */);
+  const holidayId = getHolidayIdFromRoute(pathname, holidayPreferences);
 
-	// Returns appropriate mutation based on route:
-	// /christmas/gift-list → createGift
-	// /christmas/cards → createCard
-	// /christmas/tasks → createTask
-	// /christmas/guest-list → createGuest
+  // Returns appropriate mutation based on route:
+  // /christmas/gift-list → createGift
+  // /christmas/cards → createCard
+  // /christmas/tasks → createTask
+  // /christmas/guest-list → createGuest
 }
 ```
 
@@ -105,20 +105,17 @@ export function useFormModalMutation() {
 #### Transformers (`src/utils/formTransformers.ts`)
 
 ```typescript
-export function transformGiftPayload(
-	values: Record<string, any>,
-	contacts: any[]
-) {
-	const contact = contacts.find((c) => c.name === values.recipient);
-	return {
-		name: values.description || values.name || "",
-		description: values.description || "",
-		price: values.price ? parseFloat(values.price) : 0,
-		store: values.store || "",
-		product_link: values.productLink || "",
-		notes: values.notes || "",
-		contact_id: contact?.id || null,
-	};
+export function transformGiftPayload(values: Record<string, any>, contacts: any[]) {
+  const contact = contacts.find(c => c.name === values.recipient);
+  return {
+    name: values.description || values.name || '',
+    description: values.description || '',
+    price: values.price ? parseFloat(values.price) : 0,
+    store: values.store || '',
+    product_link: values.productLink || '',
+    notes: values.notes || '',
+    contact_id: contact?.id || null,
+  };
 }
 ```
 
@@ -168,14 +165,14 @@ export default function GiftListPage() {
 
 ```typescript
 export default function ChristmasCardsPage() {
-	const { holidayId, mutation, isLoading } = useFormModalMutation();
+  const { holidayId, mutation, isLoading } = useFormModalMutation();
 
-	async function handleAddCard(values: Record<string, any>) {
-		const payload = transformCardPayload(values, contacts);
-		await mutation({ holidayId, payload }).unwrap();
-	}
+  async function handleAddCard(values: Record<string, any>) {
+    const payload = transformCardPayload(values, contacts);
+    await mutation({ holidayId, payload }).unwrap();
+  }
 
-	// Similar FormModal setup
+  // Similar FormModal setup
 }
 ```
 

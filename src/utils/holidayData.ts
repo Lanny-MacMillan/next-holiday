@@ -1,4 +1,4 @@
-import { RootState } from "@/store";
+import { RootState } from '@/store';
 
 /**
  * Determines if holiday data should be fetched from RTK Query
@@ -7,28 +7,28 @@ import { RootState } from "@/store";
  * @returns true if data should be fetched, false if it exists in Redux
  */
 export function shouldFetchHolidayData(
-	holidayId: string | null | undefined,
-	state: RootState
+  holidayId: string | null | undefined,
+  state: RootState,
 ): boolean {
-	// If no holidayId, we can't fetch
-	if (!holidayId) return false;
+  // If no holidayId, we can't fetch
+  if (!holidayId) return false;
 
-	// Check if home data is initialized and contains this holiday
-	const homeData = state.home.data;
-	const homeInitialized = state.home.initialized;
+  // Check if home data is initialized and contains this holiday
+  const homeData = state.home.data;
+  const homeInitialized = state.home.initialized;
 
-	// If home data is not initialized, we need to fetch
-	if (!homeInitialized || !homeData?.holidayPreferences) return true;
+  // If home data is not initialized, we need to fetch
+  if (!homeInitialized || !homeData?.holidayPreferences) return true;
 
-	// Check if this holiday exists in preferences
-	const holidayPref = homeData.holidayPreferences.find(
-		(h) => h.holidayId === holidayId
-	);
-	if (!holidayPref) return true;
+  // Check if this holiday exists in preferences
+  const holidayPref = homeData.holidayPreferences.find(
+    h => h.holidayId === holidayId,
+  );
+  if (!holidayPref) return true;
 
-	// If home data is available and complete, don't fetch from API
-	// This prevents duplicate network calls when navigating from home
-	return false;
+  // If home data is available and complete, don't fetch from API
+  // This prevents duplicate network calls when navigating from home
+  return false;
 }
 
 /**
@@ -39,15 +39,15 @@ export function shouldFetchHolidayData(
  * @returns true if the query should be skipped
  */
 export function shouldSkipHolidayQuery(
-	holidayId: string | null | undefined,
-	auth0User: any,
-	state: RootState
+  holidayId: string | null | undefined,
+  auth0User: any,
+  state: RootState,
 ): boolean {
-	// Skip if no auth or no holidayId
-	if (!auth0User || !holidayId) return true;
+  // Skip if no auth or no holidayId
+  if (!auth0User || !holidayId) return true;
 
-	// Skip if we should NOT fetch (i.e., data exists in Redux)
-	return !shouldFetchHolidayData(holidayId, state);
+  // Skip if we should NOT fetch (i.e., data exists in Redux)
+  return !shouldFetchHolidayData(holidayId, state);
 }
 
 /**
@@ -57,23 +57,23 @@ export function shouldSkipHolidayQuery(
  * @returns The holiday preference data or null if not found
  */
 export function getHolidayDataFromRedux(
-	holidayId: string | null | undefined,
-	state: RootState
+  holidayId: string | null | undefined,
+  state: RootState,
 ) {
-	if (!holidayId) {
-		return null;
-	}
+  if (!holidayId) {
+    return null;
+  }
 
-	const homeData = state.home.data;
-	if (!homeData?.holidayPreferences) {
-		return null;
-	}
+  const homeData = state.home.data;
+  if (!homeData?.holidayPreferences) {
+    return null;
+  }
 
-	const foundHoliday = homeData.holidayPreferences.find(
-		(h) => h.holidayId === holidayId
-	);
+  const foundHoliday = homeData.holidayPreferences.find(
+    h => h.holidayId === holidayId,
+  );
 
-	return foundHoliday || null;
+  return foundHoliday || null;
 }
 
 /**
@@ -83,11 +83,11 @@ export function getHolidayDataFromRedux(
  * @returns The budget amount or undefined if not found
  */
 export function getBudgetFromRedux(
-	holidayId: string | null | undefined,
-	state: RootState
+  holidayId: string | null | undefined,
+  state: RootState,
 ): number | undefined {
-	const holidayData = getHolidayDataFromRedux(holidayId, state);
-	return holidayData?.budget;
+  const holidayData = getHolidayDataFromRedux(holidayId, state);
+  return holidayData?.budget;
 }
 
 /**
@@ -100,20 +100,20 @@ export function getBudgetFromRedux(
  * @returns true if the query should be skipped
  */
 export function shouldSkipHolidayQueryWithColdEntry(
-	holidayId: string | null | undefined,
-	auth0User: any,
-	state: RootState,
-	allowColdEntry: boolean = false
+  holidayId: string | null | undefined,
+  auth0User: any,
+  state: RootState,
+  allowColdEntry: boolean = false,
 ): boolean {
-	// Skip if no auth
-	if (!auth0User) return true;
+  // Skip if no auth
+  if (!auth0User) return true;
 
-	// Skip if no holidayId
-	if (!holidayId) return true;
+  // Skip if no holidayId
+  if (!holidayId) return true;
 
-	// If cold entry is allowed and home is not initialized, don't skip
-	if (allowColdEntry && !state.home.initialized) return false;
+  // If cold entry is allowed and home is not initialized, don't skip
+  if (allowColdEntry && !state.home.initialized) return false;
 
-	// Otherwise use the normal logic
-	return !shouldFetchHolidayData(holidayId, state);
+  // Otherwise use the normal logic
+  return !shouldFetchHolidayData(holidayId, state);
 }

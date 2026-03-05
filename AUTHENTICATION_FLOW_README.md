@@ -42,24 +42,24 @@ model User {
 
 ```typescript
 const user = await prisma.user.upsert({
-	where: { auth0Sub: session.user.sub }, // Find by Auth0 ID
-	update: {
-		// Update existing user info
-		email: session.user.email,
-		name: session.user.name,
-		picture: session.user.picture,
-		isInDb: true,
-		updatedAt: new Date(),
-	},
-	create: {
-		// Create new user
-		auth0Sub: session.user.sub, // Store Auth0 ID
-		email: session.user.email,
-		name: session.user.name,
-		picture: session.user.picture,
-		isInDb: true,
-		isFirstLogin: true, // Mark as first login
-	},
+  where: { auth0Sub: session.user.sub }, // Find by Auth0 ID
+  update: {
+    // Update existing user info
+    email: session.user.email,
+    name: session.user.name,
+    picture: session.user.picture,
+    isInDb: true,
+    updatedAt: new Date(),
+  },
+  create: {
+    // Create new user
+    auth0Sub: session.user.sub, // Store Auth0 ID
+    email: session.user.email,
+    name: session.user.name,
+    picture: session.user.picture,
+    isInDb: true,
+    isFirstLogin: true, // Mark as first login
+  },
 });
 ```
 
@@ -76,12 +76,10 @@ const user = await prisma.user.upsert({
 **File**: `src/lib/auth.ts` - `getAuth0Session()`
 
 ```typescript
-async function getAuth0Session(
-	request: NextRequest
-): Promise<Auth0Session | null> {
-	// Currently mocked for API scaffold
-	// TODO: Implement proper Auth0 session handling for Next.js 15
-	return null;
+async function getAuth0Session(request: NextRequest): Promise<Auth0Session | null> {
+  // Currently mocked for API scaffold
+  // TODO: Implement proper Auth0 session handling for Next.js 15
+  return null;
 }
 ```
 
@@ -101,13 +99,13 @@ async function getAuth0Session(
 
 ```typescript
 export async function requireAuth(request: NextRequest): Promise<AuthUser> {
-	const user = await getCurrentUser(request);
+  const user = await getCurrentUser(request);
 
-	if (!user) {
-		throw new Error("Authentication required");
-	}
+  if (!user) {
+    throw new Error('Authentication required');
+  }
 
-	return user;
+  return user;
 }
 ```
 
@@ -117,18 +115,18 @@ export async function requireAuth(request: NextRequest): Promise<AuthUser> {
 
 ```typescript
 export async function GET(request: NextRequest) {
-	const user = await requireAuth(request); // Get authenticated user
+  const user = await requireAuth(request); // Get authenticated user
 
-	// Use user.id (Prisma UUID) for database queries
-	const accounts = await prisma.account.findMany({
-		where: {
-			members: {
-				some: {
-					userId: user.id, // Uses Prisma UUID
-				},
-			},
-		},
-	});
+  // Use user.id (Prisma UUID) for database queries
+  const accounts = await prisma.account.findMany({
+    where: {
+      members: {
+        some: {
+          userId: user.id, // Uses Prisma UUID
+        },
+      },
+    },
+  });
 }
 ```
 
@@ -225,8 +223,8 @@ LEFT JOIN accounts a ON am.account_id = a.id;
 
 ```typescript
 // Debug in getCurrentUser function
-console.log("Auth0 sub:", session.user.sub);
-console.log("User lookup result:", user);
+console.log('Auth0 sub:', session.user.sub);
+console.log('User lookup result:', user);
 ```
 
 #### Issue: Database relationships failing
@@ -236,16 +234,16 @@ console.log("User lookup result:", user);
 ```typescript
 // Correct
 const account = await prisma.account.create({
-	data: {
-		ownerUserId: user.id, // Use Prisma UUID
-	},
+  data: {
+    ownerUserId: user.id, // Use Prisma UUID
+  },
 });
 
 // Incorrect
 const account = await prisma.account.create({
-	data: {
-		ownerUserId: user.auth0Sub, // Don't use Auth0 ID
-	},
+  data: {
+    ownerUserId: user.auth0Sub, // Don't use Auth0 ID
+  },
 });
 ```
 

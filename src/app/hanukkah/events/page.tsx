@@ -1,583 +1,645 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { useAuth0 } from "@auth0/auth0-react";
-import { fetchContacts } from "@/store/slices/addressBookSlice";
-import { updateTaskInHomeData, setHomeData, addTaskToHomeData, removeTaskFromHomeData } from "@/store/slices/homeSlice";
+import { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAuth0 } from '@auth0/auth0-react';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-	selectHolidayPreferences,
-	selectHomeInitialized,
-	selectHomeData,
-} from "@/store/selectors/home";
-import { getHolidayIdFromRoute } from "@/utils/holidayUtils";
-import { getHolidayDataFromRedux } from "@/utils/holidayData";
-import { selectIsHolidayShared } from "@/store/slices/sharesSlice";
+  updateTaskInHomeData,
+  setHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+} from '@/store/slices/homeSlice';
+import {
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+} from '@/store/selectors/home';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 
-import HolidayPageHeader from "@/components/common/HolidayPageHeader";
-import TaskSection from "@/components/common/TaskSection";
-import ToDoCard from "@/components/cards/to-do/ToDoCard";
-import FormModal from "@/components/modals/FormModal";
-import DeleteModal from "@/components/modals/DeleteModal";
-import SortModal from "@/components/modals/SortModal";
-import AddButton from "@/components/common/AddButton";
-
-
+import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import TaskSection from '@/components/common/TaskSection';
+import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import SortModal from '@/components/modals/SortModal';
+import AddButton from '@/components/common/AddButton';
 
 export default function HanukkahEventsPage() {
-	const dispatch = useAppDispatch();
-	const { contacts } = useAppSelector((state: any) => state.addressBook);
-	const { user: auth0User } = useAuth0();
+  const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { user: auth0User } = useAuth0();
 
-	// Get Redux data
-	const holidayPreferences = useAppSelector(selectHolidayPreferences);
-	const homeInitialized = useAppSelector(selectHomeInitialized);
-	const currentState = useAppSelector((state: any) => state);
+  // Get Redux data
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
+  const currentState = useAppSelector((state: any) => state);
 
-	// Holiday ID resolution
-	const resolvedHolidayId = homeInitialized
-		? getHolidayIdFromRoute("/hanukkah", holidayPreferences)
-		: getHolidayIdFromRoute("/hanukkah", holidayPreferences);
+  // Holiday ID resolution
+  const resolvedHolidayId = homeInitialized
+    ? getHolidayIdFromRoute('/hanukkah', holidayPreferences)
+    : getHolidayIdFromRoute('/hanukkah', holidayPreferences);
 
-	// Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
-	const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
-	const events = holidayData?.tasks?.filter((task: any) => task.category === "Events") || [];
-	const isLoading = !homeInitialized;
+  // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
+  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const events =
+    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+  const isLoading = !homeInitialized;
 
-	// Sharing status (for conditional form fields)
-	const isHolidayShared = useAppSelector((state: any) =>
-		selectIsHolidayShared(state, "hanukkah")
-	);
+  // Sharing status (for conditional form fields)
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'hanukkah'),
+  );
 
-	// State management
-	const [showFormModal, setShowFormModal] = useState(false);
-	const [selectedEvent, setSelectedEvent] = useState<any>(null);
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [eventToDelete, setEventToDelete] = useState<any>(null);
-	const [showSortModal, setShowSortModal] = useState(false);
-	const [sortBy, setSortBy] = useState<string>("datetime");
-	const [isUpdating, setIsUpdating] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
+  // State management
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<any>(null);
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('datetime');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-	useEffect(() => {
-		// Always fetch contacts for address book functionality
-		dispatch(fetchContacts());
-	}, [dispatch]);
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
-	// Check if default event tasks exist
-	useEffect(() => {
-		if (events.length === 0 && homeInitialized) {
-			// Could add default tasks here if needed
-		}
-	}, [events, homeInitialized]);
+  // Check if default event tasks exist
+  useEffect(() => {
+    if (events.length === 0 && homeInitialized) {
+      // Could add default tasks here if needed
+    }
+  }, [events, homeInitialized]);
 
-	// Refresh home data function
-	const refreshHomeData = async () => {
-		if (!auth0User?.sub || !resolvedHolidayId) return;
+  // Refresh home data function
+  const refreshHomeData = async () => {
+    if (!auth0User?.sub || !resolvedHolidayId) return;
 
-		try {
-			const response = await fetch("/api/home", {
-				headers: {
-					"Content-Type": "application/json",
-					"x-test-user": JSON.stringify({
-						sub: auth0User.sub,
-						email: auth0User.email,
-						name: auth0User.name,
-						picture: auth0User.picture,
-					}),
-				},
-			});
-			if (response.ok) {
-				const result = await response.json();
-				dispatch(setHomeData(result.data));
-			}
-		} catch (error) {
-			console.error("Error refreshing home data:", error);
-		}
-	};
+    try {
+      const response = await fetch('/api/home', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        dispatch(setHomeData(result.data));
+      }
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    }
+  };
 
-	// CRUD Operations Pattern (like Kwanzaa)
-	async function handleAddEvent(values: Record<string, any>) {
-		if (!values.title?.trim()) return;
-		if (!resolvedHolidayId || !auth0User) return;
+  // CRUD Operations Pattern (like Kwanzaa)
+  async function handleAddEvent(values: Record<string, any>) {
+    if (!values.title?.trim()) return;
+    if (!resolvedHolidayId || !auth0User) return;
 
-		const newTask = {
-			id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			category: "Events",
-			dueDate: values.dueDate || undefined,
-			isCompleted: false,
-			holidayId: resolvedHolidayId,
-		};
+    const newTask = {
+      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+      title: values.title,
+      description: values.description || undefined,
+      priority: values.priority as 'low' | 'medium' | 'high',
+      assignedTo: values.assignedTo || undefined,
+      category: 'Events',
+      dueDate: values.dueDate || undefined,
+      isCompleted: false,
+      holidayId: resolvedHolidayId,
+    };
 
-		try {
-			// Optimistically update Redux state first (like Kwanzaa)
-			dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+    try {
+      // Optimistically update Redux state first (like Kwanzaa)
+      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
 
-// Call API - map camelCase to snake_case for API
-		const apiPayload = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assigned_to: values.assignedTo || undefined, // snake_case for API
-			category: "Events",
-			due_date: values.dueDate || undefined, // snake_case for API
-			isCompleted: false,
-		};
-		
-		console.log('🐛 [HanukkahAdd] API payload:', apiPayload);
-		
-		const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"x-test-user": JSON.stringify({
-					sub: auth0User.sub,
-					email: auth0User.email,
-					name: auth0User.name,
-					picture: auth0User.picture,
-				}),
-			},
-			body: JSON.stringify(apiPayload),
-			});
+      // Call API - map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        category: 'Events',
+        due_date: values.dueDate || undefined, // snake_case for API
+        isCompleted: false,
+      };
 
-			if (response.ok) {
-				// Replace temporary task with real task from API (like Kwanzaa)
-				const result = await response.json();
-				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
-				dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
-				
-				// Also refresh home data like Kwanzaa does
-				await refreshHomeData();
-			} else {
-				// Remove optimistic update on error
-				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
-				console.error("Failed to add task:", response.status, response.statusText);
-			}
+      console.log('🐛 [HanukkahAdd] API payload:', apiPayload);
 
-			setShowFormModal(false);
-		} catch (error) {
-			// Remove optimistic update on error (like Kwanzaa)
-			dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }));
-			console.error("Error creating event:", error);
-		}
-	}
+      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+        body: JSON.stringify(apiPayload),
+      });
 
-	async function handleToggleCompletion(eventId: string) {
-		if (!resolvedHolidayId || !auth0User) return;
+      if (response.ok) {
+        // Replace temporary task with real task from API (like Kwanzaa)
+        const result = await response.json();
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
 
-		const event = events.find((e: any) => e.id === eventId);
-		if (!event) return;
+        // Also refresh home data like Kwanzaa does
+        await refreshHomeData();
+      } else {
+        // Remove optimistic update on error
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: newTask.id,
+          }),
+        );
+        console.error('Failed to add task:', response.status, response.statusText);
+      }
 
-		// Optimistic update
-		dispatch(updateTaskInHomeData({
-			holidayId: resolvedHolidayId,
-			taskId: eventId,
-			updates: { isCompleted: !event.isCompleted },
-		}));
+      setShowFormModal(false);
+    } catch (error) {
+      // Remove optimistic update on error (like Kwanzaa)
+      dispatch(
+        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
+      );
+      console.error('Error creating event:', error);
+    }
+  }
 
-		try {
-			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${eventId}`, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					"x-test-user": JSON.stringify({
-						sub: auth0User.sub,
-						email: auth0User.email,
-						name: auth0User.name,
-						picture: auth0User.picture,
-					}),
-				},
-				body: JSON.stringify({ isCompleted: !event.isCompleted }),
-			});
+  async function handleToggleCompletion(eventId: string) {
+    if (!resolvedHolidayId || !auth0User) return;
 
-			if (!response.ok) {
-				// Revert on error
-				dispatch(updateTaskInHomeData({
-					holidayId: resolvedHolidayId,
-					taskId: eventId,
-					updates: { isCompleted: event.isCompleted },
-				}));
-				console.error("Failed to toggle event:", response.status, response.statusText);
-			}
-		} catch (error) {
-			// Revert on error
-			dispatch(updateTaskInHomeData({
-				holidayId: resolvedHolidayId,
-				taskId: eventId,
-				updates: { isCompleted: event.isCompleted },
-			}));
-			console.error("Error toggling event:", error);
-		}
-	}
+    const event = events.find((e: any) => e.id === eventId);
+    if (!event) return;
 
-	function handleEditEvent(event: any) {
-		setSelectedEvent(event);
-		setShowFormModal(true);
-	}
+    // Optimistic update
+    dispatch(
+      updateTaskInHomeData({
+        holidayId: resolvedHolidayId,
+        taskId: eventId,
+        updates: { isCompleted: !event.isCompleted },
+      }),
+    );
 
-	async function handleEditSubmit(values: Record<string, any>) {
-		if (!selectedEvent || !resolvedHolidayId || !auth0User) return;
+    try {
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${eventId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify({ isCompleted: !event.isCompleted }),
+        },
+      );
 
-		setIsUpdating(true);
-		const updates = {
-			title: values.title,
-			description: values.description || undefined,
-			priority: values.priority as "low" | "medium" | "high",
-			assignedTo: values.assignedTo || undefined,
-			dueDate: values.dueDate || undefined,
-		};
+      if (!response.ok) {
+        // Revert on error
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: eventId,
+            updates: { isCompleted: event.isCompleted },
+          }),
+        );
+        console.error(
+          'Failed to toggle event:',
+          response.status,
+          response.statusText,
+        );
+      }
+    } catch (error) {
+      // Revert on error
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: eventId,
+          updates: { isCompleted: event.isCompleted },
+        }),
+      );
+      console.error('Error toggling event:', error);
+    }
+  }
 
-		try {
-			// Optimistic update
-			dispatch(updateTaskInHomeData({
-				holidayId: resolvedHolidayId,
-				taskId: selectedEvent.id,
-				updates,
-			}));
+  function handleEditEvent(event: any) {
+    setSelectedEvent(event);
+    setShowFormModal(true);
+  }
 
-			// Map camelCase to snake_case for API
-			const apiPayload = {
-				title: values.title,
-				description: values.description || undefined,
-				priority: values.priority as "low" | "medium" | "high",
-				assigned_to: values.assignedTo || undefined, // snake_case for API
-				due_date: values.dueDate || undefined, // snake_case for API
-			};
-			
-			console.log('🐛 [HanukkahEdit] API payload:', apiPayload);
+  async function handleEditSubmit(values: Record<string, any>) {
+    if (!selectedEvent || !resolvedHolidayId || !auth0User) return;
 
-			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${selectedEvent.id}`, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					"x-test-user": JSON.stringify({
-						sub: auth0User.sub,
-						email: auth0User.email,
-						name: auth0User.name,
-						picture: auth0User.picture,
-					}),
-				},
-				body: JSON.stringify(apiPayload),
-			});
+    setIsUpdating(true);
+    const updates = {
+      title: values.title,
+      description: values.description || undefined,
+      priority: values.priority as 'low' | 'medium' | 'high',
+      assignedTo: values.assignedTo || undefined,
+      dueDate: values.dueDate || undefined,
+    };
 
-			if (!response.ok) {
-				// Revert on error
-				dispatch(updateTaskInHomeData({
-					holidayId: resolvedHolidayId,
-					taskId: selectedEvent.id,
-					updates: selectedEvent,
-				}));
-				console.error("Failed to update event:", response.status, response.statusText);
-			}
+    try {
+      // Optimistic update
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: selectedEvent.id,
+          updates,
+        }),
+      );
 
-			setShowFormModal(false);
-			setSelectedEvent(null);
-		} catch (error) {
-			// Revert on error
-			dispatch(updateTaskInHomeData({
-				holidayId: resolvedHolidayId,
-				taskId: selectedEvent.id,
-				updates: selectedEvent,
-			}));
-			console.error("Error updating event:", error);
-		} finally {
-			setIsUpdating(false);
-		}
-	}
+      // Map camelCase to snake_case for API
+      const apiPayload = {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assignedTo || undefined, // snake_case for API
+        due_date: values.dueDate || undefined, // snake_case for API
+      };
 
-	function handleDeleteEvent(event: any) {
-		setEventToDelete(event);
-		setShowDeleteModal(true);
-	}
+      console.log('🐛 [HanukkahEdit] API payload:', apiPayload);
 
-	function handleDelete(taskId: string, taskTitle: string) {
-		const task = events.find((e: any) => e.id === taskId);
-		if (task) {
-			setEventToDelete(task);
-			setShowDeleteModal(true);
-		}
-	}
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${selectedEvent.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify(apiPayload),
+        },
+      );
 
-	async function confirmDelete() {
-		if (!eventToDelete || !resolvedHolidayId || !auth0User) return;
+      if (!response.ok) {
+        // Revert on error
+        dispatch(
+          updateTaskInHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: selectedEvent.id,
+            updates: selectedEvent,
+          }),
+        );
+        console.error(
+          'Failed to update event:',
+          response.status,
+          response.statusText,
+        );
+      }
 
-		setIsDeleting(true);
-		try {
-			const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks/${eventToDelete.id}`, {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-					"x-test-user": JSON.stringify({
-						sub: auth0User.sub,
-						email: auth0User.email,
-						name: auth0User.name,
-						picture: auth0User.picture,
-					}),
-				},
-			});
+      setShowFormModal(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      // Revert on error
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: resolvedHolidayId,
+          taskId: selectedEvent.id,
+          updates: selectedEvent,
+        }),
+      );
+      console.error('Error updating event:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
-			if (response.ok) {
-				// Remove from Redux state on success
-				dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: eventToDelete.id }));
-			} else {
-				console.error("Failed to delete event:", response.status, response.statusText);
-			}
+  function handleDeleteEvent(event: any) {
+    setEventToDelete(event);
+    setShowDeleteModal(true);
+  }
 
-			setShowDeleteModal(false);
-			setEventToDelete(null);
-		} catch (error) {
-			console.error("Error deleting event:", error);
-		} finally {
-			setIsDeleting(false);
-		}
-	}
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = events.find((e: any) => e.id === taskId);
+    if (task) {
+      setEventToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
 
-	function openForm() {
-		setShowFormModal(true);
-		setSelectedEvent(null);
-	}
+  async function confirmDelete() {
+    if (!eventToDelete || !resolvedHolidayId || !auth0User) return;
 
-	function closeForm() {
-		setShowFormModal(false);
-		setSelectedEvent(null);
-	}
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/holidays/${resolvedHolidayId}/tasks/${eventToDelete.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+        },
+      );
 
-	function cancelDelete() {
-		setShowDeleteModal(false);
-		setEventToDelete(null);
-	}
+      if (response.ok) {
+        // Remove from Redux state on success
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId: resolvedHolidayId,
+            taskId: eventToDelete.id,
+          }),
+        );
+      } else {
+        console.error(
+          'Failed to delete event:',
+          response.status,
+          response.statusText,
+        );
+      }
 
-	// Event data sorting
-	const sortedEvents = [...events].sort((a, b) => {
-		switch (sortBy) {
-			case "title":
-				return a.title.localeCompare(b.title);
-			case "completed":
-				return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
-			case "datetime":
-				return new Date(a.datetime || 0).getTime() - new Date(b.datetime || 0).getTime();
-			default:
-				return 0;
-		}
-	});
+      setShowDeleteModal(false);
+      setEventToDelete(null);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
-	const incompleteEvents = sortedEvents.filter((event: any) => !event.isCompleted);
-	const completedEvents = sortedEvents.filter((event: any) => event.isCompleted);
+  function openForm() {
+    setShowFormModal(true);
+    setSelectedEvent(null);
+  }
 
-	// Contact options for assigned to field
-	const contactOptions = contacts.map((contact: any) => ({
-		value: contact.id,
-		label: contact.name,
-	}));
+  function closeForm() {
+    setShowFormModal(false);
+    setSelectedEvent(null);
+  }
 
-	// Form field configuration
-	const formFields = [
-		{
-			id: "title",
-			type: "text" as const,
-			placeholder: "Task Title*",
-			required: true,
-		},
-		{
-			id: "description",
-			type: "textarea" as const,
-			placeholder: "Description",
-			rows: 2,
-		},
-		{
-			id: "priority",
-			type: "select" as const,
-			placeholder: "Priority",
-			options: [
-				{ value: "low", label: "Low Priority" },
-				{ value: "medium", label: "Medium Priority" },
-				{ value: "high", label: "High Priority" },
-			],
-		},
-		// CONDITIONAL: Only show when isHolidayShared is true
-		...(isHolidayShared ? [{
-			id: "assignedTo",
-			type: "text" as const,
-			placeholder: "Assigned To",
-		}] : []),
-		{
-			id: "dueDate",
-			type: "date" as const,
-			placeholder: "Due Date",
-		},
-	];
+  function cancelDelete() {
+    setShowDeleteModal(false);
+    setEventToDelete(null);
+  }
 
-	if (isLoading) {
-		return (
-			<div className="min-h-screen hanukkah-gradient flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-					<p className="text-gray-600 dark:text-gray-300">Loading events...</p>
-				</div>
-			</div>
-		);
-	}
+  // Event data sorting
+  const sortedEvents = [...events].sort((a, b) => {
+    switch (sortBy) {
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'completed':
+        return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
+      case 'datetime':
+        return (
+          new Date(a.datetime || 0).getTime() - new Date(b.datetime || 0).getTime()
+        );
+      default:
+        return 0;
+    }
+  });
 
-	return (
-		<div className="min-h-screen hanukkah-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
-			<HolidayPageHeader
-				title="Hanukkah Events"
-				backHref="/hanukkah"
-				description="Plan your Hanukkah celebrations!"
-			/>
+  const incompleteEvents = sortedEvents.filter((event: any) => !event.isCompleted);
+  const completedEvents = sortedEvents.filter((event: any) => event.isCompleted);
 
-			<div className="w-full max-w-4xl mt-8">
-				{/* Event Status */}
-				<div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 mb-6 shadow-lg border border-blue-200/30">
-					<div className="grid grid-cols-3 gap-4 text-center">
-						<div>
-							<div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-								{events.length}
-							</div>
-							<div className="text-sm text-gray-600 dark:text-gray-300">
-								Total Events
-							</div>
-						</div>
-						<div>
-							<div className="text-2xl font-bold text-green-600 dark:text-green-400">
-								{completedEvents.length}
-							</div>
-							<div className="text-sm text-gray-600 dark:text-gray-300">
-								Completed
-							</div>
-						</div>
-						<div>
-							<div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-								{incompleteEvents.length}
-							</div>
-							<div className="text-sm text-gray-600 dark:text-gray-300">
-								Upcoming
-							</div>
-						</div>
-					</div>
-				</div>
+  // Contact options for assigned to field
+  const contactOptions = contacts.map((contact: any) => ({
+    value: contact.id,
+    label: contact.name,
+  }));
 
-				{/* Add Button - positioned above tasks like other implementations */}
-				<div className="w-full">
-					<div className="w-full">
-						<AddButton 
-							title="Event"
-							onClick={openForm}
-							color="blue"
-						/>
-					</div>
-				</div>
+  // Form field configuration
+  const formFields = [
+    {
+      id: 'title',
+      type: 'text' as const,
+      placeholder: 'Task Title*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'textarea' as const,
+      placeholder: 'Description',
+      rows: 2,
+    },
+    {
+      id: 'priority',
+      type: 'select' as const,
+      placeholder: 'Priority',
+      options: [
+        { value: 'low', label: 'Low Priority' },
+        { value: 'medium', label: 'Medium Priority' },
+        { value: 'high', label: 'High Priority' },
+      ],
+    },
+    // CONDITIONAL: Only show when isHolidayShared is true
+    ...(isHolidayShared
+      ? [
+          {
+            id: 'assignedTo',
+            type: 'text' as const,
+            placeholder: 'Assigned To',
+          },
+        ]
+      : []),
+    {
+      id: 'dueDate',
+      type: 'date' as const,
+      placeholder: 'Due Date',
+    },
+  ];
 
-				{/* Upcoming Events */}
-				<TaskSection
-					title="Upcoming Events"
-					items={incompleteEvents}
-					isCompleted={false}
-					emptyMessage="No events planned yet."
-					completedMessage="All events completed!"
-					renderItem={(task: any) => (
-						<ToDoCard
-							key={task.id}
-							task={task}
-							onToggleComplete={handleToggleCompletion}
-							onDelete={(taskId: string) => handleDelete(taskId, task.title)}
-							onEdit={handleEditEvent}
-							theme={{
-								accentColor: "#3b82f6", // Blue for Hanukkah
-							}}
-							borderColor="rgb(59 130 246)" // Blue border for Hanukkah
-							disableInternalModal={true}
-						/>
-					)}
-				/>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen hanukkah-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading events...</p>
+        </div>
+      </div>
+    );
+  }
 
-				{/* Completed Events */}
-				{completedEvents.length > 0 && (
-					<TaskSection
-						title="Completed Events"
-						items={completedEvents}
-						isCompleted={true}
-						emptyMessage=""
-						completedMessage=""
-						renderItem={(task: any) => (
-							<ToDoCard
-								key={task.id}
-								task={task}
-								onToggleComplete={handleToggleCompletion}
-								onDelete={(taskId: string) => handleDelete(taskId, task.title)}
-								onEdit={handleEditEvent}
-								className="opacity-60"
-								theme={{
-									accentColor: "#3b82f6", // Blue for Hanukkah
-								}}
-								borderColor="rgb(59 130 246)" // Blue border for Hanukkah
-								disableInternalModal={true}
-							/>
-						)}
-					/>
-				)}
-			</div>
+  return (
+    <div className="min-h-screen hanukkah-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      <HolidayPageHeader
+        title="Hanukkah Events"
+        backHref="/hanukkah"
+        description="Plan your Hanukkah celebrations!"
+      />
 
-			{/* Add Modal */}
-			<FormModal
-				isOpen={showFormModal && !selectedEvent}
-				onClose={closeForm}
-				title="Add New Event Task"
-				fields={formFields}
-				onSubmit={handleAddEvent}
-				submitText="Add Task"
-				submitButtonColor="#3b82f6"
-				initialValues={{
-					title: "",
-					description: "",
-					priority: "medium",
-					...(isHolidayShared ? { assignedTo: "" } : {}),
-					dueDate: "",
-				}}
-			/>
+      <div className="w-full max-w-4xl mt-8">
+        {/* Event Status */}
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 mb-6 shadow-lg border border-blue-200/30">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {events.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Total Events
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {completedEvents.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Completed
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                {incompleteEvents.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Upcoming
+              </div>
+            </div>
+          </div>
+        </div>
 
-			{/* Edit Modal */}
-			<FormModal
-				isOpen={showFormModal && !!selectedEvent}
-				onClose={closeForm}
-				title="Edit Event Task"
-				fields={formFields}
-				onSubmit={handleEditSubmit}
-				submitText="Update Task"
-				submitButtonColor="#3b82f6"
-				initialValues={selectedEvent ? {
-				...selectedEvent,
-				dueDate: selectedEvent.dueDate ? new Date(selectedEvent.dueDate).toISOString().split('T')[0] : "",
-			} : {}}
-			/>
+        {/* Add Button - positioned above tasks like other implementations */}
+        <div className="w-full">
+          <div className="w-full">
+            <AddButton title="Event" onClick={openForm} color="blue" />
+          </div>
+        </div>
 
-			{/* Delete Modal */}
-			<DeleteModal
-				isOpen={showDeleteModal}
-				onCancel={cancelDelete}
-				onConfirm={confirmDelete}
-				title="Delete Event"
-				message={`Are you sure you want to delete "${eventToDelete?.title}"?`}
-				loading={isDeleting}
-			/>
+        {/* Upcoming Events */}
+        <TaskSection
+          title="Upcoming Events"
+          items={incompleteEvents}
+          isCompleted={false}
+          emptyMessage="No events planned yet."
+          completedMessage="All events completed!"
+          renderItem={(task: any) => (
+            <ToDoCard
+              key={task.id}
+              task={task}
+              onToggleComplete={handleToggleCompletion}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              onEdit={handleEditEvent}
+              theme={{
+                accentColor: '#3b82f6', // Blue for Hanukkah
+              }}
+              borderColor="rgb(59 130 246)" // Blue border for Hanukkah
+              disableInternalModal={true}
+            />
+          )}
+        />
 
-			{/* Sort Modal */}
-			<SortModal
-				isOpen={showSortModal}
-				onClose={() => setShowSortModal(false)}
-				sortOptions={[
-					{ value: "datetime", label: "Date & Time" },
-					{ value: "title", label: "Title A-Z" },
-					{ value: "completed", label: "Completion Status" },
-				]}
-				sortBy={sortBy}
-				onSortChange={(sortOption: string) => setSortBy(sortOption)}
-				title="Sort Events"
-			/>
-		</div>
-	);
+        {/* Completed Events */}
+        {completedEvents.length > 0 && (
+          <TaskSection
+            title="Completed Events"
+            items={completedEvents}
+            isCompleted={true}
+            emptyMessage=""
+            completedMessage=""
+            renderItem={(task: any) => (
+              <ToDoCard
+                key={task.id}
+                task={task}
+                onToggleComplete={handleToggleCompletion}
+                onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+                onEdit={handleEditEvent}
+                className="opacity-60"
+                theme={{
+                  accentColor: '#3b82f6', // Blue for Hanukkah
+                }}
+                borderColor="rgb(59 130 246)" // Blue border for Hanukkah
+                disableInternalModal={true}
+              />
+            )}
+          />
+        )}
+      </div>
+
+      {/* Add Modal */}
+      <FormModal
+        isOpen={showFormModal && !selectedEvent}
+        onClose={closeForm}
+        title="Add New Event Task"
+        fields={formFields}
+        onSubmit={handleAddEvent}
+        submitText="Add Task"
+        submitButtonColor="#3b82f6"
+        initialValues={{
+          title: '',
+          description: '',
+          priority: 'medium',
+          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          dueDate: '',
+        }}
+      />
+
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showFormModal && !!selectedEvent}
+        onClose={closeForm}
+        title="Edit Event Task"
+        fields={formFields}
+        onSubmit={handleEditSubmit}
+        submitText="Update Task"
+        submitButtonColor="#3b82f6"
+        initialValues={
+          selectedEvent
+            ? {
+                ...selectedEvent,
+                dueDate: selectedEvent.dueDate
+                  ? new Date(selectedEvent.dueDate).toISOString().split('T')[0]
+                  : '',
+              }
+            : {}
+        }
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Event"
+        message={`Are you sure you want to delete "${eventToDelete?.title}"?`}
+        loading={isDeleting}
+      />
+
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortOptions={[
+          { value: 'datetime', label: 'Date & Time' },
+          { value: 'title', label: 'Title A-Z' },
+          { value: 'completed', label: 'Completion Status' },
+        ]}
+        sortBy={sortBy}
+        onSortChange={(sortOption: string) => setSortBy(sortOption)}
+        title="Sort Events"
+      />
+    </div>
+  );
 }

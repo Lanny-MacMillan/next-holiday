@@ -106,26 +106,26 @@ Create new API routes in `src/app/api/` to replace Redux async thunks:
 ```typescript
 // src/app/api/users/route.ts
 export async function POST(request: Request) {
-	const { auth0Sub, email, name, picture } = await request.json();
-	const user = await prisma.user.upsert({
-		where: { auth0Sub },
-		update: { email, name, picture, isInDb: true },
-		create: { auth0Sub, email, name, picture, isInDb: true },
-	});
-	return Response.json(user);
+  const { auth0Sub, email, name, picture } = await request.json();
+  const user = await prisma.user.upsert({
+    where: { auth0Sub },
+    update: { email, name, picture, isInDb: true },
+    create: { auth0Sub, email, name, picture, isInDb: true },
+  });
+  return Response.json(user);
 }
 
 // src/app/api/users/me/route.ts
 export async function GET(request: Request) {
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({
-		where: { auth0Sub },
-		include: {
-			ownedAccounts: true,
-			accountMembers: { include: { account: true } },
-		},
-	});
-	return Response.json(user);
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({
+    where: { auth0Sub },
+    include: {
+      ownedAccounts: true,
+      accountMembers: { include: { account: true } },
+    },
+  });
+  return Response.json(user);
 }
 ```
 
@@ -134,39 +134,39 @@ export async function GET(request: Request) {
 ```typescript
 // src/app/api/accounts/route.ts
 export async function GET(request: Request) {
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({
-		where: { auth0Sub },
-		include: {
-			ownedAccounts: true,
-			accountMembers: { include: { account: true } },
-		},
-	});
-	const accounts = [
-		...user.ownedAccounts,
-		...user.accountMembers.map((m) => m.account),
-	];
-	return Response.json(accounts);
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({
+    where: { auth0Sub },
+    include: {
+      ownedAccounts: true,
+      accountMembers: { include: { account: true } },
+    },
+  });
+  const accounts = [
+    ...user.ownedAccounts,
+    ...user.accountMembers.map(m => m.account),
+  ];
+  return Response.json(accounts);
 }
 
 export async function POST(request: Request) {
-	const { name } = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const { name } = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const account = await prisma.account.create({
-		data: {
-			name,
-			ownerUserId: user.id,
-			members: {
-				create: {
-					userId: user.id,
-					role: "owner",
-				},
-			},
-		},
-	});
-	return Response.json(account);
+  const account = await prisma.account.create({
+    data: {
+      name,
+      ownerUserId: user.id,
+      members: {
+        create: {
+          userId: user.id,
+          role: 'owner',
+        },
+      },
+    },
+  });
+  return Response.json(account);
 }
 ```
 
@@ -175,28 +175,28 @@ export async function POST(request: Request) {
 ```typescript
 // src/app/api/holidays/route.ts
 export async function GET(request: Request) {
-	const { searchParams } = new URL(request.url);
-	const accountId = searchParams.get("accountId");
+  const { searchParams } = new URL(request.url);
+  const accountId = searchParams.get('accountId');
 
-	const holidays = await prisma.holiday.findMany({
-		where: { accountId },
-		include: { creator: true },
-	});
-	return Response.json(holidays);
+  const holidays = await prisma.holiday.findMany({
+    where: { accountId },
+    include: { creator: true },
+  });
+  return Response.json(holidays);
 }
 
 export async function POST(request: Request) {
-	const holidayData = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const holidayData = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const holiday = await prisma.holiday.create({
-		data: {
-			...holidayData,
-			createdBy: user.id,
-		},
-	});
-	return Response.json(holiday);
+  const holiday = await prisma.holiday.create({
+    data: {
+      ...holidayData,
+      createdBy: user.id,
+    },
+  });
+  return Response.json(holiday);
 }
 ```
 
@@ -204,37 +204,34 @@ export async function POST(request: Request) {
 
 ```typescript
 // src/app/api/holidays/[id]/tasks/route.ts
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
-	const tasks = await prisma.task.findMany({
-		where: { holidayId: params.id },
-		include: {
-			assignee: true,
-			creator: true,
-			taskAssignees: { include: { user: true } },
-		},
-	});
-	return Response.json(tasks);
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const tasks = await prisma.task.findMany({
+    where: { holidayId: params.id },
+    include: {
+      assignee: true,
+      creator: true,
+      taskAssignees: { include: { user: true } },
+    },
+  });
+  return Response.json(tasks);
 }
 
 export async function POST(
-	request: Request,
-	{ params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } },
 ) {
-	const taskData = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const taskData = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const task = await prisma.task.create({
-		data: {
-			...taskData,
-			holidayId: params.id,
-			createdBy: user.id,
-		},
-	});
-	return Response.json(task);
+  const task = await prisma.task.create({
+    data: {
+      ...taskData,
+      holidayId: params.id,
+      createdBy: user.id,
+    },
+  });
+  return Response.json(task);
 }
 ```
 
@@ -242,33 +239,30 @@ export async function POST(
 
 ```typescript
 // src/app/api/holidays/[id]/gifts/route.ts
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
-	const gifts = await prisma.gift.findMany({
-		where: { holidayId: params.id },
-		include: { contact: true, creator: true },
-	});
-	return Response.json(gifts);
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const gifts = await prisma.gift.findMany({
+    where: { holidayId: params.id },
+    include: { contact: true, creator: true },
+  });
+  return Response.json(gifts);
 }
 
 export async function POST(
-	request: Request,
-	{ params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } },
 ) {
-	const giftData = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const giftData = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const gift = await prisma.gift.create({
-		data: {
-			...giftData,
-			holidayId: params.id,
-			createdBy: user.id,
-		},
-	});
-	return Response.json(gift);
+  const gift = await prisma.gift.create({
+    data: {
+      ...giftData,
+      holidayId: params.id,
+      createdBy: user.id,
+    },
+  });
+  return Response.json(gift);
 }
 ```
 
@@ -276,33 +270,30 @@ export async function POST(
 
 ```typescript
 // src/app/api/accounts/[id]/contacts/route.ts
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
-	const contacts = await prisma.contact.findMany({
-		where: { accountId: params.id },
-		include: { creator: true },
-	});
-	return Response.json(contacts);
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const contacts = await prisma.contact.findMany({
+    where: { accountId: params.id },
+    include: { creator: true },
+  });
+  return Response.json(contacts);
 }
 
 export async function POST(
-	request: Request,
-	{ params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } },
 ) {
-	const contactData = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const contactData = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const contact = await prisma.contact.create({
-		data: {
-			...contactData,
-			accountId: params.id,
-			createdBy: user.id,
-		},
-	});
-	return Response.json(contact);
+  const contact = await prisma.contact.create({
+    data: {
+      ...contactData,
+      accountId: params.id,
+      createdBy: user.id,
+    },
+  });
+  return Response.json(contact);
 }
 ```
 
@@ -310,41 +301,38 @@ export async function POST(
 
 ```typescript
 // src/app/api/holidays/[id]/budgets/route.ts
-export async function GET(
-	request: Request,
-	{ params }: { params: { id: string } }
-) {
-	const budgets = await prisma.budget.findMany({
-		where: { holidayId: params.id },
-		include: {
-			creator: true,
-			transactions: true,
-		},
-	});
-	return Response.json(budgets);
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const budgets = await prisma.budget.findMany({
+    where: { holidayId: params.id },
+    include: {
+      creator: true,
+      transactions: true,
+    },
+  });
+  return Response.json(budgets);
 }
 
 // src/app/api/budgets/[id]/transactions/route.ts
 export async function POST(
-	request: Request,
-	{ params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } },
 ) {
-	const transactionData = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const transactionData = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const transaction = await prisma.budgetTransaction.create({
-		data: {
-			...transactionData,
-			budgetId: params.id,
-			createdBy: user.id,
-		},
-	});
+  const transaction = await prisma.budgetTransaction.create({
+    data: {
+      ...transactionData,
+      budgetId: params.id,
+      createdBy: user.id,
+    },
+  });
 
-	// Update budget amounts
-	await updateBudgetAmounts(params.id);
+  // Update budget amounts
+  await updateBudgetAmounts(params.id);
 
-	return Response.json(transaction);
+  return Response.json(transaction);
 }
 ```
 
@@ -353,40 +341,40 @@ export async function POST(
 ```typescript
 // src/app/api/holidays/[id]/share/route.ts
 export async function POST(
-	request: Request,
-	{ params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } },
 ) {
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const share = await prisma.share.create({
-		data: {
-			holidayId: params.id,
-			ownerUserId: user.id,
-		},
-	});
-	return Response.json(share);
+  const share = await prisma.share.create({
+    data: {
+      holidayId: params.id,
+      ownerUserId: user.id,
+    },
+  });
+  return Response.json(share);
 }
 
 // src/app/api/shares/[id]/invites/route.ts
 export async function POST(
-	request: Request,
-	{ params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: { id: string } },
 ) {
-	const { toEmail, message } = await request.json();
-	const auth0Sub = getAuth0Sub(request);
-	const user = await prisma.user.findUnique({ where: { auth0Sub } });
+  const { toEmail, message } = await request.json();
+  const auth0Sub = getAuth0Sub(request);
+  const user = await prisma.user.findUnique({ where: { auth0Sub } });
 
-	const invite = await prisma.invite.create({
-		data: {
-			shareId: params.id,
-			fromUserId: user.id,
-			toEmail,
-			message,
-			status: "pending",
-		},
-	});
-	return Response.json(invite);
+  const invite = await prisma.invite.create({
+    data: {
+      shareId: params.id,
+      fromUserId: user.id,
+      toEmail,
+      message,
+      status: 'pending',
+    },
+  });
+  return Response.json(invite);
 }
 ```
 
@@ -399,20 +387,20 @@ Modify existing slices to use API calls instead of localStorage:
 ```typescript
 // Before: localStorage-based
 export const fetchTasks = createAsyncThunk(
-	"tasks/fetchTasks",
-	async (_, { getState }) => {
-		// localStorage logic
-	}
+  'tasks/fetchTasks',
+  async (_, { getState }) => {
+    // localStorage logic
+  },
 );
 
 // After: API-based
 export const fetchTasks = createAsyncThunk(
-	"tasks/fetchTasks",
-	async (holidayId: string) => {
-		const response = await fetch(`/api/holidays/${holidayId}/tasks`);
-		if (!response.ok) throw new Error("Failed to fetch tasks");
-		return response.json();
-	}
+  'tasks/fetchTasks',
+  async (holidayId: string) => {
+    const response = await fetch(`/api/holidays/${holidayId}/tasks`);
+    if (!response.ok) throw new Error('Failed to fetch tasks');
+    return response.json();
+  },
 );
 ```
 
@@ -423,14 +411,14 @@ Update Redux state structure to match database schema:
 ```typescript
 // Before: Flat arrays
 interface TasksState {
-	tasks: Task[];
+  tasks: Task[];
 }
 
 // After: Normalized by holiday
 interface TasksState {
-	byHoliday: Record<string, Task[]>;
-	loading: Record<string, boolean>;
-	error: Record<string, string | null>;
+  byHoliday: Record<string, Task[]>;
+  loading: Record<string, boolean>;
+  error: Record<string, string | null>;
 }
 ```
 
@@ -441,12 +429,12 @@ Update selectors to work with normalized state:
 ```typescript
 // Before
 export const selectTasksForHoliday = (state: any, holidayKey: string) => {
-	return state.tasks.tasks.filter((task) => task.holidayKey === holidayKey);
+  return state.tasks.tasks.filter(task => task.holidayKey === holidayKey);
 };
 
 // After
 export const selectTasksForHoliday = (state: any, holidayId: string) => {
-	return state.tasks.byHoliday[holidayId] || [];
+  return state.tasks.byHoliday[holidayId] || [];
 };
 ```
 
@@ -458,14 +446,14 @@ Update components to fetch data by holiday ID instead of using global state:
 
 ```typescript
 // Before
-const tasks = useSelector((state) => state.tasks.tasks);
+const tasks = useSelector(state => state.tasks.tasks);
 
 // After
-const tasks = useSelector((state) => selectTasksForHoliday(state, holidayId));
+const tasks = useSelector(state => selectTasksForHoliday(state, holidayId));
 const dispatch = useDispatch();
 
 useEffect(() => {
-	dispatch(fetchTasks(holidayId));
+  dispatch(fetchTasks(holidayId));
 }, [holidayId, dispatch]);
 ```
 
@@ -475,13 +463,13 @@ Update forms to include holiday context:
 
 ```typescript
 // Before
-const handleSubmit = (taskData) => {
-	dispatch(addTask(taskData));
+const handleSubmit = taskData => {
+  dispatch(addTask(taskData));
 };
 
 // After
-const handleSubmit = (taskData) => {
-	dispatch(addTask({ ...taskData, holidayId }));
+const handleSubmit = taskData => {
+  dispatch(addTask({ ...taskData, holidayId }));
 };
 ```
 
@@ -615,17 +603,17 @@ FROM existing_tasks_data;
 Implement feature flags to gradually migrate features:
 
 ```typescript
-const useDatabaseBackend = process.env.NEXT_PUBLIC_USE_DB === "true";
+const useDatabaseBackend = process.env.NEXT_PUBLIC_USE_DB === 'true';
 
 export const fetchTasks = createAsyncThunk(
-	"tasks/fetchTasks",
-	async (holidayId: string) => {
-		if (useDatabaseBackend) {
-			return fetchFromAPI(holidayId);
-		} else {
-			return fetchFromLocalStorage();
-		}
-	}
+  'tasks/fetchTasks',
+  async (holidayId: string) => {
+    if (useDatabaseBackend) {
+      return fetchFromAPI(holidayId);
+    } else {
+      return fetchFromLocalStorage();
+    }
+  },
 );
 ```
 
@@ -634,15 +622,15 @@ export const fetchTasks = createAsyncThunk(
 During migration, write to both Redux and database:
 
 ```typescript
-export const addTask = createAsyncThunk("tasks/addTask", async (taskData) => {
-	// Write to database
-	const dbResponse = await fetch("/api/tasks", {
-		method: "POST",
-		body: JSON.stringify(taskData),
-	});
+export const addTask = createAsyncThunk('tasks/addTask', async taskData => {
+  // Write to database
+  const dbResponse = await fetch('/api/tasks', {
+    method: 'POST',
+    body: JSON.stringify(taskData),
+  });
 
-	// Also update Redux for backward compatibility
-	return { ...taskData, id: dbResponse.id };
+  // Also update Redux for backward compatibility
+  return { ...taskData, id: dbResponse.id };
 });
 ```
 
@@ -665,7 +653,7 @@ Implement Redis caching for frequently accessed data:
 // Cache holiday data
 const cachedHoliday = await redis.get(`holiday:${holidayId}`);
 if (cachedHoliday) {
-	return JSON.parse(cachedHoliday);
+  return JSON.parse(cachedHoliday);
 }
 
 // Fetch from database and cache
@@ -701,14 +689,14 @@ interface TasksState {
 Create comprehensive database tests:
 
 ```typescript
-describe("Holiday API", () => {
-	it("should create holiday with tasks", async () => {
-		const holiday = await createHoliday(testData);
-		const tasks = await createTasks(holiday.id, testTasks);
+describe('Holiday API', () => {
+  it('should create holiday with tasks', async () => {
+    const holiday = await createHoliday(testData);
+    const tasks = await createTasks(holiday.id, testTasks);
 
-		expect(holiday.account_id).toBe(testAccount.id);
-		expect(tasks).toHaveLength(testTasks.length);
-	});
+    expect(holiday.account_id).toBe(testAccount.id);
+    expect(tasks).toHaveLength(testTasks.length);
+  });
 });
 ```
 
@@ -717,13 +705,13 @@ describe("Holiday API", () => {
 Test the full Redux-to-database flow:
 
 ```typescript
-describe("Task Management", () => {
-	it("should sync Redux state with database", async () => {
-		const task = await dispatch(addTask(testTask));
-		const dbTask = await fetchTaskFromDB(task.id);
+describe('Task Management', () => {
+  it('should sync Redux state with database', async () => {
+    const task = await dispatch(addTask(testTask));
+    const dbTask = await fetchTaskFromDB(task.id);
 
-		expect(task).toEqual(dbTask);
-	});
+    expect(task).toEqual(dbTask);
+  });
 });
 ```
 

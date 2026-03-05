@@ -1,47 +1,43 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { ReduxProvider } from "@/store/provider";
-import Auth0ProviderWrapper from "@/components/auth/Auth0Provider";
-import AppContent from "@/components/AppContent";
-import { installFetchTracer } from "@/lib/traceFetch";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { ReduxProvider } from '@/store/provider';
+import Auth0ProviderWrapper from '@/components/auth/Auth0Provider';
+import AppContent from '@/components/AppContent';
+import { installFetchTracer } from '@/lib/traceFetch';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-	title: "Next Holiday",
-	description: "Plan your holidays with ease",
+  title: 'Next Holiday',
+  description: 'Plan your holidays with ease',
 };
 
-export default function RootLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
-	// Install fetch tracer on client side
-	if (typeof window !== "undefined") {
-		installFetchTracer();
-	}
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Install fetch tracer on client side
+  if (typeof window !== 'undefined') {
+    installFetchTracer();
+  }
 
-	return (
-		<html lang="en">
-			<head>
-				<link
-					href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap"
-					rel="stylesheet"
-				/>
-				<link
-					href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap"
-					rel="stylesheet"
-				/>
-			</head>
-			<body className={inter.className}>
-				<Auth0ProviderWrapper>
-					<ReduxProvider>
-						<AppContent>{children}</AppContent>
-					</ReduxProvider>
-				</Auth0ProviderWrapper>
-			</body>
-		</html>
-	);
+  return (
+    <html lang="en">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className={inter.className}>
+        <Auth0ProviderWrapper>
+          <ReduxProvider>
+            <AppContent>{children}</AppContent>
+          </ReduxProvider>
+        </Auth0ProviderWrapper>
+      </body>
+    </html>
+  );
 }

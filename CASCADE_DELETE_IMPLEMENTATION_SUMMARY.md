@@ -120,18 +120,18 @@ The implementation is production-ready with:
 ```typescript
 // Dry run to see impact
 const result = await deleteHolidayData({
-	accountId: "account-123",
-	holidayId: "holiday-456",
-	dryRun: true,
+  accountId: 'account-123',
+  holidayId: 'holiday-456',
+  dryRun: true,
 });
 
 // Result shows: { Holiday: 1, Task: 5, Gift: 3, Card: 2, ... }
 
 // Actual deletion
 const result = await deleteHolidayData({
-	accountId: "account-123",
-	holidayId: "holiday-456",
-	dryRun: false,
+  accountId: 'account-123',
+  holidayId: 'holiday-456',
+  dryRun: false,
 });
 ```
 
