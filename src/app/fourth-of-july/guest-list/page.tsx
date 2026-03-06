@@ -8,9 +8,9 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
@@ -65,10 +65,11 @@ export default function FourthOfJulyGuestListPage() {
     : null;
 
   // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
 
   // Get holiday data from Redux
-  const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
   // Get guest lists from home data
   const guestLists = useAppSelector(

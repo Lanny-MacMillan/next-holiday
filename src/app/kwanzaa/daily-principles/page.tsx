@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import {
   updateTaskInHomeData,
   setHomeData,
@@ -13,10 +13,9 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -75,20 +74,12 @@ const defaultKwanzaaPrinciples = [
 
 export default function DailyPrinciplesPage() {
   const dispatch = useAppDispatch();
-  const { user: auth0User } = useAuth0();
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
-
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/kwanzaa', holidayPreferences)
-    : getHolidayIdFromRoute('/kwanzaa', holidayPreferences);
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -96,7 +87,9 @@ export default function DailyPrinciplesPage() {
   );
 
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const displayTasks =
     holidayData?.tasks?.filter(
       (task: any) => task.category === 'Daily Principles',
@@ -106,7 +99,7 @@ export default function DailyPrinciplesPage() {
 
   // Refresh home data function
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
@@ -149,7 +142,7 @@ export default function DailyPrinciplesPage() {
   }, [displayTasks, homeInitialized]);
 
   const handleToggleTask = async (taskId: string) => {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -164,30 +157,27 @@ export default function DailyPrinciplesPage() {
       // Optimistically update Redux state
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newCompletionStatus },
         }),
       );
 
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify({
-            isCompleted: newCompletionStatus,
+      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
           }),
         },
-      );
+        body: JSON.stringify({
+          isCompleted: newCompletionStatus,
+        }),
+      });
 
       if (!response.ok) {
         // Revert optimistic update on error
@@ -195,7 +185,7 @@ export default function DailyPrinciplesPage() {
         if (currentTask) {
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: taskId,
               updates: { isCompleted: currentTask.isCompleted },
             }),
@@ -215,7 +205,7 @@ export default function DailyPrinciplesPage() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     // Find the task to delete for potential rollback
     const taskToDelete = displayTasks.find((task: any) => task.id === taskId);
@@ -224,10 +214,10 @@ export default function DailyPrinciplesPage() {
     setIsDeleting(true);
     try {
       // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       console.log('Delete API URL:', apiUrl); // Debug logging
       console.log('Daily Principles before delete:', displayTasks.length);
       const response = await fetch(apiUrl, {
@@ -245,9 +235,7 @@ export default function DailyPrinciplesPage() {
 
       if (!response.ok) {
         // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
         console.error(
           'Failed to delete task:',
           response.status,
@@ -265,9 +253,7 @@ export default function DailyPrinciplesPage() {
       }
     } catch (error) {
       // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       console.error('Failed to delete task:', error);
     } finally {
       setIsDeleting(false);
@@ -276,7 +262,7 @@ export default function DailyPrinciplesPage() {
 
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -289,12 +275,12 @@ export default function DailyPrinciplesPage() {
       category: 'Daily Principles',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
       // API call with snake_case mapping
       const apiPayload = {
@@ -307,7 +293,7 @@ export default function DailyPrinciplesPage() {
         isCompleted: false,
       };
 
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,11 +312,11 @@ export default function DailyPrinciplesPage() {
         const result = await response.json();
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // CRITICAL: Refresh home data for proper UI updates
         await refreshHomeData();
@@ -338,7 +324,7 @@ export default function DailyPrinciplesPage() {
         // Remove optimistic update on error
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -346,9 +332,7 @@ export default function DailyPrinciplesPage() {
       }
       setShowFormModal(false);
     } catch (error) {
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add task:', error);
     } finally {
       setIsAdding(false);
@@ -356,7 +340,7 @@ export default function DailyPrinciplesPage() {
   }
 
   async function addDefaultPrinciples() {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
     try {
@@ -369,7 +353,7 @@ export default function DailyPrinciplesPage() {
         );
 
         try {
-          const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+          const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -394,9 +378,7 @@ export default function DailyPrinciplesPage() {
             console.log(`✅ Added principle ${i + 1}: ${result.title}`);
 
             // Add to Redux
-            dispatch(
-              addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }),
-            );
+            dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
             // Refresh home data after each principle to ensure consistency
             await refreshHomeData();
@@ -422,14 +404,14 @@ export default function DailyPrinciplesPage() {
   }
 
   async function handleEditTask(values: Record<string, any>) {
-    if (!selectedTask || !resolvedHolidayId || !auth0User) return;
+    if (!selectedTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
       // Optimistically update Redux state
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: selectedTask.id,
           updates: {
             title: values.title,
@@ -451,7 +433,7 @@ export default function DailyPrinciplesPage() {
       };
 
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${selectedTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${selectedTask.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -466,7 +448,7 @@ export default function DailyPrinciplesPage() {
         // Revert optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: selectedTask.id,
             updates: {
               title: selectedTask.title,

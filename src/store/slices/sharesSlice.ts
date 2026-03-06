@@ -382,22 +382,26 @@ export const selectShareByHolidayKey = createSelector(
 );
 
 export const selectShareById = createSelector(
-  (state: any, shareId: string) => state.shares.shares,
-  (shareId: string) => shareId,
+  (state: any) => state.shares.shares,
+  (state: any, shareId: string) => shareId,
   (shares, shareId) =>
     shares.find((share: HolidayShare) => share.shareId === shareId),
 );
 
 export const selectMembers = createSelector(
-  (state: any, shareId: string) =>
-    state.shares.shares.find((s: HolidayShare) => s.shareId === shareId),
-  share => (share ? share.memberUserIds : []),
+  (state: any) => state.shares.shares,
+  (state: any, shareId: string) => shareId,
+  (shares, shareId) => {
+    const share = shares.find((s: HolidayShare) => s.shareId === shareId);
+    return share ? share.memberUserIds : [];
+  },
 );
 
 export const selectHolidayShareId = createSelector(
-  (state: any, holidayKey: string, userId: string) => state.shares.shares,
-  (holidayKey: string, userId: string) => ({ holidayKey, userId }),
-  (shares, { holidayKey, userId }) => {
+  (state: any) => state.shares.shares,
+  (state: any, holidayKey: string) => holidayKey,
+  (state: any, holidayKey: string, userId: string) => userId,
+  (shares, holidayKey, userId) => {
     const share = shares.find(
       (s: HolidayShare) =>
         s.holidayKey === holidayKey &&
@@ -429,9 +433,10 @@ export const selectIsHolidayShared = createSelector(
 );
 
 export const selectIsUserInShare = createSelector(
-  (state: any, shareId: string, userId: string) => state.shares.shares,
-  (shareId: string, userId: string) => ({ shareId, userId }),
-  (shares, { shareId, userId }) => {
+  (state: any) => state.shares.shares,
+  (state: any, shareId: string) => shareId,
+  (state: any, shareId: string, userId: string) => userId,
+  (shares, shareId, userId) => {
     const share = shares.find((s: HolidayShare) => s.shareId === shareId);
     return share
       ? share.ownerUserId === userId || share.memberUserIds.includes(userId)
@@ -440,18 +445,20 @@ export const selectIsUserInShare = createSelector(
 );
 
 export const selectIsUserOwner = createSelector(
-  (state: any, shareId: string, userId: string) => state.shares.shares,
-  (shareId: string, userId: string) => ({ shareId, userId }),
-  (shares, { shareId, userId }) => {
+  (state: any) => state.shares.shares,
+  (state: any, shareId: string) => shareId,
+  (state: any, shareId: string, userId: string) => userId,
+  (shares, shareId, userId) => {
     const share = shares.find((s: HolidayShare) => s.shareId === shareId);
     return share ? share.ownerUserId === userId : false;
   },
 );
 
 export const selectIsOwnerByHolidayKey = createSelector(
-  (state: any, holidayKey: string, userId: string) => state.shares.shares,
-  (holidayKey: string, userId: string) => ({ holidayKey, userId }),
-  (shares, { holidayKey, userId }) => {
+  (state: any) => state.shares.shares,
+  (state: any, holidayKey: string) => holidayKey,
+  (state: any, holidayKey: string, userId: string) => userId,
+  (shares, holidayKey, userId) => {
     // Normalize holiday key for comparison
     const normalizeKey = (key: string | null | undefined) => {
       if (!key || typeof key !== 'string') return '';

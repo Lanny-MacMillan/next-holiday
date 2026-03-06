@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -14,9 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -30,22 +29,12 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 export default function MothersDayEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
-
-  // No need for useFormModalMutation hook - using direct API calls like Kwanzaa
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
-
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/mothers-day', holidayPreferences)
-    : getHolidayIdFromRoute('/mothers-day', holidayPreferences);
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -53,31 +42,17 @@ export default function MothersDayEventsPage() {
   );
 
   // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const events =
     holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Debug logging to understand the state
-  console.log("Mother's Day Events Debug:", {
-    resolvedHolidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    eventTasks: events.length,
-    events: events.map(e => ({
-      id: e.id,
-      title: e.title,
-      category: e.category,
-      isCompleted: e.isCompleted,
-    })),
-  });
-
   // Refresh home data function (like gift-list)
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
@@ -119,7 +94,7 @@ export default function MothersDayEventsPage() {
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -132,15 +107,12 @@ export default function MothersDayEventsPage() {
       category: 'Events',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first (like Kwanzaa)
-      console.log('Adding task optimistically:', newTask);
-      console.log('Holiday ID for addition:', resolvedHolidayId);
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-      console.log('Task added to Redux, making API call...');
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
       // Call API - map camelCase to snake_case for API
       const apiPayload = {
@@ -153,7 +125,7 @@ export default function MothersDayEventsPage() {
         isCompleted: false,
       };
 
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,14 +142,13 @@ export default function MothersDayEventsPage() {
       if (response.ok) {
         // Replace temporary task with real task from API (like Kwanzaa)
         const result = await response.json();
-        console.log('API success, replacing temp task with real task:', result);
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // Also refresh home data like gift-list does
         await refreshHomeData();
@@ -186,7 +157,7 @@ export default function MothersDayEventsPage() {
         console.log('API error, removing optimistic update');
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -196,9 +167,7 @@ export default function MothersDayEventsPage() {
       setShowForm(false);
     } catch (error) {
       // Remove optimistic update on error (like Kwanzaa)
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add task:', error);
     } finally {
       setIsAdding(false);
@@ -206,7 +175,7 @@ export default function MothersDayEventsPage() {
   }
 
   async function handleToggleCompletion(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -223,15 +192,14 @@ export default function MothersDayEventsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newCompletionStatus },
         }),
       );
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-      console.log('Toggle API URL:', apiUrl); // Debug logging
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       const response = await fetch(apiUrl, {
         method: 'PATCH',
         headers: {
@@ -254,7 +222,7 @@ export default function MothersDayEventsPage() {
         if (currentTask) {
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: taskId,
               updates: { isCompleted: currentTask.isCompleted },
             }),
@@ -279,7 +247,7 @@ export default function MothersDayEventsPage() {
   };
 
   async function handleEditSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
@@ -294,7 +262,7 @@ export default function MothersDayEventsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: updatedTask,
         }),
@@ -309,10 +277,8 @@ export default function MothersDayEventsPage() {
         due_date: values.dueDate || undefined, // snake_case for API
       };
 
-      console.log('🐛 [MothersDayEdit] API payload:', apiPayload);
-
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -332,7 +298,7 @@ export default function MothersDayEventsPage() {
         // Revert the optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: {
               title: editingTask.title,
@@ -359,37 +325,32 @@ export default function MothersDayEventsPage() {
     }
   }
 
-  async function handleDelete(taskId: string, taskTitle: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+  async function handleDelete(taskId: string) {
+    if (!holidayId || !auth0User) return;
 
     setIsDeleting(true);
     try {
       // Optimistically remove the task from Redux
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
+      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
         },
-      );
+      });
 
       if (!response.ok) {
         // Revert the optimistic removal on error
         const taskToRestore = events.find((task: any) => task.id === taskId);
         if (taskToRestore) {
-          dispatch(
-            addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToRestore }),
-          );
+          dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToRestore }));
         }
         console.error(
           'Failed to delete task:',
@@ -506,9 +467,7 @@ export default function MothersDayEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string, taskTitle: string) =>
-                handleDelete(taskId, taskTitle)
-              }
+              onDelete={handleDelete}
               onEdit={handleEditEvent}
               theme={{
                 accentColor: '#ec4899', // Pink for Mother's Day
@@ -530,9 +489,7 @@ export default function MothersDayEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string, taskTitle: string) =>
-                handleDelete(taskId, taskTitle)
-              }
+              onDelete={handleDelete}
               onEdit={handleEditEvent}
               theme={{
                 accentColor: '#ec4899', // Pink for Mother's Day

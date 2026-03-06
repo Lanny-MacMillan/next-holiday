@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
@@ -18,10 +18,9 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import {
   updateGuestInHomeData,
   addGuestToHomeData,
@@ -51,23 +50,16 @@ interface Guest {
 
 export default function ThanksgivingGuestListPage() {
   const dispatch = useAppDispatch();
-  const { user: auth0User } = useAuth0();
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-
-  // Get holiday ID from route
-  const holidayId = homeInitialized
-    ? getHolidayIdFromRoute('/thanksgiving', holidayPreferences)
-    : null;
-
-  // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
 
   // Get holiday data from Redux
-  const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
   // Get guest lists from home data
   const guestLists = useAppSelector(
@@ -122,12 +114,7 @@ export default function ThanksgivingGuestListPage() {
       const response = await fetch('/api/home', {
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
       });
 

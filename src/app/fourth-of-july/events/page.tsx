@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -15,9 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -31,32 +29,24 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 export default function FourthOfJulyEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
-  // No need for useFormModalMutation hook - using direct API calls like Kwanzaa
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
 
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/fourth-of-july', holidayPreferences)
-    : getHolidayIdFromRoute('/fourth-of-july', holidayPreferences);
+  // Redux data access using selectHolidayPrefById
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fourth-of-july'),
   );
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  // Redux data access - events are stored as tasks with category "Events"
   const events =
     holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
@@ -64,18 +54,13 @@ export default function FourthOfJulyEventsPage() {
 
   // Refresh home data function (like Kwanzaa)
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
       });
       if (response.ok) {
@@ -104,7 +89,7 @@ export default function FourthOfJulyEventsPage() {
   }, [dispatch]);
 
   // Show message if holiday doesn't exist
-  if (!resolvedHolidayId) {
+  if (!holidayId) {
     return (
       <div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
         <HolidayPageHeader
@@ -135,7 +120,7 @@ export default function FourthOfJulyEventsPage() {
   // CRUD Operations
   async function handleAddEvent(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -148,14 +133,14 @@ export default function FourthOfJulyEventsPage() {
       category: 'Events',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first (like Kwanzaa)
       console.log('Adding event optimistically:', newTask);
-      console.log('Holiday ID for addition:', resolvedHolidayId);
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      console.log('Holiday ID for addition:', holidayId);
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
       console.log('Event added to Redux, making API call...');
 
       // Call API - map camelCase to snake_case for API
@@ -171,16 +156,11 @@ export default function FourthOfJulyEventsPage() {
 
       console.log('🐛 [FourthOfJulyAdd] API payload:', apiPayload);
 
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
         body: JSON.stringify(apiPayload),
       });
@@ -191,11 +171,11 @@ export default function FourthOfJulyEventsPage() {
         console.log('API success, replacing temp task with real task:', result);
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // Also refresh home data like Kwanzaa does
         await refreshHomeData();
@@ -204,7 +184,7 @@ export default function FourthOfJulyEventsPage() {
         console.log('API error, removing optimistic update');
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -214,9 +194,7 @@ export default function FourthOfJulyEventsPage() {
       setShowForm(false);
     } catch (error) {
       // Remove optimistic update on error (like Kwanzaa)
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add event:', error);
     } finally {
       setIsAdding(false);
@@ -224,7 +202,7 @@ export default function FourthOfJulyEventsPage() {
   }
 
   async function handleToggleCompletion(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -241,25 +219,20 @@ export default function FourthOfJulyEventsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newCompletionStatus },
         }),
       );
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       console.log('Toggle API URL:', apiUrl); // Debug logging
       const response = await fetch(apiUrl, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
         body: JSON.stringify({
           isCompleted: newCompletionStatus,
@@ -272,7 +245,7 @@ export default function FourthOfJulyEventsPage() {
         if (currentTask) {
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: taskId,
               updates: { isCompleted: currentTask.isCompleted },
             }),
@@ -297,7 +270,7 @@ export default function FourthOfJulyEventsPage() {
   };
 
   async function handleEditSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
@@ -313,7 +286,7 @@ export default function FourthOfJulyEventsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: updatedTask,
         }),
@@ -329,20 +302,13 @@ export default function FourthOfJulyEventsPage() {
         due_date: values.dueDate || undefined, // snake_case for API
       };
 
-      console.log('🐛 [FourthOfJulyEdit] API payload:', apiPayload);
-
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
+            'x-test-user': JSON.stringify(auth0User),
           },
           body: JSON.stringify(apiPayload),
         },
@@ -352,7 +318,7 @@ export default function FourthOfJulyEventsPage() {
         // Revert the optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: {
               title: editingTask.title,
@@ -381,7 +347,7 @@ export default function FourthOfJulyEventsPage() {
   }
 
   async function handleDelete(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     // Find the task to delete for potential rollback
     const taskToDelete = events.find((task: any) => task.id === taskId);
@@ -390,30 +356,21 @@ export default function FourthOfJulyEventsPage() {
     setIsDeleting(true);
     try {
       // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-      console.log('Delete API URL:', apiUrl); // Debug logging
-      console.log('Events before delete:', events.length);
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
       });
 
       if (!response.ok) {
         // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
         console.error(
           'Failed to delete task:',
           response.status,
@@ -424,9 +381,7 @@ export default function FourthOfJulyEventsPage() {
       }
     } catch (error) {
       // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       console.error('Failed to delete task:', error);
     } finally {
       setIsDeleting(false);
@@ -615,7 +570,7 @@ export default function FourthOfJulyEventsPage() {
               { value: 'high', label: 'High Priority' },
             ],
           },
-          ...(isAuthorizedForSharing && isHolidayShared
+          ...(isHolidayShared
             ? [
                 {
                   id: 'assignedTo',
@@ -630,7 +585,7 @@ export default function FourthOfJulyEventsPage() {
           title: '',
           description: '',
           priority: 'medium',
-          ...(isAuthorizedForSharing && isHolidayShared ? { assignedTo: '' } : {}),
+          ...(isHolidayShared ? { assignedTo: '' } : {}),
           dueDate: '',
         }}
         onSubmit={handleAddEvent}
@@ -668,7 +623,7 @@ export default function FourthOfJulyEventsPage() {
               { value: 'high', label: 'High Priority' },
             ],
           },
-          ...(isAuthorizedForSharing && isHolidayShared
+          ...(isHolidayShared
             ? [
                 {
                   id: 'assignedTo',
@@ -685,7 +640,7 @@ export default function FourthOfJulyEventsPage() {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isAuthorizedForSharing && isHolidayShared
+                ...(isHolidayShared
                   ? { assignedTo: editingTask.assignedTo || '' }
                   : {}),
                 dueDate: editingTask.dueDate

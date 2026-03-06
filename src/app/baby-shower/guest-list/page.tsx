@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -52,7 +52,13 @@ interface Guest {
 
 export default function BabyShowerGuestListPage() {
   const dispatch = useAppDispatch();
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
@@ -60,19 +66,18 @@ export default function BabyShowerGuestListPage() {
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
 
   // Get holiday ID from route
-  const holidayId = homeInitialized
-    ? getHolidayIdFromRoute('/baby-shower', holidayPreferences)
-    : null;
 
   // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
+  const resolvedHolidayId = holidayData?.holidayId;
 
   // Get holiday data from Redux
-  const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
   // Get guest lists from home data
   const guestLists = useAppSelector(
-    holidayId ? selectGuestListsByHoliday(holidayId) : () => [],
+    resolvedHolidayId ? selectGuestListsByHoliday(resolvedHolidayId) : () => [],
   ) as any[];
 
   // Transform guest list data to match expected format

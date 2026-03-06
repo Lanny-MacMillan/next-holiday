@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import {
   updateTaskInHomeData,
@@ -81,20 +81,24 @@ const costumeFormConfig = (isHolidayShared: boolean) => ({
 export default function HalloweenCostumeIdeasPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
 
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
   // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/halloween', holidayPreferences)
-    : getHolidayIdFromRoute('/halloween', holidayPreferences);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
+  const resolvedHolidayId = holidayData?.holidayId;
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -102,7 +106,6 @@ export default function HalloweenCostumeIdeasPage() {
   );
 
   // Redux data access - costume ideas are stored as tasks with category "Costume Ideas"
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
   const costumeIdeas =
     holidayData?.tasks?.filter((task: any) => task.category === 'Costume Ideas') ||
     [];
@@ -514,8 +517,12 @@ export default function HalloweenCostumeIdeasPage() {
     switch (sortBy) {
       case 'priority':
         return [...tasksToSort].sort((a, b) => {
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
+          const priorityOrder: { [key: string]: number } = {
+            high: 3,
+            medium: 2,
+            low: 1,
+          };
+          return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
         });
       case 'dateDue':
         return [...tasksToSort].sort((a, b) => {
@@ -659,40 +666,6 @@ export default function HalloweenCostumeIdeasPage() {
               }
             : null
         }
-        initialValues={(() => {
-          if (!editingTask) return {};
-
-          const initialValues = {
-            title: editingTask.title || '',
-            description: editingTask.description || '',
-            priority: editingTask.priority || 'medium',
-            ...(isHolidayShared ? { assignedTo: editingTask.assignedTo || '' } : {}),
-            dueDate: editingTask.dueDate
-              ? (() => {
-                  try {
-                    const date = new Date(editingTask.dueDate);
-                    const formattedDate = date.toISOString().split('T')[0];
-                    console.log('🐛 [EditModal] Date formatting:', {
-                      original: editingTask.dueDate,
-                      parsed: date,
-                      formatted: formattedDate,
-                    });
-                    return formattedDate;
-                  } catch (e) {
-                    console.error(
-                      '🐛 [EditModal] Date parsing error:',
-                      e,
-                      editingTask.dueDate,
-                    );
-                    return '';
-                  }
-                })()
-              : '',
-          };
-
-          console.log('🐛 [EditModal] Final initialValues:', initialValues);
-          return initialValues;
-        })()}
         onClose={handleCloseEdit}
         onSave={handleSaveEdit}
         loading={isUpdating}
