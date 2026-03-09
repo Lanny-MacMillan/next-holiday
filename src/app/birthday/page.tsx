@@ -195,10 +195,6 @@ export default function BirthdayPage() {
                   <GuestListCard
                     holiday="Birthday"
                     href={section.href}
-                    guestList={{
-                      totalItems: total,
-                      completedItems: completed,
-                    }}
                     theme={{
                       primaryColor: '#f59e0b', // Amber for Birthday
                       accentColor: '#f59e0b', // Amber accent
