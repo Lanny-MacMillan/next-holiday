@@ -100,7 +100,7 @@ const budgetsSlice = createSlice({
   initialState,
   reducers: {
     setMany: (state, action: PayloadAction<Budget[]>) => {
-      action.payload.forEach(budget => {
+      action.payload.forEach((budget: Budget) => {
         state.entities[budget.holidayId] = budget;
       });
       state.initialized = true;
@@ -124,7 +124,7 @@ const budgetsSlice = createSlice({
       })
       .addCase(fetchBudgets.fulfilled, (state, action) => {
         state.loading = false;
-        action.payload.forEach(budget => {
+        action.payload.forEach((budget: Budget) => {
           state.entities[budget.holidayId] = budget;
         });
         state.initialized = true;
