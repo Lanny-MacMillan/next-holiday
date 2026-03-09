@@ -115,17 +115,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </button>
         )}
         <button
-          onClick={() =>
-            onDelete({
-              id,
-              title,
-              description,
-              dueDate,
-              priority,
-              isCompleted,
-              notes,
-            })
-          }
+          onClick={() => onDelete(id)}
           className="flex-1 px-2 py-2 sm:px-3 sm:py-2 bg-red-500 text-white rounded text-xs sm:text-sm font-medium transition-colors hover:bg-red-600"
         >
           Delete
