@@ -2,19 +2,17 @@
 
 import { useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 const subsections = [
   {
     name: 'Gift List',
@@ -47,21 +45,22 @@ const subsections = [
 ];
 
 export default function HanukkahPage() {
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Get holiday ID for Hanukkah - only resolve if home data is initialized
-  const holidayId = homeInitialized
-    ? getHolidayIdFromRoute('/hanukkah', holidayPreferences)
-    : getHolidayIdFromRoute('/hanukkah', holidayPreferences); // Allow fallback for cold entry
 
   // Get data from Redux home state first, fallback to RTK Query if needed
   const homeData = useAppSelector(selectHomeData);
 
   // Get holiday data from Redux using memoized selector
   const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
+    selectHolidayPrefById(state, holidayId!),
   );
 
   // Use only Redux data - no API calls on holiday pages

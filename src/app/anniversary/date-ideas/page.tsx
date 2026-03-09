@@ -14,9 +14,9 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -28,7 +28,13 @@ import ToDoCard from '@/components/cards/to-do/ToDoCard';
 export default function AnniversaryDateIdeasPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
@@ -38,10 +44,11 @@ export default function AnniversaryDateIdeasPage() {
   // Get current Redux state for data access
   const currentState = useAppSelector((state: any) => state);
 
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/anniversary', holidayPreferences)
-    : getHolidayIdFromRoute('/anniversary', holidayPreferences);
+  // Holiday ID resolution - use the holidayId from useFormModalMutation hook
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
+  const resolvedHolidayId = holidayData?.holidayId;
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -49,7 +56,6 @@ export default function AnniversaryDateIdeasPage() {
   );
 
   // Redux data access - date ideas are stored as tasks with category "Date Ideas"
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
   const dateIdeas =
     holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') || [];
   const isLoading = !homeInitialized;

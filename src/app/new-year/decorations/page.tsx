@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -14,9 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -63,20 +62,12 @@ const defaultDecorationTasks = [
 export default function NewYearDecorationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
-
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/new-year', holidayPreferences)
-    : getHolidayIdFromRoute('/new-year', holidayPreferences);
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -84,30 +75,16 @@ export default function NewYearDecorationsPage() {
   );
 
   // Redux data access - decorations are stored as tasks with category "Decorations"
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const decorations =
     holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
   const isLoading = !homeInitialized;
 
-  // Debug logging to understand the state
-  console.log('New Year Decorations Debug:', {
-    resolvedHolidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    decorationTasks: decorations.length,
-    decorations: decorations.map(d => ({
-      id: d.id,
-      title: d.title,
-      category: d.category,
-      isCompleted: d.isCompleted,
-    })),
-  });
-
   // Refresh home data function
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
@@ -151,7 +128,7 @@ export default function NewYearDecorationsPage() {
   // CRUD Operations - Add Decoration with optimistic updates + refreshHomeData + API field mapping
   async function handleAddDecoration(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -164,12 +141,12 @@ export default function NewYearDecorationsPage() {
       category: 'Decorations',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
       // CRITICAL: Map camelCase to snake_case for API
       const apiPayload = {
@@ -182,9 +159,7 @@ export default function NewYearDecorationsPage() {
         isCompleted: false,
       };
 
-      console.log('🐛 [NewYearDecorationsAdd] API payload:', apiPayload);
-
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,11 +172,11 @@ export default function NewYearDecorationsPage() {
         const result = await response.json();
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // CRITICAL: Refresh home data for proper UI updates
         await refreshHomeData();
@@ -209,7 +184,7 @@ export default function NewYearDecorationsPage() {
         // Remove optimistic update on error
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -223,9 +198,7 @@ export default function NewYearDecorationsPage() {
       setShowForm(false);
     } catch (error) {
       // Remove optimistic update on error
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add decoration:', error);
     } finally {
       setIsAdding(false);
@@ -233,7 +206,7 @@ export default function NewYearDecorationsPage() {
   }
 
   async function addDefaultDecorationTasks() {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
     try {
@@ -243,14 +216,14 @@ export default function NewYearDecorationsPage() {
           ...task,
           category: 'Decorations',
           isCompleted: false,
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
         };
 
         // Optimistically update Redux state first
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
         try {
-          const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+          const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -267,17 +240,15 @@ export default function NewYearDecorationsPage() {
             const result = await response.json();
             dispatch(
               removeTaskFromHomeData({
-                holidayId: resolvedHolidayId,
+                holidayId: holidayId,
                 taskId: newTask.id,
               }),
             );
-            dispatch(
-              addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }),
-            );
+            dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
           } else {
             dispatch(
               removeTaskFromHomeData({
-                holidayId: resolvedHolidayId,
+                holidayId: holidayId,
                 taskId: newTask.id,
               }),
             );
@@ -290,7 +261,7 @@ export default function NewYearDecorationsPage() {
         } catch (taskError) {
           dispatch(
             removeTaskFromHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: newTask.id,
             }),
           );
@@ -307,7 +278,7 @@ export default function NewYearDecorationsPage() {
   }
 
   async function handleToggleCompletion(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -322,31 +293,28 @@ export default function NewYearDecorationsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newCompletionStatus },
         }),
       );
 
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-          body: JSON.stringify({
-            isCompleted: newCompletionStatus,
-          }),
+      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify(auth0User),
         },
-      );
+        body: JSON.stringify({
+          isCompleted: newCompletionStatus,
+        }),
+      });
 
       if (!response.ok) {
         // Revert the optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: taskId,
             updates: { isCompleted: currentTask.isCompleted },
           }),
@@ -370,7 +338,7 @@ export default function NewYearDecorationsPage() {
   };
 
   async function handleEditDecorationSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
@@ -386,7 +354,7 @@ export default function NewYearDecorationsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: updatedTask,
         }),
@@ -402,10 +370,8 @@ export default function NewYearDecorationsPage() {
         due_date: values.dueDate || undefined, // snake_case for API
       };
 
-      console.log('🐛 [NewYearDecorationsEdit] API payload:', apiPayload);
-
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -420,7 +386,7 @@ export default function NewYearDecorationsPage() {
         // Revert the optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: {
               title: editingTask.title,
@@ -448,8 +414,8 @@ export default function NewYearDecorationsPage() {
     }
   }
 
-  async function handleDelete(taskId: string, taskTitle: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+  async function handleDelete(taskId: string) {
+    if (!holidayId || !auth0User) return;
 
     const taskToDelete = decorations.find((task: any) => task.id === taskId);
     if (!taskToDelete) return;
@@ -457,24 +423,19 @@ export default function NewYearDecorationsPage() {
     setIsDeleting(true);
     try {
       // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
+      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify(auth0User),
         },
-      );
+      });
 
       if (!response.ok) {
         // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
         console.error(
           'Failed to delete decoration:',
           response.status,
@@ -489,9 +450,7 @@ export default function NewYearDecorationsPage() {
       }
     } catch (error) {
       // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       console.error('Failed to delete decoration:', error);
     } finally {
       setIsDeleting(false);
@@ -685,9 +644,7 @@ export default function NewYearDecorationsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string, taskTitle: string) =>
-                handleDelete(taskId, taskTitle)
-              }
+              onDelete={handleDelete}
               onEdit={handleEditDecoration}
               theme={{
                 accentColor: '#f59e0b', // Amber for New Year
@@ -709,9 +666,7 @@ export default function NewYearDecorationsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string, taskTitle: string) =>
-                handleDelete(taskId, taskTitle)
-              }
+              onDelete={handleDelete}
               onEdit={handleEditDecoration}
               className="opacity-60"
               theme={{

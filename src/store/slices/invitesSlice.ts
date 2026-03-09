@@ -344,12 +344,11 @@ export default invitesSlice.reducer;
 
 // Selectors
 export const selectPendingInvites = createSelector(
-  (state: any, userId: string, userEmail?: string) => state.invites.invites,
-  (state: any, userId: string, userEmail?: string) => ({ userId, userEmail }),
-  (invites, params) => {
-    const { userId, userEmail } = params;
-
-    const filtered = invites.filter((invite: Invite) => {
+  (state: any) => state.invites.invites,
+  (state: any, userId: string) => userId,
+  (state: any, userId: string, userEmail?: string) => userEmail,
+  (invites, userId, userEmail) => {
+    return invites.filter((invite: Invite) => {
       const matches =
         (invite.toUserId === userId ||
           invite.toEmail === userId ||
@@ -358,34 +357,32 @@ export const selectPendingInvites = createSelector(
 
       return matches;
     });
-
-    return filtered;
   },
 );
 
 export const selectOutgoingInvites = createSelector(
-  (state: any, userId: string) => state.invites.invites,
-  (userId: string) => userId,
+  (state: any) => state.invites.invites,
+  (state: any, userId: string) => userId,
   (invites, userId) =>
     invites.filter((invite: Invite) => invite.fromUserId === userId),
 );
 
 export const selectInviteById = createSelector(
-  (state: any, inviteId: string) => state.invites.invites,
-  (inviteId: string) => inviteId,
+  (state: any) => state.invites.invites,
+  (state: any, inviteId: string) => inviteId,
   (invites, inviteId) => invites.find((invite: Invite) => invite.id === inviteId),
 );
 
 export const selectInvitesByShareId = createSelector(
-  (state: any, shareId: string) => state.invites.invites,
-  (shareId: string) => shareId,
+  (state: any) => state.invites.invites,
+  (state: any, shareId: string) => shareId,
   (invites, shareId) =>
     invites.filter((invite: Invite) => invite.shareId === shareId),
 );
 
 export const selectPendingInvitesCount = createSelector(
-  (state: any, userId: string) => state.invites.invites,
-  (userId: string) => userId,
+  (state: any) => state.invites.invites,
+  (state: any, userId: string) => userId,
   (invites, userId) =>
     invites.filter(
       (invite: Invite) =>

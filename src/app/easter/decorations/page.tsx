@@ -14,8 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
@@ -76,9 +76,11 @@ export default function EasterDecorationsPage() {
   const currentState = useAppSelector((state: any) => state);
 
   // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/easter', holidayPreferences)
-    : getHolidayIdFromRoute('/easter', holidayPreferences);
+  const holidayId = 'easter';
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
+  const resolvedHolidayId = holidayData?.holidayId;
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -86,9 +88,11 @@ export default function EasterDecorationsPage() {
   );
 
   // Redux data access - decorations are stored as tasks with category "Decorations" like Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const reduxHolidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
   const decorations =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
+    reduxHolidayData?.tasks?.filter(
+      (task: any) => task.category === 'Decorations',
+    ) || [];
   const isLoading = !homeInitialized;
   const error = null;
 

@@ -5,9 +5,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -49,7 +48,9 @@ export default function BabyShowerGiftListPage() {
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayData = getHolidayDataFromRedux(holidayId, currentState);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (

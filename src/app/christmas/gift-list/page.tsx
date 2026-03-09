@@ -5,8 +5,9 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
+
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
@@ -43,12 +44,13 @@ export default function GiftListPage() {
   } = useFormModalMutation();
 
   // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayData = getHolidayDataFromRedux(holidayId, currentState);
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (

@@ -14,8 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -40,9 +40,11 @@ export default function BabyShowerGamesPage() {
   const currentState = useAppSelector((state: any) => state);
 
   // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/baby-shower', holidayPreferences)
-    : getHolidayIdFromRoute('/baby-shower', holidayPreferences);
+  const holidayId = 'baby-shower';
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
+  const resolvedHolidayId = holidayData?.holidayId;
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -50,9 +52,9 @@ export default function BabyShowerGamesPage() {
   );
 
   // Redux data access - games are stored as tasks with category "Games"
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const reduxHolidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
   const gameTasks =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Games') || [];
+    reduxHolidayData?.tasks?.filter((task: any) => task.category === 'Games') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
