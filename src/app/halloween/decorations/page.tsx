@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -14,9 +15,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
@@ -67,7 +67,13 @@ const defaultDecorationTasks = [
 export default function HalloweenDecorationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
 
   // No need for useFormModalMutation hook - using direct API calls like Kwanzaa
 
@@ -76,45 +82,23 @@ export default function HalloweenDecorationsPage() {
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
 
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/halloween', holidayPreferences)
-    : getHolidayIdFromRoute('/halloween', holidayPreferences);
-
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, 'halloween'),
+    selectIsHolidayShared(state, holidayId!),
   );
 
   // Redux data access - decorations are stored as tasks with category "Decorations" like in Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const holidayData = useAppSelector((state: any) =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const decorations =
     holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Debug logging to understand the state
-  console.log('Halloween Decorations Debug:', {
-    resolvedHolidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    decorationTasks: decorations.length,
-    decorations: decorations.map(d => ({
-      id: d.id,
-      title: d.title,
-      category: d.category,
-      isCompleted: d.isCompleted,
-    })),
-  });
-
   // Refresh home data function (like gift-list)
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
@@ -163,7 +147,7 @@ export default function HalloweenDecorationsPage() {
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -176,14 +160,14 @@ export default function HalloweenDecorationsPage() {
       category: 'Decorations',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first (like Kwanzaa)
       console.log('Adding decoration optimistically:', newTask);
-      console.log('Holiday ID for addition:', resolvedHolidayId);
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      console.log('Holiday ID for addition:', holidayId);
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
       console.log('Decoration added to Redux, making API call...');
 
       // Call API - map camelCase to snake_case for API
@@ -199,7 +183,7 @@ export default function HalloweenDecorationsPage() {
 
       console.log('🐛 [HalloweenDecorationsAdd] API payload:', apiPayload);
 
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,11 +206,11 @@ export default function HalloweenDecorationsPage() {
         );
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // Also refresh home data like gift-list does
         await refreshHomeData();
@@ -235,7 +219,7 @@ export default function HalloweenDecorationsPage() {
         console.log('API error, removing optimistic update');
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -249,9 +233,7 @@ export default function HalloweenDecorationsPage() {
       setShowForm(false);
     } catch (error) {
       // Remove optimistic update on error (like Kwanzaa)
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add decoration:', error);
     } finally {
       setIsAdding(false);
@@ -267,7 +249,7 @@ export default function HalloweenDecorationsPage() {
   }
 
   async function handleToggleCompletion(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -278,37 +260,34 @@ export default function HalloweenDecorationsPage() {
         // Optimistically update Redux state first
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId,
             updates: { isCompleted: newIsCompleted },
           }),
         );
 
         // Call API with snake_case mapping
-        const response = await fetch(
-          `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-          {
-            method: 'PATCH', // Use PATCH instead of PUT
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            },
-            body: JSON.stringify({
-              isCompleted: newIsCompleted, // Use isCompleted, not is_completed
+        const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+          method: 'PATCH', // Use PATCH instead of PUT
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
             }),
           },
-        );
+          body: JSON.stringify({
+            isCompleted: newIsCompleted, // Use isCompleted, not is_completed
+          }),
+        });
 
         if (!response.ok) {
           // Revert optimistic update on error
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId,
               updates: { isCompleted: decoration.isCompleted },
             }),
@@ -326,7 +305,7 @@ export default function HalloweenDecorationsPage() {
       if (decoration) {
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId,
             updates: { isCompleted: decoration.isCompleted },
           }),
@@ -338,7 +317,7 @@ export default function HalloweenDecorationsPage() {
     }
   }
 
-  function handleDelete(taskId: string, taskTitle: string) {
+  function handleDelete(taskId: string) {
     setDeleteConfirm({ show: true, taskId });
   }
 
@@ -353,7 +332,7 @@ export default function HalloweenDecorationsPage() {
   };
 
   async function handleEditDecorationSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
@@ -369,7 +348,7 @@ export default function HalloweenDecorationsPage() {
 
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: updatedTask,
         }),
@@ -386,7 +365,7 @@ export default function HalloweenDecorationsPage() {
       };
 
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH', // Use PATCH instead of PUT
           headers: {
@@ -407,7 +386,7 @@ export default function HalloweenDecorationsPage() {
         // Update Redux with real data from API
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: result,
           }),
@@ -416,7 +395,7 @@ export default function HalloweenDecorationsPage() {
         // Revert optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: editingTask,
           }),
@@ -434,7 +413,7 @@ export default function HalloweenDecorationsPage() {
       // Revert optimistic update on error
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: editingTask,
         }),
@@ -451,20 +430,20 @@ export default function HalloweenDecorationsPage() {
   }
 
   async function confirmDelete() {
-    if (deleteConfirm.taskId && resolvedHolidayId && auth0User) {
+    if (deleteConfirm.taskId && holidayId && auth0User) {
       setIsDeleting(true);
       try {
         // Optimistically remove from Redux state first
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: deleteConfirm.taskId,
           }),
         );
 
         // Call API
         const response = await fetch(
-          `/api/holidays/${resolvedHolidayId}/tasks/${deleteConfirm.taskId}`,
+          `/api/holidays/${holidayId}/tasks/${deleteConfirm.taskId}`,
           {
             method: 'DELETE',
             headers: {
@@ -510,9 +489,14 @@ export default function HalloweenDecorationsPage() {
   function sortTasks(tasksToSort: any[]): any[] {
     switch (sortBy) {
       case 'priority':
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityOrder: { [key: string]: number } = {
+          high: 3,
+          medium: 2,
+          low: 1,
+        };
         return [...tasksToSort].sort(
-          (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority],
+          (a, b) =>
+            (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0),
         );
       case 'dateDue':
         return [...tasksToSort].sort((a, b) => {
@@ -555,9 +539,7 @@ export default function HalloweenDecorationsPage() {
       key={task.id}
       task={task}
       onToggleComplete={handleToggleCompletion}
-      onDelete={(taskId: string, taskTitle: string) =>
-        handleDelete(taskId, taskTitle)
-      }
+      onDelete={handleDelete}
       onEdit={handleEditDecoration}
       theme={{
         accentColor: '#f97316', // Orange for Halloween

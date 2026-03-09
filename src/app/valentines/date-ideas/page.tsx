@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import {
   updateTaskInHomeData,
   setHomeData,
@@ -28,53 +27,31 @@ import TaskSection from '@/components/common/TaskSection';
 
 export default function ValentinesDateIdeasPage() {
   const dispatch = useAppDispatch();
-  const { user: auth0User } = useAuth0();
+  const { holidayId, auth0User } = useFormModalMutation();
   const { contacts, isHolidayShared } = useAppSelector(
     (state: any) => state.addressBook,
   );
-
-  // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
 
-  // Holiday ID Resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/valentines', holidayPreferences)
-    : getHolidayIdFromRoute('/valentines', holidayPreferences);
-
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  // Redux data access using selectHolidayPrefById
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
 
   // Redux Data Access (Date Ideas are stored as tasks with category "Date Ideas")
   const dateIdeas =
     holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') || [];
   const isLoading = !homeInitialized;
 
-  // Debug Logging (Essential for troubleshooting)
-  console.log('Valentine Date Ideas Debug:', {
-    resolvedHolidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    dateIdeaTasks: dateIdeas.length,
-    dateIdeas: dateIdeas.map(d => ({
-      id: d.id,
-      title: d.title,
-      category: d.category,
-      isCompleted: d.isCompleted,
-    })),
-  });
-
   // RefreshHomeData Function (CRITICAL for UI updates)
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
-      console.log('🐛 [RefreshHomeData] Starting refresh...');
       const response = await fetch('/api/home', {
         headers: {
           'Content-Type': 'application/json',
@@ -83,14 +60,7 @@ export default function ValentinesDateIdeasPage() {
       });
       if (response.ok) {
         const result = await response.json();
-        console.log('🐛 [RefreshHomeData] Response received:', {
-          dataKeys: Object.keys(result.data || {}),
-          holidayData: result.data?.holidays?.find(
-            (h: any) => h.id === resolvedHolidayId,
-          ),
-        });
         dispatch(setHomeData(result.data));
-        console.log('🐛 [RefreshHomeData] Redux state updated');
       } else {
         console.error(
           '🐛 [RefreshHomeData] Response not ok:',
@@ -122,7 +92,7 @@ export default function ValentinesDateIdeasPage() {
 
   // CRUD Operations with Direct API Calls and Field Mapping
   const handleAddDateIdea = async (values: Record<string, any>) => {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -135,11 +105,11 @@ export default function ValentinesDateIdeasPage() {
       category: 'Date Ideas',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     // Optimistically update Redux state first
-    dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+    dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
     try {
       // CRITICAL: Map camelCase to snake_case for API
@@ -153,9 +123,7 @@ export default function ValentinesDateIdeasPage() {
         isCompleted: false,
       };
 
-      console.log('🐛 [ValentineDateIdeasAdd] API payload:', apiPayload);
-
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,11 +136,11 @@ export default function ValentinesDateIdeasPage() {
         const result = await response.json();
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // CRITICAL: Refresh home data for proper UI updates
         await refreshHomeData();
@@ -181,7 +149,7 @@ export default function ValentinesDateIdeasPage() {
         // Revert optimistic update
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -189,9 +157,7 @@ export default function ValentinesDateIdeasPage() {
       }
     } catch (error) {
       // Revert optimistic update
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Error adding date idea:', error);
     } finally {
       setIsAdding(false);
@@ -207,7 +173,7 @@ export default function ValentinesDateIdeasPage() {
   };
 
   const handleUpdateDateIdea = async (values: Record<string, any>) => {
-    if (!resolvedHolidayId || !auth0User || !editingTask) return;
+    if (!holidayId || !auth0User || !editingTask) return;
 
     setIsAdding(true);
 
@@ -222,16 +188,8 @@ export default function ValentinesDateIdeasPage() {
         due_date: values.dueDate ? values.dueDate.split('T')[0] : undefined, // CRITICAL: Format date same as edit (prevent timezone issues)
       };
 
-      console.log('🐛 [ValentineDateIdeasUpdate] Before update:', {
-        taskId: editingTask.id,
-        currentTask: dateIdeas.find(t => t.id === editingTask.id),
-        apiPayload,
-        originalDueDate: values.dueDate,
-        formattedDueDate: apiPayload.due_date,
-      });
-
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -244,26 +202,14 @@ export default function ValentinesDateIdeasPage() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('🐛 [ValentineDateIdeasUpdate] API Response:', result);
 
         // Use the exact pattern from working New Year resolution tracker
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: result, // Use result directly, not result.data
           }),
-        );
-
-        console.log('🐛 [ValentineDateIdeasUpdate] Redux updated with:', result);
-        console.log(
-          '🐛 [ValentineDateIdeasUpdate] Current dateIdeas after Redux update:',
-          dateIdeas.map(d => ({
-            id: d.id,
-            title: d.title,
-            dueDate: d.dueDate,
-            updatedAt: d.updatedAt,
-          })),
         );
 
         // Add back refresh to ensure UI consistency
@@ -284,35 +230,26 @@ export default function ValentinesDateIdeasPage() {
   };
 
   const handleToggleCompletion = async (taskId: string) => {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     try {
       const task = dateIdeas.find((t: any) => t.id === taskId);
       if (task) {
-        console.log('🐛 [ToggleCompletion] Before:', {
-          taskId,
-          currentCompleted: task.isCompleted,
-        });
-
-        const response = await fetch(
-          `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify(auth0User),
-            },
-            body: JSON.stringify({ isCompleted: !task.isCompleted }),
+        const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify(auth0User),
           },
-        );
+          body: JSON.stringify({ isCompleted: !task.isCompleted }),
+        });
 
         if (response.ok) {
           const result = await response.json();
-          console.log('🐛 [ToggleCompletion] API Response:', result);
 
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId,
               updates: result,
             }),
@@ -330,9 +267,7 @@ export default function ValentinesDateIdeasPage() {
   };
 
   const handleDelete = (taskId: string, taskTitle: string) => {
-    console.log('🐛 [Delete] Called with:', { taskId, taskTitle });
     const task = dateIdeas.find(t => t.id === taskId);
-    console.log('🐛 [Delete] Found task:', task);
 
     setTaskToDelete({
       id: taskId,
@@ -342,13 +277,13 @@ export default function ValentinesDateIdeasPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!resolvedHolidayId || !auth0User || !taskToDelete) return;
+    if (!holidayId || !auth0User || !taskToDelete) return;
 
     setIsDeleting(true);
 
     try {
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskToDelete.id}`,
+        `/api/holidays/${holidayId}/tasks/${taskToDelete.id}`,
         {
           method: 'DELETE',
           headers: {
@@ -361,7 +296,7 @@ export default function ValentinesDateIdeasPage() {
       if (response.ok) {
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: taskToDelete.id,
           }),
         );

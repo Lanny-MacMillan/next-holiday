@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -15,9 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -31,67 +29,36 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 export default function ThanksgivingDecorationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
-  // No need for useFormModalMutation hook - using direct API calls like Kwanzaa
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
 
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/thanksgiving', holidayPreferences)
-    : getHolidayIdFromRoute('/thanksgiving', holidayPreferences);
-
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'thanksgiving'),
   );
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Redux data access - decorations are stored as tasks with category "Decorations" like in Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  // Redux data access - decorations are stored as tasks with category "Decorations"
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const decorations =
     holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Debug logging to understand the state
-  console.log('Thanksgiving Decorations Debug:', {
-    resolvedHolidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    decorationTasks: decorations.length,
-    decorations: decorations.map(d => ({
-      id: d.id,
-      title: d.title,
-      category: d.category,
-      isCompleted: d.isCompleted,
-    })),
-  });
-
   // Refresh home data function (like Kwanzaa)
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
       });
       if (response.ok) {
@@ -122,7 +89,7 @@ export default function ThanksgivingDecorationsPage() {
   // CRUD Operations - Direct API calls like Kwanzaa
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -135,13 +102,12 @@ export default function ThanksgivingDecorationsPage() {
       category: 'Decorations',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first (like Kwanzaa)
-      console.log('Adding decoration task optimistically:', newTask);
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
       // CRITICAL: Map camelCase to snake_case for API
       const apiPayload = {
@@ -154,18 +120,11 @@ export default function ThanksgivingDecorationsPage() {
         isCompleted: false,
       };
 
-      console.log('🐛 [ThanksgivingDecorationsAdd] API payload:', apiPayload);
-
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
         body: JSON.stringify(apiPayload), // Use mapped payload
       });
@@ -175,11 +134,11 @@ export default function ThanksgivingDecorationsPage() {
         // Replace temporary task with real one from API
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // CRITICAL: Refresh home data for proper UI updates
         await refreshHomeData();
@@ -190,7 +149,7 @@ export default function ThanksgivingDecorationsPage() {
         // Revert optimistic update on failure
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -198,9 +157,7 @@ export default function ThanksgivingDecorationsPage() {
     } catch (error) {
       console.error('Error creating decoration:', error);
       // Revert optimistic update on failure
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
     } finally {
       setIsAdding(false);
     }
@@ -215,7 +172,7 @@ export default function ThanksgivingDecorationsPage() {
   }
 
   async function handleToggleCompletion(taskId: string) {
-    if (!resolvedHolidayId || !auth0User || isToggling) return;
+    if (!holidayId || !auth0User || isToggling) return;
 
     setIsToggling(true);
     try {
@@ -229,34 +186,26 @@ export default function ThanksgivingDecorationsPage() {
       // Optimistically update Redux state
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newIsCompleted },
         }),
       );
 
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify({ isCompleted: newIsCompleted }),
+      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify(auth0User),
         },
-      );
+        body: JSON.stringify({ isCompleted: newIsCompleted }),
+      });
 
       if (!response.ok) {
         // Revert optimistic update on failure
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: taskId,
             updates: { isCompleted: !newIsCompleted },
           }),
@@ -272,7 +221,7 @@ export default function ThanksgivingDecorationsPage() {
       if (currentDecoration) {
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: taskId,
             updates: { isCompleted: currentDecoration.isCompleted },
           }),
@@ -310,7 +259,7 @@ export default function ThanksgivingDecorationsPage() {
   };
 
   async function handleEditTaskSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User || isUpdating) return;
+    if (!editingTask || !holidayId || !auth0User || isUpdating) return;
 
     setIsUpdating(true);
     try {
@@ -327,17 +276,12 @@ export default function ThanksgivingDecorationsPage() {
       console.log('🐛 [ThanksgivingDecorationsEdit] API payload:', apiPayload);
 
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
+            'x-test-user': JSON.stringify(auth0User),
           },
           body: JSON.stringify(apiPayload),
         },
@@ -348,7 +292,7 @@ export default function ThanksgivingDecorationsPage() {
         // Update Redux state directly
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: result,
           }),
@@ -375,33 +319,25 @@ export default function ThanksgivingDecorationsPage() {
   }
 
   async function confirmDelete(taskId: string) {
-    if (!resolvedHolidayId || !auth0User || isDeleting) return;
+    if (!holidayId || !auth0User || isDeleting) return;
 
     setIsDeleting(true);
     try {
       // Optimistically update Redux state
       dispatch(
         removeTaskFromHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
         }),
       );
 
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
+      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify(auth0User),
         },
-      );
+      });
 
       if (response.ok) {
         // CRITICAL: Refresh home data for proper UI updates
@@ -489,7 +425,7 @@ export default function ThanksgivingDecorationsPage() {
         { value: 'high', label: 'High Priority' },
       ],
     },
-    ...(isAuthorizedForSharing && isHolidayShared
+    ...(isHolidayShared
       ? [
           {
             id: 'assignedTo',
@@ -602,9 +538,7 @@ export default function ThanksgivingDecorationsPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isAuthorizedForSharing && isHolidayShared
-            ? { assignedTo: editingTask?.assignedTo || '' }
-            : {}),
+          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTaskSubmit}

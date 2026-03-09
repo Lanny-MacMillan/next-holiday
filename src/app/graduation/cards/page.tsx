@@ -5,8 +5,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
@@ -40,15 +40,16 @@ export default function GraduationCardsPage() {
   const homeData = useAppSelector(selectHomeData);
 
   // Get current Redux state for skip logic
-  const currentState = useAppSelector((state: any) => state);
-
   // Get holiday ID for Graduation - try to resolve from home data, fallback to route-based resolution
   const resolvedHolidayId = homeInitialized
     ? getHolidayIdFromRoute('/graduation', holidayPreferences)
     : getHolidayIdFromRoute('/graduation', holidayPreferences); // Allow fallback for cold entry
 
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, resolvedHolidayId),
+  );
+
   // Get holiday data from Redux - single source of truth
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
 
   // Use Redux data directly - no individual API calls needed
   const cards = holidayData?.cards || [];

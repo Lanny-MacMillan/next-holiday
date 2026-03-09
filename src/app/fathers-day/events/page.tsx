@@ -14,8 +14,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
@@ -43,9 +43,11 @@ export default function FathersDayEventsPage() {
   const currentState = useAppSelector((state: any) => state);
 
   // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/fathers-day', holidayPreferences)
-    : getHolidayIdFromRoute('/fathers-day', holidayPreferences);
+  const holidayId = 'fathers-day';
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId),
+  );
+  const resolvedHolidayId = holidayData?.holidayId;
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -53,9 +55,9 @@ export default function FathersDayEventsPage() {
   );
 
   // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const reduxHolidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
   const events =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+    reduxHolidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
   const error = null;
 

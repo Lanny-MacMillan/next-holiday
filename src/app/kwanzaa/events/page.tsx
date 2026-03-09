@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -15,9 +15,8 @@ import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -84,23 +83,13 @@ const defaultEventTasks = [
 export default function KwanzaaEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
+  const { holidayId, auth0User } = useFormModalMutation();
   const { isUserPlusMember, hasSubscription } = useSubscription();
-
-  // No need for useFormModalMutation hook - using direct API calls like Hanukkah
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
   const homeData = useAppSelector(selectHomeData);
-
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/kwanzaa', holidayPreferences)
-    : getHolidayIdFromRoute('/kwanzaa', holidayPreferences);
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -109,31 +98,17 @@ export default function KwanzaaEventsPage() {
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // Redux data access - events are stored as tasks with category "Events" like in Hanukkah
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const events =
     holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Debug logging to understand the state
-  console.log('Kwanzaa Events Debug:', {
-    resolvedHolidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    eventTasks: events.length,
-    events: events.map(e => ({
-      id: e.id,
-      title: e.title,
-      category: e.category,
-      isCompleted: e.isCompleted,
-    })),
-  });
-
   // Refresh home data function (like gift-list)
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
@@ -186,7 +161,7 @@ export default function KwanzaaEventsPage() {
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -199,14 +174,14 @@ export default function KwanzaaEventsPage() {
       category: 'Events',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first (like Hanukkah)
       console.log('Adding task optimistically:', newTask);
-      console.log('Holiday ID for addition:', resolvedHolidayId);
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+      console.log('Holiday ID for addition:', holidayId);
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
       console.log('Task added to Redux, making API call...');
 
       // Call API - map camelCase to snake_case for API
@@ -222,7 +197,7 @@ export default function KwanzaaEventsPage() {
 
       console.log('🐛 [KwanzaaAdd] API payload:', apiPayload);
 
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -242,11 +217,11 @@ export default function KwanzaaEventsPage() {
         console.log('API success, replacing temp task with real task:', result);
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // Also refresh home data like gift-list does
         await refreshHomeData();
@@ -255,7 +230,7 @@ export default function KwanzaaEventsPage() {
         console.log('API error, removing optimistic update');
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -265,9 +240,7 @@ export default function KwanzaaEventsPage() {
       setShowForm(false);
     } catch (error) {
       // Remove optimistic update on error (like Hanukkah)
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add task:', error);
     } finally {
       setIsAdding(false);
@@ -275,7 +248,7 @@ export default function KwanzaaEventsPage() {
   }
 
   async function addDefaultEventTasks() {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
     try {
@@ -285,14 +258,14 @@ export default function KwanzaaEventsPage() {
           id: `temp-${Date.now()}-${task.title}`, // Temporary ID
           ...task,
           isCompleted: false,
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
         };
 
         // Optimistically update Redux state first
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
         try {
-          const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+          const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -306,7 +279,7 @@ export default function KwanzaaEventsPage() {
             body: JSON.stringify({
               ...task,
               isCompleted: false,
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
             }),
           });
 
@@ -315,18 +288,16 @@ export default function KwanzaaEventsPage() {
             const result = await response.json();
             dispatch(
               removeTaskFromHomeData({
-                holidayId: resolvedHolidayId,
+                holidayId: holidayId,
                 taskId: newTask.id,
               }),
             );
-            dispatch(
-              addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }),
-            );
+            dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
           } else {
             // Remove optimistic update on error
             dispatch(
               removeTaskFromHomeData({
-                holidayId: resolvedHolidayId,
+                holidayId: holidayId,
                 taskId: newTask.id,
               }),
             );
@@ -340,7 +311,7 @@ export default function KwanzaaEventsPage() {
           // Remove optimistic update on error
           dispatch(
             removeTaskFromHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: newTask.id,
             }),
           );
@@ -357,7 +328,7 @@ export default function KwanzaaEventsPage() {
   }
 
   async function handleToggleTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -374,14 +345,14 @@ export default function KwanzaaEventsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newCompletionStatus },
         }),
       );
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       console.log('Toggle API URL:', apiUrl); // Debug logging
       const response = await fetch(apiUrl, {
         method: 'PATCH',
@@ -405,7 +376,7 @@ export default function KwanzaaEventsPage() {
         if (currentTask) {
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: taskId,
               updates: { isCompleted: currentTask.isCompleted },
             }),
@@ -430,7 +401,7 @@ export default function KwanzaaEventsPage() {
   };
 
   async function handleEditTaskSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
@@ -446,7 +417,7 @@ export default function KwanzaaEventsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: updatedTask,
         }),
@@ -465,7 +436,7 @@ export default function KwanzaaEventsPage() {
       console.log('🐛 [KwanzaaEdit] API payload:', apiPayload);
 
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -485,7 +456,7 @@ export default function KwanzaaEventsPage() {
         // Revert the optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: {
               title: editingTask.title,
@@ -514,7 +485,7 @@ export default function KwanzaaEventsPage() {
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     // Find the task to delete for potential rollback
     const taskToDelete = events.find((task: any) => task.id === taskId);
@@ -523,10 +494,10 @@ export default function KwanzaaEventsPage() {
     setIsDeleting(true);
     try {
       // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       console.log('Delete API URL:', apiUrl); // Debug logging
       console.log('Events before delete:', events.length);
       const response = await fetch(apiUrl, {
@@ -544,9 +515,7 @@ export default function KwanzaaEventsPage() {
 
       if (!response.ok) {
         // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
         console.error(
           'Failed to delete task:',
           response.status,
@@ -564,9 +533,7 @@ export default function KwanzaaEventsPage() {
       }
     } catch (error) {
       // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       console.error('Failed to delete task:', error);
     } finally {
       setIsDeleting(false);

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import GuestListCard from '@/components/cards/guest/GuestListCard';
@@ -10,14 +10,12 @@ import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
 import CountdownWithInvite from '@/components/common/CountdownWithInvite';
 import SharedIndicator from '@/components/common/SharedIndicator';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 
 const fourthOfJulySubsections = [
   {
@@ -51,14 +49,9 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-  const { user: auth0User } = useAuth0();
+  const { holidayId, auth0User } = useFormModalMutation();
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Get holiday ID for Fourth of July - only resolve if home data is initialized
-  const holidayId = homeInitialized
-    ? getHolidayIdFromRoute('/fourth-of-july', holidayPreferences)
-    : getHolidayIdFromRoute('/fourth-of-july', holidayPreferences); // Allow fallback for cold entry
 
   // Get data from Redux home state first, fallback to RTK Query if needed
   const homeData = useAppSelector(selectHomeData);

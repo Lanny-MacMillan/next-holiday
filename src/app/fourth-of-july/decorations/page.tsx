@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -12,12 +11,9 @@ import {
   setHomeData,
 } from '@/store/slices/homeSlice';
 import {
-  selectHolidayPreferences,
   selectHomeInitialized,
-  selectHomeData,
+  selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -31,51 +27,34 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 export default function FourthOfJulyDecorationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
-  // No need for useFormModalMutation hook - using direct API calls like Kwanzaa
+  const { holidayId, auth0User } = useFormModalMutation();
 
   // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
-
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/fourth-of-july', holidayPreferences)
-    : getHolidayIdFromRoute('/fourth-of-july', holidayPreferences);
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fourth-of-july'),
   );
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Redux data access - decorations are stored as tasks with category "Decorations" like in Kwanzaa
-  const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
+  // Redux data access - decorations are stored as tasks with category "Decorations"
+  const holidayData = useAppSelector((state: any) =>
+    selectHolidayPrefById(state, holidayId!),
+  );
   const decorations =
     holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Refresh home data function (like Kwanzaa)
+  // Refresh home data function
   const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
+    if (!auth0User?.sub || !holidayId) return;
 
     try {
       const response = await fetch('/api/home', {
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
       });
       if (response.ok) {
@@ -106,7 +85,7 @@ export default function FourthOfJulyDecorationsPage() {
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsAdding(true);
 
@@ -119,22 +98,19 @@ export default function FourthOfJulyDecorationsPage() {
       category: 'Decorations',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
-      holidayId: resolvedHolidayId,
+      holidayId: holidayId,
     };
 
     try {
       // Optimistically update Redux state first (like Kwanzaa)
-      console.log('Adding decoration optimistically:', newTask);
-      console.log('Holiday ID for addition:', resolvedHolidayId);
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-      console.log('Task added to Redux, making API call...');
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
       // Call API - map camelCase to snake_case for API
       const apiPayload: any = {
         title: values.title,
         category: 'Decorations',
         isCompleted: false,
-        holidayId: resolvedHolidayId, // Include holidayId in payload
+        holidayId: holidayId, // Include holidayId in payload
       };
 
       // Only add optional fields if they have values
@@ -143,18 +119,11 @@ export default function FourthOfJulyDecorationsPage() {
       if (values.assignedTo) apiPayload.assigned_to = values.assignedTo;
       if (values.dueDate) apiPayload.due_date = values.dueDate;
 
-      console.log('🐛 [FourthOfJulyDecorationsAdd] API payload:', apiPayload);
-
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
+      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
         body: JSON.stringify(apiPayload),
       });
@@ -162,23 +131,21 @@ export default function FourthOfJulyDecorationsPage() {
       if (response.ok) {
         // Replace temporary task with real task from API (like Kwanzaa)
         const result = await response.json();
-        console.log('API success, replacing temp task with real task:', result);
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
         // CRITICAL: Refresh home data for proper UI updates
         await refreshHomeData();
       } else {
         // Remove optimistic update on error
-        console.log('API error, removing optimistic update');
         dispatch(
           removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: newTask.id,
           }),
         );
@@ -188,9 +155,7 @@ export default function FourthOfJulyDecorationsPage() {
       setShowForm(false);
     } catch (error) {
       // Remove optimistic update on error (like Kwanzaa)
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add task:', error);
     } finally {
       setIsAdding(false);
@@ -198,7 +163,7 @@ export default function FourthOfJulyDecorationsPage() {
   }
 
   async function handleToggleTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     setIsToggling(true);
     try {
@@ -215,24 +180,19 @@ export default function FourthOfJulyDecorationsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: taskId,
           updates: { isCompleted: newCompletionStatus },
         }),
       );
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       const response = await fetch(apiUrl, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
         body: JSON.stringify({
           isCompleted: newCompletionStatus,
@@ -245,7 +205,7 @@ export default function FourthOfJulyDecorationsPage() {
         if (currentTask) {
           dispatch(
             updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
+              holidayId: holidayId,
               taskId: taskId,
               updates: { isCompleted: currentTask.isCompleted },
             }),
@@ -270,7 +230,7 @@ export default function FourthOfJulyDecorationsPage() {
   };
 
   async function handleEditTaskSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     setIsUpdating(true);
     try {
@@ -286,7 +246,7 @@ export default function FourthOfJulyDecorationsPage() {
       // Optimistically update the Redux home data
       dispatch(
         updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
+          holidayId: holidayId,
           taskId: editingTask.id,
           updates: updatedTask,
         }),
@@ -302,20 +262,13 @@ export default function FourthOfJulyDecorationsPage() {
         due_date: values.dueDate || undefined, // snake_case for API
       };
 
-      console.log('🐛 [FourthOfJulyDecorationsEdit] API payload:', apiPayload);
-
       const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
+        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
+            'x-test-user': JSON.stringify(auth0User),
           },
           body: JSON.stringify(apiPayload),
         },
@@ -325,7 +278,7 @@ export default function FourthOfJulyDecorationsPage() {
         // Revert the optimistic update on error
         dispatch(
           updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
+            holidayId: holidayId,
             taskId: editingTask.id,
             updates: {
               title: editingTask.title,
@@ -354,7 +307,7 @@ export default function FourthOfJulyDecorationsPage() {
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     // Find the task to delete for potential rollback
     const taskToDelete = decorations.find((task: any) => task.id === taskId);
@@ -363,28 +316,21 @@ export default function FourthOfJulyDecorationsPage() {
     setIsDeleting(true);
     try {
       // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
       // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
+      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
       const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
+          'x-test-user': JSON.stringify(auth0User),
         },
       });
 
       if (!response.ok) {
         // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
         console.error(
           'Failed to delete task:',
           response.status,
@@ -395,9 +341,7 @@ export default function FourthOfJulyDecorationsPage() {
       }
     } catch (error) {
       // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       console.error('Failed to delete task:', error);
     } finally {
       setIsDeleting(false);
@@ -490,7 +434,7 @@ export default function FourthOfJulyDecorationsPage() {
         { value: 'high', label: 'High Priority' },
       ],
     },
-    ...(isAuthorizedForSharing && isHolidayShared
+    ...(isHolidayShared
       ? [
           {
             id: 'assignedTo',
@@ -512,12 +456,12 @@ export default function FourthOfJulyDecorationsPage() {
         backHref="/fourth-of-july"
         onSortClick={() => setShowSortModal(true)}
         description="Plan your patriotic decorations!"
-        holidayColor="blue-600"
+        holidayColor="red-600"
         sortTitle="Sort Decorations"
       />
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
-        <AddButton title="Decoration" onClick={openForm} color="blue" />
+        <AddButton title="Decoration" onClick={openForm} color="red" />
 
         {/* Decoration Status Summary */}
         {decorations.length > 0 && (
@@ -566,9 +510,9 @@ export default function FourthOfJulyDecorationsPage() {
               onDelete={(taskId: string) => handleDeleteTask(taskId)}
               onEdit={handleEditTask}
               theme={{
-                accentColor: '#3b82f6', // Blue for Fourth of July
+                accentColor: '#dc2626', // Blue for Fourth of July
               }}
-              borderColor="rgb(59 130 246)" // Blue border for Fourth of July
+              borderColor="rgb(220 38 38)" // Blue border for Fourth of July
               disableInternalModal={true}
             />
           )}
@@ -589,9 +533,9 @@ export default function FourthOfJulyDecorationsPage() {
               onEdit={handleEditTask}
               className="opacity-60"
               theme={{
-                accentColor: '#3b82f6', // Blue for Fourth of July
+                accentColor: '#dc2626', // Blue for Fourth of July
               }}
-              borderColor="rgb(59 130 246)" // Blue border for Fourth of July
+              borderColor="rgb(220 38 38)" // Blue border for Fourth of July
               disableInternalModal={true}
             />
           )}
@@ -625,7 +569,7 @@ export default function FourthOfJulyDecorationsPage() {
               { value: 'high', label: 'High Priority' },
             ],
           },
-          ...(isAuthorizedForSharing && isHolidayShared
+          ...(isHolidayShared
             ? [
                 {
                   id: 'assignedTo',
@@ -640,7 +584,7 @@ export default function FourthOfJulyDecorationsPage() {
           title: '',
           description: '',
           priority: 'medium',
-          ...(isAuthorizedForSharing && isHolidayShared ? { assignedTo: '' } : {}),
+          ...(isHolidayShared ? { assignedTo: '' } : {}),
           dueDate: '',
         }}
         onSubmit={handleAddTask}
@@ -677,7 +621,7 @@ export default function FourthOfJulyDecorationsPage() {
               { value: 'high', label: 'High Priority' },
             ],
           },
-          ...(isAuthorizedForSharing && isHolidayShared
+          ...(isHolidayShared
             ? [
                 {
                   id: 'assignedTo',
@@ -694,7 +638,7 @@ export default function FourthOfJulyDecorationsPage() {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isAuthorizedForSharing && isHolidayShared
+                ...(isHolidayShared
                   ? { assignedTo: editingTask.assignedTo || '' }
                   : {}),
                 dueDate: editingTask.dueDate

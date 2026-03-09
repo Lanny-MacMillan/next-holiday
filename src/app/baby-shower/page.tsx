@@ -1,13 +1,11 @@
 'use client';
 
 import { useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import GuestListCard from '@/components/cards/guest/GuestListCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
@@ -42,14 +40,15 @@ const subsections = [
 ];
 
 export default function BabyShowerPage() {
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Get holiday ID for Baby Shower - only resolve if home data is initialized
-  const holidayId = homeInitialized
-    ? getHolidayIdFromRoute('/baby-shower', holidayPreferences)
-    : getHolidayIdFromRoute('/baby-shower', holidayPreferences); // Allow fallback for cold entry
 
   // Get data from Redux home state first, fallback to RTK Query if needed
   const homeData = useAppSelector(selectHomeData);

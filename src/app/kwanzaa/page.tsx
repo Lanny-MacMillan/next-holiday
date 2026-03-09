@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
@@ -47,21 +47,22 @@ const subsections = [
 ];
 
 export default function KwanzaaPage() {
-  const { user: auth0User } = useAuth0();
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Get holiday ID for Kwanzaa - try to resolve from home data, fallback to route-based resolution
-  const holidayId = homeInitialized
-    ? getHolidayIdFromRoute('/kwanzaa', holidayPreferences)
-    : getHolidayIdFromRoute('/kwanzaa', holidayPreferences); // Allow fallback for cold entry
 
   // Get data from Redux home state first, fallback to RTK Query if needed
   const homeData = useAppSelector(selectHomeData);
 
   // Get holiday data from Redux using memoized selector
   const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
+    selectHolidayPrefById(state, holidayId!),
   );
 
   // Use only Redux data - no API calls on holiday pages

@@ -629,13 +629,9 @@ button.dark .hover\:bg-purple-500:hover {
   border-left: 4px solid rgb(var(--color-green-500));
 }
 
-/* Remove green border in gamified mode - now handled by component */
-.gamified-mode .card-cards {
-  /* Border handling moved to component level */
-}
-
-.gamified-mode .card-events-christmas {
-  border-left: none !important;
+/* White border for all cards in gamified mode */
+.gamified-mode [class*='card-'] {
+  border-left: 4px solid white !important;
 }
 
 /* Override white backgrounds in gamified mode */
