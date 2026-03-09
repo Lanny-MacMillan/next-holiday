@@ -117,7 +117,7 @@ export async function addUserToDb(auth0User: {
           const existingUser = await prisma.user.findUnique({
             where: { auth0Sub: auth0User.sub },
             include: {
-              accountMemberships: {
+              accountMembers: {
                 include: {
                   account: true,
                 },
@@ -126,7 +126,7 @@ export async function addUserToDb(auth0User: {
           });
 
           if (existingUser) {
-            const account = existingUser.accountMemberships?.[0]?.account || null;
+            const account = existingUser.accountMembers?.[0]?.account || null;
             console.log('Successfully recovered from race condition:', {
               userId: existingUser.id,
               hasAccount: !!account,
