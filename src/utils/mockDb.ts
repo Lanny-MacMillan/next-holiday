@@ -18,7 +18,7 @@ export interface ShareRepository {
 
 export interface InviteRepository {
   create(
-    invite: Omit<Invite, 'inviteId' | 'status' | 'createdAt' | 'respondedAt'>,
+    invite: Omit<Invite, 'id' | 'status' | 'createdAt' | 'respondedAt'>,
   ): Promise<Invite>;
   findById(inviteId: string): Promise<Invite | null>;
   findByUserId(userId: string): Promise<Invite[]>;
@@ -88,11 +88,11 @@ export class MockShareRepository implements ShareRepository {
 
 export class MockInviteRepository implements InviteRepository {
   async create(
-    inviteData: Omit<Invite, 'inviteId' | 'status' | 'createdAt' | 'respondedAt'>,
+    inviteData: Omit<Invite, 'id' | 'status' | 'createdAt' | 'respondedAt'>,
   ): Promise<Invite> {
     const invite: Invite = {
       ...inviteData,
-      inviteId: this.generateId(),
+      id: this.generateId(),
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
@@ -102,7 +102,7 @@ export class MockInviteRepository implements InviteRepository {
   }
 
   async findById(inviteId: string): Promise<Invite | null> {
-    return invites.find(invite => invite.inviteId === inviteId) || null;
+    return invites.find(invite => invite.id === inviteId) || null;
   }
 
   async findByUserId(userId: string): Promise<Invite[]> {
@@ -123,7 +123,7 @@ export class MockInviteRepository implements InviteRepository {
   }
 
   async update(invite: Invite): Promise<Invite> {
-    const index = invites.findIndex(i => i.inviteId === invite.inviteId);
+    const index = invites.findIndex(i => i.id === invite.id);
     if (index === -1) {
       throw new Error('Invite not found');
     }
