@@ -153,7 +153,7 @@ export default function HanukkahGiftListPage() {
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
+    if (!holidayId || !mutation || !auth0User) return;
 
     try {
       const payload = transformGiftPayload(values, contacts);

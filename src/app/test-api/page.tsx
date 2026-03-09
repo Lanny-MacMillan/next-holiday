@@ -15,7 +15,7 @@ export default function TestApiPage() {
   const [testResult, setTestResult] = useState<string>('');
 
   const testGiftCreation = async () => {
-    if (!holidayId || !mutation) {
+    if (!holidayId || !mutation || !auth0User) {
       setTestResult('No holiday ID or mutation available');
       return;
     }

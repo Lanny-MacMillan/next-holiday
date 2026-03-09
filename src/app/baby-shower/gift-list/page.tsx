@@ -121,7 +121,7 @@ export default function BabyShowerGiftListPage() {
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
+    if (!holidayId || !mutation || !auth0User) return;
 
     try {
       const payload = transformGiftPayload(values, contacts);
@@ -156,7 +156,7 @@ export default function BabyShowerGiftListPage() {
   }
 
   async function handleToggleGift(giftId: string) {
-    if (!holidayId) return;
+    if (!holidayId || !auth0User) return;
 
     try {
       // Find the current gift to get its completion status from Redux data
@@ -200,7 +200,7 @@ export default function BabyShowerGiftListPage() {
   }
 
   async function confirmDelete() {
-    if (!giftToDelete || !holidayId) return;
+    if (!giftToDelete || !holidayId || !auth0User) return;
 
     setDeleteLoading(true);
     try {
@@ -244,7 +244,7 @@ export default function BabyShowerGiftListPage() {
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
-    if (!selectedGift || !holidayId) return;
+    if (!selectedGift || !holidayId || !auth0User) return;
 
     setEditLoading(true);
     try {
@@ -436,7 +436,7 @@ export default function BabyShowerGiftListPage() {
 
     // Find the contact that matches this gift's recipient
     const matchingContact = contacts.find(
-      contact => contact.name === selectedGift.recipient,
+      (contact: any) => contact.name === selectedGift.recipient,
     );
 
     return {

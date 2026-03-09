@@ -62,6 +62,7 @@ export default function AddressBookPage() {
 
   async function handleAddContact(formValues: Record<string, any>) {
     if (!formValues.name?.trim() || !formValues.phone?.trim()) return;
+    if (!auth0User) return;
 
     const contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> = {
       name: formValues.name,
@@ -138,6 +139,7 @@ export default function AddressBookPage() {
   }
 
   async function confirmDelete() {
+    if (!auth0User) return;
     if (deleteConfirm.contactId) {
       try {
         await dispatch(
