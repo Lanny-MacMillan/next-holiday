@@ -46,7 +46,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
           borderColor
             ? {
                 borderLeftWidth: '4px',
-                borderLeftStyle: 'solid',
+                borderLeftStyle: 'solid' as const,
                 borderLeftColor: borderColor,
               }
             : {}

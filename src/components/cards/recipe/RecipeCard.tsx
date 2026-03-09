@@ -93,7 +93,7 @@ export default function RecipeCard({
   const borderStyle = borderColor
     ? {
         borderLeftWidth: '4px',
-        borderLeftStyle: 'solid',
+        borderLeftStyle: 'solid' as const,
         borderLeftColor: borderColor,
       }
     : {};

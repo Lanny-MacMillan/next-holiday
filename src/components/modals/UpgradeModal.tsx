@@ -387,7 +387,7 @@ export default function UpgradeModal({
                         : 'border-gray-600 dark:border-gray-400'
                     }`}
                     maxLength={5}
-                    style={{ borderStyle: 'solid' }}
+                    style={{ borderStyle: 'solid' as const }}
                   />
                 </div>
                 <div>
@@ -411,7 +411,7 @@ export default function UpgradeModal({
                         : 'border-gray-600 dark:border-gray-400'
                     }`}
                     maxLength={4}
-                    style={{ borderStyle: 'solid' }}
+                    style={{ borderStyle: 'solid' as const }}
                   />
                 </div>
               </div>
@@ -426,7 +426,7 @@ export default function UpgradeModal({
                   onChange={e => handleInputChange('cardholderName', e.target.value)}
                   placeholder="John Doe"
                   className="w-full px-3 py-2 border-2 border-gray-600 dark:border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm text-sm sm:text-base"
-                  style={{ borderStyle: 'solid' }}
+                  style={{ borderStyle: 'solid' as const }}
                 />
               </div>
             </div>

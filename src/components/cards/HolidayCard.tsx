@@ -170,7 +170,7 @@ export default function HolidayCard({
                 intensity: 'heavy',
               }),
               borderLeftWidth: '4px',
-              borderLeftStyle: 'solid',
+              borderLeftStyle: 'solid' as const,
               borderLeftColor: 'white',
             } as React.CSSProperties
           }
@@ -298,7 +298,7 @@ export default function HolidayCard({
             }),
             '--holiday-color': color.light,
             borderLeftWidth: '4px',
-            borderLeftStyle: 'solid',
+            borderLeftStyle: 'solid' as const,
             borderLeftColor: color.light, // Always show holiday color accent
           } as React.CSSProperties
         }
