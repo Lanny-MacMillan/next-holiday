@@ -28,7 +28,7 @@ const UpdateContactSchema = z.object({
 // PUT /api/contacts/[id] - Update owned contact
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireAuth(request);
@@ -60,7 +60,7 @@ export async function PUT(
     // Check if contact exists and belongs to user's account
     const existingContact = await prisma.contact.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         accountId: account.id,
       },
     });
@@ -72,7 +72,7 @@ export async function PUT(
     // Update the contact
     const updatedContact = await prisma.contact.update({
       where: {
-        id: params.id,
+        id: (await params).id,
       },
       data: {
         ...(contactData.name && { name: contactData.name }),
@@ -115,7 +115,7 @@ export async function PUT(
 // DELETE /api/contacts/[id] - Soft-delete (set archived=true)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireAuth(request);
@@ -138,7 +138,7 @@ export async function DELETE(
     // Check if contact exists and belongs to user's account
     const existingContact = await prisma.contact.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         accountId: account.id,
       },
     });
@@ -152,7 +152,7 @@ export async function DELETE(
     // For now, we'll do a hard delete since the schema doesn't have archived field
     await prisma.contact.delete({
       where: {
-        id: params.id,
+        id: (await params).id,
       },
     });
 
