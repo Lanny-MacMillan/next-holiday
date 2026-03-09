@@ -1,107 +1,114 @@
-@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  /* Font families */
-  --font-family-sans:
-    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  --font-family-display:
-    'Luckiest Guy', 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive,
-    sans-serif;
-  --font-family-fredoka:
-    'Fredoka', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, sans-serif;
-  /* Cursor Light Theme Colors with Christmas touches */
-  --color-background: 250 245 255; /* Very light purple with Christmas warmth */
-  --color-foreground: 28 28 28;
+@layer base {
+  :root {
+    /* Font families */
+    --font-family-sans:
+      'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    --font-family-display:
+      'Luckiest Guy', 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive,
+      sans-serif;
+    --font-family-fredoka:
+      'Fredoka', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      Roboto, 'Helvetica Neue', Arial, sans-serif;
 
-  /* Card backgrounds - pure white for contrast */
-  --color-card-background: 255 255 255;
-  --color-card-border: 230 230 230;
+    /* Cursor Light Theme Colors with Christmas touches */
+    --color-background: 250 245 255; /* Very light purple with Christmas warmth */
+    --color-foreground: 28 28 28;
 
-  /* Gray scale - Cursor's subtle grays */
-  --color-gray-50: 250 250 250;
-  --color-gray-100: 245 245 245;
-  --color-gray-200: 235 235 235;
-  --color-gray-300: 220 220 220;
-  --color-gray-400: 180 180 180;
-  --color-gray-500: 120 120 120;
-  --color-gray-600: 80 80 80;
-  --color-gray-700: 60 60 60;
-  --color-gray-800: 40 40 40;
-  --color-gray-900: 20 20 20;
+    /* Card backgrounds - pure white for contrast */
+    --color-card-background: 255 255 255;
+    --color-card-border: 230 230 230;
 
-  /* Blue - Cursor's signature blue */
-  --color-blue-400: 59 130 246;
-  --color-blue-500: 37 99 235;
-  --color-blue-600: 29 78 216;
+    /* Gray scale - Cursor's subtle grays */
+    --color-gray-50: 250 250 250;
+    --color-gray-100: 245 245 245;
+    --color-gray-200: 235 235 235;
+    --color-gray-300: 220 220 220;
+    --color-gray-400: 180 180 180;
+    --color-gray-500: 120 120 120;
+    --color-gray-600: 80 80 80;
+    --color-gray-700: 60 60 60;
+    --color-gray-800: 40 40 40;
+    --color-gray-900: 20 20 20;
 
-  /* Green - Christmas green */
-  --color-green-400: 34 197 94;
-  --color-green-500: 22 163 74;
-  --color-green-600: 21 128 61;
+    /* Blue - Cursor's signature blue */
+    --color-blue-400: 59 130 246;
+    --color-blue-500: 37 99 235;
+    --color-blue-600: 29 78 216;
 
-  /* Red - Christmas red */
-  --color-red-400: 239 68 68;
-  --color-red-500: 220 38 38;
-  --color-red-600: 185 28 28;
+    /* Green - Christmas green */
+    --color-green-400: 34 197 94;
+    --color-green-500: 22 163 74;
+    --color-green-600: 21 128 61;
 
-  /* Purple - Cursor's accent purple */
-  --color-purple-300: 196 181 253;
-  --color-purple-400: 167 139 250;
-  --color-purple-500: 147 51 234;
-  --color-purple-600: 126 34 206;
-  --color-purple-800: 107 33 168;
+    /* Red - Christmas red */
+    --color-red-400: 239 68 68;
+    --color-red-500: 220 38 38;
+    --color-red-600: 185 28 28;
 
-  /* Orange - Christmas orange */
-  --color-orange-300: 253 186 116;
-  --color-orange-400: 251 146 60;
-  --color-orange-500: 249 115 22;
-  --color-orange-600: 234 88 12;
-  --color-orange-800: 194 65 12;
+    /* Purple - Cursor's accent purple */
+    --color-purple-300: 196 181 253;
+    --color-purple-400: 167 139 250;
+    --color-purple-500: 147 51 234;
+    --color-purple-600: 126 34 206;
+    --color-purple-800: 107 33 168;
 
-  /* Yellow - Christmas gold */
-  --color-yellow-500: 234 179 8;
-  --color-yellow-600: 202 138 4;
+    /* Orange - Christmas orange */
+    --color-orange-300: 253 186 116;
+    --color-orange-400: 251 146 60;
+    --color-orange-500: 249 115 22;
+    --color-orange-600: 234 88 12;
+    --color-orange-800: 194 65 12;
 
-  /* Pink - Cursor's accent pink */
-  --color-pink-500: 236 72 153;
-  --color-pink-600: 219 39 119;
+    /* Yellow - Christmas gold */
+    --color-yellow-500: 234 179 8;
+    --color-yellow-600: 202 138 4;
+
+    /* Pink - Cursor's accent pink */
+    --color-pink-500: 236 72 153;
+    --color-pink-600: 219 39 119;
+  }
 }
 
-/* Font classes */
-.font-sans {
-  font-family: var(--font-family-sans);
-}
+@layer components {
+  /* Font classes */
+  .font-sans {
+    font-family: var(--font-family-sans);
+  }
 
-.font-display {
-  font-family: var(--font-family-display);
-}
+  .font-display {
+    font-family: var(--font-family-display);
+  }
 
-.font-fredoka {
-  font-family: var(--font-family-fredoka);
-}
+  .font-fredoka {
+    font-family: var(--font-family-fredoka);
+  }
 
-/* Line clamp utilities for text truncation */
-.line-clamp-1 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-}
+  /* Line clamp utilities for text truncation */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
 
-.line-clamp-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 
-.line-clamp-3 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
 }
 
 /* Cursor Dark Theme Colors with Christmas touches */
