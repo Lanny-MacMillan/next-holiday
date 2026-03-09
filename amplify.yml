@@ -3,7 +3,8 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - rm -f package-lock.json
+        - npm install
         - npx prisma generate
     build:
       commands:
