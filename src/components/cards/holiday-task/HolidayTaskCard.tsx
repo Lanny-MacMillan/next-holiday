@@ -60,7 +60,7 @@ export default function HolidayTaskCard({
         className={`block card card-cards rounded-2xl p-3 sm:p-5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${backgroundColor} text-white ${className}`}
         style={{
           borderWidth: isDarkMode ? '3px' : '0',
-          borderStyle: 'solid',
+          borderStyle: 'solid' as const,
           borderColor: isDarkMode ? 'rgba(255, 255, 255, 1)' : 'transparent',
           filter: getCardStyling({
             isDarkMode,
@@ -121,7 +121,7 @@ export default function HolidayTaskCard({
       style={{
         ...(themeBackgroundColor && { backgroundColor: themeBackgroundColor }),
         borderLeftWidth: '4px',
-        borderLeftStyle: 'solid',
+        borderLeftStyle: 'solid' as const,
         borderLeftColor: primaryColor,
         filter: getCardStyling({
           isDarkMode,

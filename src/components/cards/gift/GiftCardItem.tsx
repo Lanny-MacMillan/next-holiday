@@ -67,10 +67,10 @@ export default function GiftCardItem({
   const completedClasses = isCompleted ? 'opacity-60' : '';
 
   // Apply border color if provided
-  const borderStyle = borderColor
+  const borderStyle: React.CSSProperties = borderColor
     ? {
         borderLeftWidth: '4px',
-        borderLeftStyle: 'solid',
+        borderLeftStyle: 'solid' as const,
         borderLeftColor: borderColor,
       }
     : {};

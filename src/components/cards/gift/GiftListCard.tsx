@@ -402,7 +402,7 @@ export default function GiftListCard({
       className={`max-w-4xl mx-auto card rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${className}`}
       style={{
         borderLeftWidth: '4px',
-        borderLeftStyle: 'solid',
+        borderLeftStyle: 'solid' as const,
         borderLeftColor: primaryColor,
         filter: getCardStyling({
           isDarkMode,

@@ -131,7 +131,7 @@ export default function PartyPlanningCard({
       style={{
         ...(themeBackgroundColor && { backgroundColor: themeBackgroundColor }),
         borderLeftWidth: '4px',
-        borderLeftStyle: 'solid',
+        borderLeftStyle: 'solid' as const,
         borderLeftColor: primaryColor,
       }}
     >

@@ -29,7 +29,7 @@ const BirthdayHolidayCard: React.FC<BirthdayHolidayCardProps> = ({
   const borderStyle: React.CSSProperties = borderColor
     ? {
         borderLeftWidth: '4px',
-        borderLeftStyle: 'solid',
+        borderLeftStyle: 'solid' as const,
         borderLeftColor: borderColor,
       }
     : {};

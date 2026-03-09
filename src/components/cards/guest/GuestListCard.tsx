@@ -301,7 +301,7 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
         className="card rounded-lg p-4 sm:p-6 transition-all duration-200"
         style={{
           borderLeftWidth: '4px',
-          borderLeftStyle: 'solid',
+          borderLeftStyle: 'solid' as const,
           borderLeftColor: theme.primaryColor,
           filter: getCardStyling({
             isDarkMode,
