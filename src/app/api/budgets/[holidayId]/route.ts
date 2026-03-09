@@ -12,7 +12,7 @@ const UpdateBudgetSchema = z.object({
 // PUT /api/budgets/[holidayId] - Update budget for a specific holiday
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { holidayId: string } },
+  { params }: { params: Promise<{ holidayId: string }> },
 ) {
   try {
     const user = await requireAuth(request);
@@ -24,7 +24,7 @@ export async function PUT(
     }
 
     const { targetAmount } = validation.data;
-    const { holidayId } = params;
+    const { holidayId } = await params;
 
     // Find existing budget
     const existingBudget = await prisma.budget.findFirst({
