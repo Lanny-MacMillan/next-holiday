@@ -163,11 +163,16 @@ export default function HolidayCard({
               : ''
           }`}
           style={
-            getCardStyling({
-              isDarkMode,
-              isGamified: true,
-              intensity: 'heavy',
-            }) as React.CSSProperties
+            {
+              ...getCardStyling({
+                isDarkMode,
+                isGamified: true,
+                intensity: 'heavy',
+              }),
+              borderLeftWidth: '4px',
+              borderLeftStyle: 'solid',
+              borderLeftColor: 'white',
+            } as React.CSSProperties
           }
         >
           {/* Background texture overlay */}
