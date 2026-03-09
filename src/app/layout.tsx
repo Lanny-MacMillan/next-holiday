@@ -14,6 +14,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Server-side env check (only logs on server, not exposed to client)
+  if (typeof window === 'undefined') {
+    console.log('🔧 Layout render - DB configured:', !!process.env.DATABASE_URL);
+  }
+
   // Install fetch tracer on client side
   if (typeof window !== 'undefined') {
     installFetchTracer();
