@@ -2,6 +2,8 @@
  * Utility functions for consistent card drop shadows across the app
  */
 
+import React from 'react';
+
 export interface ShadowOptions {
   isDarkMode?: boolean;
   isGamified?: boolean;
@@ -55,33 +57,31 @@ export const getCardFilter = (options: ShadowOptions = {}): { filter: string } =
 /**
  * Get complete card styling including shadows and borders for dark mode
  */
-export const getCardStyling = (
-  options: ShadowOptions = {},
-): {
-  filter: string;
-  borderTopWidth?: string;
-  borderRightWidth?: string;
-  borderBottomWidth?: string;
-  borderTopStyle?: string;
-  borderRightStyle?: string;
-  borderBottomStyle?: string;
-  borderTopColor?: string;
-  borderRightColor?: string;
-  borderBottomColor?: string;
-  boxShadow?: string;
-} => {
+export const getCardStyling = (options: ShadowOptions = {}): React.CSSProperties => {
   const { isDarkMode = false, intensity = 'medium' } = options;
 
-  const baseStyles = {
+  const baseStyles: React.CSSProperties = {
     filter: getCardDropShadow(options),
   };
 
   if (isDarkMode) {
     // Add white outline for dark mode to make shadows pop
     const borderIntensityMap = {
-      light: { width: '1px', style: 'solid', color: 'rgba(255, 255, 255, 0.1)' },
-      medium: { width: '1px', style: 'solid', color: 'rgba(255, 255, 255, 0.25)' },
-      heavy: { width: '3px', style: 'solid', color: 'rgba(255, 255, 255, 1)' },
+      light: {
+        width: '1px',
+        style: 'solid' as const,
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+      medium: {
+        width: '1px',
+        style: 'solid' as const,
+        color: 'rgba(255, 255, 255, 0.25)',
+      },
+      heavy: {
+        width: '3px',
+        style: 'solid' as const,
+        color: 'rgba(255, 255, 255, 1)',
+      },
     };
 
     const borderProps = borderIntensityMap[intensity];
