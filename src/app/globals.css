@@ -636,7 +636,7 @@ button.dark .hover\:bg-purple-500:hover {
   border-left: 4px solid rgb(var(--color-green-500));
 }
 
-/* White border for all cards in gamified mode */
+/* White border for all cards in gamified mode - only in dark mode */
 .gamified-mode [class*='card-'] {
   border-left: 4px solid white !important;
 }
@@ -1371,3 +1371,12 @@ button.dark .hover\:bg-purple-500:hover {
     }
   }
 }
+
+/* Force white left border for RSVP sections in gamified mode
+.rsvp-gamified-border {
+  border-left: 4px solid white !important;
+}
+
+.rsvp-gamified-border-light {
+  border-left: 4px solid rgba(255, 255, 255, 0.8) !important;
+} */

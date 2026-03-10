@@ -82,11 +82,16 @@ export default function GuestCardItem({
       <li
         key={guest.id}
         className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden text-white tracking-wide ${completedClasses} ${backgroundColor}`}
-        style={getCardStyling({
-          isDarkMode,
-          isGamified: true,
-          intensity: 'heavy',
-        })}
+        style={{
+          ...getCardStyling({
+            isDarkMode,
+            isGamified: true,
+            intensity: 'heavy',
+          }),
+          borderLeftWidth: isDarkMode ? '4px' : '0',
+          borderLeftStyle: 'solid' as const,
+          borderLeftColor: isDarkMode ? 'white' : 'transparent',
+        }}
         onClick={() => onToggle(guest.id)}
       >
         {/* Background texture overlay */}

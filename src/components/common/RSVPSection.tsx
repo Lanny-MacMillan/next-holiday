@@ -93,7 +93,7 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
       }, ${guestCount} guests)`;
     }
   };
-  console.log('holidayColor', holidayColor);
+  console.log('borderColor', borderColor);
   if (isGamifiedMode) {
     // Gamified mode design
     return (
@@ -123,8 +123,24 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
             </div>
           </div>
         ) : (
-          // Non-empty state - render items directly without background container
-          <div className="space-y-3">{items.map(item => renderItem(item))}</div>
+          // Non-empty state - render items in a card container with white border in dark mode
+          <div
+            className={`card ${cardClassName} rounded-lg shadow-sm overflow-hidden`}
+            // style={{
+            //   borderLeftWidth: isDarkMode ? '4px' : '0',
+            //   borderLeftStyle: 'solid' as const,
+            //   borderLeftColor: isDarkMode ? 'white' : 'transparent',
+            //   ...getCardStyling({
+            //     isDarkMode,
+            //     isGamified: true,
+            //     intensity: 'heavy',
+            //   }),
+            // }}
+          >
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {items.map(item => renderItem(item))}
+            </div>
+          </div>
         )}
       </div>
     );
@@ -156,15 +172,6 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
       ) : (
         <div
           className={`card ${cardClassName} rounded shadow`}
-          style={
-            borderColor
-              ? {
-                  borderLeftWidth: '4px',
-                  borderLeftStyle: 'solid' as const,
-                  borderLeftColor: borderColor,
-                }
-              : {}
-          }
         >
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {items.map(item => renderItem(item))}

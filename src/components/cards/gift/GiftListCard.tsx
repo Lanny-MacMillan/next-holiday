@@ -256,12 +256,74 @@ export default function GiftListCard({
     getGamifiedBackgroundColor(holiday) ||
     'bg-gradient-to-br from-gray-400 to-gray-600';
 
+  // Helper function to get combined styling without border conflicts
+  const getCombinedCardStyling = (cardStylingOptions: any) => {
+    const cardStyles = getCardStyling(cardStylingOptions);
+
+    if (isDarkMode) {
+      // If we're in dark mode, getCardStyling returns border properties
+      // We need to combine them properly to avoid conflicts
+      const {
+        borderTopWidth,
+        borderRightWidth,
+        borderBottomWidth,
+        borderTopStyle,
+        borderRightStyle,
+        borderBottomStyle,
+        borderTopColor,
+        borderRightColor,
+        borderBottomColor,
+        filter,
+        ...otherStyles
+      } = cardStyles;
+
+      // Only include border properties if they exist and are consistent
+      if (borderTopWidth && borderRightWidth && borderBottomWidth) {
+        return {
+          ...otherStyles,
+          borderTopWidth,
+          borderRightWidth,
+          borderBottomWidth,
+          borderLeftWidth: '4px', // Add left border for gamified mode
+          borderTopStyle,
+          borderRightStyle,
+          borderBottomStyle,
+          borderLeftStyle: 'solid' as const, // Add left border style
+          borderTopColor,
+          borderRightColor,
+          borderBottomColor,
+          borderLeftColor: 'white', // White left border for dark mode
+          filter,
+        };
+      } else {
+        // Fallback to our own border style
+        return {
+          ...otherStyles,
+          borderWidth: '3px',
+          borderStyle: 'solid' as const,
+          borderColor: 'rgba(255, 255, 255, 1)',
+          borderLeftWidth: '4px', // Add left border
+          borderLeftColor: 'white', // White left border
+          filter,
+        };
+      }
+    }
+
+    // For light mode, add left border to the existing styles
+    return {
+      ...cardStyles,
+      borderLeftWidth: '4px',
+      borderLeftStyle: 'solid' as const,
+      borderLeftColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white for light mode
+    };
+  };
+
   if (isGamifiedMode) {
     // Gamified mode design
     const cardContent = (
       <div
         className={`max-w-4xl mx-auto rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${backgroundColor} text-white ${className}`}
-        style={getCardStyling({
+        style={getCombinedCardStyling({
           isDarkMode,
           isGamified: true,
           intensity: 'heavy',

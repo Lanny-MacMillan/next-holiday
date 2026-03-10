@@ -94,7 +94,7 @@ export default function HolidayHeader({
         {showBackButton && (
           <Link
             href={backHref}
-            className="absolute left-0 text-blue-600 dark:text-blue-400 text-3xl sm:text-4xl md:text-5xl transition-colors duration-200 hover:scale-110"
+            className="absolute left-0 text-black dark:text-white text-3xl sm:text-4xl md:text-5xl transition-colors duration-200 hover:scale-110"
             onMouseEnter={e => {
               e.currentTarget.style.color = getOutlineColor();
             }}
@@ -120,18 +120,16 @@ export default function HolidayHeader({
             <h1
               className={`${
                 isGamified ? 'font-display' : 'font-sans'
-              } text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-2 text-gray-800 dark:text-white break-words ${
+              } text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-2 text-black dark:text-white break-words ${
                 isGamified ? 'tracking-wide relative z-10' : ''
               }`}
               style={
                 isGamified
                   ? {
                       fontFamily: 'var(--font-family-fredoka)',
-                      color: 'white',
                       filter: 'drop-shadow(3px 5px 9px rgba(0, 0, 0, 0.5))',
                     }
                   : {
-                      color: 'white',
                       filter: 'drop-shadow(3px 5px 9px rgba(0, 0, 0, 0.5))',
                     }
               }

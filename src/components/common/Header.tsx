@@ -56,7 +56,12 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <header
+        className="shadow-sm border-b border-gray-200 dark:border-gray-700"
+        style={{
+          backgroundColor: isDarkMode ? 'rgb(10, 8, 15)' : 'rgb(250, 245, 255)',
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Left side - App title */}

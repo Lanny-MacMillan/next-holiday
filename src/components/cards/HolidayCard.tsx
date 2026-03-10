@@ -169,9 +169,9 @@ export default function HolidayCard({
                 isGamified: true,
                 intensity: 'heavy',
               }),
-              borderLeftWidth: '4px',
+              borderLeftWidth: isDarkMode ? '4px' : '2px',
               borderLeftStyle: 'solid' as const,
-              borderLeftColor: 'white',
+              borderLeftColor: isDarkMode ? 'white' : 'rgba(255, 255, 255, 0.8)',
             } as React.CSSProperties
           }
         >

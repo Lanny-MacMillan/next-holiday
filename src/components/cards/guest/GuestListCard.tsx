@@ -101,6 +101,66 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
   // Calculate +1s (people beyond the primary guest)
   const totalPlusOnes = totalPeople - totalGuests;
 
+  // Helper function to get combined styling without border conflicts (same as GiftListCard)
+  const getCombinedCardStyling = (cardStylingOptions: any) => {
+    const cardStyles = getCardStyling(cardStylingOptions);
+
+    if (isDarkMode) {
+      // If we're in dark mode, getCardStyling returns border properties
+      // We need to combine them properly to avoid conflicts
+      const {
+        borderTopWidth,
+        borderRightWidth,
+        borderBottomWidth,
+        borderTopStyle,
+        borderRightStyle,
+        borderBottomStyle,
+        borderTopColor,
+        borderRightColor,
+        borderBottomColor,
+        filter,
+        ...otherStyles
+      } = cardStyles;
+
+      // Only include border properties if they exist and are consistent
+      if (borderTopWidth && borderRightWidth && borderBottomWidth) {
+        return {
+          ...otherStyles,
+          borderTopWidth,
+          borderRightWidth,
+          borderBottomWidth,
+          borderLeftWidth: '4px', // Add left border for gamified mode
+          borderTopStyle,
+          borderRightStyle,
+          borderBottomStyle,
+          borderLeftStyle: 'solid' as const, // Add left border style
+          borderTopColor,
+          borderRightColor,
+          borderBottomColor,
+          borderLeftColor: 'white', // White left border for dark mode
+          filter,
+        };
+      } else {
+        // Fallback to our own border style
+        return {
+          ...otherStyles,
+          borderLeftWidth: '4px', // Add left border
+          borderLeftStyle: 'solid' as const,
+          borderLeftColor: 'white', // White left border
+          filter,
+        };
+      }
+    }
+
+    // For light mode in gamified mode, add white left border
+    return {
+      ...cardStyles,
+      borderLeftWidth: '4px',
+      borderLeftStyle: 'solid' as const,
+      borderLeftColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white for light mode
+    };
+  };
+
   // Guest-themed icons for gamified mode
   const GuestIcon = ({
     count,
@@ -128,8 +188,8 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
     return (
       <Link href={href} className="block group">
         <div
-          className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white border-2 border-white ${backgroundColor}`}
-          style={getCardStyling({
+          className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${backgroundColor}`}
+          style={getCombinedCardStyling({
             isDarkMode,
             isGamified: true,
             intensity: 'heavy',

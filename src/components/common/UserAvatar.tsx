@@ -13,10 +13,10 @@ interface UserAvatarProps {
 }
 
 const sizeClasses = {
-  xs: 'w-5 h-5 text-xs',
-  sm: 'w-7 h-7 text-xs',
-  md: 'w-9 h-9 text-sm',
-  lg: 'w-11 h-11 text-base',
+  xs: 'w-6 h-6 text-xs',
+  sm: 'w-8 h-8 text-sm',
+  md: 'w-10 h-10 text-base',
+  lg: 'w-12 h-12 text-lg',
 };
 
 const textSizeClasses = {
@@ -66,7 +66,7 @@ export default function UserAvatar({
       onMouseLeave={() => setShowTooltipState(false)}
     >
       <div
-        className={`${sizeClass} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm ${className}`}
+        className={`${sizeClass} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center  border-black dark:border-white ${className}`}
       >
         {shouldShowImage ? (
           <img

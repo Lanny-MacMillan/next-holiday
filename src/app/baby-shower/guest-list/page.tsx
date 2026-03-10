@@ -419,6 +419,7 @@ export default function BabyShowerGuestListPage() {
           title="Pending"
           items={pendingGuests}
           rsvpStatus="pending"
+          borderColor="rgb(var(--color-cyan-500))" // Cyan border for Baby Shower
           emptyMessage="No pending RSVPs yet."
           renderItem={(guest: Guest) => (
             <GuestCardItem
