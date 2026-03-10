@@ -40,14 +40,14 @@ function getRandomTimingFunction(): string {
  * Generate random transform values for gentle, bouncing movement that stays within card boundaries
  */
 function getRandomTransform(baseScale: number = 1): string {
-  // Much smaller ranges to ensure shapes stay within card boundaries
-  // Typical card is ~300px wide, ~200px tall, so we use conservative ranges
-  const translateX = (Math.random() - 0.5) * 60; // -30px to +30px (safe for most cards)
-  const translateY = (Math.random() - 0.5) * 40; // -20px to +20px (safe for card height)
+  // Use rem units for responsive scaling that adapts to different screen sizes
+  // Conservative ranges that work well across mobile and desktop
+  const translateX = (Math.random() - 0.5) * 3.75; // -1.875rem to +1.875rem (responsive equivalent of ±30px)
+  const translateY = (Math.random() - 0.5) * 2.5; // -1.25rem to +1.25rem (responsive equivalent of ±20px)
   const rotate = Math.random() * 360; // 0deg to 360deg (rotation is safe)
   const scale = baseScale; // Keep original scale, no random scaling
 
-  return `translate(${translateX}px, ${translateY}px) rotate(${rotate}deg) scale(${scale})`;
+  return `translate(${translateX}rem, ${translateY}rem) rotate(${rotate}deg) scale(${scale})`;
 }
 
 /**

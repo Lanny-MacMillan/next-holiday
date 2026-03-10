@@ -291,7 +291,7 @@ export default function SharedIndicatorEnhanced({
 
         {/* Member count info - positioned on the right */}
         {members.length >= 1 && (
-          <span className="text-xs text-white ml-1 flex-shrink-0">
+          <span className="hidden sm:block text-xs text-white ml-1 flex-shrink-0">
             {members.length} member{members.length !== 1 ? 's' : ''}
             {members.length === 1 && share.hasPendingInvites && isCurrentUserOwner
               ? ' (invite sent)'

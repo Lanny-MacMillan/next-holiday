@@ -1204,13 +1204,15 @@ button.dark .hover\:bg-purple-500:hover {
     transform: translate(0, 0) scale(var(--shape-scale, 1));
   }
   25% {
-    transform: translate(50px, -30px) scale(var(--shape-scale, 1)) rotate(90deg);
+    transform: translate(3.125rem, -1.875rem) scale(var(--shape-scale, 1))
+      rotate(90deg);
   }
   50% {
-    transform: translate(100px, 40px) scale(var(--shape-scale, 1)) rotate(180deg);
+    transform: translate(6.25rem, 2.5rem) scale(var(--shape-scale, 1)) rotate(180deg);
   }
   75% {
-    transform: translate(20px, 60px) scale(var(--shape-scale, 1)) rotate(270deg);
+    transform: translate(1.25rem, 3.75rem) scale(var(--shape-scale, 1))
+      rotate(270deg);
   }
 }
 
@@ -1220,13 +1222,15 @@ button.dark .hover\:bg-purple-500:hover {
     transform: translate(0, 0) scale(var(--shape-scale, 1));
   }
   25% {
-    transform: translate(-40px, 50px) scale(var(--shape-scale, 1)) rotate(-90deg);
+    transform: translate(-2.5rem, 3.125rem) scale(var(--shape-scale, 1))
+      rotate(-90deg);
   }
   50% {
-    transform: translate(80px, -20px) scale(var(--shape-scale, 1)) rotate(-180deg);
+    transform: translate(5rem, -1.25rem) scale(var(--shape-scale, 1)) rotate(-180deg);
   }
   75% {
-    transform: translate(-30px, -40px) scale(var(--shape-scale, 1)) rotate(-270deg);
+    transform: translate(-1.875rem, -2.5rem) scale(var(--shape-scale, 1))
+      rotate(-270deg);
   }
 }
 
@@ -1236,13 +1240,13 @@ button.dark .hover\:bg-purple-500:hover {
     transform: translateX(0) scale(var(--shape-scale, 1));
   }
   25% {
-    transform: translateX(60px) scale(var(--shape-scale, 1)) rotateY(180deg);
+    transform: translateX(3.75rem) scale(var(--shape-scale, 1)) rotateY(180deg);
   }
   50% {
-    transform: translateX(-30px) scale(var(--shape-scale, 1)) rotateY(360deg);
+    transform: translateX(-1.875rem) scale(var(--shape-scale, 1)) rotateY(360deg);
   }
   75% {
-    transform: translateX(40px) scale(var(--shape-scale, 1)) rotateY(180deg);
+    transform: translateX(2.5rem) scale(var(--shape-scale, 1)) rotateY(180deg);
   }
 }
 
@@ -1252,13 +1256,13 @@ button.dark .hover\:bg-purple-500:hover {
     transform: translateY(0) scale(var(--shape-scale, 1));
   }
   25% {
-    transform: translateY(-50px) scale(var(--shape-scale, 1)) rotateX(180deg);
+    transform: translateY(-3.125rem) scale(var(--shape-scale, 1)) rotateX(180deg);
   }
   50% {
-    transform: translateY(40px) scale(var(--shape-scale, 1)) rotateX(360deg);
+    transform: translateY(2.5rem) scale(var(--shape-scale, 1)) rotateX(360deg);
   }
   75% {
-    transform: translateY(-20px) scale(var(--shape-scale, 1)) rotateX(180deg);
+    transform: translateY(-1.25rem) scale(var(--shape-scale, 1)) rotateX(180deg);
   }
 }
 
@@ -1267,13 +1271,14 @@ button.dark .hover\:bg-purple-500:hover {
     transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(0deg);
   }
   25% {
-    transform: translate(40px, -40px) scale(var(--shape-scale, 1)) rotate(90deg);
+    transform: translate(2.5rem, -2.5rem) scale(var(--shape-scale, 1)) rotate(90deg);
   }
   50% {
-    transform: translate(0, -80px) scale(var(--shape-scale, 1)) rotate(180deg);
+    transform: translate(0, -5rem) scale(var(--shape-scale, 1)) rotate(180deg);
   }
   75% {
-    transform: translate(-40px, -40px) scale(var(--shape-scale, 1)) rotate(270deg);
+    transform: translate(-2.5rem, -2.5rem) scale(var(--shape-scale, 1))
+      rotate(270deg);
   }
   100% {
     transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(360deg);
@@ -1285,25 +1290,29 @@ button.dark .hover\:bg-purple-500:hover {
     transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(0deg);
   }
   12.5% {
-    transform: translate(20px, -15px) scale(var(--shape-scale, 1)) rotate(45deg);
+    transform: translate(1.25rem, -0.9375rem) scale(var(--shape-scale, 1))
+      rotate(45deg);
   }
   25% {
-    transform: translate(30px, 0) scale(var(--shape-scale, 1)) rotate(90deg);
+    transform: translate(1.875rem, 0) scale(var(--shape-scale, 1)) rotate(90deg);
   }
   37.5% {
-    transform: translate(20px, 15px) scale(var(--shape-scale, 1)) rotate(135deg);
+    transform: translate(1.25rem, 0.9375rem) scale(var(--shape-scale, 1))
+      rotate(135deg);
   }
   50% {
     transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(180deg);
   }
   62.5% {
-    transform: translate(-20px, 15px) scale(var(--shape-scale, 1)) rotate(225deg);
+    transform: translate(-1.25rem, 0.9375rem) scale(var(--shape-scale, 1))
+      rotate(225deg);
   }
   75% {
-    transform: translate(-30px, 0) scale(var(--shape-scale, 1)) rotate(270deg);
+    transform: translate(-1.875rem, 0) scale(var(--shape-scale, 1)) rotate(270deg);
   }
   87.5% {
-    transform: translate(-20px, -15px) scale(var(--shape-scale, 1)) rotate(315deg);
+    transform: translate(-1.25rem, -0.9375rem) scale(var(--shape-scale, 1))
+      rotate(315deg);
   }
   100% {
     transform: translate(0, 0) scale(var(--shape-scale, 1)) rotate(360deg);
@@ -1361,13 +1370,16 @@ button.dark .hover\:bg-purple-500:hover {
       transform: translate(0, 0) scale(var(--shape-scale, 1));
     }
     25% {
-      transform: translate(25px, -15px) scale(var(--shape-scale, 1)) rotate(90deg);
+      transform: translate(1.5625rem, -0.9375rem) scale(var(--shape-scale, 1))
+        rotate(90deg);
     }
     50% {
-      transform: translate(50px, 20px) scale(var(--shape-scale, 1)) rotate(180deg);
+      transform: translate(3.125rem, 1.25rem) scale(var(--shape-scale, 1))
+        rotate(180deg);
     }
     75% {
-      transform: translate(10px, 30px) scale(var(--shape-scale, 1)) rotate(270deg);
+      transform: translate(0.625rem, 1.875rem) scale(var(--shape-scale, 1))
+        rotate(270deg);
     }
   }
 
@@ -1377,13 +1389,16 @@ button.dark .hover\:bg-purple-500:hover {
       transform: translate(0, 0) scale(var(--shape-scale, 1));
     }
     25% {
-      transform: translate(-20px, 25px) scale(var(--shape-scale, 1)) rotate(-90deg);
+      transform: translate(-1.25rem, 1.5625rem) scale(var(--shape-scale, 1))
+        rotate(-90deg);
     }
     50% {
-      transform: translate(40px, -10px) scale(var(--shape-scale, 1)) rotate(-180deg);
+      transform: translate(2.5rem, -0.625rem) scale(var(--shape-scale, 1))
+        rotate(-180deg);
     }
     75% {
-      transform: translate(-15px, -20px) scale(var(--shape-scale, 1)) rotate(-270deg);
+      transform: translate(-0.9375rem, -1.25rem) scale(var(--shape-scale, 1))
+        rotate(-270deg);
     }
   }
 }

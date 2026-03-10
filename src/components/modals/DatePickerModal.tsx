@@ -92,6 +92,11 @@ export default function DatePickerModal({
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
               className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm sm:text-base text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [&::-webkit-calendar-picker-indicator]:dark:invert"
+              style={{
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                minWidth: '0',
+              }}
             />
           </div>
           <div className="flex gap-2">

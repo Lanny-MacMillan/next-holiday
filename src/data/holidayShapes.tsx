@@ -8,8 +8,7 @@ export interface HolidayShapeProps {
 export const HolidayShapes = {
   christmas: ({ className }: HolidayShapeProps) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYMid meet"
@@ -44,8 +43,7 @@ export const HolidayShapes = {
   ),
   hanukkah: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYMid meet"
@@ -94,8 +92,7 @@ export const HolidayShapes = {
   ),
   valentines: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -118,8 +115,7 @@ export const HolidayShapes = {
   ),
   halloween: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 64 64"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -326,8 +322,7 @@ export const HolidayShapes = {
   // Add alias for "new-year" -> "newyear" mapping
   'new-year': ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -406,7 +401,7 @@ export const HolidayShapes = {
     </svg>
   ),
   kwanzaa: ({ className }: { className?: string }) => (
-    <svg width={32} height={32} viewBox="0 0 24 24" className={className}>
+    <svg className={className || 'w-full h-full'} viewBox="0 0 24 24">
       {/* Base (black) */}
       <rect x="4" y="18" width="16" height="2" rx="0.5" fill="#111" />
 
@@ -435,8 +430,7 @@ export const HolidayShapes = {
   ),
   easter: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -465,14 +459,12 @@ export const HolidayShapes = {
   ),
   thanksgiving: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
       aria-hidden="true"
       role="img"
-      className="iconify iconify--twemoji"
       preserveAspectRatio="xMidYMid meet"
     >
       <path
@@ -504,10 +496,8 @@ export const HolidayShapes = {
   ),
   mothersday: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
-      className={className}
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
     >
@@ -739,10 +729,8 @@ export const HolidayShapes = {
   // Add aliases for hyphenated holiday IDs
   'mothers-day': ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
-      className={className}
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
     >
@@ -973,8 +961,7 @@ export const HolidayShapes = {
   ),
   fathersday: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -1022,8 +1009,7 @@ export const HolidayShapes = {
   // Add alias for "fathers-day" -> "fathersday" mapping
   'fathers-day': ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -1070,8 +1056,7 @@ export const HolidayShapes = {
   ),
   fourthoffuly: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -1152,8 +1137,7 @@ export const HolidayShapes = {
   // Add alias for "fourth-of-july" -> "fourthoffuly" mapping
   'fourth-of-july': ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -1233,8 +1217,7 @@ export const HolidayShapes = {
   ),
   anniversary: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -1257,8 +1240,7 @@ export const HolidayShapes = {
   ),
   graduation: ({ className }: { className?: string }) => (
     <svg
-      width={32}
-      height={32}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -1292,8 +1274,7 @@ export const HolidayShapes = {
   ),
   babyshower: ({ className }: { className?: string }) => (
     <svg
-      width={24}
-      height={24}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -1337,8 +1318,7 @@ export const HolidayShapes = {
   ),
   'baby-shower': ({ className }: { className?: string }) => (
     <svg
-      width={24}
-      height={24}
+      className={className || 'w-full h-full'}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"

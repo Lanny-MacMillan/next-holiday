@@ -190,15 +190,22 @@ const BouncingShape: React.FC<BouncingShapeProps> = ({
   return (
     <div
       ref={shapeRef}
-      className={`absolute pointer-events-none ${debug ? 'random-debug' : 'random-bouncing'}`}
-      style={{
-        ...finalStyle,
-        // Add containment to keep animations within bounds
-        contain: 'layout style paint',
-      }}
+      className={`absolute pointer-events-none overflow-hidden ${debug ? 'random-debug' : 'random-bouncing'}`}
+      style={
+        {
+          ...finalStyle,
+          // Add containment to keep animations within bounds
+          contain: 'layout style paint',
+          // Ensure the container doesn't exceed bounds on mobile
+          maxWidth: '100%',
+          maxHeight: '100%',
+          // Use CSS variables for responsive animation scaling
+          ['--shape-scale' as any]: 'clamp(0.6, 2vw, 1)',
+        } as React.CSSProperties
+      }
     >
       <div
-        className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 transition-opacity drop-shadow-lg ${debug ? 'opacity-100 border-2 border-blue-500' : 'opacity-100'}`}
+        className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8 transition-opacity duration-200 drop-shadow-lg ${debug ? 'opacity-100 border-2 border-blue-500' : 'opacity-100'}`}
       >
         <ShapeComponent className="w-full h-full filter drop-shadow-xl" />
       </div>

@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSubscription } from '@/hooks/useSubscription';
 import UpgradeModal from '../modals/UpgradeModal';
 
 export default function UpgradeBanner() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+
+  // Get subscription state including loading state
+  const { hasSubscription, isUserPlusMember, initialized, loading } =
+    useSubscription();
 
   // Check if dark mode is enabled
   useEffect(() => {
@@ -32,6 +37,16 @@ export default function UpgradeBanner() {
 
   // Don't render if dismissed
   if (isDismissed) {
+    return null;
+  }
+
+  // Don't render if user data is still loading or not initialized
+  if (loading || !initialized) {
+    return null;
+  }
+
+  // Don't render if user is already a plus member or doesn't have subscription data
+  if (!hasSubscription || isUserPlusMember) {
     return null;
   }
 

@@ -4,6 +4,8 @@ import {
   selectUserSubscriptionPlan,
   selectIsUserPlusMember,
   selectUserSubscriptionData,
+  selectUserLoading,
+  selectUserInitialized,
 } from '@/store/slices/userSlice';
 
 /**
@@ -15,6 +17,8 @@ export function useSubscription() {
   const subscriptionPlan = useAppSelector(selectUserSubscriptionPlan);
   const isUserPlusMember = useAppSelector(selectIsUserPlusMember);
   const subscriptionData = useAppSelector(selectUserSubscriptionData);
+  const loading = useAppSelector(selectUserLoading);
+  const initialized = useAppSelector(selectUserInitialized);
 
   return {
     user,
@@ -23,5 +27,7 @@ export function useSubscription() {
     subscriptionData,
     isFreeMember: subscriptionPlan === 'free',
     hasSubscription: !!user?.subscriptionPlan,
+    loading,
+    initialized,
   };
 }
