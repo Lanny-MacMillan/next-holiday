@@ -636,9 +636,25 @@ button.dark .hover\:bg-purple-500:hover {
   border-left: 4px solid rgb(var(--color-green-500));
 }
 
-/* White border for all cards in gamified mode - only in dark mode */
-.gamified-mode [class*='card-'] {
-  border-left: 4px solid white !important;
+/* White border for all cards in gamified mode - higher specificity */
+.gamified-mode [class*='card-'],
+.gamified-mode .card-tasks,
+.gamified-mode .card-events-christmas,
+.gamified-mode .card-events-hanukkah,
+.gamified-mode .card-events-kwanzaa,
+.gamified-mode .card-events-new-year,
+.gamified-mode .card-events-easter,
+.gamified-mode .card-events-graduation,
+.gamified-mode .card-events-valentines,
+.gamified-mode .card-events-fourth-of-july,
+.gamified-mode .card-events-fathers-day,
+.gamified-mode .card-events-birthday,
+.gamified-mode .card-tasks-kwanzaa,
+.gamified-mode .card-address,
+.gamified-mode .card-settings,
+.gamified-mode .card-valentines,
+.gamified-mode .card-cards {
+  border: 2px solid white !important;
 }
 
 /* Override white backgrounds in gamified mode */
@@ -1372,11 +1388,20 @@ button.dark .hover\:bg-purple-500:hover {
   }
 }
 
-/* Force white left border for RSVP sections in gamified mode
-.rsvp-gamified-border {
-  border-left: 4px solid white !important;
+/* Force white border for RSVP sections in gamified mode */
+.gamified-mode .rsvp-gamified-border {
+  border: 2px solid white !important;
 }
 
-.rsvp-gamified-border-light {
+/* Light mode RSVP - only left border */
+:not(.gamified-mode) .rsvp-gamified-border-light {
   border-left: 4px solid rgba(255, 255, 255, 0.8) !important;
-} */
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+}
+
+/* Final override for gamified mode borders - highest specificity */
+html .gamified-mode [class*='card-'] {
+  border-left: 4px solid white !important;
+}
