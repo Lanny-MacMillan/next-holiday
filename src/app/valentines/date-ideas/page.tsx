@@ -20,6 +20,7 @@ import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import AddButton from '@/components/common/AddButton';
 import DateTrackerCard from '@/components/cards/DateTrackerCard';
 import DateIdeaCard from '@/components/cards/DateIdeaCard';
@@ -547,10 +548,7 @@ export default function ValentinesDateIdeasPage() {
         message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
         loading={isDeleting}
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

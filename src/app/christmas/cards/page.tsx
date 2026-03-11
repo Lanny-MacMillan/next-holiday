@@ -17,6 +17,7 @@ import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import MailCardStatus from '@/components/cards/MailCardStatus';
 import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
@@ -439,10 +440,7 @@ export default function ChristmasCardsPage() {
         ]}
         title="Sort Cards"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

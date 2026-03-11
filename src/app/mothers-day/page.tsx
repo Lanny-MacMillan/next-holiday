@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
+import Footer from '@/components/common/Footer';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import {
@@ -191,9 +192,7 @@ export default function MothersDayPage() {
           })}
         </ul>
       </main>
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

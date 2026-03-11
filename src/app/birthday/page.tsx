@@ -17,6 +17,7 @@ import {
   selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { getHolidayDataFromRedux } from '@/utils/holidayData';
+import Footer from '@/components/common/Footer';
 
 const subsections = [
   {
@@ -247,9 +248,7 @@ export default function BirthdayPage() {
           })}
         </ul>
       </main>
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

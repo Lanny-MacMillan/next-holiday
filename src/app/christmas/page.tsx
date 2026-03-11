@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { useFormModalMutation } from '@/hooks/useFormModalMutation';
-// Removed RTK Query imports - using only Redux data
-import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
+import Footer from '@/components/common/Footer';
 import {
   selectHolidayPreferences,
   selectHomeInitialized,
@@ -193,9 +191,7 @@ export default function ChristmasPage() {
           })}
         </ul>
       </main>
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }
