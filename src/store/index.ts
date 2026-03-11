@@ -1,4 +1,6 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { persistStore, persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
 import { api } from './api';
 import addressBookReducer from './slices/addressBookSlice';
 import budgetsReducer from './slices/budgetsSlice';
@@ -81,85 +83,108 @@ const shouldDisableSerializableCheck =
   process.env.NODE_ENV === 'development' &&
   process.env.NEXT_PUBLIC_DISABLE_SERIALIZABLE_CHECK === 'true';
 
-export const store = configureStore({
-  reducer: {
-    [api.reducerPath]: api.reducer,
-    addressBook: addressBookReducer,
-    budgets: budgetsReducer,
-    cards: cardsReducer,
-    giftList: giftListReducer,
-    home: homeReducer,
-    tasks: tasksReducer,
-    user: userReducer,
-    theme: themeReducer,
-    countdown: countdownReducer,
-    shares: sharesReducer,
-    invites: invitesReducer,
-    hanukkahGiftList: hanukkahGiftListReducer,
-    hanukkahTasks: hanukkahTasksReducer,
-    hanukkahCountdown: hanukkahCountdownReducer,
-    kwanzaaGiftList: kwanzaaGiftListReducer,
-    kwanzaaTasks: kwanzaaTasksReducer,
-    kwanzaaCountdown: kwanzaaCountdownReducer,
+// Redux Persist configuration
+const persistConfig = {
+  key: 'root',
+  storage,
 
-    newYearTasks: newYearTasksReducer,
-    newYearCountdown: newYearCountdownReducer,
-    valentinesGiftList: valentinesGiftListReducer,
-    valentinesTasks: valentinesTasksReducer,
-    valentinesCountdown: valentinesCountdownReducer,
-    easterGiftList: easterGiftListReducer,
-    easterTasks: easterTasksReducer,
-    easterCountdown: easterCountdownReducer,
-    halloweenGiftList: halloweenGiftListReducer,
-    halloweenTasks: halloweenTasksReducer,
-    halloweenCountdown: halloweenCountdownReducer,
-    halloweenBudget: halloweenBudgetReducer,
-    halloweenGuestList: halloweenGuestListReducer,
-    thanksgivingGiftList: thanksgivingGiftListReducer,
-    thanksgivingTasks: thanksgivingTasksReducer,
-    thanksgivingCountdown: thanksgivingCountdownReducer,
-    thanksgivingGuestList: thanksgivingGuestListReducer,
-    thanksgivingMealPlanning: thanksgivingMealPlanningReducer,
-    thanksgivingBudget: thanksgivingBudgetReducer,
-    mothersDayGiftList: mothersDayGiftListReducer,
-    mothersDayTasks: mothersDayTasksReducer,
-    fathersDayGiftList: fathersDayGiftListReducer,
-    fathersDayTasks: fathersDayTasksReducer,
-    fathersDayCards: fathersDayCardsReducer,
-    fourthOfJulyTasks: fourthOfJulyTasksReducer,
-    fourthOfJulyGuestList: fourthOfJulyGuestListReducer,
-    birthdayGiftList: birthdayGiftListReducer,
-    birthdayTasks: birthdayTasksReducer,
-    birthdayCards: birthdayCardsReducer,
-    birthdayAddressBook: birthdayAddressBookReducer,
-    birthdayGuestList: birthdayGuestListReducer,
-    anniversaryGiftList: anniversaryGiftListReducer,
-    anniversaryTasks: anniversaryTasksReducer,
-    graduationGiftList: graduationGiftListReducer,
-    graduationTasks: graduationTasksReducer,
-    graduationCards: graduationCardsReducer,
-    graduationAddressBook: graduationAddressBookReducer,
-    graduationGuestList: graduationGuestListReducer,
-    babyShowerGiftList: babyShowerGiftListReducer,
-    babyShowerAddressBook: babyShowerAddressBookReducer,
-    babyShowerGuestList: babyShowerGuestListReducer,
-    christmasGuestList: christmasGuestListReducer,
-    easterGuestList: easterGuestListReducer,
-    hanukkahGuestList: hanukkahGuestListReducer,
-    kwanzaaGuestList: kwanzaaGuestListReducer,
-    newYearGuestList: newYearGuestListReducer,
-    valentinesGuestList: valentinesGuestListReducer,
-    graduationCountdown: graduationCountdownReducer,
-    anniversaryCountdown: anniversaryCountdownReducer,
-    birthdayCountdown: birthdayCountdownReducer,
-    fourthOfJulyCountdown: fourthOfJulyCountdownReducer,
-    fathersDayCountdown: fathersDayCountdownReducer,
-    mothersDayCountdown: mothersDayCountdownReducer,
-    christmasCountdown: christmasCountdownReducer,
-    userPreferences: userPreferencesReducer,
-    holidayPreferences: holidayPreferencesReducer,
-    countdownTimer: countdownTimerReducer,
-  },
+  whitelist: [
+    'home',
+    'userPreferences',
+    'theme',
+    'holidayPreferences',
+    'budgets',
+    'user', // Persist user subscription data for authorization checks
+  ],
+  // Don't persist API cache or temporary UI state
+  blacklist: [api.reducerPath],
+};
+
+// Create the root reducer
+const rootReducer = combineReducers({
+  [api.reducerPath]: api.reducer,
+  addressBook: addressBookReducer,
+  budgets: budgetsReducer,
+  cards: cardsReducer,
+  giftList: giftListReducer,
+  home: homeReducer,
+  tasks: tasksReducer,
+  user: userReducer,
+  theme: themeReducer,
+  countdown: countdownReducer,
+  shares: sharesReducer,
+  invites: invitesReducer,
+  hanukkahGiftList: hanukkahGiftListReducer,
+  hanukkahTasks: hanukkahTasksReducer,
+  hanukkahCountdown: hanukkahCountdownReducer,
+  kwanzaaGiftList: kwanzaaGiftListReducer,
+  kwanzaaTasks: kwanzaaTasksReducer,
+  kwanzaaCountdown: kwanzaaCountdownReducer,
+
+  newYearTasks: newYearTasksReducer,
+  newYearCountdown: newYearCountdownReducer,
+  valentinesGiftList: valentinesGiftListReducer,
+  valentinesTasks: valentinesTasksReducer,
+  valentinesCountdown: valentinesCountdownReducer,
+  easterGiftList: easterGiftListReducer,
+  easterTasks: easterTasksReducer,
+  easterCountdown: easterCountdownReducer,
+  halloweenGiftList: halloweenGiftListReducer,
+  halloweenTasks: halloweenTasksReducer,
+  halloweenCountdown: halloweenCountdownReducer,
+  halloweenBudget: halloweenBudgetReducer,
+  halloweenGuestList: halloweenGuestListReducer,
+  thanksgivingGiftList: thanksgivingGiftListReducer,
+  thanksgivingTasks: thanksgivingTasksReducer,
+  thanksgivingCountdown: thanksgivingCountdownReducer,
+  thanksgivingGuestList: thanksgivingGuestListReducer,
+  thanksgivingMealPlanning: thanksgivingMealPlanningReducer,
+  thanksgivingBudget: thanksgivingBudgetReducer,
+  mothersDayGiftList: mothersDayGiftListReducer,
+  mothersDayTasks: mothersDayTasksReducer,
+  fathersDayGiftList: fathersDayGiftListReducer,
+  fathersDayTasks: fathersDayTasksReducer,
+  fathersDayCards: fathersDayCardsReducer,
+  fourthOfJulyTasks: fourthOfJulyTasksReducer,
+  fourthOfJulyGuestList: fourthOfJulyGuestListReducer,
+  birthdayGiftList: birthdayGiftListReducer,
+  birthdayTasks: birthdayTasksReducer,
+  birthdayCards: birthdayCardsReducer,
+  birthdayAddressBook: birthdayAddressBookReducer,
+  birthdayGuestList: birthdayGuestListReducer,
+  anniversaryGiftList: anniversaryGiftListReducer,
+  anniversaryTasks: anniversaryTasksReducer,
+  graduationGiftList: graduationGiftListReducer,
+  graduationTasks: graduationTasksReducer,
+  graduationCards: graduationCardsReducer,
+  graduationAddressBook: graduationAddressBookReducer,
+  graduationGuestList: graduationGuestListReducer,
+  babyShowerGiftList: babyShowerGiftListReducer,
+  babyShowerAddressBook: babyShowerAddressBookReducer,
+  babyShowerGuestList: babyShowerGuestListReducer,
+  christmasGuestList: christmasGuestListReducer,
+  easterGuestList: easterGuestListReducer,
+  hanukkahGuestList: hanukkahGuestListReducer,
+  kwanzaaGuestList: kwanzaaGuestListReducer,
+  newYearGuestList: newYearGuestListReducer,
+  valentinesGuestList: valentinesGuestListReducer,
+  graduationCountdown: graduationCountdownReducer,
+  anniversaryCountdown: anniversaryCountdownReducer,
+  birthdayCountdown: birthdayCountdownReducer,
+  fourthOfJulyCountdown: fourthOfJulyCountdownReducer,
+  fathersDayCountdown: fathersDayCountdownReducer,
+  mothersDayCountdown: mothersDayCountdownReducer,
+  christmasCountdown: christmasCountdownReducer,
+  userPreferences: userPreferencesReducer,
+  holidayPreferences: holidayPreferencesReducer,
+  countdownTimer: countdownTimerReducer,
+});
+
+// Create persisted reducer
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = configureStore({
+  reducer: persistedReducer,
   middleware: getDefaultMiddleware => {
     const middleware = getDefaultMiddleware({
       serializableCheck: shouldDisableSerializableCheck
@@ -201,6 +226,8 @@ export const store = configureStore({
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',
 });
+
+export const persistor = persistStore(store);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
