@@ -76,10 +76,36 @@ export function useHolidayPageData(): HolidayPageData {
 
     switch (sliceKey) {
       case 'cards':
-        if (holidayData.cards) {
-          total = holidayData.cards.length;
-          completed = holidayData.cards.filter(
-            (card: any) => card.isCompleted,
+        // Cards are stored as tasks with category 'Cards'
+        if (holidayData.tasks) {
+          const cardTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Cards',
+          );
+          total = cardTasks.length;
+          completed = cardTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      case 'dateIdeas':
+        // Date Ideas are stored as tasks with category 'Date Ideas'
+        if (holidayData.tasks) {
+          const dateIdeaTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Date Ideas',
+          );
+          total = dateIdeaTasks.length;
+          completed = dateIdeaTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      case 'reservations':
+        // Reservations are stored as tasks with category 'Reservations'
+        if (holidayData.tasks) {
+          const reservationTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Reservations',
+          );
+          total = reservationTasks.length;
+          completed = reservationTasks.filter(
+            (task: any) => task.isCompleted,
           ).length;
         }
         break;
