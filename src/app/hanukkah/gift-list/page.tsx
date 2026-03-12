@@ -1,13 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import Link from 'next/link';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -16,14 +10,12 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -34,20 +26,17 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function HanukkahGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Use centralized holiday page data hook
   const {
     holidayId,
+    holidayData,
+    homeInitialized,
     mutation,
     isLoading: mutationLoading,
     error: mutationError,
     auth0User,
-  } = useFormModalMutation();
-
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
+  } = useHolidayPageData();
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -55,9 +44,6 @@ export default function HanukkahGiftListPage() {
     operation: 'add' | 'update' | 'delete',
   ) => {
     if (!holidayId) return;
-
-    console.log(`updateGiftInRedux - ${operation}:`, giftData);
-    console.log('Available contacts:', contacts);
 
     // For add and update operations, ensure the recipient field is populated
     let processedGiftData = giftData;
@@ -67,14 +53,11 @@ export default function HanukkahGiftListPage() {
       contacts
     ) {
       const contact = contacts.find((c: any) => c.id === giftData.contactId);
-      console.log('Found contact for gift:', contact);
       processedGiftData = {
         ...giftData,
         recipient: contact?.name || giftData.recipient || 'Unknown',
       };
     }
-
-    console.log(`Processed gift data for ${operation}:`, processedGiftData);
 
     switch (operation) {
       case 'add':
@@ -189,10 +172,10 @@ export default function HanukkahGiftListPage() {
     setSelectedGift(null);
   }
 
-  function closeEditModal() {
-    setShowEditModal(false);
-    setSelectedGift(null);
-  }
+  // function closeEditModal() {
+  //   setShowEditModal(false);
+  //   setSelectedGift(null);
+  // }
 
   async function handleToggleGift(giftId: string) {
     if (!holidayId || !auth0User) return;
@@ -333,17 +316,6 @@ export default function HanukkahGiftListPage() {
       default:
         return giftsToSort;
     }
-  }
-
-  if (loading && !initialized) {
-    return (
-      <div className="min-h-screen hanukkah-gifts-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading gifts...</p>
-        </div>
-      </div>
-    );
   }
 
   const sortedGifts = sortGifts(gifts);

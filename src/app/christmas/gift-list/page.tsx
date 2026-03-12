@@ -1,14 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-
-import Link from 'next/link';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -17,40 +10,36 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
-
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 
 type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 
-export default function GiftListPage() {
+export default function ChristmasGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Use centralized holiday page data hook
   const {
     holidayId,
+    holidayData,
+    homeInitialized,
     mutation,
     isLoading: mutationLoading,
     error: mutationError,
     auth0User,
-  } = useFormModalMutation();
-
-  // Get current Redux state for skip logic
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
+  } = useHolidayPageData();
 
   // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
+  // const homeData = useAppSelector(selectHomeData);
+  // const homeInitialized = useAppSelector(selectHomeInitialized);
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -110,6 +99,10 @@ export default function GiftListPage() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
   // Home data already declared above
 

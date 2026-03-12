@@ -27,59 +27,6 @@ import ToDoCard from '@/components/cards/to-do/ToDoCard';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
-const defaultEventTasks = [
-  {
-    title: 'Kwanzaa Karamu Feast Planning',
-    description: 'Plan the traditional Kwanzaa feast celebration',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Kinara Lighting Ceremony Setup',
-    description: 'Prepare for daily kinara candle lighting ceremonies',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Zawadi Gift Exchange Planning',
-    description: 'Organize handmade gift exchange activities',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'African Drum and Dance Workshop',
-    description: 'Plan traditional music and dance activities',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'Storytelling and Poetry Reading',
-    description: 'Prepare for Kuumba (Creativity) day activities',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'Community Service Planning',
-    description: 'Organize Ujima (Collective Work) activities',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Family Heritage Workshop',
-    description: 'Plan genealogy and heritage activities',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'Unity Cup Ceremony Preparation',
-    description: 'Set up Kikombe cha Umoja ceremony space',
-    priority: 'high' as const,
-  },
-  {
-    title: 'African Art & Craft Workshop',
-    description: 'Prepare materials for traditional crafts',
-    priority: 'low' as const,
-  },
-  {
-    title: 'Vision Board Workshop',
-    description: 'Plan Nia (Purpose) day goal-setting activities',
-    priority: 'low' as const,
-  },
-];
-
 export default function KwanzaaEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
@@ -138,7 +85,6 @@ export default function KwanzaaEventsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -150,13 +96,6 @@ export default function KwanzaaEventsPage() {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
-
-  // Check if default event tasks exist
-  useEffect(() => {
-    if (events.length === 0 && homeInitialized) {
-      setShowDefaultTasks(true);
-    }
-  }, [events, homeInitialized]);
 
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
@@ -247,86 +186,6 @@ export default function KwanzaaEventsPage() {
     }
   }
 
-  async function addDefaultEventTasks() {
-    if (!holidayId || !auth0User) return;
-
-    setIsAdding(true);
-    try {
-      // Add all default event tasks with optimistic updates
-      for (const task of defaultEventTasks) {
-        const newTask = {
-          id: `temp-${Date.now()}-${task.title}`, // Temporary ID
-          ...task,
-          isCompleted: false,
-          holidayId: holidayId,
-        };
-
-        // Optimistically update Redux state first
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-        try {
-          const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            },
-            body: JSON.stringify({
-              ...task,
-              isCompleted: false,
-              holidayId: holidayId,
-            }),
-          });
-
-          if (response.ok) {
-            // Replace temporary task with real task from API
-            const result = await response.json();
-            dispatch(
-              removeTaskFromHomeData({
-                holidayId: holidayId,
-                taskId: newTask.id,
-              }),
-            );
-            dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-          } else {
-            // Remove optimistic update on error
-            dispatch(
-              removeTaskFromHomeData({
-                holidayId: holidayId,
-                taskId: newTask.id,
-              }),
-            );
-            console.error(
-              'Failed to add default task:',
-              response.status,
-              response.statusText,
-            );
-          }
-        } catch (taskError) {
-          // Remove optimistic update on error
-          dispatch(
-            removeTaskFromHomeData({
-              holidayId: holidayId,
-              taskId: newTask.id,
-            }),
-          );
-          console.error('Failed to add default task:', taskError);
-        }
-      }
-
-      setShowDefaultTasks(false);
-    } catch (error) {
-      console.error('Failed to add default tasks:', error);
-    } finally {
-      setIsAdding(false);
-    }
-  }
-
   async function handleToggleTask(taskId: string) {
     if (!holidayId || !auth0User) return;
 
@@ -370,7 +229,10 @@ export default function KwanzaaEventsPage() {
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
+      } else {
         // Revert the optimistic update on error
         const currentTask = events.find((task: any) => task.id === taskId);
         if (currentTask) {
@@ -523,13 +385,6 @@ export default function KwanzaaEventsPage() {
         );
       } else {
         console.log('Task deleted successfully');
-        // Check if this was the last task and re-show default tasks prompt
-        const remainingTasks = events.filter(e => e.id !== taskId);
-        console.log('Events after delete:', remainingTasks.length);
-        if (remainingTasks.length === 0) {
-          console.log('No tasks remaining, showing default tasks prompt');
-          setShowDefaultTasks(true);
-        }
       }
     } catch (error) {
       // If API failed, revert the optimistic update
@@ -655,31 +510,6 @@ export default function KwanzaaEventsPage() {
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Default Tasks Prompt */}
-        {showDefaultTasks && (
-          <div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-            <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              🎉 Set Up Kwanzaa Events
-            </h3>
-            <p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
-              Would you like to add some common Kwanzaa event planning tasks?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addDefaultEventTasks}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
-              >
-                Add Default Events
-              </button>
-              <button
-                onClick={() => setShowDefaultTasks(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
-
         <AddButton title="Event" onClick={openForm} color="red" />
 
         {/* Event Status Summary */}

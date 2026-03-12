@@ -301,6 +301,10 @@ export default function ValentinesDateIdeasPage() {
             taskId: taskToDelete.id,
           }),
         );
+
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
+
         setShowDeleteModal(false);
         setTaskToDelete(null);
       } else {

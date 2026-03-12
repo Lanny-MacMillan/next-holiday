@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -10,12 +10,6 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -78,20 +72,19 @@ const defaultCandleTasks = [
 ];
 
 export default function CandleLightingPage() {
-  const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  // Use centralized holiday page data hook
+  const {
+    holidayId,
+    holidayData,
+    auth0User,
+    homeInitialized,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+  } = useHolidayPageData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -99,9 +92,6 @@ export default function CandleLightingPage() {
   );
 
   // Redux data access - candle lighting are stored as tasks with category "Candle Lighting"
-  const holidayData = useAppSelector((state: any) =>
-    selectHolidayPrefById(state, holidayId!),
-  );
   const candleLighting =
     holidayData?.tasks?.filter((task: any) => task.category === 'Candle Lighting') ||
     [];
@@ -504,7 +494,7 @@ export default function CandleLightingPage() {
       } else {
         console.log('Task deleted successfully');
         // Check if this was the last task and re-show default tasks prompt
-        const remainingTasks = candleLighting.filter(c => c.id !== taskId);
+        const remainingTasks = candleLighting.filter((c: any) => c.id !== taskId);
         console.log('Candle Lighting after delete:', remainingTasks.length);
         if (remainingTasks.length === 0) {
           console.log('No tasks remaining, showing default tasks prompt');

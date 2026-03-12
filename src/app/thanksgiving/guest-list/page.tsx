@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
@@ -14,12 +14,6 @@ import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
 import {
   updateGuestInHomeData,
@@ -50,16 +44,10 @@ interface Guest {
 
 export default function ThanksgivingGuestListPage() {
   const dispatch = useAppDispatch();
-  const { holidayId, auth0User } = useFormModalMutation();
 
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
-  );
-
-  // Get holiday data from Redux
+  // Use centralized holiday page data hook
+  const { holidayId, holidayData, homeData, homeInitialized, auth0User } =
+    useHolidayPageData();
 
   // Get guest lists from home data
   const guestLists = useAppSelector(

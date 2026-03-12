@@ -315,6 +315,8 @@ export default function NewYearEventsPage() {
         );
       } else {
         console.log('Task deleted successfully');
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       // If API failed, revert the optimistic update
@@ -373,6 +375,9 @@ export default function NewYearEventsPage() {
           response.status,
           response.statusText,
         );
+      } else {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       // Revert optimistic update on error

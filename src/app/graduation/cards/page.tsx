@@ -54,6 +54,7 @@ export default function GraduationCardsPage() {
 
   // Use Redux data directly - no individual API calls needed
   const cards = holidayData?.cards || [];
+
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
 

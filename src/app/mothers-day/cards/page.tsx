@@ -241,6 +241,9 @@ export default function MothersDayCardsPage() {
             payload,
             auth0User,
           }).unwrap();
+
+          // Refresh home data to ensure progress tracking updates
+          await refreshHomeData();
         }
       } catch (error) {
         console.error('Error toggling card completion:', error);

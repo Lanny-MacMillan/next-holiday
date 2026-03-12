@@ -186,6 +186,9 @@ export default function GiftListPage() {
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
+
+      // Refresh home data to ensure progress tracking updates
+      await refreshHomeData();
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)

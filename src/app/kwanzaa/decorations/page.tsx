@@ -365,6 +365,9 @@ export default function KwanzaaDecorationsPage() {
           }),
         );
         console.error('Failed to toggle decoration completion');
+      } else {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       // Revert optimistic update on error

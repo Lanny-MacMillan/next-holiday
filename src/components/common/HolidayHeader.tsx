@@ -49,6 +49,7 @@ export default function HolidayHeader({
       graduation: '#9333ea', // purple-600
       'baby-shower': '#0891b2', // cyan-600
       'baby shower': '#0891b2', // cyan-600
+      '👶 baby shower': '#0891b2', // cyan-600 (with emoji)
     };
     return outlineColorMap[holidayName.toLowerCase()] || ''; // default fallback
   };

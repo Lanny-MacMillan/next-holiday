@@ -233,6 +233,9 @@ export default function MothersDayEventsPage() {
           response.status,
           response.statusText,
         );
+      } else {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       console.error('Failed to toggle task:', error);
@@ -314,6 +317,9 @@ export default function MothersDayEventsPage() {
           response.status,
           response.statusText,
         );
+      } else {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
 
       setShowEditModal(false);
@@ -357,6 +363,9 @@ export default function MothersDayEventsPage() {
           response.status,
           response.statusText,
         );
+      } else {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       console.error('Failed to delete task:', error);

@@ -42,10 +42,9 @@ export default function FathersDayEventsPage() {
   // Get current Redux state for data access
   const currentState = useAppSelector((state: any) => state);
 
-  // Holiday ID resolution
-  const holidayId = 'fathers-day';
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
+  // Holiday ID resolution - find the actual Father's Day holiday ID
+  const holidayData = holidayPreferences.find(
+    (pref: any) => pref.holiday === "Father's Day",
   );
   const resolvedHolidayId = holidayData?.holidayId;
 
@@ -107,9 +106,20 @@ export default function FathersDayEventsPage() {
 
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
-    if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
+    console.log('handleAddTask called with values:', values);
+    console.log('resolvedHolidayId:', resolvedHolidayId);
+    console.log('auth0User:', !!auth0User);
 
+    if (!values.title?.trim()) {
+      console.log('Validation failed: no title');
+      return;
+    }
+    if (!resolvedHolidayId || !auth0User) {
+      console.log('Validation failed: missing holidayId or auth0User');
+      return;
+    }
+
+    console.log('Setting isAdding to true');
     setIsAdding(true);
 
     const newTask = {
@@ -403,6 +413,7 @@ export default function FathersDayEventsPage() {
   }
 
   function openForm() {
+    setIsAdding(false); // Reset loading state when opening form
     setShowForm(true);
   }
 

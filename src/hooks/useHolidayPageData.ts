@@ -1,0 +1,237 @@
+import { useAppSelector } from '@/store/hooks';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import {
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+  selectHolidayPrefById,
+} from '@/store/selectors/home';
+
+export interface HolidayPageData {
+  // Auth & User
+  holidayId: string | null;
+  auth0User: any;
+
+  // Redux State
+  holidayPreferences: any[];
+  homeInitialized: boolean;
+  homeData: any;
+  holidayData: any;
+
+  // Form Modal Mutation
+  mutation: any;
+  isLoading: boolean;
+  error: any;
+
+  // Utility Functions
+  getProgressData: (sliceKey: string) => {
+    total: number;
+    completed: number;
+    progress: number;
+  };
+}
+
+/**
+ * Custom hook that provides all the common data and functionality
+ * needed by holiday pages, reducing 150-200 lines of boilerplate per page
+ */
+export function useHolidayPageData(): HolidayPageData {
+  // Form modal mutation (includes auth0User and holidayId)
+  const {
+    holidayId,
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+    auth0User,
+  } = useFormModalMutation();
+
+  // Redux selectors
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
+  const homeInitialized = useAppSelector(selectHomeInitialized);
+  const homeData = useAppSelector(selectHomeData);
+
+  // Get holiday-specific data using memoized selector
+  const holidayData = useAppSelector(state =>
+    selectHolidayPrefById(state, holidayId!),
+  );
+
+  /**
+   * Generic progress calculation function that can handle different slice types
+   * Used across all holiday pages for calculating completion percentages
+   */
+  const getProgressData = (
+    sliceKey: string,
+  ): {
+    total: number;
+    completed: number;
+    progress: number;
+  } => {
+    let total = 0;
+    let completed = 0;
+
+    // Early return if data not ready
+    if (!holidayData || !homeInitialized) {
+      return { total: 0, completed: 0, progress: 0 };
+    }
+
+    switch (sliceKey) {
+      case 'cards':
+        if (holidayData.cards) {
+          total = holidayData.cards.length;
+          completed = holidayData.cards.filter(
+            (card: any) => card.isCompleted,
+          ).length;
+        }
+        break;
+
+      case 'giftList':
+        if (holidayData.gifts) {
+          total = holidayData.gifts.length;
+          completed = holidayData.gifts.filter(
+            (gift: any) => gift.isCompleted,
+          ).length;
+        }
+        break;
+
+      case 'guestList':
+        if (holidayData.guestLists) {
+          const guestLists = holidayData.guestLists || [];
+          total = guestLists.length;
+          completed = guestLists.filter(
+            (guest: any) => guest.rsvpStatus === 'confirmed',
+          ).length;
+        }
+        break;
+
+      case 'events':
+        if (holidayData.events) {
+          total = holidayData.events.length;
+          completed = holidayData.events.filter(
+            (event: any) => event.isCompleted,
+          ).length;
+        }
+        break;
+
+      case 'decorations':
+        if (holidayData.decorations) {
+          total = holidayData.decorations.length;
+          completed = holidayData.decorations.filter(
+            (decoration: any) => decoration.isCompleted,
+          ).length;
+        }
+        break;
+
+      // Task-based categories that filter by category name
+      case 'mealPlanning':
+        if (holidayData.tasks) {
+          const mealTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Meal Planning',
+          );
+          total = mealTasks.length;
+          completed = mealTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      case 'partyPlanning':
+        if (holidayData.tasks) {
+          const partyTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Party Planning',
+          );
+          total = partyTasks.length;
+          completed = partyTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      case 'candleLighting':
+        if (holidayData.tasks) {
+          const candleTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Candle Lighting',
+          );
+          total = candleTasks.length;
+          completed = candleTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      // Halloween specific categories
+      case 'trickOrTreatPrep':
+        if (holidayData.tasks) {
+          const trickOrTreatTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Trick or Treat Prep',
+          );
+          total = trickOrTreatTasks.length;
+          completed = trickOrTreatTasks.filter(
+            (task: any) => task.isCompleted,
+          ).length;
+        }
+        break;
+
+      case 'costumeIdeas':
+        if (holidayData.tasks) {
+          const costumeTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Costume Ideas',
+          );
+          total = costumeTasks.length;
+          completed = costumeTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      // Kwanzaa specific categories
+      case 'kwanzaaPrinciples':
+        if (holidayData.tasks) {
+          const principleTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Daily Principles',
+          );
+          total = principleTasks.length;
+          completed = principleTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      // Valentine's Day specific categories
+      case 'dateIdeas':
+        if (holidayData.tasks) {
+          const dateIdeaTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Date Ideas',
+          );
+          total = dateIdeaTasks.length;
+          completed = dateIdeaTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
+      // Generic task category handling
+      default:
+        if (holidayData.tasks) {
+          // Try to match by category name (capitalize first letter)
+          const categoryName = sliceKey.charAt(0).toUpperCase() + sliceKey.slice(1);
+          const categoryTasks = holidayData.tasks.filter(
+            (task: any) => task.category === categoryName,
+          );
+          total = categoryTasks.length;
+          completed = categoryTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+    }
+
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, completed, progress };
+  };
+
+  return {
+    // Auth & User
+    holidayId,
+    auth0User,
+
+    // Redux State
+    holidayPreferences,
+    homeInitialized,
+    homeData,
+    holidayData,
+
+    // Form Modal Mutation
+    mutation,
+    isLoading: mutationLoading,
+    error: mutationError,
+
+    // Utility Functions
+    getProgressData,
+  };
+}

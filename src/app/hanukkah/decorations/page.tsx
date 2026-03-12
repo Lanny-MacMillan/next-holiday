@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -10,12 +10,6 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -26,98 +20,21 @@ import ToDoCard from '@/components/cards/to-do/ToDoCard';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
-const defaultDecorationTasks = [
-  {
-    title: 'Set up Menorah',
-    description: 'Place the menorah in a prominent location',
-    category: 'Decorations',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Hang Hanukkah banners',
-    description: 'Display Hanukkah-themed banners and signs',
-    category: 'Decorations',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'String blue and white lights',
-    description: 'Decorate with traditional Hanukkah colors',
-    category: 'Decorations',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'Display dreidels',
-    description: 'Place decorative dreidels around the home',
-    category: 'Decorations',
-    priority: 'low' as const,
-  },
-  {
-    title: 'Set up Hanukkah table',
-    description: 'Prepare the dining table with Hanukkah decorations',
-    category: 'Decorations',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Hang Star of David decorations',
-    description: 'Display Star of David ornaments and symbols',
-    category: 'Decorations',
-    priority: 'medium' as const,
-  },
-  {
-    title: 'Arrange Hanukkah candles',
-    description: 'Organize and display Hanukkah candles',
-    category: 'Decorations',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Set up Hanukkah centerpiece',
-    description: 'Create a festive centerpiece for the table',
-    category: 'Decorations',
-    priority: 'low' as const,
-  },
-];
-
 export default function HanukkahDecorationsPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { holidayId, auth0User } = useFormModalMutation();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
 
-  // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'hanukkah'),
   );
 
-  // Redux data access - decorations are stored as tasks with category "Decorations"
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
-  );
   const decorations =
     holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Debug logging to understand the state
-  console.log('Hanukkah Decorations Debug:', {
-    holidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    decorationTasks: decorations.length,
-    decorations: decorations.map(d => ({
-      id: d.id,
-      title: d.title,
-      category: d.category,
-      isCompleted: d.isCompleted,
-    })),
-  });
-
-  // Refresh home data function (like gift-list)
   const refreshHomeData = async () => {
     if (!auth0User?.sub || !holidayId) return;
 
@@ -153,19 +70,11 @@ export default function HanukkahDecorationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
-  const [showDefaultTasks, setShowDefaultTasks] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
-
-  // Check if default decoration tasks exist
-  useEffect(() => {
-    if (decorations.length === 0 && homeInitialized) {
-      setShowDefaultTasks(true);
-    }
-  }, [decorations, homeInitialized]);
 
   // CRUD Operations
   async function handleAddDecoration(values: Record<string, any>) {
@@ -187,11 +96,7 @@ export default function HanukkahDecorationsPage() {
     };
 
     try {
-      // Optimistically update Redux state first
-      console.log('Adding decoration task optimistically:', newTask);
-      console.log('Holiday ID for addition:', holidayId);
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-      console.log('Task added to Redux, making API call...');
 
       // Call API - map camelCase to snake_case for API
       const apiPayload = {
@@ -203,8 +108,6 @@ export default function HanukkahDecorationsPage() {
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
       };
-
-      console.log('🐛 [HanukkahDecorationsAdd] API payload:', apiPayload);
 
       const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
@@ -223,7 +126,6 @@ export default function HanukkahDecorationsPage() {
       if (response.ok) {
         // Replace temporary task with real task from API
         const result = await response.json();
-        console.log('API success, replacing temp task with real task:', result);
         dispatch(
           removeTaskFromHomeData({
             holidayId: holidayId,
@@ -232,7 +134,6 @@ export default function HanukkahDecorationsPage() {
         );
         dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
-        // Also refresh home data like gift-list does
         await refreshHomeData();
       } else {
         // Remove optimistic update on error
@@ -254,94 +155,6 @@ export default function HanukkahDecorationsPage() {
     } finally {
       setIsAdding(false);
     }
-  }
-
-  async function addDefaultDecorationTasks() {
-    if (!holidayId || !auth0User) return;
-
-    setIsAdding(true);
-    try {
-      // Add all default decoration tasks with optimistic updates
-      for (const task of defaultDecorationTasks) {
-        const newTask = {
-          id: `temp-${Date.now()}-${task.title}`, // Temporary ID
-          ...task,
-          isCompleted: false,
-          holidayId: holidayId,
-        };
-
-        // Optimistically update Redux state first
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-        try {
-          const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            },
-            body: JSON.stringify({
-              ...task,
-              isCompleted: false,
-              holidayId: holidayId,
-            }),
-          });
-
-          if (response.ok) {
-            // Replace temporary task with real task from API
-            const result = await response.json();
-            dispatch(
-              removeTaskFromHomeData({
-                holidayId: holidayId,
-                taskId: newTask.id,
-              }),
-            );
-            dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-          } else {
-            // Remove optimistic update on error
-            dispatch(
-              removeTaskFromHomeData({
-                holidayId: holidayId,
-                taskId: newTask.id,
-              }),
-            );
-            console.error(
-              'Failed to add default task:',
-              response.status,
-              response.statusText,
-            );
-          }
-        } catch (taskError) {
-          // Remove optimistic update on error
-          dispatch(
-            removeTaskFromHomeData({
-              holidayId: holidayId,
-              taskId: newTask.id,
-            }),
-          );
-          console.error('Failed to add default task:', taskError);
-        }
-      }
-
-      setShowDefaultTasks(false);
-    } catch (error) {
-      console.error('Failed to add default tasks:', error);
-    } finally {
-      setIsAdding(false);
-    }
-  }
-
-  function openForm() {
-    setShowForm(true);
-  }
-
-  function closeForm() {
-    setShowForm(false);
   }
 
   async function handleToggleCompletion(taskId: string) {
@@ -399,6 +212,9 @@ export default function HanukkahDecorationsPage() {
           response.status,
           response.statusText,
         );
+      } else {
+        // Refresh home data to update progress on main holiday page
+        await refreshHomeData();
       }
     } catch (error) {
       console.error('Failed to toggle task:', error);
@@ -454,11 +270,6 @@ export default function HanukkahDecorationsPage() {
         );
       } else {
         console.log('Task deleted successfully');
-        // Check if this was the last task and re-show default tasks prompt
-        const remainingTasks = decorations.filter(d => d.id !== taskId);
-        if (remainingTasks.length === 0) {
-          setShowDefaultTasks(true);
-        }
       }
     } catch (error) {
       // If API failed, revert the optimistic update
@@ -609,17 +420,6 @@ export default function HanukkahDecorationsPage() {
 
   const loading = isAdding || isUpdating || isDeleting || isToggling;
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen hanukkah-tasks-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading decorations...</p>
-        </div>
-      </div>
-    );
-  }
-
   const sortedTasks = sortTasks(decorations);
   const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedDecorations = sortedTasks.filter((task: any) => task.isCompleted);
@@ -636,32 +436,6 @@ export default function HanukkahDecorationsPage() {
         error={error ? 'API Error' : undefined}
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
-        {/* Default Tasks Prompt */}
-        {showDefaultTasks && (
-          <div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-            <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              ✨ Set Up Hanukkah Decorations
-            </h3>
-            <p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
-              Would you like to add common Hanukkah decoration tasks?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addDefaultDecorationTasks}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
-              >
-                Add Default Tasks
-              </button>
-              <button
-                onClick={() => setShowDefaultTasks(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
-
         <AddButton
           title="Decoration Task"
           onClick={() => setShowForm(true)}

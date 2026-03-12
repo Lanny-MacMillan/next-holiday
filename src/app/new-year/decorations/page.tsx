@@ -324,6 +324,9 @@ export default function NewYearDecorationsPage() {
           response.status,
           response.statusText,
         );
+      } else {
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       console.error('Failed to toggle decoration:', error);
@@ -447,6 +450,8 @@ export default function NewYearDecorationsPage() {
         if (remainingDecorations.length === 0) {
           setShowDefaultTasks(true);
         }
+        // Refresh home data to ensure progress tracking updates
+        await refreshHomeData();
       }
     } catch (error) {
       // If API failed, revert the optimistic update
