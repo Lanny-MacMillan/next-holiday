@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -11,12 +11,6 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -30,13 +24,11 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 export default function KwanzaaEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { holidayId, auth0User } = useFormModalMutation();
-  const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -45,9 +37,6 @@ export default function KwanzaaEventsPage() {
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // Redux data access - events are stored as tasks with category "Events" like in Hanukkah
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
-  );
   const events =
     holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;

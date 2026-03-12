@@ -2,19 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import {
   updateTaskInHomeData,
   setHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -74,12 +68,9 @@ const defaultKwanzaaPrinciples = [
 
 export default function DailyPrinciplesPage() {
   const dispatch = useAppDispatch();
-  const { holidayId, auth0User } = useFormModalMutation();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -87,9 +78,6 @@ export default function DailyPrinciplesPage() {
   );
 
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
-  );
   const displayTasks =
     holidayData?.tasks?.filter(
       (task: any) => task.category === 'Daily Principles',
@@ -244,7 +232,7 @@ export default function DailyPrinciplesPage() {
       } else {
         console.log('Task deleted successfully');
         // Check if this was the last task and re-show default principles prompt
-        const remainingTasks = displayTasks.filter(c => c.id !== taskId);
+        const remainingTasks = displayTasks.filter((c: any) => c.id !== taskId);
         console.log('Daily Principles after delete:', remainingTasks.length);
         if (remainingTasks.length === 0) {
           console.log('No tasks remaining, showing default principles prompt');
