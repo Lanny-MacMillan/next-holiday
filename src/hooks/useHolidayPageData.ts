@@ -111,6 +111,7 @@ export function useHolidayPageData(): HolidayPageData {
         break;
 
       case 'giftList':
+      case 'gifts': // Support both giftList and gifts sliceKey
         if (holidayData.gifts) {
           total = holidayData.gifts.length;
           completed = holidayData.gifts.filter(

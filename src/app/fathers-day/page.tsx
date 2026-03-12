@@ -7,7 +7,7 @@ const subsections = [
     name: 'Gift Ideas',
     description: "Track gift ideas for Father's Day",
     href: '/fathers-day/gift-list',
-    sliceKey: 'giftList',
+    sliceKey: 'gifts',
     category: 'Gifts',
     type: 'gift-list' as const,
   },
@@ -16,6 +16,7 @@ const subsections = [
     description: "Track cards to send on Father's Day",
     href: '/fathers-day/cards',
     sliceKey: 'cards',
+    category: 'Cards',
     type: 'task' as const,
   },
   {
@@ -23,6 +24,7 @@ const subsections = [
     description: "Plan Father's Day celebrations",
     href: '/fathers-day/events',
     sliceKey: 'events',
+    category: 'Events',
     type: 'task' as const,
   },
 ];
