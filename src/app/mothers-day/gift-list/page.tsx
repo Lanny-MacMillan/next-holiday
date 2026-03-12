@@ -1,15 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateGiftInHomeData,
@@ -17,7 +13,6 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -35,22 +30,23 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function GiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // New hooks pattern for data access
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  // CRUD Operations Hook for gifts
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createGift,
+    updateGift,
+    deleteGift,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get current Redux state for skip logic
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
-
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
+  // Data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -99,10 +95,8 @@ export default function GiftListPage() {
 
   // Use only Redux data - no GET API calls on holiday pages
 
-  // Local loading states for mutations
-  const [updateLoading, setUpdateLoading] = useState(false);
+  // Local loading states for mutations (removed duplicate states)
   const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -121,17 +115,17 @@ export default function GiftListPage() {
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     try {
       const payload = transformGiftPayload(values, contacts);
-      const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+      const result = await createGift(payload);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'add');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
     } catch (error) {
@@ -166,34 +160,17 @@ export default function GiftListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      setUpdateLoading(true);
-      // Update the gift in the database with direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newIsCompleted,
-        }),
-      });
+      // Update the gift using the hook
+      await updateGift(giftId, { isCompleted: newIsCompleted });
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
 
       // Refresh home data to ensure progress tracking updates
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
-    } finally {
-      setUpdateLoading(false);
     }
   }
 
@@ -205,34 +182,20 @@ export default function GiftListPage() {
   async function confirmDelete() {
     if (!giftToDelete || !holidayId || !auth0User) return;
 
-    setDeleteLoading(true);
     try {
-      // Direct API call instead of RTK mutation
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      // Delete using the hook
+      await deleteGift(giftToDelete.id);
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftToDelete.id }, 'delete');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
-    } finally {
-      setDeleteLoading(false);
     }
   }
 
@@ -252,31 +215,15 @@ export default function GiftListPage() {
     setEditLoading(true);
     try {
       const payload = transformGiftPayload(values, contacts);
-      // Direct API call instead of RTK mutation
-      const response = await fetch(
-        `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(payload),
-        },
-      );
 
-      const result = await response.json();
+      // Update using the hook
+      const result = await updateGift(selectedGift.id, payload);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
       setSelectedGift(null);
@@ -327,32 +274,6 @@ export default function GiftListPage() {
   // Use only Redux data - no fallback to API calls
   const displayGifts =
     holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
-
-  // Function to refresh home data from server
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   const sortedGifts = sortGifts(displayGifts || []);
   const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
@@ -511,7 +432,7 @@ export default function GiftListPage() {
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
-        loading={mutationLoading || editLoading}
+        loading={createLoading || editLoading}
         submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
         cancelText="Cancel"
         cardClassName="card"
