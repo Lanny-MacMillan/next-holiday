@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useGuestMutations } from '@/hooks/useGuestMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
@@ -21,12 +23,6 @@ import {
   removeGuestFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  useCreateGuestMutation,
-  useUpdateGuestMutation,
-  useEditGuestMutation,
-  useDeleteGuestMutation,
-} from '@/store/api';
 
 interface Guest {
   id: string;
@@ -46,8 +42,23 @@ export default function ThanksgivingGuestListPage() {
   const dispatch = useAppDispatch();
 
   // Use centralized holiday page data hook
-  const { holidayId, holidayData, homeData, homeInitialized, auth0User } =
+  const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
+
+  // Use standardized guest mutations hook
+  const {
+    createGuest,
+    updateGuest,
+    editGuest,
+    deleteGuest,
+    createGuestState,
+    updateGuestState,
+    editGuestState,
+    deleteGuestState,
+  } = useGuestMutations();
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Get guest lists from home data
   const guestLists = useAppSelector(
@@ -55,25 +66,23 @@ export default function ThanksgivingGuestListPage() {
   ) as any[];
 
   // Transform guest list data to match expected format
-  const guests = guestLists.map((guestList: any) => ({
-    id: guestList.id,
-    name: guestList.contact?.name || 'Unknown',
-    email: guestList.contact?.email || undefined,
-    phone: guestList.contact?.phone || undefined,
-    address: guestList.contact?.streetAddress || undefined,
-    rsvpStatus: guestList.rsvpStatus || 'pending',
-    numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
-    notes: guestList.notes || undefined,
-    isCompleted: guestList.rsvpStatus === 'confirmed',
-    createdAt: guestList.createdAt,
-    updatedAt: guestList.updatedAt,
-  }));
-
-  // Use API mutations only for data persistence
-  const [createGuest, createGuestState] = useCreateGuestMutation();
-  const [updateGuest, updateGuestState] = useUpdateGuestMutation();
-  const [editGuest, editGuestState] = useEditGuestMutation();
-  const [deleteGuest, deleteGuestState] = useDeleteGuestMutation();
+  const guests = useMemo(
+    () =>
+      guestLists.map((guestList: any) => ({
+        id: guestList.id,
+        name: guestList.contact?.name || 'Unknown',
+        email: guestList.contact?.email || undefined,
+        phone: guestList.contact?.phone || undefined,
+        address: guestList.contact?.streetAddress || undefined,
+        rsvpStatus: guestList.rsvpStatus || 'pending',
+        numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
+        notes: guestList.notes || undefined,
+        isCompleted: guestList.rsvpStatus === 'confirmed',
+        createdAt: guestList.createdAt,
+        updatedAt: guestList.updatedAt,
+      })),
+    [guestLists],
+  );
 
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
@@ -94,28 +103,7 @@ export default function ThanksgivingGuestListPage() {
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  // Function to refresh home data from server
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
-
-  async function handleAddGuest(formValues: Record<string, any>) {
+  const handleAddGuest = async (formValues: Record<string, any>) => {
     if (
       !formValues.name ||
       (typeof formValues.name === 'string' && !formValues.name.trim())
@@ -125,29 +113,7 @@ export default function ThanksgivingGuestListPage() {
     if (!holidayId || !auth0User) return;
 
     if (editingGuest) {
-      // Update existing guest - optimistic update to Redux first, then persist to API
-      const updatedGuestList = {
-        ...editingGuest,
-        contact: {
-          name: formValues.name,
-          email: formValues.email || undefined,
-          phone: formValues.phone || undefined,
-          streetAddress: formValues.address || undefined,
-        },
-        rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
-        notes: formValues.notes || undefined,
-      };
-
-      // Update Redux immediately for responsive UI
-      dispatch(
-        updateGuestInHomeData({
-          holidayId,
-          guestId: editingGuest.id,
-          updates: updatedGuestList,
-        }),
-      );
-
-      // Persist to API in background
+      // Update existing guest
       try {
         await editGuest({
           holidayId,
@@ -165,41 +131,19 @@ export default function ThanksgivingGuestListPage() {
           },
           auth0User,
         }).unwrap();
+
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData(auth0User, holidayId);
+
+        setEditingGuest(null);
+        setShowForm(false);
       } catch (error) {
         console.error('Failed to update guest:', error);
-        // Could implement rollback logic here if needed
       }
-
-      setEditingGuest(null);
-      setShowForm(false);
     } else {
-      // Add new guest - optimistic update to Redux first, then persist to API
-      const tempId = `temp-${Date.now()}`;
-      const newGuestList = {
-        id: tempId, // Temporary ID for optimistic update
-        contact: {
-          name: formValues.name,
-          email: formValues.email || undefined,
-          phone: formValues.phone || undefined,
-          streetAddress: formValues.address || undefined,
-        },
-        rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
-        notes: formValues.notes || undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update Redux immediately for responsive UI
-      dispatch(
-        addGuestToHomeData({
-          holidayId,
-          guest: newGuestList,
-        }),
-      );
-
-      // Persist to API in background
+      // Add new guest
       try {
-        await createGuest({
+        const result = await createGuest({
           holidayId,
           payload: {
             name: formValues.name,
@@ -215,22 +159,23 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Refresh home data to get the new guest with real ID
-        await refreshHomeData();
-      } catch (error) {
-        console.error('Failed to create guest:', error);
-        // Remove the optimistic update on error
+        // Update Redux state immediately
         dispatch(
-          removeGuestFromHomeData({
+          addGuestToHomeData({
             holidayId,
-            guestId: tempId,
+            guest: result,
           }),
         );
-      }
 
-      setShowForm(false);
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData(auth0User, holidayId);
+
+        setShowForm(false);
+      } catch (error) {
+        console.error('Failed to create guest:', error);
+      }
     }
-  }
+  };
 
   function openForm() {
     setShowForm(true);
@@ -241,7 +186,7 @@ export default function ThanksgivingGuestListPage() {
     setEditingGuest(null);
   }
 
-  async function handleToggleGuest(guestId: string) {
+  const handleToggleGuest = async (guestId: string) => {
     if (!holidayId || !auth0User) return;
 
     const guestList = guestLists.find((gl: any) => gl.id === guestId);
@@ -250,35 +195,33 @@ export default function ThanksgivingGuestListPage() {
       const newRsvpStatus =
         guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
 
-      const updatedGuestList = {
-        ...guestList,
-        rsvpStatus: newRsvpStatus,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update Redux immediately for responsive UI
-      dispatch(
-        updateGuestInHomeData({
-          holidayId,
-          guestId: guestId,
-          updates: updatedGuestList,
-        }),
-      );
-
-      // Persist to API in background
       try {
         await updateGuest({
           holidayId,
           guestId,
-          isCompleted: true, // This will toggle the RSVP status
+          isCompleted: newRsvpStatus === 'confirmed',
           auth0User,
         }).unwrap();
+
+        // Update Redux state immediately
+        const updatedGuestList = {
+          ...guestList,
+          rsvpStatus: newRsvpStatus,
+          updatedAt: new Date().toISOString(),
+        };
+
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: guestId,
+            updates: updatedGuestList,
+          }),
+        );
       } catch (error) {
         console.error('Failed to toggle guest:', error);
-        // Could implement rollback logic here if needed
       }
     }
-  }
+  };
 
   function handleEditGuest(guest: Guest) {
     setEditingGuest(guest);
@@ -289,31 +232,32 @@ export default function ThanksgivingGuestListPage() {
     setDeleteConfirm({ show: true, guestId });
   }
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (deleteConfirm.guestId && holidayId && auth0User) {
-      // Update Redux immediately for responsive UI
-      dispatch(
-        removeGuestFromHomeData({
-          holidayId,
-          guestId: deleteConfirm.guestId,
-        }),
-      );
-
-      // Persist to API in background
       try {
         await deleteGuest({
           holidayId,
           guestId: deleteConfirm.guestId,
           auth0User,
         }).unwrap();
+
+        // Update Redux state immediately
+        dispatch(
+          removeGuestFromHomeData({
+            holidayId,
+            guestId: deleteConfirm.guestId,
+          }),
+        );
+
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData(auth0User, holidayId);
+
+        setDeleteConfirm({ show: false, guestId: null });
       } catch (error) {
         console.error('Failed to delete guest:', error);
-        // Could implement rollback logic here if needed
       }
-
-      setDeleteConfirm({ show: false, guestId: null });
     }
-  }
+  };
 
   function cancelDelete() {
     setDeleteConfirm({ show: false, guestId: null });

@@ -135,7 +135,7 @@ export default function ToDoCard({
   const gamifiedBackgroundColor =
     propGamifiedBackgroundColor ||
     (accentColor
-      ? `bg-gradient-to-br from-purple-400 to-purple-600` // Use graduation colors when theme is provided
+      ? getTaskGamifiedBackgroundColor(task.priority) // Use proper task-based colors when theme is provided
       : getTaskGamifiedBackgroundColor(task.priority));
 
   const formatDate = (dateString: string) => {

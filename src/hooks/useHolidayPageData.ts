@@ -180,6 +180,14 @@ export function useHolidayPageData(): HolidayPageData {
             completed = costumeIdeaTasks.filter(
               (task: any) => task.isCompleted,
             ).length;
+          } else if (sliceKey === 'mealPlanning') {
+            const mealPlanningTasks = holidayData.tasks.filter(
+              (task: any) => task.category === 'Meal Planning',
+            );
+            total = mealPlanningTasks.length;
+            completed = mealPlanningTasks.filter(
+              (task: any) => task.isCompleted,
+            ).length;
           } else {
             // Try to match by category name (capitalize first letter)
             const categoryName =
