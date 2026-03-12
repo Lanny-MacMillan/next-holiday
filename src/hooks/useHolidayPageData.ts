@@ -103,97 +103,34 @@ export function useHolidayPageData(): HolidayPageData {
         }
         break;
 
+      // New Year specific categories
       case 'events':
-        if (holidayData.events) {
-          total = holidayData.events.length;
-          completed = holidayData.events.filter(
-            (event: any) => event.isCompleted,
-          ).length;
+        if (holidayData.tasks) {
+          const eventTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Events',
+          );
+          total = eventTasks.length;
+          completed = eventTasks.filter((task: any) => task.isCompleted).length;
         }
         break;
 
       case 'decorations':
-        if (holidayData.decorations) {
-          total = holidayData.decorations.length;
-          completed = holidayData.decorations.filter(
-            (decoration: any) => decoration.isCompleted,
-          ).length;
+        if (holidayData.tasks) {
+          const decorationTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Decorations',
+          );
+          total = decorationTasks.length;
+          completed = decorationTasks.filter((task: any) => task.isCompleted).length;
         }
         break;
 
-      // Task-based categories that filter by category name
-      case 'mealPlanning':
+      case 'resolutions':
         if (holidayData.tasks) {
-          const mealTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Meal Planning',
+          const resolutionTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Resolutions',
           );
-          total = mealTasks.length;
-          completed = mealTasks.filter((task: any) => task.isCompleted).length;
-        }
-        break;
-
-      case 'partyPlanning':
-        if (holidayData.tasks) {
-          const partyTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Party Planning',
-          );
-          total = partyTasks.length;
-          completed = partyTasks.filter((task: any) => task.isCompleted).length;
-        }
-        break;
-
-      case 'candleLighting':
-        if (holidayData.tasks) {
-          const candleTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Candle Lighting',
-          );
-          total = candleTasks.length;
-          completed = candleTasks.filter((task: any) => task.isCompleted).length;
-        }
-        break;
-
-      // Halloween specific categories
-      case 'trickOrTreatPrep':
-        if (holidayData.tasks) {
-          const trickOrTreatTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Trick or Treat Prep',
-          );
-          total = trickOrTreatTasks.length;
-          completed = trickOrTreatTasks.filter(
-            (task: any) => task.isCompleted,
-          ).length;
-        }
-        break;
-
-      case 'costumeIdeas':
-        if (holidayData.tasks) {
-          const costumeTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Costume Ideas',
-          );
-          total = costumeTasks.length;
-          completed = costumeTasks.filter((task: any) => task.isCompleted).length;
-        }
-        break;
-
-      // Kwanzaa specific categories
-      case 'kwanzaaPrinciples':
-        if (holidayData.tasks) {
-          const principleTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Daily Principles',
-          );
-          total = principleTasks.length;
-          completed = principleTasks.filter((task: any) => task.isCompleted).length;
-        }
-        break;
-
-      // Valentine's Day specific categories
-      case 'dateIdeas':
-        if (holidayData.tasks) {
-          const dateIdeaTasks = holidayData.tasks.filter(
-            (task: any) => task.category === 'Date Ideas',
-          );
-          total = dateIdeaTasks.length;
-          completed = dateIdeaTasks.filter((task: any) => task.isCompleted).length;
+          total = resolutionTasks.length;
+          completed = resolutionTasks.filter((task: any) => task.isCompleted).length;
         }
         break;
 

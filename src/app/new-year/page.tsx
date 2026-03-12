@@ -4,19 +4,19 @@ import { HolidayPageTemplate } from '@/components/templates/HolidayPageTemplate'
 
 const subsections = [
   {
-    name: 'Resolution Tracker',
-    description: 'Track your New Year resolutions and goals',
-    href: '/new-year/resolution-tracker',
-    sliceKey: 'resolutions',
-    type: 'task' as const,
-  },
-  {
     name: 'Supplies List',
     description: 'Plan your party supplies and fireworks',
     href: '/new-year/supplies-list',
     sliceKey: 'giftList',
     category: 'Supplies List',
     type: 'gift-list' as const,
+  },
+  {
+    name: 'Resolution Tracker',
+    description: 'Track your New Year resolutions and goals',
+    href: '/new-year/resolution-tracker',
+    sliceKey: 'resolutions',
+    type: 'task' as const,
   },
   {
     name: 'Events',
@@ -37,7 +37,7 @@ const subsections = [
 export default function NewYearPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🎊 New Year"
+      holidayName="New Year"
       description="Ring in the new year with resolutions and celebrations!"
       subsections={subsections}
       theme={{

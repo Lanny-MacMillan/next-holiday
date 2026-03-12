@@ -247,7 +247,9 @@ export default function GiftListCard({
     href ||
     (holiday?.toLowerCase() === 'easter'
       ? '/easter/basket-list'
-      : `/${holiday?.toLowerCase()}/gift-list`) ||
+      : holiday?.toLowerCase() === 'new year'
+        ? '/new-year/supplies-list'
+        : `/${holiday?.toLowerCase().replace(' ', '-')}/gift-list`) ||
     '/gift-list';
 
   // Get gamified background gradient based on holiday
@@ -410,7 +412,9 @@ export default function GiftListCard({
                   ? 'Shopping List'
                   : holiday === 'Easter'
                     ? 'Basket List'
-                    : 'Gift List'}
+                    : holiday === 'New Year'
+                      ? '✨ Supplies List'
+                      : 'Gift List'}
               </h4>
               <span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white">
                 {finalGiftList.totalItems}
@@ -421,7 +425,9 @@ export default function GiftListCard({
                 ? 'Track your Thanksgiving shopping budget'
                 : holiday === 'Easter'
                   ? 'Track your Easter basket items'
-                  : `Track your ${displayHolidayName} gift ideas`}
+                  : holiday === 'New Year'
+                    ? 'Track your ✨ New Year supplies'
+                    : `Track your ${displayHolidayName} gift ideas`}
             </p>
 
             {/* Gift List Progress bar */}
@@ -527,7 +533,13 @@ export default function GiftListCard({
         <div className={isAuthorizedPlusMember ? 'mt-4 sm:mt-6' : ''}>
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-bold text-gray-900 text-base sm:text-lg">
-              {getHolidayGiftListConfig(holiday).displayText}
+              {holiday === 'Thanksgiving'
+                ? 'Shopping List'
+                : holiday === 'Easter'
+                  ? 'Basket List'
+                  : holiday === 'New Year'
+                    ? '✨ Supplies List'
+                    : 'Gift List'}
             </h4>
             <span
               className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full"
@@ -542,7 +554,9 @@ export default function GiftListCard({
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3">
             {holiday === 'Thanksgiving'
               ? 'Track your Thanksgiving shopping budget'
-              : `Track your ${displayHolidayName} gift ideas`}
+              : holiday === 'New Year'
+                ? 'Track your ✨ New Year supplies'
+                : `Track your ${displayHolidayName} gift ideas`}
           </p>
 
           {/* Gift List Progress bar */}

@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateGiftInHomeData,
@@ -16,7 +12,6 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -34,22 +29,18 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function NewYearSuppliesListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
-
-  // Get current Redux state for skip logic
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
-
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
+    createGift,
+    updateGift,
+    deleteGift,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -98,11 +89,6 @@ export default function NewYearSuppliesListPage() {
 
   // Use only Redux data - no GET API calls on holiday pages
 
-  // Local loading states for mutations
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -122,13 +108,10 @@ export default function NewYearSuppliesListPage() {
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
 
     try {
       const payload = transformGiftPayload(values, contacts);
-      const result = await mutation({ holidayId, payload, auth0User }).unwrap();
-
-      // Update Redux state directly
+      const result = await createGift(payload);
       updateGiftInRedux(result, 'add');
 
       // Refresh home data to ensure UI is in sync
@@ -157,8 +140,6 @@ export default function NewYearSuppliesListPage() {
   }
 
   async function handleToggleGift(giftId: string) {
-    if (!holidayId || !auth0User) return;
-
     try {
       // Find the current gift to get its completion status from Redux data
       const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
@@ -167,31 +148,14 @@ export default function NewYearSuppliesListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      setUpdateLoading(true);
-      // Update the gift in the database with direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newIsCompleted,
-        }),
-      });
+      // Update the gift using the hook
+      await updateGift(giftId, { isCompleted: newIsCompleted });
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
-    } finally {
-      setUpdateLoading(false);
     }
   }
 
@@ -201,23 +165,11 @@ export default function NewYearSuppliesListPage() {
   }
 
   async function confirmDelete() {
-    if (!giftToDelete || !holidayId || !auth0User) return;
+    if (!giftToDelete) return;
 
-    setDeleteLoading(true);
     try {
-      // Direct API call instead of RTK mutation
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      // Delete using the hook
+      await deleteGift(giftToDelete.id);
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftToDelete.id }, 'delete');
@@ -229,8 +181,6 @@ export default function NewYearSuppliesListPage() {
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
-    } finally {
-      setDeleteLoading(false);
     }
   }
 
@@ -245,30 +195,12 @@ export default function NewYearSuppliesListPage() {
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
-    if (!selectedGift || !holidayId || !auth0User) return;
+    if (!selectedGift) return;
 
-    setEditLoading(true);
     try {
       const payload = transformGiftPayload(values, contacts);
-      // Direct API call instead of RTK mutation
-      const response = await fetch(
-        `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const result = await response.json();
+      // Update using the hook
+      const result = await updateGift(selectedGift.id, payload);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
@@ -286,8 +218,6 @@ export default function NewYearSuppliesListPage() {
       } else {
         alert('Error updating gift. Please try again.');
       }
-    } finally {
-      setEditLoading(false);
     }
   }
 
@@ -308,18 +238,6 @@ export default function NewYearSuppliesListPage() {
       default:
         return giftsToSort;
     }
-  }
-
-  // Show loading only if home data is not initialized
-  if (!homeInitialized) {
-    return (
-      <div className="min-h-screen new-year-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading supplies...</p>
-        </div>
-      </div>
-    );
   }
 
   // Use only Redux data - no fallback to API calls
@@ -509,7 +427,7 @@ export default function NewYearSuppliesListPage() {
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
-        loading={mutationLoading || editLoading}
+        loading={createLoading || updateLoading}
         submitText={selectedGift ? 'Update Supply' : 'Add Supply'}
         cancelText="Cancel"
         cardClassName="card"
