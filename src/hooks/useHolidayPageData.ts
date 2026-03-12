@@ -163,13 +163,33 @@ export function useHolidayPageData(): HolidayPageData {
       // Generic task category handling
       default:
         if (holidayData.tasks) {
-          // Try to match by category name (capitalize first letter)
-          const categoryName = sliceKey.charAt(0).toUpperCase() + sliceKey.slice(1);
-          const categoryTasks = holidayData.tasks.filter(
-            (task: any) => task.category === categoryName,
-          );
-          total = categoryTasks.length;
-          completed = categoryTasks.filter((task: any) => task.isCompleted).length;
+          // Handle Halloween-specific categories
+          if (sliceKey === 'trickOrTreatPrep') {
+            const trickOrTreatTasks = holidayData.tasks.filter(
+              (task: any) => task.category === 'Trick or Treat Prep',
+            );
+            total = trickOrTreatTasks.length;
+            completed = trickOrTreatTasks.filter(
+              (task: any) => task.isCompleted,
+            ).length;
+          } else if (sliceKey === 'costumeIdeas') {
+            const costumeIdeaTasks = holidayData.tasks.filter(
+              (task: any) => task.category === 'Costume Ideas',
+            );
+            total = costumeIdeaTasks.length;
+            completed = costumeIdeaTasks.filter(
+              (task: any) => task.isCompleted,
+            ).length;
+          } else {
+            // Try to match by category name (capitalize first letter)
+            const categoryName =
+              sliceKey.charAt(0).toUpperCase() + sliceKey.slice(1);
+            const categoryTasks = holidayData.tasks.filter(
+              (task: any) => task.category === categoryName,
+            );
+            total = categoryTasks.length;
+            completed = categoryTasks.filter((task: any) => task.isCompleted).length;
+          }
         }
         break;
     }

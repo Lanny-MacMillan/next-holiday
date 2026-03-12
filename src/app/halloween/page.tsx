@@ -17,6 +17,7 @@ const subsections = [
     description: 'List of things needed for trick-or-treating',
     href: '/halloween/trick-or-treat-prep',
     sliceKey: 'trickOrTreatPrep',
+    category: 'Trick or Treat Prep',
     type: 'task' as const,
   },
   {
@@ -24,6 +25,7 @@ const subsections = [
     description: 'List of possible costume ideas and who they may be for',
     href: '/halloween/costume-ideas',
     sliceKey: 'costumeIdeas',
+    category: 'Costume Ideas',
     type: 'task' as const,
   },
   {
@@ -31,6 +33,7 @@ const subsections = [
     description: 'Stay on top of your Halloween decorations',
     href: '/halloween/decorations',
     sliceKey: 'decorations',
+    category: 'Decorations',
     type: 'task' as const,
   },
 ];
