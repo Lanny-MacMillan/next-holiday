@@ -29,7 +29,7 @@ const subsections = [
 export default function ChristmasPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🎄 Christmas"
+      holidayName="Christmas"
       description="Make this Christmas magical!"
       subsections={subsections}
       theme={{

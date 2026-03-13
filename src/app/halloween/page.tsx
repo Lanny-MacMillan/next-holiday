@@ -49,7 +49,7 @@ const subsections = [
 export default function HalloweenPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🎃 Halloween"
+      holidayName="Halloween"
       description="Plan your spooky celebrations and trick-or-treating adventures!"
       subsections={subsections}
       theme={{

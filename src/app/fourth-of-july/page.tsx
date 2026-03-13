@@ -57,7 +57,7 @@ export default function FourthOfJulyPage() {
     return (
       <div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
         <HolidayHeader
-          holidayName="🎆 Fourth of July"
+          holidayName="Fourth of July"
           description="Celebrate independence and freedom!"
         />
         <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">

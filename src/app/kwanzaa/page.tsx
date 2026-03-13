@@ -49,7 +49,7 @@ const subsections = [
 export default function KwanzaaPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🕯️ Kwanzaa"
+      holidayName="Kwanzaa"
       description="Celebrate unity, heritage, and the seven principles!"
       subsections={subsections}
       theme={{

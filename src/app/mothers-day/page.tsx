@@ -38,7 +38,7 @@ const subsections = [
 export default function MothersDayPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🌸 Mother's Day"
+      holidayName="Mother's Day"
       description="Show your love and appreciation for mom!"
       subsections={subsections}
       theme={{

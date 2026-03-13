@@ -37,7 +37,7 @@ const subsections = [
 export default function EasterPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🐰 Easter"
+      holidayName="Easter"
       description="Celebrate renewal and joy with family traditions!"
       subsections={subsections}
       theme={{

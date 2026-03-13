@@ -32,7 +32,7 @@ const subsections = [
 export default function AnniversaryPage() {
   return (
     <HolidayPageTemplate
-      holidayName="💕 Anniversary"
+      holidayName="Anniversary"
       description="Celebrate your special milestones with love and romance!"
       subsections={subsections}
       theme={{

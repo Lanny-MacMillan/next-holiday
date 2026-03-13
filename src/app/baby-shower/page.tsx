@@ -27,7 +27,7 @@ const subsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: 'Stay on top of your baby shower to-dos',
     href: '/baby-shower/tasks',
     sliceKey: 'tasks',
     category: 'Tasks',
@@ -38,7 +38,7 @@ const subsections = [
 export default function BabyShowerPage() {
   return (
     <HolidayPageTemplate
-      holidayName="👶 Baby Shower"
+      holidayName="Baby Shower"
       description="Celebrate new beginnings with joyful baby shower planning!"
       subsections={subsections}
       theme={{

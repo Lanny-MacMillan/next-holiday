@@ -47,7 +47,7 @@ const subsections = [
 export default function BirthdayPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🎉 Birthday"
+      holidayName="Birthday"
       description="Plan your birthday celebrations with style and joy!"
       subsections={subsections}
       theme={{

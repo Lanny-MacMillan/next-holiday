@@ -47,7 +47,7 @@ const subsections = [
 export default function ValentinesPage() {
   return (
     <HolidayPageTemplate
-      holidayName="❤️ Valentine's Day"
+      holidayName="Valentine's Day"
       description="Plan your romantic celebration with love and care!"
       subsections={subsections}
       theme={{

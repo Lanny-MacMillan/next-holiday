@@ -40,7 +40,7 @@ const subsections = [
 export default function FathersDayPage() {
   return (
     <HolidayPageTemplate
-      holidayName="👨 Father's Day"
+      holidayName="Father's Day"
       description="Honor and celebrate dad with thoughtful gifts and memories!"
       subsections={subsections}
       theme={{

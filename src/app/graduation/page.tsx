@@ -47,7 +47,7 @@ const subsections = [
 export default function GraduationPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🎓 Graduation"
+      holidayName="Graduation"
       description="Celebrate achievements and plan memorable graduation events!"
       subsections={subsections}
       theme={{

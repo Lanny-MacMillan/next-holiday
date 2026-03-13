@@ -45,7 +45,7 @@ const subsections = [
 export default function ThanksgivingPage() {
   return (
     <HolidayPageTemplate
-      holidayName="🦃 Thanksgiving"
+      holidayName="Thanksgiving"
       description="Plan your feast, guests, and gratitude!"
       subsections={subsections}
       theme={{
