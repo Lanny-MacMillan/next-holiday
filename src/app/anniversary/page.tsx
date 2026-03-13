@@ -16,6 +16,7 @@ const subsections = [
     description: 'Plan special anniversary dates',
     href: '/anniversary/date-ideas',
     sliceKey: 'dateIdeas',
+    category: 'Date Ideas',
     type: 'task' as const,
   },
 ];
