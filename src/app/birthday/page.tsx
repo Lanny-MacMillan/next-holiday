@@ -23,6 +23,7 @@ const subsections = [
     description: 'Plan birthday parties and celebrations',
     href: '/birthday/party-planning',
     sliceKey: 'partyPlanning',
+    category: 'Party Planning',
     type: 'task' as const,
   },
   {
@@ -30,6 +31,7 @@ const subsections = [
     description: 'Track birthday cards to send',
     href: '/birthday/cards',
     sliceKey: 'cards',
+    category: 'Cards',
     type: 'task' as const,
   },
 ];

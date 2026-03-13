@@ -76,13 +76,32 @@ export function useHolidayPageData(): HolidayPageData {
 
     switch (sliceKey) {
       case 'cards':
-        // Cards are stored as tasks with category 'Cards'
+        // Dual logic: For most holidays, cards are stored as tasks with category 'Cards'
+        // Only Birthday uses the actual cards collection
         if (holidayData.tasks) {
           const cardTasks = holidayData.tasks.filter(
             (task: any) => task.category === 'Cards',
           );
-          total = cardTasks.length;
-          completed = cardTasks.filter((task: any) => task.isCompleted).length;
+          if (cardTasks.length > 0) {
+            // Use tasks approach (Fathers-day, Mothers-day, Valentines use this)
+
+            total = cardTasks.length;
+            completed = cardTasks.filter((task: any) => task.isCompleted).length;
+          } else if (holidayData.cards && holidayData.cards.length > 0) {
+            // Fall back to actual cards collection (Birthday uses this approach)
+            total = holidayData.cards.length;
+            completed = holidayData.cards.filter(
+              (card: any) => card.isCompleted,
+            ).length;
+          }
+        } else if (holidayData.cards && holidayData.cards.length > 0) {
+          // Use actual cards collection if no tasks exist
+          total = holidayData.cards.length;
+          completed = holidayData.cards.filter(
+            (card: any) => card.isCompleted,
+          ).length;
+        } else {
+          console.log('No cards or tasks data found for progress calculation');
         }
         break;
 
@@ -187,6 +206,14 @@ export function useHolidayPageData(): HolidayPageData {
             );
             total = mealPlanningTasks.length;
             completed = mealPlanningTasks.filter(
+              (task: any) => task.isCompleted,
+            ).length;
+          } else if (sliceKey === 'partyPlanning') {
+            const partyPlanningTasks = holidayData.tasks.filter(
+              (task: any) => task.category === 'Party Planning',
+            );
+            total = partyPlanningTasks.length;
+            completed = partyPlanningTasks.filter(
               (task: any) => task.isCompleted,
             ).length;
           } else {
