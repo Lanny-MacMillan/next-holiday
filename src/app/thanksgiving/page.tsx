@@ -32,6 +32,14 @@ const subsections = [
     sliceKey: 'decorations',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/thanksgiving/tasks',
+    sliceKey: 'tasks',
+    category: 'To-Do',
+    type: 'task' as const,
+  },
 ];
 
 export default function ThanksgivingPage() {

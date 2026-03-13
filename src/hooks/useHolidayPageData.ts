@@ -220,9 +220,14 @@ export function useHolidayPageData(): HolidayPageData {
             'Date Ideas',
             'Reservations',
             'Candle Lighting',
+            'Meal Planning', // Exclude meal planning tasks as they have their own section
           ];
+          // Include tasks with category 'Tasks' or 'To-Do' OR tasks without any specific category
           const generalTasks = holidayData.tasks.filter(
-            (task: any) => !excludedCategories.includes(task.category),
+            (task: any) =>
+              task.category === 'Tasks' ||
+              task.category === 'To-Do' ||
+              !excludedCategories.includes(task.category),
           );
           total = generalTasks.length;
           completed = generalTasks.filter((task: any) => task.isCompleted).length;

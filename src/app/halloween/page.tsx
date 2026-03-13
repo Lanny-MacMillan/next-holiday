@@ -36,6 +36,14 @@ const subsections = [
     category: 'Decorations',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/halloween/tasks',
+    sliceKey: 'tasks',
+    category: 'To-Do',
+    type: 'task' as const,
+  },
 ];
 
 export default function HalloweenPage() {
