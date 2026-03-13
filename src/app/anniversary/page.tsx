@@ -19,6 +19,14 @@ const subsections = [
     category: 'Date Ideas',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your anniversary to-dos',
+    href: '/anniversary/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
 ];
 
 export default function AnniversaryPage() {
