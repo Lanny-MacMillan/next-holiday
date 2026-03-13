@@ -34,6 +34,14 @@ const subsections = [
     category: 'Cards',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your graduation to-dos',
+    href: '/graduation/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
 ];
 
 export default function GraduationPage() {
