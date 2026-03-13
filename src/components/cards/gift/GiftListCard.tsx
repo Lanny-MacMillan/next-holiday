@@ -196,6 +196,8 @@ export default function GiftListCard({
     holiday === 'Thanksgiving' || holiday?.includes('Thanksgiving');
   const isEaster = holiday === 'Easter' || holiday?.includes('Easter');
   const isNewYear = holiday === 'New Year' || holiday?.includes('New Year');
+  const isFourthOfJuly =
+    holiday === 'Fourth of July' || holiday?.includes('Fourth of July');
 
   // Use holiday-specific data if holiday prop is provided, otherwise use passed props
   // Prioritize props over hook data to avoid API calls
@@ -415,7 +417,9 @@ export default function GiftListCard({
                     ? 'Basket List'
                     : isNewYear
                       ? '✨ Supplies List'
-                      : 'Gift List'}
+                      : isFourthOfJuly
+                        ? 'Supplies List'
+                        : 'Gift List'}
               </h4>
               <span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white">
                 {finalGiftList.totalItems}
@@ -428,7 +432,9 @@ export default function GiftListCard({
                   ? 'Track your Easter basket items'
                   : isNewYear
                     ? 'Track your ✨ New Year supplies'
-                    : `Track your ${displayHolidayName} gift ideas`}
+                    : isFourthOfJuly
+                      ? 'Track your Fourth of July supplies'
+                      : `Track your ${displayHolidayName} gift ideas`}
             </p>
 
             {/* Gift List Progress bar */}
@@ -540,7 +546,9 @@ export default function GiftListCard({
                   ? 'Basket List'
                   : isNewYear
                     ? '✨ Supplies List'
-                    : 'Gift List'}
+                    : isFourthOfJuly
+                      ? 'Supplies List'
+                      : 'Gift List'}
             </h4>
             <span
               className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full"
@@ -557,7 +565,9 @@ export default function GiftListCard({
               ? 'Track your Thanksgiving shopping budget'
               : isNewYear
                 ? 'Track your ✨ New Year supplies'
-                : `Track your ${displayHolidayName} gift ideas`}
+                : isFourthOfJuly
+                  ? 'Track your Fourth of July supplies'
+                  : `Track your ${displayHolidayName} gift ideas`}
           </p>
 
           {/* Gift List Progress bar */}

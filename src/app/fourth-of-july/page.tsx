@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import GuestListCard from '@/components/cards/guest/GuestListCard';
@@ -10,12 +9,6 @@ import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
 import CountdownWithInvite from '@/components/common/CountdownWithInvite';
 import SharedIndicator from '@/components/common/SharedIndicator';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 
 const fourthOfJulySubsections = [
   {
@@ -49,17 +42,8 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-  const { holidayId, auth0User } = useFormModalMutation();
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Get data from Redux home state first, fallback to RTK Query if needed
-  const homeData = useAppSelector(selectHomeData);
-
-  // Get holiday data from Redux using memoized selector
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
   // Show message if holiday doesn't exist
   if (!holidayId) {
     return (

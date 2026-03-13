@@ -1,29 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateGiftInHomeData,
-  addGiftToHomeData,
-  removeGiftFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -34,74 +22,19 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function FourthOfJulySuppliesListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+  const { refreshHomeData } = useRefreshHomeData();
+
+  // Use hooks for gift CRUD operations
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
-
-  // Get current Redux state for skip logic
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
-
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Helper function to update Redux state after gift operations
-  const updateGiftInRedux = (
-    giftData: any,
-    operation: 'add' | 'update' | 'delete',
-  ) => {
-    if (!holidayId) return;
-
-    // For add and update operations, ensure the recipient field is populated
-    let processedGiftData = giftData;
-    if (
-      (operation === 'add' || operation === 'update') &&
-      giftData.contactId &&
-      contacts
-    ) {
-      const contact = contacts.find((c: any) => c.id === giftData.contactId);
-      processedGiftData = {
-        ...giftData,
-        recipient: contact?.name || 'Unknown',
-      };
-    }
-
-    switch (operation) {
-      case 'add':
-        dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
-        break;
-      case 'update':
-        dispatch(
-          updateGiftInHomeData({
-            holidayId,
-            giftId: processedGiftData.id,
-            updates: processedGiftData,
-          }),
-        );
-        break;
-      case 'delete':
-        dispatch(
-          removeGiftFromHomeData({
-            holidayId,
-            giftId: giftData.id,
-          }),
-        );
-        break;
-    }
-  };
-
-  // Use only Redux data - no GET API calls on holiday pages
-
-  // Local loading states for mutations
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+    createGift,
+    updateGift,
+    deleteGift,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -110,7 +43,9 @@ export default function FourthOfJulySuppliesListPage() {
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  // Home data already declared above
+  // Use only Redux data - no fallback to API calls
+  const displayGifts =
+    holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
 
   useEffect(() => {
     // Fetch contacts for address book functionality
@@ -122,21 +57,15 @@ export default function FourthOfJulySuppliesListPage() {
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
+    if (!holidayId || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
-      const result = await mutation({ holidayId, payload, auth0User }).unwrap();
-
-      // Update Redux state directly
-      updateGiftInRedux(result, 'add');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
-
+      const giftData = transformGiftPayload(values, contacts);
+      await createGift(giftData);
+      await refreshHomeData(auth0User, holidayId);
       setShowFormModal(false);
     } catch (error) {
-      console.error('Error creating gift:', error);
+      console.error('Failed to add gift:', error);
       // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
@@ -160,38 +89,16 @@ export default function FourthOfJulySuppliesListPage() {
     if (!holidayId || !auth0User) return;
 
     try {
-      // Find the current gift to get its completion status from Redux data
+      // Find the current gift to get its completion status
       const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
       if (!currentGift) return;
 
       // Toggle the completion status
-      const newIsCompleted = !currentGift.isCompleted;
-
-      setUpdateLoading(true);
-      // Update the gift in the database with direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newIsCompleted,
-        }),
-      });
-
-      // Update Redux state directly
-      updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
+      const updateData = { isCompleted: !currentGift.isCompleted };
+      await updateGift(giftId, updateData);
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      console.error('Error toggling gift:', error);
-      // Handle error (could show a toast notification)
-    } finally {
-      setUpdateLoading(false);
+      console.error('Failed to toggle gift:', error);
     }
   }
 
@@ -203,34 +110,13 @@ export default function FourthOfJulySuppliesListPage() {
   async function confirmDelete() {
     if (!giftToDelete || !holidayId || !auth0User) return;
 
-    setDeleteLoading(true);
     try {
-      // Direct API call instead of RTK mutation
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      // Update Redux state directly
-      updateGiftInRedux({ id: giftToDelete.id }, 'delete');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
-
+      await deleteGift(giftToDelete.id);
+      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
-      console.error('Error deleting gift:', error);
-    } finally {
-      setDeleteLoading(false);
+      console.error('Failed to delete gift:', error);
     }
   }
 
@@ -247,47 +133,20 @@ export default function FourthOfJulySuppliesListPage() {
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
 
-    setEditLoading(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
-      // Direct API call instead of RTK mutation
-      const response = await fetch(
-        `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const result = await response.json();
-
-      // Update Redux state directly
-      updateGiftInRedux(result, 'update');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
-
+      const giftData = transformGiftPayload(values, contacts);
+      await updateGift(selectedGift.id, giftData);
+      await refreshHomeData(auth0User, holidayId);
       setShowFormModal(false);
       setSelectedGift(null);
     } catch (error) {
-      console.error('Error updating gift:', error);
+      console.error('Failed to update gift:', error);
       // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
       } else {
         alert('Error updating gift. Please try again.');
       }
-    } finally {
-      setEditLoading(false);
     }
   }
 
@@ -321,36 +180,6 @@ export default function FourthOfJulySuppliesListPage() {
       </div>
     );
   }
-
-  // Use only Redux data - no fallback to API calls
-  const displayGifts =
-    holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
-
-  // Function to refresh home data from server
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   const sortedGifts = sortGifts(displayGifts || []);
   const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
@@ -509,7 +338,7 @@ export default function FourthOfJulySuppliesListPage() {
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
-        loading={mutationLoading || editLoading}
+        loading={selectedGift ? updateLoading : createLoading}
         submitText={selectedGift ? 'Update Supply' : 'Add Supply'}
         cancelText="Cancel"
         cardClassName="card"
