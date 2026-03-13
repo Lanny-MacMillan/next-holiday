@@ -1,7 +1,6 @@
 'use client';
 
 import { HolidayPageTemplate } from '@/components/templates/HolidayPageTemplate';
-import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 
 const subsections = [
   {
@@ -23,7 +22,7 @@ const subsections = [
     name: 'Event Planning',
     description: 'Plan graduation ceremonies or parties',
     href: '/graduation/events',
-    sliceKey: 'events', // Changed from 'tasks' to 'events'
+    sliceKey: 'events',
     category: 'Events',
     type: 'task' as const,
   },
@@ -32,28 +31,12 @@ const subsections = [
     description: 'Track graduation cards to send',
     href: '/graduation/cards',
     sliceKey: 'cards',
-    type: 'gift-list' as const, // Changed from 'task' to 'gift-list'
+    category: 'Cards',
+    type: 'task' as const,
   },
 ];
 
 export default function GraduationPage() {
-  console.log('GraduationPage component rendered');
-
-  // Debug: Add logging to see what data the template is using
-  try {
-    const { holidayData, getProgressData } = useHolidayPageData();
-
-    console.log('Graduation Page Debug:', {
-      holidayData,
-      giftListProgress: getProgressData('giftList'),
-      guestListProgress: getProgressData('guestList'),
-      tasksProgress: getProgressData('tasks'),
-      cardsProgress: getProgressData('cards'),
-    });
-  } catch (error) {
-    console.error('Error in useHolidayPageData:', error);
-  }
-
   return (
     <HolidayPageTemplate
       holidayName="🎓 Graduation"

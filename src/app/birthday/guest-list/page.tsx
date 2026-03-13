@@ -458,9 +458,6 @@ export default function BirthdayGuestListPage() {
         submitButtonColor="#f59e0b"
         showAddressBook={true}
         contacts={contacts}
-        onAddressBookSelect={contact => {
-          // The FormModal will handle the form values internally
-        }}
       />
 
       {/* Delete Confirmation Modal */}
