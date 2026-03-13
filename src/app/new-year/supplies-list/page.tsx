@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateGiftInHomeData,
@@ -41,6 +42,9 @@ export default function NewYearSuppliesListPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -115,7 +119,7 @@ export default function NewYearSuppliesListPage() {
       updateGiftInRedux(result, 'add');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
     } catch (error) {
@@ -175,7 +179,7 @@ export default function NewYearSuppliesListPage() {
       updateGiftInRedux({ id: giftToDelete.id }, 'delete');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -206,7 +210,7 @@ export default function NewYearSuppliesListPage() {
       updateGiftInRedux(result, 'update');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
       setSelectedGift(null);
@@ -243,32 +247,6 @@ export default function NewYearSuppliesListPage() {
   // Use only Redux data - no fallback to API calls
   const displayGifts =
     holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
-
-  // Function to refresh home data from server
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   const sortedGifts = sortGifts(displayGifts || []);
   const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);

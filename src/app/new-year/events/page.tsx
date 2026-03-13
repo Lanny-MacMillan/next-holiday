@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -38,6 +39,9 @@ export default function NewYearEventsPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
+
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Check if the holiday is shared to conditionally show assign to field
@@ -70,30 +74,6 @@ export default function NewYearEventsPage() {
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  // CRUD Operations
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
-
   const handleAddTask = async (values: any) => {
     if (!values.title?.trim() || !holidayId) return;
 
@@ -111,7 +91,7 @@ export default function NewYearEventsPage() {
       dispatch(addTaskToHomeData({ holidayId, task: result }));
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
@@ -149,7 +129,7 @@ export default function NewYearEventsPage() {
       );
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setEditingTask(null);
       setShowEditModal(false);
@@ -173,7 +153,7 @@ export default function NewYearEventsPage() {
       );
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error deleting task:', error);
     }
