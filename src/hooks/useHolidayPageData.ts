@@ -74,6 +74,21 @@ export function useHolidayPageData(): HolidayPageData {
       return { total: 0, completed: 0, progress: 0 };
     }
 
+    // Handle tasks with specific categories (format: "tasks:CategoryName")
+    // baby shower Games page uses this format to differentiate between different types of tasks
+    if (sliceKey.startsWith('tasks:')) {
+      const category = sliceKey.split(':')[1];
+      if (holidayData.tasks) {
+        const categoryTasks = holidayData.tasks.filter(
+          (task: any) => task.category === category,
+        );
+        total = categoryTasks.length;
+        completed = categoryTasks.filter((task: any) => task.isCompleted).length;
+      }
+      const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+      return { total, completed, progress };
+    }
+
     switch (sliceKey) {
       case 'cards':
         // Dual logic: For most holidays, cards are stored as tasks with category 'Cards'

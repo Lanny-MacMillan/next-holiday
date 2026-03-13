@@ -64,7 +64,11 @@ export function HolidayPageTemplate({
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         <ul className="flex flex-col gap-4">
           {subsections.map(section => {
-            const { total, completed } = getProgressData(section.sliceKey);
+            // Only apply category formatting for tasks sliceKey to avoid breaking existing holidays
+            const progressKey = (section.sliceKey === 'tasks' && section.category) 
+              ? `${section.sliceKey}:${section.category}` 
+              : section.sliceKey;
+            const { total, completed } = getProgressData(progressKey);
 
             // Render appropriate card based on section type
             if (section.type === 'gift-list') {
