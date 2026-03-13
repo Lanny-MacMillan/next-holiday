@@ -16,23 +16,34 @@ const subsections = [
     name: 'Daily Principle Tracker',
     description: 'Track the seven principles of Kwanzaa',
     href: '/kwanzaa/daily-principles',
-    sliceKey: 'kwanzaaPrinciples',
+    sliceKey: 'tasks',
+    category: 'Daily Principles',
     type: 'task' as const,
   },
   {
     name: 'Events',
     description: 'Plan your Kwanzaa events and celebrations',
     href: '/kwanzaa/events',
-    sliceKey: 'events',
+    sliceKey: 'tasks',
+    category: 'Events',
     type: 'task' as const,
   },
   {
     name: 'Decorations Checklist',
     description: 'Stay on top of your Kwanzaa decorations',
     href: '/kwanzaa/decorations',
-    sliceKey: 'decorations',
+    sliceKey: 'tasks',
+    category: 'Decorations',
     type: 'task' as const,
   },
+  // {
+  //   name: 'To-Do List',
+  //   description: 'General tasks for your Kwanzaa celebration',
+  //   href: '/kwanzaa/tasks',
+  //   sliceKey: 'tasks',
+  //   category: 'Tasks',
+  //   type: 'task' as const,
+  // },
 ];
 
 export default function KwanzaaPage() {

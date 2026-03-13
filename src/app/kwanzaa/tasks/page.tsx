@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useKwanzaaTasksMutations } from '@/hooks/useKwanzaaTasksMutations';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  updateTaskInHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+} from '@/store/slices/homeSlice';
+import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import EditTaskModal from '@/components/modals/EditTaskModal';
@@ -18,25 +27,34 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
 export default function KwanzaaTasksPage() {
   const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-  // Use the Kwanzaa tasks mutations hook
+  // Use centralized holiday page data hook
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  // Use standardized mutation hooks for task operations
   const {
-    holidayId,
-    auth0User,
-    tasks,
-    loading,
-    error,
-    initialized,
     createTask,
     updateTask,
-    editTask,
     deleteTask,
-    createTaskState,
-    updateTaskState,
-    editTaskState,
-    deleteTaskState,
-    getTasksByCategory,
-  } = useKwanzaaTasksMutations();
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
+
+  // Redux data access - tasks with category "Tasks"
+  const tasks =
+    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+  const isLoading = !homeInitialized;
+
+  // Sharing status (for conditional form fields)
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'kwanzaa'),
+  );
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showForm, setShowForm] = useState(false);
@@ -46,22 +64,31 @@ export default function KwanzaaTasksPage() {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
+
   async function handleAddTask(formValues: Record<string, any>) {
     if (!formValues.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
     try {
-      const payload = {
+      const result = await createTask({
         title: formValues.title,
         description: formValues.description || undefined,
         priority: formValues.priority as 'low' | 'medium' | 'high',
         assignedTo: formValues.assignedTo || undefined,
-        category: formValues.category || 'Tasks',
+        category: 'Tasks',
         dueDate: formValues.dueDate || undefined,
-        isCompleted: false,
-      };
+      });
 
-      await createTask({ holidayId, payload, auth0User }).unwrap();
+      // Update Redux state immediately
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -79,18 +106,25 @@ export default function KwanzaaTasksPage() {
   async function handleToggleTask(taskId: string) {
     if (!holidayId || !auth0User) return;
 
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (!task) return;
+
     try {
-      const task = tasks.find((t: any) => t.id === taskId);
-      if (task) {
-        await updateTask({
-          holidayId,
-          taskId,
-          isCompleted: !task.isCompleted,
-          auth0User,
-        }).unwrap();
-      }
+      const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
+
+      // Update Redux state
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: holidayId,
+          taskId: taskId,
+          updates: { isCompleted: !task.isCompleted },
+        }),
+      );
+
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error('Error toggling task:', error);
     }
   }
 
@@ -109,12 +143,26 @@ export default function KwanzaaTasksPage() {
     if (!editingTask || !holidayId || !auth0User) return;
 
     try {
-      await editTask({
-        holidayId,
-        taskId: editingTask.id,
-        payload: formValues,
-        auth0User,
-      }).unwrap();
+      const result = await updateTask(editingTask.id, {
+        title: formValues.title,
+        description: formValues.description || undefined,
+        priority: formValues.priority as 'low' | 'medium' | 'high',
+        assignedTo: formValues.assignedTo || undefined,
+        dueDate: formValues.dueDate || undefined,
+      });
+
+      // Update Redux state
+      dispatch(
+        updateTaskInHomeData({
+          holidayId: holidayId,
+          taskId: editingTask.id,
+          updates: result,
+        }),
+      );
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
       setShowEditModal(false);
       setEditingTask(null);
     } catch (error) {
@@ -128,18 +176,26 @@ export default function KwanzaaTasksPage() {
   }
 
   async function confirmDelete() {
-    if (taskToDelete) {
-      try {
-        await deleteTask({
-          holidayId: holidayId || '',
+    if (!taskToDelete || !holidayId || !auth0User) return;
+
+    try {
+      await deleteTask(taskToDelete.id);
+
+      // Remove from Redux state on success
+      dispatch(
+        removeTaskFromHomeData({
+          holidayId: holidayId,
           taskId: taskToDelete.id,
-          auth0User,
-        }).unwrap();
-        setShowDeleteModal(false);
-        setTaskToDelete(null);
-      } catch (error) {
-        console.error('Error deleting task:', error);
-      }
+        }),
+      );
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting task:', error);
     }
   }
 
@@ -180,7 +236,7 @@ export default function KwanzaaTasksPage() {
     }
   }
 
-  if (loading && !initialized) {
+  if (isLoading) {
     return (
       <div className="min-h-screen kwanzaa-gradient flex items-center justify-center">
         <div className="text-center">
@@ -192,8 +248,7 @@ export default function KwanzaaTasksPage() {
   }
 
   // Filter tasks by category
-  const tasksByCategory = getTasksByCategory('Tasks');
-  const sortedTasks = sortTasks(tasksByCategory);
+  const sortedTasks = sortTasks(tasks);
   const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
@@ -208,7 +263,7 @@ export default function KwanzaaTasksPage() {
         backHref="/kwanzaa"
         onSortClick={() => setShowSortModal(true)}
         sortTitle="Sort tasks"
-        error={error ? 'API Error' : undefined}
+        error={undefined}
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
         <AddButton title="Task" onClick={openForm} color="red" />
@@ -274,8 +329,8 @@ export default function KwanzaaTasksPage() {
         fields={getFormConfig('tasks', 'add').fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={loading}
-        submitText={loading ? 'Adding...' : 'Add Task'}
+        loading={createLoading}
+        submitText={createLoading ? 'Adding...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"
@@ -295,7 +350,7 @@ export default function KwanzaaTasksPage() {
         }}
         onSubmit={handleEditTaskSubmit}
         onClose={handleCloseEdit}
-        loading={editTaskState.isLoading}
+        loading={updateLoading}
         submitText="Update Task"
         cancelText="Cancel"
         cardClassName="card card-tasks"
@@ -310,7 +365,7 @@ export default function KwanzaaTasksPage() {
         itemName={taskToDelete?.title}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
-        loading={deleteTaskState.isLoading}
+        loading={deleteLoading}
         cardClassName={deleteConfig.cardClassName}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
