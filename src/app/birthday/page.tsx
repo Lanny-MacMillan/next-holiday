@@ -36,7 +36,7 @@ const subsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: 'Stay on top of your birthday to-dos',
     href: '/birthday/tasks',
     sliceKey: 'tasks',
     category: 'Tasks',

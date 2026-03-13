@@ -27,7 +27,7 @@ const subsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: "Stay on top of your Mother's Day to-dos",
     href: '/mothers-day/tasks',
     sliceKey: 'tasks',
     category: 'Tasks',

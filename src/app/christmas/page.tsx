@@ -12,14 +12,14 @@ const subsections = [
   },
   {
     name: 'Cards',
-    description: 'Track your holiday cards',
+    description: 'Track your Christmas cards',
     href: '/christmas/cards',
     sliceKey: 'cards',
     type: 'task' as const,
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: 'Stay on top of your Christmas to-dos',
     href: '/christmas/tasks',
     sliceKey: 'tasks',
     type: 'task' as const,

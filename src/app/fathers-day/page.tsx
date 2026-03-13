@@ -13,7 +13,7 @@ const subsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: "Stay on top of your Father's Day to-dos",
     href: '/fathers-day/tasks',
     sliceKey: 'tasks',
     category: 'Tasks',

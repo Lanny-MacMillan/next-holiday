@@ -38,7 +38,7 @@ const subsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: 'Stay on top of your Halloween to-dos',
     href: '/halloween/tasks',
     sliceKey: 'tasks',
     category: 'To-Do',

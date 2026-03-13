@@ -20,7 +20,7 @@ const fourthOfJulySubsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: 'Stay on top of your Fourth of July to-dos',
     href: '/fourth-of-july/tasks',
     sliceKey: 'tasks',
     category: 'Tasks',
@@ -35,7 +35,7 @@ const fourthOfJulySubsections = [
   },
   {
     name: 'Guest List',
-    description: 'Manage your guest list',
+    description: 'Manage your Fourth of July guest list',
     href: '/fourth-of-july/guest-list',
     sliceKey: 'guestList',
     type: 'guest-list',

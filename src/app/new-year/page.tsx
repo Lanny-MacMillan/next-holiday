@@ -13,7 +13,7 @@ const subsections = [
   },
   {
     name: 'Tasks',
-    description: 'Stay on top of your holiday to-dos',
+    description: 'Stay on top of your New Year to-dos',
     href: '/new-year/tasks',
     sliceKey: 'tasks',
     type: 'task' as const,
