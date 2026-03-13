@@ -16,6 +16,7 @@ const subsections = [
     description: 'Plan romantic activities and dates',
     href: '/valentines/date-ideas',
     sliceKey: 'dateIdeas',
+    category: 'Date Ideas',
     type: 'task' as const,
   },
   {
@@ -31,6 +32,7 @@ const subsections = [
     description: 'Track restaurant and activity reservations',
     href: '/valentines/reservations',
     sliceKey: 'reservations',
+    category: 'Reservations',
     type: 'task' as const,
   },
 ];
