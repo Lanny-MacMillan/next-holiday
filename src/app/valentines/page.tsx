@@ -35,6 +35,13 @@ const subsections = [
     category: 'Reservations',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/valentines/tasks',
+    sliceKey: 'tasks',
+    type: 'task' as const,
+  },
 ];
 
 export default function ValentinesPage() {
