@@ -36,14 +36,14 @@ const subsections = [
     category: 'Decorations',
     type: 'task' as const,
   },
-  // {
-  //   name: 'To-Do List',
-  //   description: 'General tasks for your Kwanzaa celebration',
-  //   href: '/kwanzaa/tasks',
-  //   sliceKey: 'tasks',
-  //   category: 'Tasks',
-  //   type: 'task' as const,
-  // },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your Kwanzaa to-dos',
+    href: '/kwanzaa/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
 ];
 
 export default function KwanzaaPage() {
