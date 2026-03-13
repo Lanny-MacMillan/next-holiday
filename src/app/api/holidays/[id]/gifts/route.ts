@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 
 // Base schema without contact_id
 const baseSchema = z.object({
@@ -15,6 +16,7 @@ const baseSchema = z.object({
     .union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
     .optional(),
   notes: z.string().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 // Schema for holidays that require contact_id (like Christmas)
@@ -35,6 +37,7 @@ const giftWithoutContactSchema = baseSchema.extend({
     .union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
     .optional(),
   notes: z.string().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 export async function POST(
@@ -86,9 +89,32 @@ export async function POST(
             : null,
         notes: data.notes ?? null,
         contactId: data.contact_id,
+        assignedTo: data.assigned_to, // NEW
         createdBy: user.id,
       },
     });
+
+    // Create assignment notification if assigned to someone other than creator
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      try {
+        const assignerName = await getUserName(user.id);
+        await createAssignmentNotification({
+          userId: data.assigned_to,
+          fromUserId: user.id,
+          entityType: 'gift',
+          entityId: gift.id,
+          holidayId: id,
+          title: 'Gift Assignment',
+          message: `${assignerName} assigned you a gift: ${gift.name}`,
+        });
+      } catch (notificationError) {
+        // Log notification error but don't fail the gift creation
+        console.error(
+          'Failed to create assignment notification:',
+          notificationError,
+        );
+      }
+    }
 
     return created(gift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',

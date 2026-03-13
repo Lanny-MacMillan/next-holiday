@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 
 const createBodySchema = z.object({
   recipient: z.string().min(1),
   message: z.string().min(1),
   address: z.string().nullable().optional(),
   contact_id: z.string().uuid().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 const updateBodySchema = z.object({
@@ -18,6 +20,7 @@ const updateBodySchema = z.object({
   message: z.string().min(1),
   address: z.string().nullable().optional(),
   isCompleted: z.boolean().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 export async function POST(
@@ -44,9 +47,32 @@ export async function POST(
         message: data.message,
         address: data.address ?? null,
         contactId: data.contact_id ?? null,
+        assignedTo: data.assigned_to, // NEW
         createdBy: user.id,
       },
     });
+
+    // Create assignment notification if assigned to someone other than creator
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      try {
+        const assignerName = await getUserName(user.id);
+        await createAssignmentNotification({
+          userId: data.assigned_to,
+          fromUserId: user.id,
+          entityType: 'card',
+          entityId: card.id,
+          holidayId: id,
+          title: 'Card Assignment',
+          message: `${assignerName} assigned you a card for ${card.recipient}`,
+        });
+      } catch (notificationError) {
+        // Log notification error but don't fail the card creation
+        console.error(
+          'Failed to create assignment notification:',
+          notificationError,
+        );
+      }
+    }
 
     return created(card, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',

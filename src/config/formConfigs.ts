@@ -1,5 +1,6 @@
-import { FormField } from '@/components/modals/FormModal';
+import { FormField } from '@/types/form';
 
+// Re-export legacy interface for backward compatibility
 export interface FormConfig {
   title: string;
   fields: FormField[];
@@ -510,4 +511,89 @@ export function getFormConfig(
   }
 
   return baseConfig;
+}
+
+// ============================================================================
+// NEW FORM BUILDER COMPATIBILITY LAYER
+// ============================================================================
+// This section provides compatibility between old formConfigs and new form builder
+
+import {
+  buildFormConfig as newBuildFormConfig,
+  ShareMember,
+  shouldShowAssignTo,
+} from '@/lib/formBuilder';
+import { HolidayKey, ContentType } from '@/config/baseFormConfigs';
+
+/**
+ * Enhanced getFormConfig that can work with the new form builder system
+ * Maintains backward compatibility while adding assignTo support
+ */
+export function getFormConfigEnhanced(
+  type:
+    | 'cards'
+    | 'tasks'
+    | 'events'
+    | 'gifts'
+    | 'guests'
+    | 'addressBook'
+    | 'supplies',
+  mode: 'add' | 'edit' = 'add',
+  options?: {
+    customTitle?: string;
+    customFieldLabel?: string;
+    customSubmitText?: string;
+    holidayKey?: HolidayKey;
+    shareMembers?: ShareMember[];
+  },
+): FormConfig {
+  // If we have a holidayKey and shareMembers, use the new form builder for supported types
+  if (
+    options?.holidayKey &&
+    options?.shareMembers &&
+    shouldShowAssignTo(options.shareMembers)
+  ) {
+    const contentTypeMapping: Partial<Record<typeof type, ContentType>> = {
+      tasks: 'task',
+      gifts: 'gift',
+      cards: 'card',
+    };
+
+    const contentType = contentTypeMapping[type];
+    if (contentType) {
+      const newConfig = newBuildFormConfig(
+        contentType,
+        options.holidayKey,
+        options.shareMembers,
+        {
+          submitText: options.customSubmitText,
+        },
+      );
+
+      // Convert new FormConfig to legacy FormConfig format
+      return {
+        title:
+          options.customTitle ||
+          `${mode === 'add' ? 'Add' : 'Edit'} ${type.slice(0, -1)}`,
+        fields: newConfig.fields,
+        submitText: newConfig.submitText,
+        cancelText: 'Cancel',
+        cardClassName: newConfig.cardClassName || 'card',
+        submitButtonColor: '#3b82f6',
+        showAddressBook: newConfig.showAddressBook,
+        customTitle: options.customTitle,
+        customFieldLabel: options.customFieldLabel,
+        customSubmitText: options.customSubmitText,
+      };
+    }
+  }
+
+  // Fallback to original getFormConfig for unsupported types or when no shareMembers
+  return getFormConfig(
+    type,
+    mode,
+    options?.customTitle,
+    options?.customFieldLabel,
+    options?.customSubmitText,
+  );
 }

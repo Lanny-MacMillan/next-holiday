@@ -1,29 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { isEmptyString, isEmptyNumber, isValidEmail } from '@/utils/formValidation';
-
-export interface FormField {
-  id: string;
-  type:
-    | 'text'
-    | 'textarea'
-    | 'select'
-    | 'number'
-    | 'date'
-    | 'url'
-    | 'checkbox'
-    | 'email'
-    | 'tel';
-  label?: string;
-  placeholder?: string;
-  required?: boolean;
-  options?: { value: string; label: string }[];
-  rows?: number;
-  step?: string;
-  min?: string;
-  className?: string;
-  style?: React.CSSProperties;
-}
+import { FormField } from '@/types/form';
+import { ShareMember } from '@/lib/formBuilder';
 
 export interface FormModalProps {
   isOpen: boolean;
@@ -40,6 +19,9 @@ export interface FormModalProps {
   showAddressBook?: boolean;
   contacts?: any[];
   onAddressBookSelect?: (contact: any) => void;
+  // New props for enhanced functionality
+  holidayId?: string;
+  shareMembers?: ShareMember[];
 }
 
 export default function FormModal({
@@ -57,10 +39,33 @@ export default function FormModal({
   showAddressBook = false,
   contacts = [],
   onAddressBookSelect,
+  holidayId,
+  shareMembers = [],
 }: FormModalProps) {
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [showAddressBookInternal, setShowAddressBookInternal] = useState(false);
   const [showAddressBookMessage, setShowAddressBookMessage] = useState(false);
+
+  // Populate assignTo field options with share members
+  const fieldsWithOptions = useMemo(
+    () =>
+      fields.map(field => {
+        if (field.id === 'assigned_to' && shareMembers.length > 0) {
+          return {
+            ...field,
+            options: [
+              { value: '', label: 'Unassigned' },
+              ...shareMembers.map(member => ({
+                value: member.userId,
+                label: member.name || member.email || 'Unknown',
+              })),
+            ],
+          };
+        }
+        return field;
+      }),
+    [fields, shareMembers],
+  );
 
   const handleAddressBookSelect = (contact: any) => {
     // Build full address from contact details
@@ -96,7 +101,7 @@ export default function FormModal({
     e.preventDefault();
 
     // Check if all required fields are filled
-    const requiredFields = fields.filter(field => field.required);
+    const requiredFields = fieldsWithOptions.filter(field => field.required);
     const missingFields = requiredFields.filter(field => {
       const value = formValues[field.id];
       // Handle different field types for validation
@@ -117,7 +122,7 @@ export default function FormModal({
     }
 
     // Validate email fields if they have values
-    const emailFields = fields.filter(field => field.type === 'email');
+    const emailFields = fieldsWithOptions.filter(field => field.type === 'email');
     const invalidEmails = emailFields.filter(field => {
       const value = formValues[field.id];
       // Only validate if email field has a value (since it's optional)
@@ -145,7 +150,7 @@ export default function FormModal({
 
   const handleInputChange = (fieldId: string, value: any) => {
     // Find the field to determine its type
-    const field = fields.find(f => f.id === fieldId);
+    const field = fieldsWithOptions.find(f => f.id === fieldId);
 
     // Convert value based on field type
     let processedValue = value;
@@ -257,7 +262,7 @@ export default function FormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-          {fields.map(field => (
+          {fieldsWithOptions.map(field => (
             <div key={field.id}>
               {/* Special handling for address book integration */}
               {(field.id === 'recipient' || field.id === 'name') &&

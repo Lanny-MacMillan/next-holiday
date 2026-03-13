@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -42,6 +43,28 @@ export async function POST(
         createdBy: user.id,
       },
     });
+
+    // Create assignment notification if assigned to someone other than creator
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      try {
+        const assignerName = await getUserName(user.id);
+        await createAssignmentNotification({
+          userId: data.assigned_to,
+          fromUserId: user.id,
+          entityType: 'task',
+          entityId: task.id,
+          holidayId: id,
+          title: 'Task Assignment',
+          message: `${assignerName} assigned you a task: ${task.title}`,
+        });
+      } catch (notificationError) {
+        // Log notification error but don't fail the task creation
+        console.error(
+          'Failed to create assignment notification:',
+          notificationError,
+        );
+      }
+    }
 
     return created(task, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
