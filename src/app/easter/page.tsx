@@ -12,6 +12,13 @@ const subsections = [
     type: 'gift-list' as const,
   },
   {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/easter/tasks',
+    sliceKey: 'tasks',
+    type: 'task' as const,
+  },
+  {
     name: 'Event Planning',
     description: 'Plan your Easter events and celebrations',
     href: '/easter/events',
