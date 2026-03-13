@@ -157,11 +157,16 @@ export default function ToDoCard({
     return (
       <div
         className={`relative card rounded-2xl p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${gamifiedBackgroundColor} text-white ${className}`}
-        style={getCardStyling({
-          isDarkMode,
-          isGamified: true,
-          intensity: 'heavy',
-        })}
+        style={{
+          ...getCardStyling({
+            isDarkMode,
+            isGamified: true,
+            intensity: 'heavy',
+          }),
+          borderWidth: isDarkMode ? '3px' : '0',
+          borderStyle: 'solid' as const,
+          borderColor: isDarkMode ? 'rgba(255, 255, 255, 1)' : 'transparent',
+        }}
         onClick={handleToggle}
       >
         {/* Priority indicator - 10px wide strip on left side */}
