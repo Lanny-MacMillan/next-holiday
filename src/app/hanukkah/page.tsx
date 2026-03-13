@@ -31,6 +31,13 @@ const subsections = [
     sliceKey: 'decorations',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/hanukkah/tasks',
+    sliceKey: 'tasks',
+    type: 'task' as const,
+  },
 ];
 
 export default function HanukkahPage() {
