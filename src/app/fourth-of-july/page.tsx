@@ -19,6 +19,14 @@ const fourthOfJulySubsections = [
     type: 'gift-list',
   },
   {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/fourth-of-july/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
+  {
     name: 'Event Planning',
     description: 'Plan your Fourth of July celebrations',
     href: '/fourth-of-july/events',
