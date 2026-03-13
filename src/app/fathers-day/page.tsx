@@ -12,6 +12,14 @@ const subsections = [
     type: 'gift-list' as const,
   },
   {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/fathers-day/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
+  {
     name: 'Card List',
     description: "Track cards to send on Father's Day",
     href: '/fathers-day/cards',
