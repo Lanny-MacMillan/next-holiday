@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -26,6 +28,19 @@ export default function HanukkahDecorationsPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
+  // Use standardized mutation hooks for task operations
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
+
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'hanukkah'),
   );
@@ -35,36 +50,7 @@ export default function HanukkahDecorationsPage() {
   const isLoading = !homeInitialized;
   const error = null;
 
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
-
   // State management
-  const [isAdding, setIsAdding] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -81,88 +67,32 @@ export default function HanukkahDecorationsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Decorations',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
-
     try {
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-      // Call API - map camelCase to snake_case for API
-      const apiPayload = {
+      const result = await createTask({
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assignedTo: values.assignedTo || undefined,
         category: 'Decorations',
-        due_date: values.dueDate || undefined, // snake_case for API
-        isCompleted: false,
-      };
-
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify(apiPayload),
+        dueDate: values.dueDate || undefined,
       });
 
-      if (response.ok) {
-        // Replace temporary task with real task from API
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+      // Update Redux state immediately
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        console.log('API error, removing optimistic update');
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error('Failed to add task:', response.status, response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
-      // Remove optimistic update on error
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Failed to add task:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error creating decoration task:', error);
     }
   }
 
   async function handleToggleCompletion(taskId: string) {
     if (!holidayId || !auth0User) return;
 
-    setIsToggling(true);
     try {
-      // Find the current task to get its completion status
       const currentTask = decorations.find((task: any) => task.id === taskId);
       if (!currentTask) {
         console.error('Task not found:', taskId);
@@ -172,7 +102,9 @@ export default function HanukkahDecorationsPage() {
       // Toggle the completion status
       const newCompletionStatus = !currentTask.isCompleted;
 
-      // Optimistically update the Redux home data
+      const result = await updateTask(taskId, { isCompleted: newCompletionStatus });
+
+      // Update Redux state
       dispatch(
         updateTaskInHomeData({
           holidayId: holidayId,
@@ -181,102 +113,26 @@ export default function HanukkahDecorationsPage() {
         }),
       );
 
-      // Call API with field mapping
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newCompletionStatus,
-        }),
-      });
-
-      if (!response.ok) {
-        // Revert the optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: taskId,
-            updates: { isCompleted: !newCompletionStatus },
-          }),
-        );
-        console.error(
-          'Failed to toggle task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        // Refresh home data to update progress on main holiday page
-        await refreshHomeData();
-      }
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Failed to toggle task:', error);
-      // Revert the optimistic update on error
-      const currentTask = decorations.find((task: any) => task.id === taskId);
-      if (currentTask) {
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: taskId,
-            updates: { isCompleted: currentTask.isCompleted },
-          }),
-        );
-      }
-    } finally {
-      setIsToggling(false);
     }
   }
 
   async function handleDelete(taskId: string) {
     if (!holidayId || !auth0User) return;
 
-    // Find the task to delete for potential rollback
-    const taskToDelete = decorations.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
-
-    setIsDeleting(true);
     try {
-      // Optimistically update Redux state first
+      await deleteTask(taskId);
+
+      // Remove from Redux state on success
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
-      // Call API
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (!response.ok) {
-        // If API failed, revert the optimistic update
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
-        console.error(
-          'Failed to delete task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        console.log('Task deleted successfully');
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      // If API failed, revert the optimistic update
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       console.error('Failed to delete task:', error);
-    } finally {
-      setIsDeleting(false);
     }
   }
 
@@ -288,97 +144,31 @@ export default function HanukkahDecorationsPage() {
   async function handleEditDecorationSubmit(values: Record<string, any>) {
     if (!editingTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
     try {
-      const updatedTask = {
+      const result = await updateTask(editingTask.id, {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         assignedTo: values.assignedTo || undefined,
-        category: 'Decorations',
         dueDate: values.dueDate || undefined,
-      };
+      });
 
-      // Optimistically update the Redux home data
+      // Update Redux state
       dispatch(
         updateTaskInHomeData({
           holidayId: holidayId,
           taskId: editingTask.id,
-          updates: updatedTask,
+          updates: result,
         }),
       );
 
-      // Call API with field mapping
-      const apiPayload = {
-        title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
-        category: 'Decorations',
-        due_date: values.dueDate || undefined, // snake_case for API
-      };
-
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
-
-      if (!response.ok) {
-        // Revert the optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: editingTask.id,
-            updates: {
-              title: editingTask.title,
-              description: editingTask.description,
-              priority: editingTask.priority,
-              assignedTo: editingTask.assignedTo,
-              category: editingTask.category,
-              dueDate: editingTask.dueDate,
-            },
-          }),
-        );
-        console.error(
-          'Failed to update task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowEditModal(false);
       setEditingTask(null);
     } catch (error) {
       console.error('Failed to update task:', error);
-      // Revert the optimistic update on error
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: editingTask.id,
-          updates: {
-            title: editingTask.title,
-            description: editingTask.description,
-            priority: editingTask.priority,
-            assignedTo: editingTask.assignedTo,
-            category: editingTask.category,
-            dueDate: editingTask.dueDate,
-          },
-        }),
-      );
-    } finally {
-      setIsUpdating(false);
     }
   }
 
@@ -418,7 +208,7 @@ export default function HanukkahDecorationsPage() {
     }
   }
 
-  const loading = isAdding || isUpdating || isDeleting || isToggling;
+  const loading = createLoading || updateLoading || deleteLoading;
 
   const sortedTasks = sortTasks(decorations);
   const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
@@ -549,7 +339,7 @@ export default function HanukkahDecorationsPage() {
         }}
         onSubmit={handleAddDecoration}
         onClose={() => setShowForm(false)}
-        loading={isAdding}
+        loading={createLoading}
         submitText="Add Decoration"
         cardClassName="card-tasks"
       />
@@ -605,7 +395,7 @@ export default function HanukkahDecorationsPage() {
         }}
         onSubmit={handleEditDecorationSubmit}
         onClose={closeEditModal}
-        loading={isUpdating}
+        loading={updateLoading}
         submitText="Update Decoration"
         cardClassName="card-tasks"
       />

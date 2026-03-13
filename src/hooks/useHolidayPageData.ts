@@ -195,6 +195,19 @@ export function useHolidayPageData(): HolidayPageData {
         }
         break;
 
+      // Hanukkah specific categories
+      case 'candleLighting':
+        if (holidayData.tasks) {
+          const candleLightingTasks = holidayData.tasks.filter(
+            (task: any) => task.category === 'Candle Lighting',
+          );
+          total = candleLightingTasks.length;
+          completed = candleLightingTasks.filter(
+            (task: any) => task.isCompleted,
+          ).length;
+        }
+        break;
+
       // Generic task category handling
       default:
         if (holidayData.tasks) {
