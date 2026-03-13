@@ -159,6 +159,85 @@ export function useHolidayMutations({
     }
   };
 
+  const createCard = async (payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setCreateLoading(true);
+    try {
+      const response = await fetch(`/api/holidays/${holidayId}/cards`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create card');
+      }
+
+      return await response.json();
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const updateCard = async (cardId: string, payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const response = await fetch(`/api/holidays/${holidayId}/cards`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          id: cardId,
+          action: 'update',
+          ...payload,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update card');
+      }
+
+      return await response.json();
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const deleteCard = async (cardId: string, cardData: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`/api/holidays/${holidayId}/cards`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          id: cardId,
+          action: 'delete',
+          recipient: cardData.recipient,
+          message: cardData.message || '',
+          address: cardData.address || '',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete card');
+      }
+
+      return await response.json();
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return {
     // Gift operations
     createGift,
@@ -169,6 +248,11 @@ export function useHolidayMutations({
     createTask,
     updateTask,
     deleteTask,
+
+    // Card operations
+    createCard,
+    updateCard,
+    deleteCard,
 
     // Loading states
     createLoading,

@@ -208,6 +208,27 @@ export function useHolidayPageData(): HolidayPageData {
         }
         break;
 
+      case 'tasks':
+        // Generic tasks - count all tasks that don't have specific categories used by other sections
+        if (holidayData.tasks) {
+          // Exclude tasks that belong to other sections (Cards, Events, Decorations, etc.)
+          const excludedCategories = [
+            'Cards',
+            'Events',
+            'Decorations',
+            'Resolutions',
+            'Date Ideas',
+            'Reservations',
+            'Candle Lighting',
+          ];
+          const generalTasks = holidayData.tasks.filter(
+            (task: any) => !excludedCategories.includes(task.category),
+          );
+          total = generalTasks.length;
+          completed = generalTasks.filter((task: any) => task.isCompleted).length;
+        }
+        break;
+
       // Generic task category handling
       default:
         if (holidayData.tasks) {
