@@ -25,6 +25,14 @@ const subsections = [
     category: 'Games',
     type: 'task' as const,
   },
+  {
+    name: 'Tasks',
+    description: 'Stay on top of your holiday to-dos',
+    href: '/baby-shower/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
 ];
 
 export default function BabyShowerPage() {
