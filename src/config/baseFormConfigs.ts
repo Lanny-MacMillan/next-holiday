@@ -30,21 +30,32 @@ export const BASE_FORM_CONFIGS = {
   },
   gift: {
     fields: [
-      { id: 'recipient', type: 'text', placeholder: 'Recipient*', required: true },
-      { id: 'name', type: 'text', placeholder: 'Gift Name' },
-      { id: 'description', type: 'text', placeholder: 'Description' },
+      {
+        id: 'recipient',
+        type: 'text',
+        placeholder: 'Recipient',
+        showAddressBook: true, // Only recipient field should have address book
+      },
+      { id: 'name', type: 'text', placeholder: 'Gift Name*', required: true },
+      { id: 'description', type: 'textarea', placeholder: 'Description', rows: 2 },
       { id: 'price', type: 'number', placeholder: 'Price', step: '0.01' },
       { id: 'store', type: 'text', placeholder: 'Store' },
+      { id: 'product_link', type: 'url', placeholder: 'Product Link (optional)' },
       ASSIGNTO_FIELD, // NEW
       { id: 'notes', type: 'textarea', placeholder: 'Notes', rows: 2 },
     ],
     submitText: 'Add Gift',
     cardClassName: 'card',
-    showAddressBook: true,
   },
   card: {
     fields: [
-      { id: 'recipient', type: 'text', placeholder: 'Recipient*', required: true },
+      {
+        id: 'recipient',
+        type: 'text',
+        placeholder: 'Recipient*',
+        required: true,
+        showAddressBook: true, // Only recipient field should have address book
+      },
       { id: 'address', type: 'text', placeholder: 'Address (optional)' },
       {
         id: 'message',
@@ -57,7 +68,6 @@ export const BASE_FORM_CONFIGS = {
     ],
     submitText: 'Add Card',
     cardClassName: 'card card-cards',
-    showAddressBook: true,
   },
 } as const;
 

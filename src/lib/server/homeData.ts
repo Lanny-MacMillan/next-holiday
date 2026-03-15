@@ -83,6 +83,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
         gifts: {
           include: {
             contact: true,
+            assignedUser: true, // Include assigned user data
           },
         },
         cards: true,
@@ -118,6 +119,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
         gifts: {
           include: {
             contact: true,
+            assignedUser: true, // Include assigned user data
           },
         },
         cards: true,
@@ -200,6 +202,8 @@ export async function getHomeData(request: Request): Promise<HomeData> {
           holiday.gifts.map((gift: any) => ({
             ...gift,
             recipient: gift.contact?.name || 'Unknown',
+            assignedTo: gift.assignedTo, // Include UUID
+            assignedToName: gift.assignedUser?.name || null, // Include name for display
             createdAt: gift.createdAt.toISOString(),
             updatedAt: gift.updatedAt.toISOString(),
             completedDate: gift.completedDate?.toISOString() || null,

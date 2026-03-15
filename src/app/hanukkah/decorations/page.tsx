@@ -16,7 +16,11 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -91,6 +95,12 @@ export default function HanukkahDecorationsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'hanukkah'),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'hanukkah'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Redux data access - decorations are stored as tasks with category "Decorations"
   const holidayData = useAppSelector(state =>
@@ -179,7 +189,7 @@ export default function HanukkahDecorationsPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       category: 'Decorations',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
@@ -198,7 +208,7 @@ export default function HanukkahDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
@@ -483,7 +493,7 @@ export default function HanukkahDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assignedTo: values.assigned_to || undefined,
         category: 'Decorations',
         dueDate: values.dueDate || undefined,
       };
@@ -502,7 +512,7 @@ export default function HanukkahDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
         due_date: values.dueDate || undefined, // snake_case for API
       };
@@ -576,6 +586,20 @@ export default function HanukkahDecorationsPage() {
     setEditingTask(null);
   }
 
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   function sortTasks(tasksToSort: any[]): any[] {
     switch (sortBy) {
       case 'priority':
@@ -620,7 +644,7 @@ export default function HanukkahDecorationsPage() {
     );
   }
 
-  const sortedTasks = sortTasks(decorations);
+  const sortedTasks = sortTasks(decorations.map(transformTaskWithAssignment));
   const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedDecorations = sortedTasks.filter((task: any) => task.isCompleted);
 
@@ -728,49 +752,18 @@ export default function HanukkahDecorationsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Decoration Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Decoration Task*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'hanukkah',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{
           title: '',
           description: '',
           priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          assigned_to: '',
           dueDate: '',
         }}
         onSubmit={handleAddDecoration}
@@ -778,55 +771,25 @@ export default function HanukkahDecorationsPage() {
         loading={isAdding}
         submitText="Add Decoration"
         cardClassName="card-tasks"
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Decoration Task*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'hanukkah',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate ? editingTask.dueDate.split('T')[0] : '', // Format for date input
         }}
         onSubmit={handleEditDecorationSubmit}
@@ -834,6 +797,7 @@ export default function HanukkahDecorationsPage() {
         loading={isUpdating}
         submitText="Update Decoration"
         cardClassName="card-tasks"
+        shareMembers={shareMembers}
       />
 
       {/* Sort Modal */}

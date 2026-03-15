@@ -289,7 +289,7 @@ export default function ToDoCard({
                 {/* Assigned To Tag */}
                 {task.assignedTo && (
                   <span className="px-2 py-1 rounded-full text-xs font-medium bg-white text-blue-600">
-                    👤 {task.assignedTo}
+                    👤 {(task as any).assignedToName || task.assignedTo}
                   </span>
                 )}
 
@@ -435,7 +435,7 @@ export default function ToDoCard({
             {/* Assigned To Tag */}
             {task.assignedTo && (
               <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                👤 {task.assignedTo}
+                👤 {(task as any).assignedToName || task.assignedTo}
               </span>
             )}
 

@@ -11,6 +11,11 @@ import {
   selectHolidayPrefById,
 } from '@/store/selectors/home';
 import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import {
   updateTaskInHomeData,
   setHomeData,
   addTaskToHomeData,
@@ -46,6 +51,26 @@ export default function ValentinesDateIdeasPage() {
   const dateIdeas =
     holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') || [];
   const isLoading = !homeInitialized;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'valentines'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // RefreshHomeData Function (CRITICAL for UI updates)
   const refreshHomeData = async () => {
@@ -101,7 +126,7 @@ export default function ValentinesDateIdeasPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       category: 'Date Ideas',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
@@ -117,7 +142,7 @@ export default function ValentinesDateIdeasPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Date Ideas',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
@@ -183,7 +208,7 @@ export default function ValentinesDateIdeasPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Date Ideas',
         due_date: values.dueDate ? values.dueDate.split('T')[0] : undefined, // CRITICAL: Format date same as edit (prevent timezone issues)
       };
@@ -328,31 +353,37 @@ export default function ValentinesDateIdeasPage() {
   };
 
   // Data sorting and completion filtering
-  const sortedDateIdeas = [...dateIdeas].sort((a: any, b: any) => {
-    switch (sortBy) {
-      case 'title':
-        return a.title.localeCompare(b.title);
-      case 'priority':
-        const priorityOrder: { [key: string]: number } = {
-          high: 3,
-          medium: 2,
-          low: 1,
-        };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      case 'dueDate':
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      case 'completed':
-        return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
-      default:
-        return 0;
-    }
-  });
+  const sortedDateIdeas = [...dateIdeas]
+    .map(transformTaskWithAssignment)
+    .sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'priority':
+          const priorityOrder: { [key: string]: number } = {
+            high: 3,
+            medium: 2,
+            low: 1,
+          };
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        case 'dueDate':
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'completed':
+          return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
+        default:
+          return 0;
+      }
+    });
 
-  const completeDateIdeas = dateIdeas.filter((task: any) => task.isCompleted);
-  const incompleteDateIdeas = dateIdeas.filter((task: any) => !task.isCompleted);
+  const completeDateIdeas = dateIdeas
+    .map(transformTaskWithAssignment)
+    .filter((task: any) => task.isCompleted);
+  const incompleteDateIdeas = dateIdeas
+    .map(transformTaskWithAssignment)
+    .filter((task: any) => !task.isCompleted);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -367,45 +398,12 @@ export default function ValentinesDateIdeasPage() {
     }
   };
 
-  // Form Configuration with Date Formatting Fix
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Date Idea*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Target Date',
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'valentines',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   return (
     <div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -519,13 +517,14 @@ export default function ValentinesDateIdeasPage() {
         isOpen={showForm}
         title={editingTask ? 'Edit Date Idea' : 'Add New Date Idea'}
         fields={formFields}
+        shareMembers={shareMembers}
         initialValues={
           editingTask
             ? {
                 title: editingTask.title,
                 description: editingTask.description || '',
                 priority: editingTask.priority,
-                assignedTo: editingTask.assignedTo || '',
+                assigned_to: editingTask.assignedTo || '',
                 dueDate: editingTask.dueDate || '',
               }
             : {}

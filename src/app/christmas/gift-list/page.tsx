@@ -24,7 +24,8 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -47,6 +48,12 @@ export default function GiftListPage() {
   const holidayData = useAppSelector(state =>
     selectHolidayPrefById(state, holidayId),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'christmas'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
@@ -107,7 +114,8 @@ export default function GiftListPage() {
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
@@ -122,11 +130,22 @@ export default function GiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation || !auth0User) return;
+    console.log('handleAddGift called with values:', values);
+    if (!values.name?.trim() || !values.recipient?.trim()) {
+      console.log('Validation failed - missing name or recipient');
+      return;
+    }
+    if (!holidayId || !mutation || !auth0User) {
+      console.log('Missing required data:', {
+        holidayId,
+        mutation: !!mutation,
+        auth0User: !!auth0User,
+      });
+      return;
+    }
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await mutation({ holidayId, payload, auth0User }).unwrap();
 
       // Update Redux state directly
@@ -135,7 +154,7 @@ export default function GiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData();
 
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
       // Show user-friendly error message
@@ -148,12 +167,17 @@ export default function GiftListPage() {
   }
 
   function openForm() {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
-  function closeForm() {
-    setShowFormModal(false);
+  function closeAddModal() {
+    setShowAddModal(false);
+    setSelectedGift(null);
+  }
+
+  function closeEditModal() {
+    setShowEditModal(false);
     setSelectedGift(null);
   }
 
@@ -242,7 +266,7 @@ export default function GiftListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
@@ -250,7 +274,7 @@ export default function GiftListPage() {
 
     setEditLoading(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       // Direct API call instead of RTK mutation
       const response = await fetch(
         `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
@@ -277,7 +301,7 @@ export default function GiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData();
 
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
@@ -389,49 +413,6 @@ export default function GiftListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
@@ -448,6 +429,7 @@ export default function GiftListPage() {
       price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
+      assigned_to: selectedGift.assignedTo || '',
       notes: selectedGift.notes || '',
     };
   };
@@ -502,21 +484,50 @@ export default function GiftListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Gift Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-        onClose={closeForm}
-        loading={mutationLoading || editLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        isOpen={showAddModal}
+        onClose={closeAddModal}
+        title="Add New Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'add', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
+        onSubmit={handleAddGift}
+        loading={mutationLoading}
+        submitText="Add Gift"
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#22c55e"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Gift Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        onClose={closeEditModal}
+        title="Edit Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'edit', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={getInitialValues()}
+        onSubmit={handleUpdateGift}
+        loading={editLoading}
+        submitText="Update Gift"
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#22c55e"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

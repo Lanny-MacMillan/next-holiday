@@ -19,6 +19,7 @@ export interface FormField {
   min?: string;
   className?: string;
   style?: React.CSSProperties;
+  showAddressBook?: boolean;
 }
 
 export interface FormConfig {

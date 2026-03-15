@@ -14,7 +14,9 @@ import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
 import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformCardPayload } from '@/utils/formTransformers';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import FormModal from '@/components/modals/FormModal';
+import { getFormConfigEnhanced, getFormConfig } from '@/config/formConfigs';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import MailCardStatus from '@/components/cards/MailCardStatus';
@@ -49,10 +51,31 @@ export default function ChristmasCardsPage() {
     selectHolidayPrefById(state, resolvedHolidayId),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'christmas'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
+
   // Get holiday data from Redux - single source of truth
 
   // Use Redux data directly - no individual API calls needed
-  const cards = holidayData?.cards || [];
+  const cardsData = holidayData?.cards || [];
+  const cards = cardsData.map(transformCardWithAssignment);
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
 
@@ -63,6 +86,8 @@ export default function ChristmasCardsPage() {
   const [cardToEdit, setCardToEdit] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Function to refresh home data after mutations
   async function refreshHomeData() {
@@ -99,6 +124,7 @@ export default function ChristmasCardsPage() {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
     if (!resolvedHolidayId || !mutation) return;
 
+    setIsSubmitting(true);
     try {
       const payload = transformCardPayload(values, contacts);
       await mutation({
@@ -114,6 +140,8 @@ export default function ChristmasCardsPage() {
     } catch (error) {
       console.error('Error creating card:', error);
       // Handle error (could show a toast notification)
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -164,6 +192,7 @@ export default function ChristmasCardsPage() {
 
   const handleEditSubmit = async (values: Record<string, any>) => {
     if (cardToEdit && mutation) {
+      setIsEditSubmitting(true);
       try {
         const payload = {
           ...transformCardPayload(values, contacts),
@@ -209,6 +238,8 @@ export default function ChristmasCardsPage() {
             },
           }),
         );
+      } finally {
+        setIsEditSubmitting(false);
       }
     }
   };
@@ -275,30 +306,7 @@ export default function ChristmasCardsPage() {
   const completedCards = cards.filter(card => card.isCompleted);
   const incompleteCards = cards.filter(card => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer provides dynamic form configuration
 
   return (
     <div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -380,36 +388,65 @@ export default function ChristmasCardsPage() {
         )}
       </main>
 
-      {/* Form Modal */}
+      {/* Add Card Modal */}
       <FormModal
         isOpen={showForm}
         title="Add New Card"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('cards', 'add', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ef4444"
+        loading={isSubmitting}
         showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
-      {/* Edit Modal */}
+      {/* Edit Card Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
-        initialValues={cardToEdit}
+        fields={
+          getFormConfigEnhanced('cards', 'edit', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={
+          cardToEdit
+            ? {
+                recipient: cardToEdit.recipient || '',
+                message: cardToEdit.message || '',
+                address: cardToEdit.address || '',
+                notes: cardToEdit.notes || '',
+                assigned_to: cardToEdit.assignedTo || '',
+              }
+            : {}
+        }
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        submitText="Update Card"
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ef4444"
+        loading={isEditSubmitting}
+        showAddressBook={true}
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}

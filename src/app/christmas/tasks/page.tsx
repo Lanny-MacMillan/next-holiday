@@ -10,7 +10,10 @@ import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { RootState } from '@/store';
 import { updateTaskInHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import SortModal from '@/components/modals/SortModal';
@@ -20,7 +23,7 @@ import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
@@ -61,6 +64,27 @@ export default function TasksPage() {
     selectIsHolidayShared(state, 'christmas'),
   );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'christmas'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
 
   // Get holiday data from Redux - single source of truth
   const holidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
@@ -440,10 +464,13 @@ export default function TasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={getFormConfig('tasks', 'add').fields.filter(
-          field =>
-            field.id !== 'assignedTo' || (isAuthorizedForSharing && isHolidayShared),
-        )}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={loading}
@@ -451,6 +478,7 @@ export default function TasksPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#22c55e"
+        shareMembers={shareMembers}
       />
 
       {/* Edit Task Modal */}

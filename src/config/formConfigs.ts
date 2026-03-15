@@ -522,6 +522,7 @@ import {
   buildFormConfig as newBuildFormConfig,
   ShareMember,
   shouldShowAssignTo,
+  enhanceShareMembersWithCurrentUser,
 } from '@/lib/formBuilder';
 import { HolidayKey, ContentType } from '@/config/baseFormConfigs';
 
@@ -545,14 +546,17 @@ export function getFormConfigEnhanced(
     customSubmitText?: string;
     holidayKey?: HolidayKey;
     shareMembers?: ShareMember[];
+    auth0User?: { sub?: string; name?: string; email?: string } | null;
   },
 ): FormConfig {
-  // If we have a holidayKey and shareMembers, use the new form builder for supported types
-  if (
-    options?.holidayKey &&
-    options?.shareMembers &&
-    shouldShowAssignTo(options.shareMembers)
-  ) {
+  // Enhance shareMembers with current user for self-assignment functionality
+  const enhancedShareMembers = options?.shareMembers
+    ? enhanceShareMembersWithCurrentUser(options.shareMembers, options.auth0User)
+    : options?.shareMembers || [];
+
+  // If we have a holidayKey, use the new form builder for supported types
+  // This ensures consistent field behavior (like address book) even for non-shared holidays
+  if (options?.holidayKey) {
     const contentTypeMapping: Partial<Record<typeof type, ContentType>> = {
       tasks: 'task',
       gifts: 'gift',
@@ -564,7 +568,7 @@ export function getFormConfigEnhanced(
       const newConfig = newBuildFormConfig(
         contentType,
         options.holidayKey,
-        options.shareMembers,
+        enhancedShareMembers,
         {
           submitText: options.customSubmitText,
         },

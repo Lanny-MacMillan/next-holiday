@@ -7,6 +7,7 @@ import {
 
 export interface ShareMember {
   userId: string;
+  uuid: string; // User's UUID for assignments
   name?: string | null;
   email?: string | null;
   picture?: string | null;

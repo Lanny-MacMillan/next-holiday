@@ -16,7 +16,11 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -98,6 +102,12 @@ export default function CandleLightingPage() {
     selectIsHolidayShared(state, holidayId!),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'hanukkah'),
+  );
+  const shareMembers = shareData?.members || [];
+
   // Redux data access - candle lighting are stored as tasks with category "Candle Lighting"
   const holidayData = useAppSelector((state: any) =>
     selectHolidayPrefById(state, holidayId!),
@@ -169,7 +179,7 @@ export default function CandleLightingPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       category: 'Candle Lighting',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
@@ -178,23 +188,18 @@ export default function CandleLightingPage() {
 
     try {
       // Optimistically update Redux state first (like Kwanzaa)
-      console.log('Adding task optimistically:', newTask);
-      console.log('Holiday ID for addition:', holidayId);
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-      console.log('Task added to Redux, making API call...');
 
       // Call API - map camelCase to snake_case for API
       const apiPayload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Candle Lighting',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
       };
-
-      console.log('🐛 [HanukkahCandleLightingAdd] API payload:', apiPayload);
 
       const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
         method: 'POST',
@@ -213,7 +218,6 @@ export default function CandleLightingPage() {
       if (response.ok) {
         // Replace temporary task with real task from API (like Kwanzaa)
         const result = await response.json();
-        console.log('API success, replacing temp task with real task:', result);
         dispatch(
           removeTaskFromHomeData({
             holidayId: holidayId,
@@ -226,7 +230,6 @@ export default function CandleLightingPage() {
         await refreshHomeData();
       } else {
         // Remove optimistic update on error
-        console.log('API error, removing optimistic update');
         dispatch(
           removeTaskFromHomeData({
             holidayId: holidayId,
@@ -255,10 +258,6 @@ export default function CandleLightingPage() {
       for (let i = 0; i < defaultCandleTasks.length; i++) {
         const task = defaultCandleTasks[i];
 
-        console.log(
-          `Adding candle task ${i + 1}/${defaultCandleTasks.length}: ${task.title}`,
-        );
-
         try {
           const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
             method: 'POST',
@@ -279,7 +278,6 @@ export default function CandleLightingPage() {
 
           if (response.ok) {
             const result = await response.json();
-            console.log(`✅ Added task ${i + 1}: ${result.title}`);
 
             // Add to Redux
             dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
@@ -298,7 +296,6 @@ export default function CandleLightingPage() {
         }
       }
 
-      console.log('✅ All candle tasks added successfully');
       setShowDefaultTasks(false);
     } catch (error) {
       console.error('Failed to add default tasks:', error);
@@ -333,7 +330,6 @@ export default function CandleLightingPage() {
 
       // Call API directly instead of using custom hook
       const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
-      console.log('Toggle API URL:', apiUrl); // Debug logging
       const response = await fetch(apiUrl, {
         method: 'PATCH',
         headers: {
@@ -389,7 +385,7 @@ export default function CandleLightingPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assignedTo: values.assigned_to || undefined,
         category: 'Candle Lighting',
         dueDate: values.dueDate || undefined,
       };
@@ -408,12 +404,10 @@ export default function CandleLightingPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Candle Lighting',
         due_date: values.dueDate || undefined, // snake_case for API
       };
-
-      console.log('🐛 [HanukkahCandleLightingEdit] API payload:', apiPayload);
 
       const response = await fetch(
         `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
@@ -478,8 +472,6 @@ export default function CandleLightingPage() {
 
       // Call API directly instead of using custom hook
       const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
-      console.log('Delete API URL:', apiUrl); // Debug logging
-      console.log('Candle Lighting before delete:', candleLighting.length);
       const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
@@ -502,12 +494,9 @@ export default function CandleLightingPage() {
           response.statusText,
         );
       } else {
-        console.log('Task deleted successfully');
         // Check if this was the last task and re-show default tasks prompt
         const remainingTasks = candleLighting.filter(c => c.id !== taskId);
-        console.log('Candle Lighting after delete:', remainingTasks.length);
         if (remainingTasks.length === 0) {
-          console.log('No tasks remaining, showing default tasks prompt');
           setShowDefaultTasks(true);
         }
       }
@@ -580,7 +569,21 @@ export default function CandleLightingPage() {
     );
   }
 
-  const sortedTasks = sortTasks(candleLighting);
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  const sortedTasks = sortTasks(candleLighting.map(transformTaskWithAssignment));
   const incompleteCandleLighting = sortedTasks.filter(
     (task: any) => !task.isCompleted,
   );
@@ -588,45 +591,12 @@ export default function CandleLightingPage() {
     (task: any) => task.isCompleted,
   );
 
-  // FormModal fields configuration - matching Kwanzaa exactly
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Candle Lighting Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'hanukkah',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   return (
     <div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -757,14 +727,15 @@ export default function CandleLightingPage() {
           title: '',
           description: '',
           priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          assigned_to: '',
           dueDate: '',
         }}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={false}
+        loading={isAdding}
         submitText="Add Task"
         cardClassName="card-tasks"
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
@@ -776,14 +747,15 @@ export default function CandleLightingPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}
-        loading={false}
+        loading={isUpdating}
         submitText="Update Task"
         cardClassName="card-tasks"
+        shareMembers={shareMembers}
       />
 
       {/* Sort Modal */}

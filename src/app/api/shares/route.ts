@@ -213,7 +213,8 @@ export async function GET(request: NextRequest) {
             ownerUserId: share.owner.auth0Sub, // Use Auth0 sub instead of internal ID
             memberUserIds: share.members.map((m: any) => m.user.auth0Sub), // Use Auth0 subs for backward compatibility
             members: share.members.map((m: any) => ({
-              userId: m.user.auth0Sub, // Use Auth0 sub instead of internal ID
+              userId: m.user.auth0Sub, // Use Auth0 sub for identification
+              uuid: m.user.id, // Add user UUID for assignments
               name: m.user.name,
               email: m.user.email,
               picture: m.user.picture,

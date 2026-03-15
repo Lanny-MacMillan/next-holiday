@@ -3,7 +3,15 @@ import { useAppSelector } from '@/store/hooks';
 /**
  * Transform form values to gift API payload
  */
-export function transformGiftPayload(values: Record<string, any>, contacts: any[]) {
+export function transformGiftPayload(
+  values: Record<string, any>,
+  contacts: any[],
+  shareMembers?: any[],
+) {
+  console.log('transformGiftPayload called with:');
+  console.log('- values:', values);
+  console.log('- shareMembers:', shareMembers);
+
   const contact = contacts.find(c => c.name === values.recipient);
 
   // Ensure recipient is selected from address book
@@ -11,14 +19,62 @@ export function transformGiftPayload(values: Record<string, any>, contacts: any[
     throw new Error('Recipient must be selected from address book');
   }
 
+  // Handle assigned_to mapping from Auth0 userId to proper UUID
+  let assignedTo = values.assigned_to || null;
+  console.log('Original assigned_to:', assignedTo);
+
+  if (assignedTo && shareMembers && shareMembers.length > 0) {
+    console.log('=== ASSIGNMENT MAPPING DEBUG ===');
+    console.log('Looking for assignedTo:', assignedTo);
+    console.log(
+      'Available shareMembers:',
+      shareMembers.map(m => ({ userId: m.userId, uuid: m.uuid, name: m.name })),
+    );
+
+    // If assigned_to contains Auth0 ID format, try to map it to the proper UUID
+    if (
+      assignedTo.includes('|') ||
+      !assignedTo.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      // Find the member with matching Auth0 user ID
+      const member = shareMembers.find(m => {
+        const matches = m.userId === assignedTo;
+        console.log(
+          `Checking member ${m.name} (${m.userId}): ${matches ? '✅ MATCH' : '❌ no match'}`,
+        );
+        return matches;
+      });
+      console.log('Found member for assignment:', member);
+
+      if (member && member.uuid) {
+        const oldAssignedTo = assignedTo;
+        assignedTo = member.uuid; // Use the UUID for assignment
+        console.log(
+          `✅ Mapped ${member.name} from Auth0 ID (${oldAssignedTo}) to UUID (${assignedTo})`,
+        );
+      } else {
+        console.warn(
+          '❌ Could not find UUID for assigned user, setting to null:',
+          assignedTo,
+        );
+        assignedTo = null; // Set to null if we can't find the UUID
+      }
+    }
+  } else {
+    console.log('No shareMembers available or assignedTo is empty');
+  }
+
   return {
-    name: values.giftName || '',
+    name: values.name || values.giftName || '', // Support both field names for backward compatibility
     description: values.description || '',
     price: values.price ? parseFloat(values.price) : 0,
     store: values.store || '',
     product_link: values.product_link || '',
     notes: values.notes || '',
     contact_id: contact.id,
+    assigned_to: assignedTo,
   };
 }
 
@@ -48,6 +104,7 @@ export function transformCardPayload(values: Record<string, any>, contacts: any[
     message: values.message || '',
     address: values.address || '',
     contact_id: contact?.id || null,
+    assigned_to: values.assigned_to || null,
   };
 }
 

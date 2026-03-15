@@ -16,7 +16,11 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import TaskSection from '@/components/common/TaskSection';
@@ -48,6 +52,12 @@ export default function HanukkahEventsPage() {
     selectIsHolidayShared(state, 'hanukkah'),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'hanukkah'),
+  );
+  const shareMembers = shareData?.members || [];
+
   // State management
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -55,6 +65,7 @@ export default function HanukkahEventsPage() {
   const [eventToDelete, setEventToDelete] = useState<any>(null);
   const [showSortModal, setShowSortModal] = useState(false);
   const [sortBy, setSortBy] = useState<string>('datetime');
+  const [isAdding, setIsAdding] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -100,12 +111,14 @@ export default function HanukkahEventsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
+    setIsAdding(true);
+
     const newTask = {
       id: `temp-${Date.now()}`, // Temporary ID for optimistic update
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       category: 'Events',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
@@ -121,7 +134,7 @@ export default function HanukkahEventsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Events',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
@@ -166,12 +179,13 @@ export default function HanukkahEventsPage() {
         );
         console.error('Failed to add task:', response.status, response.statusText);
       }
-
-      setShowFormModal(false);
     } catch (error) {
       // Remove optimistic update on error (like Kwanzaa)
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Error creating event:', error);
+    } finally {
+      setIsAdding(false);
+      setShowFormModal(false);
     }
   }
 
@@ -246,7 +260,7 @@ export default function HanukkahEventsPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       dueDate: values.dueDate || undefined,
     };
 
@@ -265,7 +279,7 @@ export default function HanukkahEventsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         due_date: values.dueDate || undefined, // snake_case for API
       };
 
@@ -390,13 +404,27 @@ export default function HanukkahEventsPage() {
     setSelectedEvent(null);
   }
 
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   function cancelDelete() {
     setShowDeleteModal(false);
     setEventToDelete(null);
   }
 
-  // Event data sorting
-  const sortedEvents = [...events].sort((a, b) => {
+  // Event data sorting with name transformation
+  const sortedEvents = [...events.map(transformTaskWithAssignment)].sort((a, b) => {
     switch (sortBy) {
       case 'title':
         return a.title.localeCompare(b.title);
@@ -420,46 +448,12 @@ export default function HanukkahEventsPage() {
     label: contact.name,
   }));
 
-  // Form field configuration
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // CONDITIONAL: Only show when isHolidayShared is true
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'hanukkah',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   if (isLoading) {
     return (
@@ -575,13 +569,15 @@ export default function HanukkahEventsPage() {
         title="Add New Event Task"
         fields={formFields}
         onSubmit={handleAddEvent}
+        loading={isAdding}
         submitText="Add Task"
         submitButtonColor="#3b82f6"
+        shareMembers={shareMembers}
         initialValues={{
           title: '',
           description: '',
           priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          assigned_to: '',
           dueDate: '',
         }}
       />
@@ -593,12 +589,15 @@ export default function HanukkahEventsPage() {
         title="Edit Event Task"
         fields={formFields}
         onSubmit={handleEditSubmit}
+        loading={isUpdating}
         submitText="Update Task"
         submitButtonColor="#3b82f6"
+        shareMembers={shareMembers}
         initialValues={
           selectedEvent
             ? {
                 ...selectedEvent,
+                assigned_to: selectedEvent.assignedTo || '',
                 dueDate: selectedEvent.dueDate
                   ? new Date(selectedEvent.dueDate).toISOString().split('T')[0]
                   : '',

@@ -23,7 +23,8 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -48,6 +49,12 @@ export default function HanukkahGiftListPage() {
   const holidayData = useAppSelector(state =>
     selectHolidayPrefById(state, holidayId),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'hanukkah'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -149,14 +156,29 @@ export default function HanukkahGiftListPage() {
     if (homeInitialized) {
       dispatch(fetchContacts());
     }
-  }, [dispatch, homeInitialized]);
+  }, [homeInitialized]);
+
+  // Effect to refresh home data if gifts lack assignment information
+  useEffect(() => {
+    if (homeInitialized && gifts.length > 0 && auth0User?.sub) {
+      // Check if any assigned gifts lack assignedToName (indicating missing assignment data)
+      const hasAssignedGiftsWithoutNames = gifts.some(
+        (gift: any) => gift.assignedTo && !gift.assignedToName,
+      );
+
+      if (hasAssignedGiftsWithoutNames) {
+        console.log('Refreshing home data to load assignment information...');
+        refreshHomeData();
+      }
+    }
+  }, [homeInitialized, gifts, auth0User?.sub]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !mutation || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       console.log('Add gift payload:', payload);
       const result = await mutation({ holidayId, payload, auth0User }).unwrap();
       console.log('Add gift result:', result);
@@ -232,13 +254,25 @@ export default function HanukkahGiftListPage() {
     }
   }
 
-  async function handleDeleteGift(gift: any) {
-    setSelectedGift(gift);
+  async function handleDeleteGift(giftId: string) {
+    // Find the full gift object by ID
+    const giftToDelete = gifts.find(g => g.id === giftId);
+    if (!giftToDelete) {
+      console.error('Gift not found for deletion:', giftId);
+      return;
+    }
+
+    setSelectedGift(giftToDelete);
     setShowDeleteModal(true);
   }
 
   async function confirmDelete() {
     if (!selectedGift || !holidayId || !auth0User) return;
+
+    if (!selectedGift.id) {
+      console.error('ERROR: Gift ID is missing!', selectedGift);
+      return;
+    }
 
     setDeleteLoading(selectedGift.id);
     try {
@@ -282,7 +316,7 @@ export default function HanukkahGiftListPage() {
 
     setEditLoading(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
 
       // Direct API call
       const response = await fetch(
@@ -431,47 +465,13 @@ export default function HanukkahGiftListPage() {
         isOpen={showAddModal}
         onClose={closeAddModal}
         title="Add New Gift"
-        fields={[
-          {
-            id: 'recipient',
-            type: 'text',
-            placeholder: 'Recipient (select from address book)*',
-            required: true,
-          },
-          {
-            id: 'giftName',
-            type: 'text',
-            placeholder: 'Gift Name*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'text',
-            placeholder: 'Description',
-          },
-          {
-            id: 'price',
-            type: 'number',
-            placeholder: 'Price',
-            step: '0.01',
-          },
-          {
-            id: 'store',
-            type: 'text',
-            placeholder: 'Store',
-          },
-          {
-            id: 'product_link',
-            type: 'url',
-            placeholder: 'Product Link (optional)',
-          },
-          {
-            id: 'notes',
-            type: 'textarea',
-            placeholder: 'Notes',
-            rows: 2,
-          },
-        ]}
+        fields={
+          getFormConfigEnhanced('gifts', 'add', {
+            holidayKey: 'hanukkah',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{}}
         onSubmit={handleAddGift}
         loading={mutationLoading}
@@ -479,8 +479,40 @@ export default function HanukkahGiftListPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#2563eb"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Gift Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        onClose={closeEditModal}
+        title="Edit Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'edit', {
+            holidayKey: 'hanukkah',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{
+          recipient: selectedGift?.contact?.name || '',
+          name: selectedGift?.name || '',
+          description: selectedGift?.description || '',
+          price: selectedGift?.price || '',
+          store: selectedGift?.store || '',
+          product_link: selectedGift?.productLink || '',
+          assigned_to: selectedGift?.assignedTo || '',
+          notes: selectedGift?.notes || '',
+        }}
+        onSubmit={handleUpdateGift}
+        loading={editLoading}
+        submitText="Update Gift"
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#2563eb"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

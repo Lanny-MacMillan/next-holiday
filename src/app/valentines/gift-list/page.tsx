@@ -7,6 +7,11 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
@@ -44,6 +49,12 @@ export default function ValentinesGiftListPage() {
   const holidayData = useAppSelector(state =>
     selectHolidayPrefById(state, holidayId),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'valentines'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
@@ -104,7 +115,8 @@ export default function ValentinesGiftListPage() {
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
@@ -143,12 +155,14 @@ export default function ValentinesGiftListPage() {
   };
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
+    if (!holidayId || !mutation || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
+      console.log('Add gift payload:', payload);
       const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+      console.log('Add gift result:', result);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'add');
@@ -156,7 +170,7 @@ export default function ValentinesGiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData();
 
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
       // Show user-friendly error message
@@ -168,13 +182,18 @@ export default function ValentinesGiftListPage() {
     }
   }
 
-  function openForm() {
-    setShowFormModal(true);
+  function openAddModal() {
+    setSelectedGift(null);
+    setShowAddModal(true);
+  }
+
+  function closeAddModal() {
+    setShowAddModal(false);
     setSelectedGift(null);
   }
 
-  function closeForm() {
-    setShowFormModal(false);
+  function closeEditModal() {
+    setShowEditModal(false);
     setSelectedGift(null);
   }
 
@@ -263,7 +282,7 @@ export default function ValentinesGiftListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
@@ -271,7 +290,7 @@ export default function ValentinesGiftListPage() {
 
     setEditLoading(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       // Direct API call instead of RTK mutation
       const response = await fetch(
         `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
@@ -298,7 +317,7 @@ export default function ValentinesGiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData();
 
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
@@ -354,68 +373,7 @@ export default function ValentinesGiftListPage() {
   const incompleteGifts = sortedGifts.filter(gift => !gift.isCompleted);
   const completedGifts = sortedGifts.filter(gift => gift.isCompleted);
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
-  // Initial values for editing
-  const getInitialValues = () => {
-    if (!selectedGift) return {};
-
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
-    return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price ? selectedGift.price.toString() : '',
-      store: selectedGift.store || '',
-      product_link: selectedGift.productLink || '',
-      notes: selectedGift.notes || '',
-    };
-  };
+  // No need for getInitialValues function - handle inline like Hanukkah
 
   const renderGiftItem = (gift: any) => (
     <GiftCardItem
@@ -478,7 +436,7 @@ export default function ValentinesGiftListPage() {
           </div>
         )}
 
-        <AddButton title="Gift" onClick={openForm} color="pink" />
+        <AddButton title="Gift" onClick={openAddModal} color="pink" />
 
         <div className="flex items-center justify-center">
           {sortBy !== 'none' && (
@@ -510,21 +468,59 @@ export default function ValentinesGiftListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Gift Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-        onClose={closeForm}
-        loading={mutationLoading || editLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        isOpen={showAddModal}
+        onClose={closeAddModal}
+        title="Add New Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'add', {
+            holidayKey: 'valentines',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
+        onSubmit={handleAddGift}
+        loading={mutationLoading}
+        submitText="Add Gift"
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#ec4899"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Gift Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        onClose={closeEditModal}
+        title="Edit Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'edit', {
+            holidayKey: 'valentines',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{
+          recipient: selectedGift?.contact?.name || '',
+          name: selectedGift?.name || '',
+          description: selectedGift?.description || '',
+          price: selectedGift?.price || '',
+          store: selectedGift?.store || '',
+          product_link: selectedGift?.productLink || '',
+          assigned_to: selectedGift?.assignedTo || '',
+          notes: selectedGift?.notes || '',
+        }}
+        onSubmit={handleUpdateGift}
+        loading={editLoading}
+        submitText="Update Gift"
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#ec4899"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

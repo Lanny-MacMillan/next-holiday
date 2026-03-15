@@ -7,6 +7,11 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
@@ -49,10 +54,31 @@ export default function ValentinesCardsPage() {
     selectHolidayPrefById(state, resolvedHolidayId),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'valentines'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
+
   // Get holiday data from Redux - single source of truth
 
-  // Use Redux data directly - no individual API calls needed
-  const cards = holidayData?.cards || [];
+  // Use Redis data directly - no individual API calls needed
+  const cardsData = holidayData?.cards || [];
+  const cards = cardsData.map(transformCardWithAssignment);
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
 
@@ -63,6 +89,9 @@ export default function ValentinesCardsPage() {
   const [cardToEdit, setCardToEdit] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Function to refresh home data after mutations
   async function refreshHomeData() {
@@ -99,6 +128,7 @@ export default function ValentinesCardsPage() {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
     if (!resolvedHolidayId || !mutation) return;
 
+    setIsAdding(true);
     try {
       const payload = transformCardPayload(values, contacts);
       await mutation({
@@ -114,6 +144,8 @@ export default function ValentinesCardsPage() {
     } catch (error) {
       console.error('Error creating card:', error);
       // Handle error (could show a toast notification)
+    } finally {
+      setIsAdding(false);
     }
   }
 
@@ -164,6 +196,7 @@ export default function ValentinesCardsPage() {
 
   const handleEditSubmit = async (values: Record<string, any>) => {
     if (cardToEdit && mutation) {
+      setIsUpdating(true);
       try {
         const payload = {
           ...transformCardPayload(values, contacts),
@@ -209,6 +242,8 @@ export default function ValentinesCardsPage() {
             },
           }),
         );
+      } finally {
+        setIsUpdating(false);
       }
     }
   };
@@ -275,30 +310,12 @@ export default function ValentinesCardsPage() {
   const completedCards = cards.filter(card => card.isCompleted);
   const incompleteCards = cards.filter(card => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('cards', 'add', {
+    holidayKey: 'valentines',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   return (
     <div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -385,8 +402,10 @@ export default function ValentinesCardsPage() {
         isOpen={showForm}
         title="Add New Card"
         fields={formFields}
+        shareMembers={shareMembers}
         onSubmit={handleAddCard}
         onClose={closeForm}
+        loading={isAdding}
         submitText="Add Card"
         cancelText="Cancel"
         cardClassName="card card-valentines"
@@ -400,16 +419,20 @@ export default function ValentinesCardsPage() {
         isOpen={showEditModal}
         title="Edit Card"
         fields={formFields}
+        shareMembers={shareMembers}
         initialValues={cardToEdit}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
+        loading={isUpdating}
         submitText="Update Card"
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ec4899"
+        showAddressBook={true}
+        contacts={contacts}
       />
 
       {/* Delete Modal */}

@@ -141,6 +141,7 @@ export async function GET(
       },
       include: {
         contact: true,
+        assignedUser: true, // Include assigned user data
       },
       orderBy: {
         createdAt: 'desc',
@@ -159,6 +160,8 @@ export async function GET(
       store: gift.store,
       productLink: gift.productLink,
       notes: gift.notes,
+      assignedTo: gift.assignedTo, // Include UUID
+      assignedToName: gift.assignedUser?.name || null, // Include name for display
       shareId: gift.shareId,
       createdAt: gift.createdAt.toISOString(),
       updatedAt: gift.updatedAt.toISOString(),

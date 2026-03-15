@@ -150,6 +150,11 @@ export default function GiftCardItem({
                   For: {gift.recipient}
                 </div>
               )}
+              {gift.assignedToName && (
+                <div className="text-xs sm:text-sm text-white opacity-90">
+                  👤 Assigned to: {gift.assignedToName}
+                </div>
+              )}
               {gift.price && (
                 <div
                   className={`text-xs sm:text-sm text-white opacity-90 ${
@@ -253,6 +258,17 @@ export default function GiftCardItem({
             }`}
           >
             For: {gift.recipient}
+          </div>
+        )}
+        {gift.assignedTo && (
+          <div
+            className={`text-xs sm:text-sm ${
+              isCompleted
+                ? 'text-gray-400 dark:text-gray-500 line-through'
+                : 'text-blue-600 dark:text-blue-400'
+            }`}
+          >
+            👤 Assigned to: {gift.assignedToName}
           </div>
         )}
         {gift.price && (
