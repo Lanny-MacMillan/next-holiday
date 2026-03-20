@@ -1,60 +1,66 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformCardPayload } from '@/utils/formTransformers';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import MailCardStatus from '@/components/cards/MailCardStatus';
 import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 
+// Helper function to extract recipient from task title
+function extractRecipientFromTitle(title: string): string {
+  // Extract recipient from "Card for [Name]" format
+  const match = title?.match(/Card for (.+)/);
+  return match ? match[1] : title || 'Unknown';
+}
+
 export default function FathersDayCardsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get Redux selectors
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get current Redux state for skip logic
-  // Get holiday ID for Fathers Day - try to resolve from home data, fallback to route-based resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/fathers-day', holidayPreferences)
-    : getHolidayIdFromRoute('/fathers-day', holidayPreferences); // Allow fallback for cold entry
+  // Cards are stored as tasks with category 'Cards'
+  const cards = useMemo(() => {
+    const cardTasks =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
 
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, resolvedHolidayId),
-  );
-
-  // Get holiday data from Redux - single source of truth
-
-  // Use Redux data directly - no individual API calls needed
-  const cards = holidayData?.cards || [];
+    // Map task structure to card structure for MailCard component
+    return cardTasks.map((task: any) => ({
+      id: task.id,
+      recipient: task.recipient || extractRecipientFromTitle(task.title),
+      message: task.message || task.description || '',
+      address: task.address || '',
+      notes: task.notes || '',
+      isCompleted: task.isCompleted || false,
+      // Keep original task data for reference
+      ...task,
+    }));
+  }, [holidayData?.tasks]);
   const isLoading = !homeInitialized;
-  const error = null; // Error handling through home data loading
+  const error = null;
 
   const [showForm, setShowForm] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
@@ -64,32 +70,6 @@ export default function FathersDayCardsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
 
-  // Function to refresh home data after mutations
-  async function refreshHomeData() {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  }
-
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
@@ -97,23 +77,23 @@ export default function FathersDayCardsPage() {
 
   async function handleAddCard(values: Record<string, any>) {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
-    if (!resolvedHolidayId || !mutation) return;
+    if (!holidayId) return;
 
     try {
-      const payload = transformCardPayload(values, contacts);
-      await mutation({
-        holidayId: resolvedHolidayId || '',
-        payload,
-        auth0User,
-      }).unwrap();
+      const transformedPayload = transformCardPayload(values, contacts);
+      const payload = {
+        title: `Card for ${values.recipient}`,
+        description: values.message || '',
+        category: 'Cards',
+        priority: 'medium' as const,
+        ...transformedPayload,
+      };
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
-
+      await createTask(payload);
+      await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
     }
   }
 
@@ -126,7 +106,7 @@ export default function FathersDayCardsPage() {
   }
 
   const handleDeleteCard = async (cardId: string) => {
-    const card = cards.find(c => c.id === cardId);
+    const card = cards.find((c: any) => c.id === cardId);
     setCardToDelete(card);
     setShowDeleteModal(true);
   };
@@ -137,23 +117,10 @@ export default function FathersDayCardsPage() {
   };
 
   const confirmDelete = async () => {
-    if (cardToDelete && mutation) {
+    if (cardToDelete && holidayId) {
       try {
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload: {
-            id: cardToDelete.id,
-            action: 'delete',
-            recipient: cardToDelete.recipient,
-            message: cardToDelete.message || '',
-            address: cardToDelete.address || '',
-          },
-          auth0User,
-        }).unwrap();
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
-
+        await deleteTask(cardToDelete.id);
+        await refreshHomeData(auth0User, holidayId);
         setShowDeleteModal(false);
         setCardToDelete(null);
       } catch (error) {
@@ -163,98 +130,39 @@ export default function FathersDayCardsPage() {
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && mutation) {
+    if (cardToEdit && holidayId) {
       try {
+        const transformedPayload = transformCardPayload(values, contacts);
         const payload = {
-          ...transformCardPayload(values, contacts),
-          id: cardToEdit.id,
-          action: 'update',
+          title: `Card for ${values.recipient}`,
+          description: values.message || '',
+          category: 'Cards',
+          priority: 'medium' as const,
+          ...transformedPayload,
         };
 
-        // Optimistically update the Redux home data
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: values.recipient,
-              message: values.message,
-              address: values.address,
-            },
-          }),
-        );
-
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload,
-          auth0User,
-        }).unwrap();
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
-
+        await updateTask(cardToEdit.id, payload);
+        await refreshHomeData(auth0User, holidayId);
         setShowEditModal(false);
         setCardToEdit(null);
       } catch (error) {
         console.error('Error updating card:', error);
-        // Revert the optimistic update on error
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: cardToEdit.recipient,
-              message: cardToEdit.message,
-              address: cardToEdit.address,
-            },
-          }),
-        );
       }
     }
   };
 
   const handleToggleCompletion = async (cardId: string) => {
-    if (mutation) {
+    if (holidayId) {
       try {
-        const card = cards.find(c => c.id === cardId);
+        const card = cards.find((c: any) => c.id === cardId);
         if (card) {
-          const payload = {
-            id: cardId,
-            action: 'update',
+          await updateTask(cardId, {
             isCompleted: !card.isCompleted,
-            recipient: card.recipient,
-            message: card.message || '',
-            address: card.address || '',
-          };
-
-          // Optimistically update the Redux home data
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: !card.isCompleted },
-            }),
-          );
-
-          await mutation({
-            holidayId: resolvedHolidayId || '',
-            payload,
-            auth0User,
-          }).unwrap();
+          });
+          await refreshHomeData(auth0User, holidayId);
         }
       } catch (error) {
         console.error('Error toggling card completion:', error);
-        // Revert the optimistic update on error
-        const card = cards.find(c => c.id === cardId);
-        if (card) {
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: card.isCompleted },
-            }),
-          );
-        }
       }
     }
   };
@@ -272,8 +180,8 @@ export default function FathersDayCardsPage() {
     }
   });
 
-  const completedCards = cards.filter(card => card.isCompleted);
-  const incompleteCards = cards.filter(card => !card.isCompleted);
+  const completedCards = cards.filter((card: any) => card.isCompleted);
+  const incompleteCards = cards.filter((card: any) => !card.isCompleted);
 
   // Form fields configuration for cards
   const formFields = [
@@ -308,7 +216,7 @@ export default function FathersDayCardsPage() {
         onSortClick={() => setShowSortModal(true)}
         description="Keep track of your Fathers Day cards!"
         holidayColor="blue-500"
-        error={mutationError ? 'API Error' : undefined}
+        error={error ? 'API Error' : undefined}
         sortTitle="Sort Cards"
       />
 
@@ -439,10 +347,7 @@ export default function FathersDayCardsPage() {
         ]}
         title="Sort Cards"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

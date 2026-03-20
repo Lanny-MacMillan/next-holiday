@@ -1,29 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-  updateGiftInHomeData,
-  addGiftToHomeData,
-  removeGiftFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig, getFormConfigEnhanced } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -33,79 +28,62 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 
 export default function NewYearSuppliesListPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
+
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createGift,
+    updateGift,
+    deleteGift,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Enhanced Compatibility Layer
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get current Redux state for skip logic
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
+  const isHolidayShared = useAppSelector((state: any) =>
+    state.shares ? state.shares.shareMembers?.length > 0 : false,
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const baseMembers = shareData?.members || [];
 
-  // Helper function to update Redux state after gift operations
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
+
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Helper function to update Redux state after gift operations (kept for compatibility)
   const updateGiftInRedux = (
     giftData: any,
     operation: 'add' | 'update' | 'delete',
   ) => {
-    if (!holidayId) return;
-
-    // For add and update operations, ensure the recipient field is populated
-    let processedGiftData = giftData;
-    if (
-      (operation === 'add' || operation === 'update') &&
-      giftData.contactId &&
-      contacts
-    ) {
-      const contact = contacts.find((c: any) => c.id === giftData.contactId);
-      processedGiftData = {
-        ...giftData,
-        recipient: contact?.name || 'Unknown',
-      };
-    }
-
-    switch (operation) {
-      case 'add':
-        dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
-        break;
-      case 'update':
-        dispatch(
-          updateGiftInHomeData({
-            holidayId,
-            giftId: processedGiftData.id,
-            updates: processedGiftData,
-          }),
-        );
-        break;
-      case 'delete':
-        dispatch(
-          removeGiftFromHomeData({
-            holidayId,
-            giftId: giftData.id,
-          }),
-        );
-        break;
-    }
+    // Since we're using standardized hooks, this function is simplified
+    // The hooks handle Redux updates automatically
+    console.log(`Gift operation: ${operation}`, giftData);
   };
 
-  // Use only Redux data - no GET API calls on holiday pages
-
-  // Local loading states for mutations
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-
+  // State management
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -114,30 +92,21 @@ export default function NewYearSuppliesListPage() {
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  // Home data already declared above
-
   useEffect(() => {
-    // Fetch contacts for address book functionality
-    // Only fetch if home data is initialized (which contains contacts)
-    if (homeInitialized) {
-      dispatch(fetchContacts());
-    }
-  }, [dispatch, homeInitialized]);
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.name?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
+    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
 
-    setIsSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts, shareMembers);
-      const result = await mutation({ holidayId, payload, auth0User }).unwrap();
-
-      // Update Redux state directly
+      const payload = transformGiftPayload(values, contacts);
+      const result = await createGift(payload);
       updateGiftInRedux(result, 'add');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowAddModal(false);
     } catch (error) {
@@ -148,8 +117,6 @@ export default function NewYearSuppliesListPage() {
       } else {
         alert('Error creating gift. Please try again.');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -158,14 +125,7 @@ export default function NewYearSuppliesListPage() {
     setSelectedGift(null);
   }
 
-  function closeAddForm() {
-    setShowAddModal(false);
-    setSelectedGift(null);
-  }
-
   async function handleToggleGift(giftId: string) {
-    if (!holidayId || !auth0User) return;
-
     try {
       // Find the current gift to get its completion status from Redux data
       const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
@@ -174,31 +134,14 @@ export default function NewYearSuppliesListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      setIsEditSubmitting(true);
-      // Update the gift in the database with direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newIsCompleted,
-        }),
-      });
+      // Update the gift using the hook
+      await updateGift(giftId, { isCompleted: newIsCompleted });
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
-    } finally {
-      setIsEditSubmitting(false);
     }
   }
 
@@ -208,36 +151,22 @@ export default function NewYearSuppliesListPage() {
   }
 
   async function confirmDelete() {
-    if (!giftToDelete || !holidayId || !auth0User) return;
+    if (!giftToDelete) return;
 
-    setDeleteLoading(true);
     try {
-      // Direct API call instead of RTK mutation
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      // Delete using the hook
+      await deleteGift(giftToDelete.id);
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftToDelete.id }, 'delete');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
-    } finally {
-      setDeleteLoading(false);
     }
   }
 
@@ -252,36 +181,18 @@ export default function NewYearSuppliesListPage() {
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
-    if (!selectedGift || !holidayId || !auth0User) return;
+    if (!selectedGift) return;
 
-    setIsEditSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts, shareMembers);
-      // Direct API call instead of RTK mutation
-      const response = await fetch(
-        `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const result = await response.json();
+      const payload = transformGiftPayload(values, contacts);
+      // Update using the hook
+      const result = await updateGift(selectedGift.id, payload);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowEditModal(false);
       setSelectedGift(null);
@@ -293,8 +204,6 @@ export default function NewYearSuppliesListPage() {
       } else {
         alert('Error updating gift. Please try again.');
       }
-    } finally {
-      setIsEditSubmitting(false);
     }
   }
 
@@ -317,47 +226,9 @@ export default function NewYearSuppliesListPage() {
     }
   }
 
-  // Show loading only if home data is not initialized
-  if (!homeInitialized) {
-    return (
-      <div className="min-h-screen new-year-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading supplies...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Use only Redux data - no fallback to API calls
   const displayGifts =
     holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
-
-  // Function to refresh home data from server
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   const sortedGifts = sortGifts(displayGifts || []);
   const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
@@ -370,7 +241,7 @@ export default function NewYearSuppliesListPage() {
       onToggle={handleToggleGift}
       onEdit={handleEditGift}
       onDelete={(giftId: string) => handleDeleteGift(gift)}
-      loading={isEditSubmitting}
+      loading={updateLoading}
       theme={{
         accentColor: '#f59e0b', // Amber for New Year
       }}
@@ -386,7 +257,7 @@ export default function NewYearSuppliesListPage() {
       onToggle={handleToggleGift}
       onEdit={handleEditGift}
       onDelete={(giftId: string) => handleDeleteGift(gift)}
-      loading={isEditSubmitting}
+      loading={updateLoading}
       theme={{
         accentColor: '#f59e0b', // Amber for New Year
       }}
@@ -394,8 +265,6 @@ export default function NewYearSuppliesListPage() {
       gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
     />
   );
-
-  // Form fields configuration removed - now using Enhanced Compatibility Layer
 
   return (
     <div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -416,7 +285,11 @@ export default function NewYearSuppliesListPage() {
           holidayId={holidayId || undefined}
         />
 
-        <AddButton title="Supply" onClick={openForm} color="amber" />
+        <AddButton
+          title="Supply"
+          onClick={() => setShowAddModal(true)}
+          color="amber"
+        />
         <div className="flex items-center justify-center">
           {sortBy !== 'none' && (
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -453,16 +326,16 @@ export default function NewYearSuppliesListPage() {
         title="Add New Supply"
         fields={
           getFormConfigEnhanced('gifts', 'add', {
-            holidayKey: 'new-year',
+            holidayKey: 'new-year' as any,
             shareMembers: shareMembers,
             auth0User: auth0User,
           }).fields
         }
         initialValues={{}}
         onSubmit={handleAddGift}
-        onClose={closeAddForm}
-        loading={isSubmitting}
-        submitText={isSubmitting ? 'Processing...' : 'Add Supply'}
+        onClose={() => setShowAddModal(false)}
+        loading={createLoading}
+        submitText={createLoading ? 'Adding...' : 'Add Supply'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"
@@ -476,14 +349,14 @@ export default function NewYearSuppliesListPage() {
         title="Edit Supply"
         fields={
           getFormConfigEnhanced('gifts', 'edit', {
-            holidayKey: 'new-year',
+            holidayKey: 'new-year' as any,
             shareMembers: shareMembers,
             auth0User: auth0User,
           }).fields
         }
         initialValues={{
           recipient: selectedGift?.recipient || '',
-          name: selectedGift?.name || '',
+          giftName: selectedGift?.name || '',
           description: selectedGift?.description || '',
           price: selectedGift?.price ? selectedGift.price.toString() : '',
           store: selectedGift?.store || '',
@@ -495,8 +368,8 @@ export default function NewYearSuppliesListPage() {
           setShowEditModal(false);
           setSelectedGift(null);
         }}
-        loading={isEditSubmitting}
-        submitText={isEditSubmitting ? 'Processing...' : 'Update Supply'}
+        loading={updateLoading}
+        submitText={updateLoading ? 'Updating...' : 'Update Supply'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"

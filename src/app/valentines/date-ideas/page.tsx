@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useState, useEffect, useMemo } from 'react';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -25,6 +23,7 @@ import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import AddButton from '@/components/common/AddButton';
 import DateTrackerCard from '@/components/cards/DateTrackerCard';
 import DateIdeaCard from '@/components/cards/DateIdeaCard';
@@ -32,71 +31,58 @@ import TaskSection from '@/components/common/TaskSection';
 
 export default function ValentinesDateIdeasPage() {
   const dispatch = useAppDispatch();
-  const { holidayId, auth0User } = useFormModalMutation();
-  const { contacts, isHolidayShared } = useAppSelector(
-    (state: any) => state.addressBook,
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
+
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  const { refreshHomeData } = useRefreshHomeData();
+
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'valentines'),
   );
-
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-
-  // Redux data access using selectHolidayPrefById
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
-  );
-
-  // Redux Data Access (Date Ideas are stored as tasks with category "Date Ideas")
-  const dateIdeas =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') || [];
-  const isLoading = !homeInitialized;
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector(state =>
+  const shareData = useAppSelector((state: RootState) =>
     selectShareByHolidayKey(state, 'valentines'),
   );
-  const shareMembers = shareData?.members || [];
+  const baseMembers = shareData?.members || [];
 
-  // Helper function to resolve assignedTo UUID to user name
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
-
-  // Transform tasks to include assignedToName for display
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
-
-  // RefreshHomeData Function (CRITICAL for UI updates)
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
         },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      } else {
-        console.error(
-          '🐛 [RefreshHomeData] Response not ok:',
-          response.status,
-          response.statusText,
-        );
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
+
+  // Redux Data Access (Date Ideas are stored as tasks with category "Date Ideas")
+  const dateIdeas = useMemo(
+    () =>
+      holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
+      [],
+    [holidayData?.tasks],
+  );
+  const isLoading = !homeInitialized;
+  const error = null;
 
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showSortModal, setShowSortModal] = useState(false);
@@ -107,85 +93,38 @@ export default function ValentinesDateIdeasPage() {
     title: string;
   } | null>(null);
   const [sortBy, setSortBy] = useState('title');
-  const [isAdding, setIsAdding] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  // CRUD Operations with Direct API Calls and Field Mapping
+  // CRUD Operations using useHolidayMutations hook
   const handleAddDateIdea = async (values: Record<string, any>) => {
-    if (!holidayId || !auth0User) return;
-
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`,
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assigned_to || undefined,
-      category: 'Date Ideas',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
-
-    // Optimistically update Redux state first
-    dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
+    if (!values.title?.trim() || !holidayId || !auth0User) return;
 
     try {
-      // CRITICAL: Map camelCase to snake_case for API
-      const apiPayload = {
+      const newTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined, // snake_case for API
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Date Ideas',
-        due_date: values.dueDate || undefined, // snake_case for API
-        isCompleted: false,
+        dueDate: values.dueDate,
       };
 
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-        body: JSON.stringify(apiPayload),
-      });
+      const result = await createTask(newTask);
 
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+      // Update Redux state immediately
+      dispatch(addTaskToHomeData({ holidayId, task: result }));
 
-        // CRITICAL: Refresh home data for proper UI updates
-        await refreshHomeData();
-        setShowForm(false);
-      } else {
-        // Revert optimistic update
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error('Error adding date idea:', response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowForm(false);
     } catch (error) {
-      // Revert optimistic update
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Error adding date idea:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error creating task:', error);
     }
   };
 
@@ -200,99 +139,68 @@ export default function ValentinesDateIdeasPage() {
   const handleUpdateDateIdea = async (values: Record<string, any>) => {
     if (!holidayId || !auth0User || !editingTask) return;
 
-    setIsAdding(true);
-
     try {
-      // CRITICAL: Map camelCase to snake_case for API
-      const apiPayload = {
+      const updates = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined, // snake_case for API
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Date Ideas',
-        due_date: values.dueDate ? values.dueDate.split('T')[0] : undefined, // CRITICAL: Format date same as edit (prevent timezone issues)
+        dueDate: values.dueDate ? values.dueDate.split('T')[0] : undefined, // Format date for API
       };
 
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-          body: JSON.stringify(apiPayload),
-        },
+      await updateTask(editingTask.id, updates);
+
+      // Update Redux state immediately
+      dispatch(
+        updateTaskInHomeData({
+          holidayId,
+          taskId: editingTask.id,
+          updates,
+        }),
       );
 
-      if (response.ok) {
-        const result = await response.json();
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
-        // Use the exact pattern from working New Year resolution tracker
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: editingTask.id,
-            updates: result, // Use result directly, not result.data
-          }),
-        );
-
-        // Add back refresh to ensure UI consistency
-        await refreshHomeData();
-
-        setShowForm(false);
-        setEditingTask(null);
-      } else {
-        console.error('Error updating date idea:', response.statusText);
-        const errorText = await response.text();
-        console.error('Error details:', errorText);
-      }
+      setShowForm(false);
+      setEditingTask(null);
     } catch (error) {
-      console.error('Error updating date idea:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error updating task:', error);
     }
   };
 
   const handleToggleCompletion = async (taskId: string) => {
-    if (!holidayId || !auth0User) return;
+    const currentTask = dateIdeas.find((task: any) => task.id === taskId);
+    if (!currentTask || !holidayId) return;
+
+    const newCompletionStatus = !currentTask.isCompleted;
 
     try {
-      const task = dateIdeas.find((t: any) => t.id === taskId);
-      if (task) {
-        const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
+      // Update API
+      await updateTask(taskId, {
+        isCompleted: newCompletionStatus,
+      });
+
+      // Update Redux state immediately
+      dispatch(
+        updateTaskInHomeData({
+          holidayId,
+          taskId,
+          updates: {
+            ...currentTask,
+            isCompleted: newCompletionStatus,
           },
-          body: JSON.stringify({ isCompleted: !task.isCompleted }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-
-          dispatch(
-            updateTaskInHomeData({
-              holidayId: holidayId,
-              taskId,
-              updates: result,
-            }),
-          );
-
-          // Refresh home data to ensure UI consistency
-          await refreshHomeData();
-        } else {
-          console.error('Error toggling completion:', response.statusText);
-        }
-      }
+        }),
+      );
     } catch (error) {
-      console.error('Error updating date idea:', error);
+      console.error('Error toggling task:', error);
     }
   };
 
   const handleDelete = (taskId: string, taskTitle: string) => {
-    const task = dateIdeas.find(t => t.id === taskId);
+    const task = dateIdeas.find((t: any) => t.id === taskId);
 
     setTaskToDelete({
       id: taskId,
@@ -302,38 +210,26 @@ export default function ValentinesDateIdeasPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!holidayId || !auth0User || !taskToDelete) return;
-
-    setIsDeleting(true);
+    if (!holidayId || !taskToDelete) return;
 
     try {
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${taskToDelete.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-        },
+      await deleteTask(taskToDelete.id);
+
+      // Update Redux state immediately
+      dispatch(
+        removeTaskFromHomeData({
+          holidayId,
+          taskId: taskToDelete.id,
+        }),
       );
 
-      if (response.ok) {
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: taskToDelete.id,
-          }),
-        );
-        setShowDeleteModal(false);
-        setTaskToDelete(null);
-      } else {
-        console.error('Error deleting date idea:', response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting date idea:', error);
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -353,37 +249,33 @@ export default function ValentinesDateIdeasPage() {
   };
 
   // Data sorting and completion filtering
-  const sortedDateIdeas = [...dateIdeas]
-    .map(transformTaskWithAssignment)
-    .sort((a: any, b: any) => {
-      switch (sortBy) {
-        case 'title':
-          return a.title.localeCompare(b.title);
-        case 'priority':
-          const priorityOrder: { [key: string]: number } = {
-            high: 3,
-            medium: 2,
-            low: 1,
-          };
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        case 'dueDate':
-          if (!a.dueDate && !b.dueDate) return 0;
-          if (!a.dueDate) return 1;
-          if (!b.dueDate) return -1;
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        case 'completed':
-          return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
-        default:
-          return 0;
-      }
-    });
+  const sortedDateIdeas = [...dateIdeas].sort((a: any, b: any) => {
+    switch (sortBy) {
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'priority':
+        const priorityOrder: { [key: string]: number } = {
+          high: 3,
+          medium: 2,
+          low: 1,
+        };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      case 'dueDate':
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      case 'completed':
+        return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
+      default:
+        return 0;
+    }
+  });
 
-  const completeDateIdeas = dateIdeas
-    .map(transformTaskWithAssignment)
-    .filter((task: any) => task.isCompleted);
-  const incompleteDateIdeas = dateIdeas
-    .map(transformTaskWithAssignment)
-    .filter((task: any) => !task.isCompleted);
+  const completeDateIdeas = sortedDateIdeas.filter((task: any) => task.isCompleted);
+  const incompleteDateIdeas = sortedDateIdeas.filter(
+    (task: any) => !task.isCompleted,
+  );
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -397,6 +289,8 @@ export default function ValentinesDateIdeasPage() {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
     }
   };
+
+  const loading = createLoading || updateLoading || deleteLoading;
 
   // Form fields configuration using Enhanced Compatibility Layer
   const formFields = getFormConfigEnhanced('tasks', 'add', {
@@ -443,7 +337,7 @@ export default function ValentinesDateIdeasPage() {
           title="Date Idea"
           onClick={openAddForm}
           color="pink"
-          disabled={isAdding}
+          disabled={loading}
         />
 
         {/* Task Sections using TaskSection component */}
@@ -531,8 +425,16 @@ export default function ValentinesDateIdeasPage() {
         }
         onSubmit={editingTask ? handleUpdateDateIdea : handleAddDateIdea}
         onClose={closeForm}
-        loading={isAdding}
-        submitText={editingTask ? 'Update Date Idea' : 'Add Date Idea'}
+        loading={loading}
+        submitText={
+          editingTask
+            ? updateLoading
+              ? 'Updating...'
+              : 'Update Date Idea'
+            : createLoading
+              ? 'Adding...'
+              : 'Add Date Idea'
+        }
         cancelText="Cancel"
         cardClassName="card-events-valentines"
       />
@@ -544,12 +446,9 @@ export default function ValentinesDateIdeasPage() {
         onConfirm={handleDeleteConfirm}
         title="Delete Date Idea"
         message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
-        loading={isDeleting}
+        loading={deleteLoading}
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

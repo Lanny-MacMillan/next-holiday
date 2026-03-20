@@ -2,6 +2,7 @@
 
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 
 export default function NewYearResolutionsPage() {
   // Enhanced Compatibility Layer for future use when this page is implemented
@@ -28,10 +29,7 @@ export default function NewYearResolutionsPage() {
           </p>
         </div>
       </main>
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,18 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import {
-  selectIsHolidayShared,
-  selectShareByHolidayKey,
-} from '@/store/slices/sharesSlice';
-import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateGiftInHomeData,
@@ -20,14 +12,17 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -38,17 +33,27 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function KwanzaaGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
 
-  // Get current Redux state for skip logic
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
+  // Use centralized holiday page data hook
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  // Use standardized mutation hooks for gift operations
+  const {
+    createGift,
+    updateGift,
+    deleteGift,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
+
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'kwanzaa'),
   );
 
   // Get share members for Enhanced Compatibility Layer
@@ -57,61 +62,9 @@ export default function KwanzaaGiftListPage() {
   );
   const shareMembers = shareData?.members || [];
 
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Helper function to update Redux state after gift operations
-  const updateGiftInRedux = (
-    giftData: any,
-    operation: 'add' | 'update' | 'delete',
-  ) => {
-    if (!holidayId) return;
-
-    // For add and update operations, ensure the recipient field is populated
-    let processedGiftData = giftData;
-    if (
-      (operation === 'add' || operation === 'update') &&
-      giftData.contactId &&
-      contacts
-    ) {
-      const contact = contacts.find((c: any) => c.id === giftData.contactId);
-      processedGiftData = {
-        ...giftData,
-        recipient: contact?.name || 'Unknown',
-      };
-    }
-
-    switch (operation) {
-      case 'add':
-        dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
-        break;
-      case 'update':
-        dispatch(
-          updateGiftInHomeData({
-            holidayId,
-            giftId: processedGiftData.id,
-            updates: processedGiftData,
-          }),
-        );
-        break;
-      case 'delete':
-        dispatch(
-          removeGiftFromHomeData({
-            holidayId,
-            giftId: giftData.id,
-          }),
-        );
-        break;
-    }
-  };
-
-  // Use only Redux data - no GET API calls on holiday pages
-
-  // Local loading states for mutations
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  // Redux data access - gifts from holiday data
+  const gifts = holidayData?.gifts || [];
+  const isLoading = !homeInitialized;
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -119,8 +72,6 @@ export default function KwanzaaGiftListPage() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
-
-  // Home data already declared above
 
   useEffect(() => {
     // Fetch contacts for address book functionality
@@ -131,18 +82,18 @@ export default function KwanzaaGiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.name?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation) return;
+    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!holidayId || !auth0User) return;
 
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+      const result = await createGift(payload);
 
-      // Update Redux state directly
-      updateGiftInRedux(result, 'add');
+      // Update Redux state immediately
+      dispatch(addGiftToHomeData({ holidayId: holidayId, gift: result }));
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
     } catch (error) {
@@ -150,8 +101,6 @@ export default function KwanzaaGiftListPage() {
       // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
-      } else {
-        alert('Error creating gift. Please try again.');
       }
     }
   }
@@ -171,37 +120,26 @@ export default function KwanzaaGiftListPage() {
 
     try {
       // Find the current gift to get its completion status from Redux data
-      const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
+      const currentGift = gifts.find((gift: any) => gift.id === giftId);
       if (!currentGift) return;
 
-      // Toggle the completion status
-      const newIsCompleted = !currentGift.isCompleted;
-
-      setUpdateLoading(true);
-      // Update the gift in the database with direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newIsCompleted,
-        }),
+      const result = await updateGift(giftId, {
+        isCompleted: !currentGift.isCompleted,
       });
 
-      // Update Redux state directly
-      updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
+      // Update Redux state
+      dispatch(
+        updateGiftInHomeData({
+          holidayId: holidayId,
+          giftId: giftId,
+          updates: { isCompleted: !currentGift.isCompleted },
+        }),
+      );
+
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
-      // Handle error (could show a toast notification)
-    } finally {
-      setUpdateLoading(false);
     }
   }
 
@@ -213,34 +151,24 @@ export default function KwanzaaGiftListPage() {
   async function confirmDelete() {
     if (!giftToDelete || !holidayId || !auth0User) return;
 
-    setDeleteLoading(true);
     try {
-      // Direct API call instead of RTK mutation
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      await deleteGift(giftToDelete.id);
 
-      // Update Redux state directly
-      updateGiftInRedux({ id: giftToDelete.id }, 'delete');
+      // Remove from Redux state on success
+      dispatch(
+        removeGiftFromHomeData({
+          holidayId: holidayId,
+          giftId: giftToDelete.id,
+        }),
+      );
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
-    } finally {
-      setDeleteLoading(false);
     }
   }
 
@@ -257,34 +185,21 @@ export default function KwanzaaGiftListPage() {
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
 
-    setEditLoading(true);
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      // Direct API call instead of RTK mutation
-      const response = await fetch(
-        `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(payload),
-        },
+      const result = await updateGift(selectedGift.id, payload);
+
+      // Update Redux state
+      dispatch(
+        updateGiftInHomeData({
+          holidayId: holidayId,
+          giftId: selectedGift.id,
+          updates: result,
+        }),
       );
 
-      const result = await response.json();
-
-      // Update Redux state directly
-      updateGiftInRedux(result, 'update');
-
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
       setSelectedGift(null);
@@ -293,11 +208,7 @@ export default function KwanzaaGiftListPage() {
       // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
       }
-    } finally {
-      setEditLoading(false);
     }
   }
 
@@ -332,37 +243,7 @@ export default function KwanzaaGiftListPage() {
     );
   }
 
-  // Use only Redux data - no fallback to API calls
-  const displayGifts =
-    holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
-
-  // Function to refresh home data from server
-  const refreshHomeData = async () => {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
-
-  const sortedGifts = sortGifts(displayGifts || []);
+  const sortedGifts = sortGifts(gifts || []);
   const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
   const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
 
@@ -407,58 +288,15 @@ export default function KwanzaaGiftListPage() {
     auth0User: auth0User,
   });
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
     return {
       recipient: selectedGift.recipient || '',
-      name: selectedGift.name,
+      giftName: selectedGift.name,
       description: selectedGift.description || '',
-      price: selectedGift.price.toString(),
+      price: selectedGift.price?.toString() || '',
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
       notes: selectedGift.notes || '',
@@ -474,7 +312,7 @@ export default function KwanzaaGiftListPage() {
         sortTitle="Sort gifts"
         description="Keep track of gift ideas and purchases!"
         holidayColor="red-500"
-        error={mutationError ? 'API Error' : undefined}
+        error={undefined}
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
         {/* Budget Display */}
@@ -523,10 +361,12 @@ export default function KwanzaaGiftListPage() {
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
-        loading={mutationLoading || editLoading}
+        loading={createLoading || updateLoading}
         submitText={
-          mutationLoading || editLoading
-            ? 'Processing...'
+          createLoading || updateLoading
+            ? selectedGift
+              ? 'Updating...'
+              : 'Adding...'
             : selectedGift
               ? 'Update Gift'
               : 'Add Gift'

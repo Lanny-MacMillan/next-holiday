@@ -1,26 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
-
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -32,70 +24,59 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
 export default function NewYearEventsPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { holidayId, auth0User } = useFormModalMutation();
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  // Enhanced Compatibility Layer
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
 
-  // Name resolution helper functions
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
-
-  // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'new-year'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
+
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Redux data access - events are stored as tasks with category "Events"
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
+  const events = useMemo(
+    () =>
+      holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [],
+    [holidayData?.tasks],
   );
-  const events =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
   const error = null;
-
-  // Safety check for contacts
-  const safeContacts = contacts || [];
-
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   // State management
   const [showAddModal, setShowAddModal] = useState(false);
@@ -103,307 +84,100 @@ export default function NewYearEventsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  // CRUD Operations
-  async function handleAddTask(values: Record<string, any>) {
-    if (!values.title?.trim()) return;
-    if (!holidayId || !auth0User) return;
-
-    setIsSubmitting(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Events',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
+  const handleAddTask = async (values: any) => {
+    if (!values.title?.trim() || !holidayId) return;
 
     try {
-      // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-      // Construct API payload
-      const apiPayload = {
+      const newTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined,
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
         category: 'Events',
-        due_date: values.dueDate || undefined, // API expects due_date (snake_case)
+        dueDate: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
 
-      // Call API
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify(apiPayload),
-      });
+      // Use the standardized hook function
+      await createTask(newTask);
 
-      if (!response.ok) {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error(
-          'Failed to create task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        // Success: replace temp task with real task from API
-        const result = await response.json();
-
-        // Remove temp task and add real task
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result.data }));
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowAddModal(false);
     } catch (error) {
-      // Remove the optimistic update if there was an error
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Failed to create task:', error);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error creating task:', error);
     }
-  }
+  };
 
   const handleEditTask = (task: any) => {
     setEditingTask(task);
     setShowEditModal(true);
   };
 
-  async function handleEditTaskSubmit(values: Record<string, any>) {
-    if (!editingTask || !holidayId || !auth0User) return;
+  const handleEditTaskSubmit = async (values: Record<string, any>) => {
+    if (!editingTask || !holidayId) return;
 
-    setIsEditSubmitting(true);
     try {
-      const updatedTask = {
+      const updates = {
         title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined,
+        description: values.description,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
         category: 'Events',
-        due_date: values.dueDate || undefined, // For API call
+        dueDate: values.dueDate,
       };
 
-      // Separate object for Redux state (needs camelCase)
-      const reduxUpdate = {
-        title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assigned_to || undefined,
-        category: 'Events',
-        dueDate: values.dueDate || undefined, // Redux expects camelCase
-      };
+      await updateTask(editingTask.id, updates);
 
-      // Optimistically update the Redux home data
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: editingTask.id,
-          updates: reduxUpdate, // Use camelCase version for Redux
-        }),
-      );
-
-      // Call API directly instead of using custom hook
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(updatedTask),
-        },
-      );
-
-      if (!response.ok) {
-        // DEBUG: Log API error
-        const errorText = await response.text();
-
-        // Revert the optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: editingTask.id,
-            updates: {
-              title: editingTask.title,
-              description: editingTask.description,
-              priority: editingTask.priority,
-              assignedTo: editingTask.assignedTo,
-              category: editingTask.category,
-              dueDate: editingTask.dueDate,
-            },
-          }),
-        );
-        console.error(
-          'Failed to update task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        // DEBUG: Log successful update
-        const result = await response.json();
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
-      console.error('Failed to update task:', error);
-    } finally {
-      setIsEditSubmitting(false);
+      console.error('Error updating task:', error);
     }
-  }
+  };
 
-  async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+  const handleDeleteTask = async (taskId: string) => {
+    if (!holidayId) return;
 
-    // Find the task to delete for potential rollback
-    const taskToDelete = events.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
-
-    setIsDeleting(true);
     try {
-      // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
+      // Use the standardized hook function
+      await deleteTask(taskId);
 
-      // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
-      const response = await fetch(apiUrl, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (!response.ok) {
-        // If API failed, revert the optimistic update
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
-        console.error(
-          'Failed to delete task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        console.log('Task deleted successfully');
-      }
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      // If API failed, revert the optimistic update
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
-      console.error('Failed to delete task:', error);
-    } finally {
-      setIsDeleting(false);
+      console.error('Error deleting task:', error);
     }
-  }
+  };
 
-  async function handleToggleTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
-
+  const handleToggleTask = async (taskId: string) => {
     const task = events.find((t: any) => t.id === taskId);
-    if (!task) return;
+    if (!task || !holidayId) return;
 
-    setIsToggling(true);
+    const newCompletionStatus = !task.isCompleted;
+
     try {
-      const updatedTask = { ...task, isCompleted: !task.isCompleted };
+      // Use the standardized hook function
+      await updateTask(taskId, { isCompleted: newCompletionStatus });
 
-      // Optimistically update Redux state
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId,
-          updates: { isCompleted: !task.isCompleted },
-        }),
-      );
-
-      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
-      const response = await fetch(apiUrl, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({ isCompleted: !task.isCompleted }),
-      });
-
-      if (!response.ok) {
-        // Revert optimistic update on API failure
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId,
-            updates: { isCompleted: task.isCompleted },
-          }),
-        );
-        console.error(
-          'Failed to toggle task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      // Revert optimistic update on error
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId,
-          updates: { isCompleted: task.isCompleted },
-        }),
-      );
-      console.error('Failed to toggle task:', error);
-    } finally {
-      setIsToggling(false);
+      console.error('Error toggling task:', error);
     }
-  }
+  };
 
   // Filter and sort events - with safety checks
   const completedEvents = events?.filter((task: any) => task.isCompleted) || [];
@@ -439,14 +213,8 @@ export default function NewYearEventsPage() {
     });
   };
 
-  const sortedUpcomingEvents = sortTasks(
-    upcomingEvents.map(transformTaskWithAssignment),
-    sortBy,
-  );
-  const sortedCompletedEvents = sortTasks(
-    completedEvents.map(transformTaskWithAssignment),
-    sortBy,
-  );
+  const sortedUpcomingEvents = sortTasks(upcomingEvents, sortBy);
+  const sortedCompletedEvents = sortTasks(completedEvents, sortBy);
 
   return (
     <div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -462,9 +230,9 @@ export default function NewYearEventsPage() {
         {/* Add New Event Button */}
         <AddButton
           onClick={() => setShowAddModal(true)}
-          title="Add New Event"
-          color="yellow"
-          disabled={isSubmitting}
+          title="Event"
+          color="amber"
+          disabled={createLoading}
         />
 
         {/* Event Status Summary */}
@@ -552,14 +320,14 @@ export default function NewYearEventsPage() {
           title="Add New Event Task"
           fields={
             getFormConfigEnhanced('tasks', 'add', {
-              holidayKey: 'new-year',
+              holidayKey: 'new-year' as any,
               shareMembers: shareMembers,
               auth0User: auth0User,
             }).fields
           }
           initialValues={{}}
-          loading={isSubmitting}
-          submitText={isSubmitting ? 'Processing...' : 'Add Task'}
+          loading={createLoading}
+          submitText={createLoading ? 'Adding...' : 'Add Task'}
           cardClassName="card-tasks"
         />
       )}
@@ -576,7 +344,7 @@ export default function NewYearEventsPage() {
           title="Edit Event Task"
           fields={
             getFormConfigEnhanced('tasks', 'edit', {
-              holidayKey: 'new-year',
+              holidayKey: 'new-year' as any,
               shareMembers: shareMembers,
               auth0User: auth0User,
             }).fields
@@ -585,13 +353,13 @@ export default function NewYearEventsPage() {
             title: editingTask.title || '',
             description: editingTask.description || '',
             priority: editingTask.priority || 'medium',
-            assigned_to: editingTask.assignedTo || '',
+            assignedTo: editingTask.assignedTo || '',
             dueDate: editingTask.dueDate
               ? new Date(editingTask.dueDate).toISOString().split('T')[0]
               : '',
           }}
-          loading={isEditSubmitting}
-          submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
+          loading={updateLoading}
+          submitText={updateLoading ? 'Updating...' : 'Update Task'}
           cardClassName="card-tasks"
         />
       )}

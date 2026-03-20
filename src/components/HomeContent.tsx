@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import HolidayCard from '@/components/cards/HolidayCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
+import Footer from '@/components/common/Footer';
 import { holidayData } from '@/data/holidayData';
 import { getHolidayCountdownTime } from '@/utils/holidayUtils';
 import { HomeData } from '@/types/home';
@@ -123,10 +124,7 @@ export default function HomeContent({ homeData }: HomeContentProps) {
           </ul>
         )}
       </main>
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

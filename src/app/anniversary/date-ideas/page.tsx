@@ -1,22 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -28,72 +17,39 @@ import ToDoCard from '@/components/cards/to-do/ToDoCard';
 export default function AnniversaryDateIdeasPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
-
-  // Holiday ID resolution - use the holidayId from useFormModalMutation hook
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
-  const resolvedHolidayId = holidayData?.holidayId;
-
-  // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'anniversary'),
   );
 
-  // Redux data access - date ideas are stored as tasks with category "Date Ideas"
-  const dateIdeas =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') || [];
+  const dateIdeas = useMemo(
+    () =>
+      holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
+      [],
+    [holidayData?.tasks],
+  );
   const isLoading = !homeInitialized;
-
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
+  const error = null;
 
   // State management
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showSortModal, setShowSortModal] = useState(false);
   const [sortBy, setSortBy] = useState<string>('priority');
-  const [isAdding, setIsAdding] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -158,170 +114,47 @@ export default function AnniversaryDateIdeasPage() {
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
-    if (!resolvedHolidayId || !auth0User) return;
-
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Date Ideas',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: resolvedHolidayId,
-    };
+    if (!holidayId || !auth0User) return;
 
     try {
-      // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-
-      // Call API - map camelCase to snake_case for API
-      const apiPayload = {
+      const payload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assignedTo || undefined,
         category: 'Date Ideas',
-        due_date: values.dueDate || undefined, // snake_case for API
+        due_date: values.dueDate || undefined,
         isCompleted: false,
       };
 
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify(apiPayload),
-      });
-
-      if (response.ok) {
-        // Replace temporary task with real task from API
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
-
-        // Refresh home data
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error(
-          'Failed to add date idea:',
-          response.status,
-          response.statusText,
-        );
-      }
-
+      await createTask(payload);
+      await refreshHomeData(auth0User, holidayId);
       setShowAddForm(false);
     } catch (error) {
-      // Remove optimistic update on error
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
-      console.error('Failed to add date idea:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error creating date idea:', error);
     }
   }
 
   async function handleEditTaskSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!values.title?.trim() || !editingTask?.id) return;
+    if (!holidayId || !auth0User) return;
 
-    setIsUpdating(true);
     try {
-      const updatedTask = {
+      const payload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assignedTo || undefined,
         category: 'Date Ideas',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       };
 
-      // Optimistically update the Redux state
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
-          taskId: editingTask.id,
-          updates: updatedTask,
-        }),
-      );
-
-      // Call API - map camelCase to snake_case
-      const apiPayload = {
-        title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
-        category: 'Date Ideas',
-        due_date: values.dueDate || undefined, // snake_case for API
-      };
-
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
-
-      if (!response.ok) {
-        // Revert the optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: editingTask.id,
-            updates: {
-              title: editingTask.title,
-              description: editingTask.description,
-              priority: editingTask.priority,
-              assignedTo: editingTask.assignedTo,
-              category: editingTask.category,
-              dueDate: editingTask.dueDate,
-            },
-          }),
-        );
-        console.error(
-          'Failed to update date idea:',
-          response.status,
-          response.statusText,
-        );
-      }
-
+      await updateTask(editingTask.id, payload);
+      await refreshHomeData(auth0User, holidayId);
       setEditingTask(null);
       setShowAddForm(false);
     } catch (error) {
-      console.error('Failed to update date idea:', error);
-    } finally {
-      setIsUpdating(false);
+      console.error('Error updating date idea:', error);
     }
   }
 
@@ -331,127 +164,38 @@ export default function AnniversaryDateIdeasPage() {
   };
 
   async function handleDeleteTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
-    // Find the task to delete for potential rollback
-    const taskToDelete = dateIdeas.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
-
-    setIsDeleting(true);
     try {
-      // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
-
-      // Call API directly
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-        },
-      );
-
-      if (!response.ok) {
-        // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
-        console.error(
-          'Failed to delete date idea:',
-          response.status,
-          response.statusText,
-        );
-      }
+      await deleteTask(taskId);
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
-      console.error('Failed to delete date idea:', error);
-    } finally {
-      setIsDeleting(false);
+      console.error('Error deleting date idea:', error);
     }
   }
 
   async function handleToggleTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
-    setIsToggling(true);
     try {
-      // Find the current task to get its completion status
       const currentTask = dateIdeas.find((task: any) => task.id === taskId);
-      if (!currentTask) {
-        console.error('Task not found:', taskId);
-        return;
-      }
+      if (!currentTask) return;
 
-      // Toggle the completion status
-      const newCompletionStatus = !currentTask.isCompleted;
+      const payload = {
+        isCompleted: !currentTask.isCompleted,
+      };
 
-      // Optimistically update the Redux state
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
-          taskId: taskId,
-          updates: { isCompleted: newCompletionStatus },
-        }),
-      );
-
-      // Call API directly
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify({
-            isCompleted: newCompletionStatus,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        // Revert the optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: taskId,
-            updates: { isCompleted: currentTask.isCompleted },
-          }),
-        );
-        console.error(
-          'Failed to toggle date idea:',
-          response.status,
-          response.statusText,
-        );
-      }
+      await updateTask(taskId, payload);
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      console.error('Failed to toggle date idea:', error);
-    } finally {
-      setIsToggling(false);
+      console.error('Error toggling date idea:', error);
     }
   }
-
   const handleSortChange = (sortOption: string) => {
     setSortBy(sortOption);
   };
 
-  const loading = isAdding || isUpdating || isDeleting || isToggling;
+  const loading = createLoading || updateLoading || deleteLoading;
 
   // Show loading only if home data is not initialized
   if (isLoading) {
@@ -514,7 +258,7 @@ export default function AnniversaryDateIdeasPage() {
         sortTitle="Sort Date Ideas"
         description="Plan your anniversary date ideas with style!"
         holidayColor="pink-500"
-        error={undefined}
+        error={error}
       />
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">

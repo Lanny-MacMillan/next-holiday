@@ -1,524 +1,738 @@
 # Database Tables Design
 
-This document outlines the proposed PostgreSQL schema for the Next Holiday application, derived from Redux state analysis.
+This document outlines the current MySQL schema for the Next Holiday application, reflecting the implemented Prisma schema.
+
+**📊 [View Live ERD Diagram](https://mermaid.ai/app/projects/5a13959b-bcd3-4844-834d-1f664ae6f043/diagrams/3605b52a-9a41-4a09-a764-2c6ee2d62a92/version/v0.1/edit)** - Interactive database schema visualization
+
+## Database Information
+
+- **Engine**: MySQL
+- **Schema Management**: Prisma ORM
+- **Generated Client**: Located at `src/generated/prisma`
 
 ## Core Tables
 
 ### users
 
-**Purpose**: Store Auth0 user information and profile data
-**Redux Source**: `userSlice.user` (User interface)
-**Key Columns**:
+**Purpose**: Store Auth0 user information, profile data, and subscription details
 
-- `id` (uuid, PK) - Internal user ID
-- `auth0_sub` (text, unique) - Auth0 subject identifier
-- `email` (text, nullable) - User email address
-- `name` (text, nullable) - Display name
-- `picture` (text, nullable) - Profile picture URL
-- `is_in_db` (boolean) - Whether user exists in our system
-- `is_first_login` (boolean) - First-time user flag
-- `created_at` (timestamptz) - Account creation timestamp
-- `updated_at` (timestamptz) - Last update timestamp
+**Description**: Central user table integrating with Auth0 OAuth and managing subscription plans.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| auth0Sub | VARCHAR(191) | No | - | Auth0 subject identifier (unique) |
+| email | VARCHAR(191) | Yes | - | User email address |
+| name | VARCHAR(191) | Yes | - | Display name |
+| picture | TEXT | Yes | - | Profile picture URL |
+| isInDb | BOOLEAN | No | false | Whether user exists in our system |
+| isFirstLogin | BOOLEAN | No | true | First-time user flag for onboarding |
+| subscriptionPlan | ENUM | No | 'free' | Subscription tier (free, plus) |
+| subscriptionStartDate | DATETIME(3) | Yes | - | Subscription start timestamp |
+| subscriptionEndDate | DATETIME(3) | Yes | - | Subscription end timestamp |
+| createdAt | DATETIME(3) | No | now() | Account creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- Unique: `auth0_sub`
-- Index: `(email)` for lookups
+**Constraints**:
 
-**Why**: Auth0 integration requires storing user profile data and tracking first-time users for onboarding flows.
+- Primary Key: `id`
+- Unique Constraints: `auth0Sub`
+- Indexes: `email`
+
+**Relationships**:
+
+- has_one: UserPreferences
+- has_many: AccountMember (as user)
+- has_many: AccountMember (as inviter)
+- has_many: Account (as owner)
+- has_many: AuditLog
+- has_many: Budget (as creator)
+- has_many: BudgetTransaction (as creator)
+- has_many: Card (as creator)
+- has_many: Contact (as creator)
+- has_many: Gift (as creator)
+- has_many: GuestList (as creator)
+- has_many: Holiday (as creator)
+- has_many: Invite (as sender)
+- has_many: Invite (as receiver)
+- has_many: ShareMember (as inviter)
+- has_many: ShareMember (as user)
+- has_many: Share (as owner)
+- has_many: TaskAssignee (as assigner)
+- has_many: TaskAssignee (as user)
+- has_many: Task (as assignee)
+- has_many: Task (as creator)
+
+### user_preferences
+
+**Purpose**: Store user-specific application preferences and settings
+
+**Description**: Comprehensive preferences table for theme, display mode, notifications, and accessibility settings.
+
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| userId | CHAR(36) | No | - | Foreign key to users table |
+| theme | VARCHAR(191) | No | 'system' | Theme preference (system, light, dark) |
+| displayMode | VARCHAR(191) | No | 'professional' | Display mode (professional, gamified) |
+| showCompletedItems | BOOLEAN | No | true | Show completed items in lists |
+| showCountdown | BOOLEAN | No | true | Show countdown timers |
+| showProgressBars | BOOLEAN | No | true | Show progress indicators |
+| emailNotifications | BOOLEAN | No | true | Enable email notifications |
+| pushNotifications | BOOLEAN | No | true | Enable push notifications |
+| reminderNotifications | BOOLEAN | No | true | Enable reminder notifications |
+| taskDueReminders | BOOLEAN | No | true | Enable task due reminders |
+| holidayCountdownAlerts | BOOLEAN | No | true | Enable holiday countdown alerts |
+| timezone | VARCHAR(191) | No | 'UTC' | User timezone |
+| locale | VARCHAR(191) | No | 'en-US' | User locale |
+| reducedMotion | BOOLEAN | No | false | Accessibility: reduced motion |
+| highContrast | BOOLEAN | No | false | Accessibility: high contrast |
+| fontSize | VARCHAR(191) | No | 'medium' | Font size preference (small, medium, large) |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
+
+**Constraints**:
+
+- Primary Key: `id`
+- Unique Constraints: `userId`
+- Foreign Keys: `userId` → `users(id)` ON DELETE CASCADE
+- Indexes: `userId`
+
+**Relationships**:
+
+- belongs_to: User
 
 ### accounts
 
 **Purpose**: Multi-tenant households/families for collaboration
-**Redux Source**: Derived from sharing patterns in `sharesSlice`
-**Key Columns**:
 
-- `id` (uuid, PK) - Account identifier
-- `name` (text) - Account/household name
-- `owner_user_id` (uuid, FK) - Primary account owner
-- `created_at` (timestamptz) - Account creation
-- `updated_at` (timestamptz) - Last update
+**Description**: Account-level organization allowing users to collaborate on holiday planning within family or friend groups.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| name | VARCHAR(191) | No | - | Account/household name |
+| ownerUserId | CHAR(36) | No | - | Primary account owner |
+| createdAt | DATETIME(3) | No | now() | Account creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `owner_user_id` → `users(id)`
-- Index: `(owner_user_id)` for user's accounts
+**Constraints**:
 
-**Why**: Multi-user collaboration requires account-level organization. Each user can belong to multiple accounts (families, friend groups).
+- Primary Key: `id`
+- Foreign Keys: `ownerUserId` → `users(id)` ON DELETE CASCADE
+- Indexes: `ownerUserId`
+
+**Relationships**:
+
+- belongs_to: User (as owner)
+- has_many: AccountMember
+- has_many: AuditLog
+- has_many: Contact
+- has_many: Holiday
 
 ### account_members
 
-**Purpose**: Many-to-many relationship between users and accounts
-**Redux Source**: `sharesSlice.HolidayShare.memberUserIds`
-**Key Columns**:
+**Purpose**: Junction table for many-to-many relationship between accounts and users
 
-- `account_id` (uuid, FK) - Account reference
-- `user_id` (uuid, FK) - User reference
-- `role` (text) - Member role ('owner', 'admin', 'member')
-- `invited_by` (uuid, FK, nullable) - Who invited this member
-- `created_at` (timestamptz) - Membership creation
+**Description**: Manages membership and roles within accounts, supporting invitation workflows.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| accountId | CHAR(36) | No | - | Foreign key to accounts table |
+| userId | CHAR(36) | No | - | Foreign key to users table |
+| role | ENUM | No | - | Member role (owner, admin, member) |
+| invitedBy | CHAR(36) | Yes | - | User who sent the invitation |
+| createdAt | DATETIME(3) | No | now() | Membership creation timestamp |
 
-- Composite PK: `(account_id, user_id)`
-- FK: `account_id` → `accounts(id)`
-- FK: `user_id` → `users(id)`
-- FK: `invited_by` → `users(id)`
-- Index: `(user_id)` for user's memberships
-- Index: `(account_id)` for account members
+**Constraints**:
 
-**Why**: Supports flexible collaboration where users can belong to multiple accounts with different roles.
+- Primary Key: `(accountId, userId)`
+- Foreign Keys:
+  - `accountId` → `accounts(id)` ON DELETE CASCADE
+  - `userId` → `users(id)` ON DELETE CASCADE
+  - `invitedBy` → `users(id)`
+- Indexes: `userId`, `accountId`, `invitedBy`
+
+**Relationships**:
+
+- belongs_to: Account
+- belongs_to: User (as user)
+- belongs_to: User (as inviter)
 
 ### holidays
 
-**Purpose**: Holiday instances with metadata and configuration
-**Redux Source**: `holidayData` array + holiday-specific slices
-**Key Columns**:
+**Purpose**: Store holiday/celebration information and settings
 
-- `id` (uuid, PK) - Holiday instance ID
-- `account_id` (uuid, FK) - Owning account
-- `holiday_type` (text) - Holiday type ('christmas', 'birthday', etc.)
-- `name` (text) - Custom holiday name
-- `description` (text, nullable) - Holiday description
-- `start_date` (date) - Holiday start date
-- `end_date` (date, nullable) - Holiday end date
-- `color_light` (text) - Light theme color
-- `color_dark` (text) - Dark theme color
-- `is_custom` (boolean) - Whether this is a custom holiday
-- `created_by` (uuid, FK) - User who created the holiday
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Central table for all holiday types (built-in and custom) with configuration for dates, colors, and countdown timers.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| accountId | CHAR(36) | No | - | Account this holiday belongs to |
+| holidayType | VARCHAR(191) | No | - | Type identifier (christmas, birthday, etc.) |
+| name | VARCHAR(191) | No | - | Display name for the holiday |
+| description | TEXT | Yes | - | Optional description |
+| startDate | DATE | No | - | Holiday start date |
+| endDate | DATE | Yes | - | Holiday end date (for multi-day holidays) |
+| countdownTimer | DATETIME(3) | Yes | - | Custom countdown target datetime |
+| colorLight | VARCHAR(191) | No | - | Light theme color |
+| colorDark | VARCHAR(191) | No | - | Dark theme color |
+| isCustom | BOOLEAN | No | false | Whether this is a user-created holiday |
+| createdBy | CHAR(36) | No | - | User who created this holiday |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `account_id` → `accounts(id)`
-- FK: `created_by` → `users(id)`
-- Index: `(account_id, holiday_type)` for account's holidays
-- Index: `(start_date)` for date-based queries
-- Index: `(is_custom)` for custom vs standard holidays
+**Constraints**:
 
-**Why**: Each holiday instance belongs to an account and can be shared among members. Supports both standard holidays and custom events.
+- Primary Key: `id`
+- Foreign Keys:
+  - `accountId` → `accounts(id)` ON DELETE CASCADE
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+- Indexes: `(accountId, holidayType)`, `startDate`, `isCustom`, `createdBy`
+
+**Relationships**:
+
+- belongs_to: Account
+- belongs_to: User (as creator)
+- has_many: Budget
+- has_many: Card
+- has_many: Gift
+- has_many: GuestList
+- has_many: KwanzaaPrinciple
+- has_one: Share
+- has_many: Task
 
 ### contacts
 
-**Purpose**: Address book entries for gift recipients, card recipients, etc.
-**Redux Source**: `addressBookSlice.contacts[]` (Contact interface)
-**Key Columns**:
+**Purpose**: Centralized address book for gift recipients, card recipients, and guests
 
-- `id` (uuid, PK) - Contact identifier
-- `account_id` (uuid, FK) - Owning account
-- `name` (text) - Contact name
-- `email` (text, nullable) - Email address
-- `phone` (text, nullable) - Phone number
-- `street_address` (text, nullable) - Street address
-- `city` (text, nullable) - City
-- `state` (text, nullable) - State/province
-- `postal_code` (text, nullable) - ZIP/postal code
-- `relationship` (text, nullable) - Relationship to user
-- `notes` (text, nullable) - Additional notes
-- `created_by` (uuid, FK) - User who created contact
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Comprehensive contact management with address information and relationship tracking.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| accountId | CHAR(36) | No | - | Account this contact belongs to |
+| name | VARCHAR(191) | No | - | Contact full name |
+| email | VARCHAR(191) | Yes | - | Email address |
+| phone | VARCHAR(191) | Yes | - | Phone number |
+| streetAddress | VARCHAR(191) | Yes | - | Street address |
+| city | VARCHAR(191) | Yes | - | City name |
+| state | VARCHAR(191) | Yes | - | State/province |
+| postalCode | VARCHAR(191) | Yes | - | ZIP/postal code |
+| relationship | VARCHAR(191) | Yes | - | Relationship to user |
+| notes | TEXT | Yes | - | Additional notes |
+| createdBy | CHAR(36) | No | - | User who created this contact |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `account_id` → `accounts(id)`
-- FK: `created_by` → `users(id)`
-- Index: `(account_id)` for account's contacts
-- Index: `(name)` for name searches
-- Index: `(email)` for email lookups
+**Constraints**:
 
-**Why**: Centralized contact management for gifts, cards, and guest lists. Contacts are scoped to accounts for privacy.
+- Primary Key: `id`
+- Unique Constraints: `(accountId, email)`
+- Foreign Keys:
+  - `accountId` → `accounts(id)` ON DELETE CASCADE
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+- Indexes: `accountId`, `name`, `email`, `createdBy`
+
+**Relationships**:
+
+- belongs_to: Account
+- belongs_to: User (as creator)
+- has_many: Card
+- has_many: Gift
+- has_many: GuestList
 
 ### tasks
 
-**Purpose**: Generic and holiday-specific tasks with priorities and assignments
-**Redux Source**: `tasksSlice.tasks[]` + holiday-specific task slices
-**Key Columns**:
+**Purpose**: Task management for holiday preparations
 
-- `id` (uuid, PK) - Task identifier
-- `holiday_id` (uuid, FK) - Associated holiday
-- `title` (text) - Task title
-- `description` (text, nullable) - Task description
-- `priority` (text) - Priority level ('low', 'medium', 'high')
-- `category` (text, nullable) - Task category
-- `is_completed` (boolean) - Completion status
-- `completed_date` (timestamptz, nullable) - When completed
-- `due_date` (date, nullable) - Due date
-- `assigned_to` (uuid, FK, nullable) - Assigned user
-- `created_by` (uuid, FK) - Task creator
-- `share_id` (uuid, FK, nullable) - Associated share for collaboration
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Comprehensive task system with priority, assignment, categories, and sharing support.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Holiday this task belongs to |
+| title | VARCHAR(191) | No | - | Task title |
+| description | TEXT | Yes | - | Task description |
+| priority | ENUM | No | 'low' | Task priority (low, medium, high) |
+| category | VARCHAR(191) | Yes | - | Task category |
+| isCompleted | BOOLEAN | No | false | Whether task is completed |
+| completedDate | DATETIME(3) | Yes | - | Completion timestamp |
+| dueDate | DATE | Yes | - | Task due date |
+| assignedTo | CHAR(36) | Yes | - | User assigned to this task |
+| createdBy | CHAR(36) | No | - | User who created this task |
+| shareId | CHAR(36) | Yes | - | Share context if shared |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- FK: `assigned_to` → `users(id)`
-- FK: `created_by` → `users(id)`
-- FK: `share_id` → `shares(id)`
-- Index: `(holiday_id)` for holiday's tasks
-- Index: `(assigned_to)` for user's assigned tasks
-- Index: `(is_completed)` for completion filtering
-- Index: `(due_date)` for date-based queries
-- Partial index: `(holiday_id) WHERE is_completed = false` for open tasks
+**Constraints**:
 
-**Why**: Tasks are the core planning entity, supporting both individual and collaborative task management with priorities and assignments.
+- Primary Key: `id`
+- Foreign Keys:
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `assignedTo` → `users(id)`
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+  - `shareId` → `shares(id)`
+- Indexes: `holidayId`, `assignedTo`, `isCompleted`, `dueDate`, `createdBy`, `shareId`
+
+**Relationships**:
+
+- belongs_to: Holiday
+- belongs_to: User (as assignee)
+- belongs_to: User (as creator)
+- belongs_to: Share
+- has_many: TaskAssignee
 
 ### task_assignees
 
-**Purpose**: Many-to-many relationship for task assignments
-**Redux Source**: Derived from task assignment patterns
-**Key Columns**:
+**Purpose**: Junction table for tasks assigned to multiple users
 
-- `task_id` (uuid, FK) - Task reference
-- `user_id` (uuid, FK) - User reference
-- `assigned_at` (timestamptz) - Assignment timestamp
-- `assigned_by` (uuid, FK) - Who made the assignment
+**Description**: Supports multiple assignees per task with assignment tracking.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| taskId | CHAR(36) | No | - | Foreign key to tasks table |
+| userId | CHAR(36) | No | - | Foreign key to users table |
+| assignedAt | DATETIME(3) | No | now() | Assignment timestamp |
+| assignedBy | CHAR(36) | No | - | User who made the assignment |
 
-- Composite PK: `(task_id, user_id)`
-- FK: `task_id` → `tasks(id)`
-- FK: `user_id` → `users(id)`
-- FK: `assigned_by` → `users(id)`
-- Index: `(user_id)` for user's assignments
+**Constraints**:
 
-**Why**: Supports multiple assignees per task for collaborative planning.
+- Primary Key: `(taskId, userId)`
+- Foreign Keys:
+  - `taskId` → `tasks(id)` ON DELETE CASCADE
+  - `userId` → `users(id)` ON DELETE CASCADE
+  - `assignedBy` → `users(id)` ON DELETE CASCADE
+- Indexes: `userId`, `assignedBy`
+
+**Relationships**:
+
+- belongs_to: Task
+- belongs_to: User (as assignee)
+- belongs_to: User (as assigner)
 
 ### gifts
 
-**Purpose**: Gift lists with recipients, prices, and purchase tracking
-**Redux Source**: `giftListSlice.gifts[]` + holiday-specific gift slices
-**Key Columns**:
+**Purpose**: Gift management and tracking
 
-- `id` (uuid, PK) - Gift identifier
-- `holiday_id` (uuid, FK) - Associated holiday
-- `contact_id` (uuid, FK, nullable) - Recipient contact
-- `name` (text) - Gift name
-- `description` (text, nullable) - Gift description
-- `price` (numeric(12,2)) - Estimated price
-- `actual_price` (numeric(12,2), nullable) - Actual purchase price
-- `store` (text, nullable) - Store name
-- `product_link` (text, nullable) - Product URL
-- `notes` (text, nullable) - Additional notes
-- `is_completed` (boolean) - Purchase status
-- `completed_date` (timestamptz, nullable) - When purchased
-- `created_by` (uuid, FK) - Gift creator
-- `share_id` (uuid, FK, nullable) - Associated share
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Comprehensive gift planning with pricing, stores, links, and completion tracking.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Holiday this gift belongs to |
+| contactId | CHAR(36) | Yes | - | Gift recipient from contacts |
+| name | VARCHAR(191) | No | - | Gift name/title |
+| description | TEXT | Yes | - | Gift description |
+| price | DECIMAL(12,2) | No | - | Expected/budget price |
+| actualPrice | DECIMAL(12,2) | Yes | - | Actual purchase price |
+| store | VARCHAR(191) | Yes | - | Store name |
+| productLink | TEXT | Yes | - | Direct link to product |
+| notes | TEXT | Yes | - | Additional notes |
+| isCompleted | BOOLEAN | No | false | Whether gift is purchased |
+| completedDate | DATETIME(3) | Yes | - | Purchase completion timestamp |
+| createdBy | CHAR(36) | No | - | User who created this gift |
+| shareId | CHAR(36) | Yes | - | Share context if shared |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- FK: `contact_id` → `contacts(id)`
-- FK: `created_by` → `users(id)`
-- FK: `share_id` → `shares(id)`
-- Index: `(holiday_id)` for holiday's gifts
-- Index: `(contact_id)` for recipient's gifts
-- Index: `(is_completed)` for completion filtering
-- Index: `(price)` for budget queries
+**Constraints**:
 
-**Why**: Gift tracking with price management and recipient association. Supports both individual and shared gift lists.
+- Primary Key: `id`
+- Foreign Keys:
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `contactId` → `contacts(id)`
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+  - `shareId` → `shares(id)`
+- Indexes: `holidayId`, `contactId`, `isCompleted`, `price`, `createdBy`, `shareId`
+
+**Relationships**:
+
+- belongs_to: Holiday
+- belongs_to: Contact
+- belongs_to: User (as creator)
+- belongs_to: Share
 
 ### cards
 
-**Purpose**: Greeting cards with recipients and sending status
-**Redux Source**: `cardsSlice.cards[]` + holiday-specific card slices
-**Key Columns**:
+**Purpose**: Holiday card management and tracking
 
-- `id` (uuid, PK) - Card identifier
-- `holiday_id` (uuid, FK) - Associated holiday
-- `contact_id` (uuid, FK, nullable) - Recipient contact
-- `recipient` (text) - Recipient name
-- `address` (text, nullable) - Mailing address
-- `message` (text) - Card message
-- `is_completed` (boolean) - Sent status
-- `sent_date` (timestamptz, nullable) - When sent
-- `created_by` (uuid, FK) - Card creator
-- `share_id` (uuid, FK, nullable) - Associated share
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Greeting card planning with recipient tracking and completion status.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Holiday this card belongs to |
+| contactId | CHAR(36) | Yes | - | Card recipient from contacts |
+| recipient | VARCHAR(191) | No | - | Recipient name |
+| address | TEXT | Yes | - | Mailing address |
+| message | TEXT | No | - | Card message content |
+| isCompleted | BOOLEAN | No | false | Whether card is sent |
+| sentDate | DATETIME(3) | Yes | - | Date card was sent |
+| createdBy | CHAR(36) | No | - | User who created this card |
+| shareId | CHAR(36) | Yes | - | Share context if shared |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- FK: `contact_id` → `contacts(id)`
-- FK: `created_by` → `users(id)`
-- FK: `share_id` → `shares(id)`
-- Index: `(holiday_id)` for holiday's cards
-- Index: `(contact_id)` for recipient's cards
-- Index: `(is_completed)` for sending status
+**Constraints**:
 
-**Why**: Card management with recipient tracking and sending status for holiday greetings.
+- Primary Key: `id`
+- Foreign Keys:
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `contactId` → `contacts(id)`
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+  - `shareId` → `shares(id)`
+- Indexes: `holidayId`, `contactId`, `isCompleted`, `createdBy`, `shareId`
+
+**Relationships**:
+
+- belongs_to: Holiday
+- belongs_to: Contact
+- belongs_to: User (as creator)
+- belongs_to: Share
 
 ### budgets
 
-**Purpose**: Budget tracking for holidays (Thanksgiving, Halloween)
-**Redux Source**: `thanksgivingBudgetSlice.budgets[]`, `halloweenBudgetSlice`
-**Key Columns**:
+**Purpose**: Budget tracking for holidays with spending limits and currency support
 
-- `id` (uuid, PK) - Budget identifier
-- `holiday_id` (uuid, FK) - Associated holiday
-- `name` (text) - Budget name
-- `total_budget` (numeric(12,2)) - Total budget amount
-- `spent_amount` (numeric(12,2)) - Amount spent
-- `remaining_amount` (numeric(12,2)) - Remaining budget
-- `currency` (text) - Currency code
-- `start_date` (date) - Budget start date
-- `end_date` (date) - Budget end date
-- `created_by` (uuid, FK) - Budget creator
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Comprehensive budget management for holiday planning with expense tracking.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Holiday this budget belongs to |
+| name | VARCHAR(191) | No | - | Budget name |
+| totalBudget | DECIMAL(12,2) | No | - | Total budget amount |
+| spentAmount | DECIMAL(12,2) | No | 0.00 | Amount spent |
+| remainingAmount | DECIMAL(12,2) | No | 0.00 | Remaining budget |
+| currency | VARCHAR(191) | No | - | Currency code |
+| startDate | DATE | No | - | Budget start date |
+| endDate | DATE | No | - | Budget end date |
+| createdBy | CHAR(36) | No | - | User who created budget |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- FK: `created_by` → `users(id)`
-- Index: `(holiday_id)` for holiday's budgets
-- Index: `(start_date, end_date)` for date range queries
+**Constraints**:
 
-**Why**: Budget tracking for holiday planning with spending limits and currency support.
+- Primary Key: `id`
+- Foreign Keys:
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+- Indexes: `holidayId`, `(startDate, endDate)`, `createdBy`
+
+**Relationships**:
+
+- belongs_to: Holiday
+- belongs_to: User (as creator)
+- has_many: BudgetTransaction
 
 ### budget_transactions
 
-**Purpose**: Individual budget line items and expenses
-**Redux Source**: `thanksgivingBudgetSlice.budgetItems[]`
-**Key Columns**:
+**Purpose**: Individual budget transactions and expenses
 
-- `id` (uuid, PK) - Transaction identifier
-- `budget_id` (uuid, FK) - Associated budget
-- `name` (text) - Transaction name
-- `description` (text, nullable) - Transaction description
-- `amount` (numeric(12,2)) - Transaction amount
-- `category` (text) - Expense category
-- `transaction_date` (date) - Transaction date
-- `is_expense` (boolean) - Whether this is an expense
-- `created_by` (uuid, FK) - Transaction creator
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Detailed expense tracking within budgets with categorization.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| budgetId | CHAR(36) | No | - | Budget this transaction belongs to |
+| name | VARCHAR(191) | No | - | Transaction name |
+| description | TEXT | Yes | - | Transaction description |
+| amount | DECIMAL(12,2) | No | - | Transaction amount |
+| category | VARCHAR(191) | No | - | Expense category |
+| transactionDate | DATE | No | - | Transaction date |
+| isExpense | BOOLEAN | No | true | Whether this is an expense |
+| createdBy | CHAR(36) | No | - | User who created transaction |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `budget_id` → `budgets(id)`
-- FK: `created_by` → `users(id)`
-- Index: `(budget_id)` for budget's transactions
-- Index: `(category)` for category filtering
-- Index: `(transaction_date)` for date-based queries
+**Constraints**:
 
-**Why**: Detailed budget tracking with categories and transaction history.
+- Primary Key: `id`
+- Foreign Keys:
+  - `budgetId` → `budgets(id)` ON DELETE CASCADE
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+- Indexes: `budgetId`, `category`, `transactionDate`, `createdBy`
+
+**Relationships**:
+
+- belongs_to: Budget
+- belongs_to: User (as creator)
 
 ### shares
 
-**Purpose**: Holiday sharing for multi-user collaboration
-**Redux Source**: `sharesSlice.shares[]` (HolidayShare interface)
-**Key Columns**:
+**Purpose**: Holiday sharing system for collaboration
 
-- `id` (uuid, PK) - Share identifier
-- `holiday_id` (uuid, FK) - Associated holiday
-- `owner_user_id` (uuid, FK) - Share owner
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Enables sharing holidays between users for collaborative planning.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Holiday being shared (unique) |
+| ownerUserId | CHAR(36) | No | - | Share owner |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- FK: `owner_user_id` → `users(id)`
-- Unique: `(holiday_id)` - One share per holiday
-- Index: `(owner_user_id)` for user's shares
+**Constraints**:
 
-**Why**: Enables holiday sharing and collaboration between users.
+- Primary Key: `id`
+- Unique Constraints: `holidayId`
+- Foreign Keys:
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `ownerUserId` → `users(id)` ON DELETE CASCADE
+- Indexes: `ownerUserId`
+
+**Relationships**:
+
+- belongs_to: Holiday
+- belongs_to: User (as owner)
+- has_many: ShareMember
+- has_many: Invite
+- has_many: Task
+- has_many: Gift
+- has_many: Card
 
 ### share_members
 
-**Purpose**: Many-to-many relationship for share membership
-**Redux Source**: `sharesSlice.HolidayShare.memberUserIds`
-**Key Columns**:
+**Purpose**: Junction table for share membership
 
-- `share_id` (uuid, FK) - Share reference
-- `user_id` (uuid, FK) - User reference
-- `joined_at` (timestamptz) - When user joined
-- `invited_by` (uuid, FK, nullable) - Who invited this user
+**Description**: Manages users who have access to shared holidays.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| shareId | CHAR(36) | No | - | Foreign key to shares table |
+| userId | CHAR(36) | No | - | Foreign key to users table |
+| joinedAt | DATETIME(3) | No | now() | When user joined share |
+| invitedBy | CHAR(36) | Yes | - | User who sent invitation |
 
-- Composite PK: `(share_id, user_id)`
-- FK: `share_id` → `shares(id)`
-- FK: `user_id` → `users(id)`
-- FK: `invited_by` → `users(id)`
-- Index: `(user_id)` for user's shares
-- Index: `(share_id)` for share members
+**Constraints**:
 
-**Why**: Tracks share membership and invitation history.
+- Primary Key: `(shareId, userId)`
+- Foreign Keys:
+  - `shareId` → `shares(id)` ON DELETE CASCADE
+  - `userId` → `users(id)` ON DELETE CASCADE
+  - `invitedBy` → `users(id)`
+- Indexes: `userId`, `shareId`, `invitedBy`
+
+**Relationships**:
+
+- belongs_to: Share
+- belongs_to: User (as member)
+- belongs_to: User (as inviter)
 
 ### invites
 
 **Purpose**: Invitation system for holiday sharing
-**Redux Source**: `invitesSlice.invites[]` (Invite interface)
-**Key Columns**:
 
-- `id` (uuid, PK) - Invite identifier
-- `share_id` (uuid, FK) - Associated share
-- `from_user_id` (uuid, FK) - Invitation sender
-- `to_user_id` (uuid, FK, nullable) - Invited user (if registered)
-- `to_email` (text, nullable) - Invited email (if not registered)
-- `holiday_key` (text) - Holiday type for context
-- `status` (text) - Invite status ('pending', 'accepted', 'declined', 'expired')
-- `message` (text, nullable) - Invitation message
-- `responded_at` (timestamptz, nullable) - Response timestamp
-- `created_at` (timestamptz) - Creation timestamp
+**Description**: Manages invitations to shared holidays with status tracking.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| shareId | CHAR(36) | No | - | Share being invited to |
+| fromUserId | CHAR(36) | No | - | User sending invitation |
+| toUserId | CHAR(36) | Yes | - | Invited user (if registered) |
+| toEmail | VARCHAR(191) | Yes | - | Invited email (if not registered) |
+| holidayKey | VARCHAR(191) | No | - | Holiday type for context |
+| status | ENUM | No | - | Invitation status (pending, accepted, declined, expired) |
+| message | TEXT | Yes | - | Optional invitation message |
+| respondedAt | DATETIME(3) | Yes | - | Response timestamp |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| senderDismissedAt | DATETIME(3) | Yes | - | When sender dismissed notification |
 
-- PK: `id`
-- FK: `share_id` → `shares(id)`
-- FK: `from_user_id` → `users(id)`
-- FK: `to_user_id` → `users(id)`
-- Index: `(to_email)` for email-based invites
-- Index: `(status)` for status filtering
-- Index: `(share_id)` for share's invites
+**Constraints**:
 
-**Why**: Invitation system supports both registered and unregistered users for holiday sharing.
+- Primary Key: `id`
+- Foreign Keys:
+  - `shareId` → `shares(id)` ON DELETE CASCADE
+  - `fromUserId` → `users(id)` ON DELETE CASCADE
+  - `toUserId` → `users(id)`
+- Indexes: `toEmail`, `status`, `shareId`, `fromUserId`, `toUserId`
+
+**Relationships**:
+
+- belongs_to: Share
+- belongs_to: User (as sender)
+- belongs_to: User (as receiver)
 
 ### kwanzaa_principles
 
-**Purpose**: Special daily principle tracking for Kwanzaa
-**Redux Source**: `kwanzaaTasksSlice` with "Daily Principles" category
-**Key Columns**:
+**Purpose**: Special daily principle tracking for Kwanzaa celebrations
 
-- `id` (uuid, PK) - Principle identifier
-- `holiday_id` (uuid, FK) - Associated Kwanzaa holiday
-- `day_number` (integer) - Day of Kwanzaa (1-7)
-- `name` (text) - Principle name
-- `description` (text, nullable) - Principle description
-- `is_completed` (boolean) - Completion status
-- `completed_at` (timestamptz, nullable) - When completed
-- `notes` (text, nullable) - Additional notes
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Tracks completion of the seven principles of Kwanzaa, one per day.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Kwanzaa holiday this belongs to |
+| dayNumber | INT | No | - | Day of Kwanzaa (1-7) |
+| name | VARCHAR(191) | No | - | Principle name |
+| description | TEXT | Yes | - | Principle description |
+| isCompleted | BOOLEAN | No | false | Whether principle is completed |
+| completedAt | DATETIME(3) | Yes | - | Completion timestamp |
+| notes | TEXT | Yes | - | Additional notes |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- Unique: `(holiday_id, day_number)` - One principle per day per holiday
-- Index: `(is_completed)` for completion filtering
+**Constraints**:
 
-**Why**: Specialized tracking for Kwanzaa's seven principles, one per day.
+- Primary Key: `id`
+- Unique Constraints: `(holidayId, dayNumber)`
+- Foreign Keys: `holidayId` → `holidays(id)` ON DELETE CASCADE
+- Indexes: `isCompleted`
+
+**Relationships**:
+
+- belongs_to: Holiday
 
 ### guest_lists
 
-**Purpose**: Guest lists for events and parties
-**Redux Source**: Holiday-specific guest list slices (birthday, graduation, etc.)
-**Key Columns**:
+**Purpose**: Guest management for events and parties
 
-- `id` (uuid, PK) - Guest list identifier
-- `holiday_id` (uuid, FK) - Associated holiday
-- `contact_id` (uuid, FK) - Guest contact
-- `rsvp_status` (text, nullable) - RSVP status ('pending', 'confirmed', 'declined')
-- `rsvp_date` (timestamptz, nullable) - When RSVP was received
-- `notes` (text, nullable) - Guest-specific notes
-- `created_by` (uuid, FK) - List creator
-- `created_at` (timestamptz) - Creation timestamp
-- `updated_at` (timestamptz) - Last update
+**Description**: Tracks guests and RSVP status for holiday events.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| holidayId | CHAR(36) | No | - | Holiday this guest list belongs to |
+| contactId | CHAR(36) | No | - | Guest contact |
+| rsvpStatus | ENUM | Yes | - | RSVP status (pending, confirmed, declined, maybe) |
+| rsvpDate | DATETIME(3) | Yes | - | When RSVP was received |
+| notes | TEXT | Yes | - | Guest-specific notes |
+| createdBy | CHAR(36) | No | - | User who created entry |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
 
-- PK: `id`
-- FK: `holiday_id` → `holidays(id)`
-- FK: `contact_id` → `contacts(id)`
-- FK: `created_by` → `users(id)`
-- Unique: `(holiday_id, contact_id)` - One entry per guest per holiday
-- Index: `(rsvp_status)` for status filtering
+**Constraints**:
 
-**Why**: Guest list management with RSVP tracking for events and parties.
+- Primary Key: `id`
+- Unique Constraints: `(holidayId, contactId)`
+- Foreign Keys:
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `contactId` → `contacts(id)` ON DELETE CASCADE
+  - `createdBy` → `users(id)` ON DELETE CASCADE
+- Indexes: `rsvpStatus`, `contactId`, `createdBy`
+
+**Relationships**:
+
+- belongs_to: Holiday
+- belongs_to: Contact
+- belongs_to: User (as creator)
 
 ### audit_log
 
-**Purpose**: Activity tracking for debugging and compliance
-**Redux Source**: Not in Redux, but recommended for production
-**Key Columns**:
+**Purpose**: Comprehensive audit logging for security and debugging
 
-- `id` (uuid, PK) - Log entry identifier
-- `account_id` (uuid, FK) - Associated account
-- `user_id` (uuid, FK, nullable) - User who performed action
-- `action` (text) - Action performed
-- `entity_type` (text) - Type of entity affected
-- `entity_id` (uuid, nullable) - ID of affected entity
-- `details` (jsonb, nullable) - Additional action details
-- `ip_address` (inet, nullable) - User's IP address
-- `user_agent` (text, nullable) - User's browser/device
-- `created_at` (timestamptz) - Action timestamp
+**Description**: Tracks all user actions and system events for accountability and troubleshooting.
 
-**Keys/Indexes**:
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| accountId | CHAR(36) | No | - | Account context |
+| userId | CHAR(36) | Yes | - | User who performed action |
+| action | VARCHAR(191) | No | - | Action performed |
+| entityType | VARCHAR(191) | No | - | Type of entity affected |
+| entityId | CHAR(36) | Yes | - | ID of affected entity |
+| details | JSON | Yes | - | Additional action details |
+| ipAddress | VARCHAR(191) | Yes | - | User IP address |
+| userAgent | TEXT | Yes | - | User agent string |
+| createdAt | DATETIME(3) | No | now() | Action timestamp |
 
-- PK: `id`
-- FK: `account_id` → `accounts(id)`
-- FK: `user_id` → `users(id)`
-- Index: `(account_id, created_at)` for account activity
-- Index: `(user_id, created_at)` for user activity
-- Index: `(entity_type, entity_id)` for entity history
-- Index: `(created_at)` for time-based queries
+**Constraints**:
 
-**Why**: Audit trail for security, debugging, and compliance requirements.
+- Primary Key: `id`
+- Foreign Keys:
+  - `accountId` → `accounts(id)` ON DELETE CASCADE
+  - `userId` → `users(id)`
+- Indexes: `(accountId, createdAt)`, `(userId, createdAt)`, `(entityType, entityId)`, `createdAt`
 
-## Enums and Constraints
+**Relationships**:
 
-### Task Priority
+- belongs_to: Account
+- belongs_to: User
 
-```sql
-CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
-```
+---
 
-### Task Status
+## Enums
 
-```sql
-CREATE TYPE task_status AS ENUM ('pending', 'in_progress', 'completed', 'cancelled');
-```
+### TaskPriority
 
-### RSVP Status
+- `low`
+- `medium`
+- `high`
 
-```sql
-CREATE TYPE rsvp_status AS ENUM ('pending', 'confirmed', 'declined', 'maybe');
-```
+### InviteStatus
 
-### Invite Status
+- `pending`
+- `accepted`
+- `declined`
+- `expired`
 
-```sql
-CREATE TYPE invite_status AS ENUM ('pending', 'accepted', 'declined', 'expired');
-```
+### RSVPStatus
 
-### Member Role
+- `pending`
+- `confirmed`
+- `declined`
+- `maybe`
 
-```sql
-CREATE TYPE member_role AS ENUM ('owner', 'admin', 'member');
-```
+### MemberRole
 
-## Denormalizations
+- `owner`
+- `admin`
+- `member`
 
-1. **Budget amounts in budgets table**: `spent_amount` and `remaining_amount` are calculated from `budget_transactions` but stored for performance.
+### SubscriptionPlan
 
-2. **Task completion dates**: `completed_date` is denormalized from the completion action for quick queries.
+- `free`
+- `plus`
 
-3. **Share member counts**: Could be calculated but may be cached for performance in high-traffic scenarios.
+---
 
-## Notes
+## Schema Summary
 
-- All tables use UUID primary keys with `gen_random_uuid()` for security
-- Timestamps use `timestamptz` for timezone awareness
-- Money fields use `numeric(12,2)` for precision
-- Foreign keys include `ON DELETE CASCADE` where child records shouldn't outlive parents
-- Indexes are optimized for common query patterns from the Redux selectors
-- The schema supports both individual and collaborative holiday planning
-- Auth0 integration is handled through the `auth0_sub` field in users table
+### Architecture Highlights
+
+**Multi-Tenant Design**: All data is scoped to accounts, enabling secure multi-family usage
+
+**Comprehensive Holiday Support**: Supports 15+ holiday types with extensible custom holidays
+
+**Advanced Collaboration**: Holiday sharing with invitation system and role management
+
+**Complete Planning Suite**: Tasks, gifts, cards, budgets, and guest lists with full tracking
+
+**Subscription Management**: Built-in support for free and premium tiers
+
+**User Experience**: Theme preferences, display modes, and accessibility features
+
+**Security & Auditing**: Comprehensive audit logging and secure UUID identifiers
+
+**Performance Optimized**: Strategic indexing and efficient relationship design
+
+### Key Features
+
+- **Auth0 Integration**: Secure OAuth with profile management
+- **Real-time Collaboration**: Share holidays with family and friends
+- **Budget Tracking**: Comprehensive expense management with categories
+- **Contact Management**: Centralized address book for all planning needs
+- **Task Management**: Priority-based task system with assignments
+- **Progress Tracking**: Completion status across all planning entities
+- **Accessibility**: Full theme and preference customization
+- **Audit Trail**: Complete action logging for security and debugging

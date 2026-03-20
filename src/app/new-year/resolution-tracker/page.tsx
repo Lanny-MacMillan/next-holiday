@@ -1,26 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
@@ -29,78 +25,61 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
 export default function NewYearResolutionTrackerPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { holidayId, auth0User } = useFormModalMutation();
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  // Enhanced Compatibility Layer
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
 
-  // Name resolution helper functions
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
+  // Use standardized mutation hooks for task operations
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
-
-  // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'new-year'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
+
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Redux data access - resolutions are stored as tasks with category "Resolutions"
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
+  const resolutions = useMemo(
+    () =>
+      holidayData?.tasks?.filter((task: any) => task.category === 'Resolutions') ||
+      [],
+    [holidayData?.tasks],
   );
-  const resolutions =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Resolutions') || [];
   const isLoading = !homeInitialized;
   const error = null;
-
-  // Debug logging to understand the state
-  console.log('New Year Resolutions Debug:', {
-    holidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    resolutionTasks: resolutions.length,
-    resolutions: resolutions.map(r => ({
-      id: r.id,
-      title: r.title,
-      category: r.category,
-      isCompleted: r.isCompleted,
-    })),
-  });
-
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   // State management
   const [showAddModal, setShowAddModal] = useState(false);
@@ -108,10 +87,6 @@ export default function NewYearResolutionTrackerPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -125,242 +100,102 @@ export default function NewYearResolutionTrackerPage() {
     }
   }, [resolutions, homeInitialized]);
 
-  // CRUD Operations
-  async function handleAddResolution(values: Record<string, any>) {
-    if (!values.title?.trim()) return;
-    if (!holidayId || !auth0User) return;
-
-    setIsSubmitting(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Resolutions',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
+  const handleAddResolution = async (values: Record<string, any>) => {
+    if (!values.title?.trim() || !holidayId) return;
 
     try {
-      // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-      // CRITICAL: Map camelCase to snake_case for API
-      const apiPayload = {
+      const newTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined, // snake_case for API
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
         category: 'Resolutions',
-        due_date: values.dueDate || undefined, // snake_case for API
+        dueDate: values.dueDate || undefined,
         isCompleted: false,
+        holidayId: holidayId,
       };
 
-      console.log('🐛 [NewYearResolutionsAdd] API payload:', apiPayload);
+      // Use the standardized hook function
+      await createTask(newTask);
 
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-        body: JSON.stringify(apiPayload), // Use mapped payload
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-
-        // CRITICAL: Refresh home data for proper UI updates
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }),
-        );
-        console.error('Failed to add task:', response.status, response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowAddModal(false);
     } catch (error) {
-      // Remove optimistic update on error
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Failed to add task:', error);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error creating resolution:', error);
     }
-  }
+  };
 
-  async function handleEditResolution(task: any) {
-    if (!holidayId || !auth0User) return;
-
+  const handleEditResolution = (task: any) => {
     setEditingTask(task);
     setShowEditModal(true);
-  }
+  };
 
-  async function handleEditSubmit(values: Record<string, any>) {
-    if (!editingTask || !holidayId || !auth0User) return;
+  const handleEditSubmit = async (values: Record<string, any>) => {
+    if (!editingTask || !holidayId) return;
 
-    setIsEditSubmitting(true);
     try {
-      // CRITICAL: Map camelCase to snake_case for API
-      const apiPayload = {
+      const updates = {
         title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined, // snake_case for API
+        description: values.description,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
         category: 'Resolutions',
-        due_date: values.dueDate || undefined, // snake_case for API
+        dueDate: values.dueDate,
       };
 
-      console.log('🐛 [NewYearResolutionsEdit] API payload:', apiPayload);
+      await updateTask(editingTask.id, updates);
 
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: editingTask.id,
-            updates: result,
-          }),
-        );
-
-        setShowEditModal(false);
-        setEditingTask(null);
-        await refreshHomeData();
-      } else {
-        console.error(
-          'Failed to update task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      setShowEditModal(false);
+      setEditingTask(null);
     } catch (error) {
-      console.error('Failed to update task:', error);
-    } finally {
-      setIsEditSubmitting(false);
+      console.error('Error updating resolution:', error);
     }
-  }
+  };
 
-  async function handleDelete(taskId: string) {
-    if (!holidayId || !auth0User) return;
-
+  const handleDelete = async (taskId: string) => {
     // Find the task to get its title for confirmation
     const taskToDelete = resolutions.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
+    if (!taskToDelete || !holidayId) return;
 
     if (window.confirm(`Are you sure you want to delete "${taskToDelete.title}"?`)) {
-      setIsDeleting(true);
       try {
-        const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-        });
+        // Use the standardized hook function
+        await deleteTask(taskId);
 
-        if (response.ok) {
-          dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
-          await refreshHomeData();
-        } else {
-          console.error(
-            'Failed to delete task:',
-            response.status,
-            response.statusText,
-          );
-        }
+        // Refresh home data to update progress on main holiday page
+        await refreshHomeData(auth0User, holidayId);
       } catch (error) {
-        console.error('Failed to delete task:', error);
-      } finally {
-        setIsDeleting(false);
+        console.error('Error deleting resolution:', error);
       }
     }
-  }
+  };
 
-  async function handleToggleCompletion(taskId: string) {
-    if (!holidayId || !auth0User) return;
+  const handleToggleCompletion = async (taskId: string) => {
+    // Find the current task to get its completion status
+    const currentTask = resolutions.find((task: any) => task.id === taskId);
+    if (!currentTask || !holidayId) {
+      console.error('Task not found or no holiday ID:', taskId, holidayId);
+      return;
+    }
 
-    setIsToggling(true);
+    const newCompletionStatus = !currentTask.isCompleted;
+
     try {
-      // Find the current task to get its completion status
-      const currentTask = resolutions.find((task: any) => task.id === taskId);
-      if (!currentTask) {
-        console.error('Task not found:', taskId);
-        return;
-      }
+      // Use the standardized hook function
+      await updateTask(taskId, { isCompleted: newCompletionStatus });
 
-      // Toggle the completion status
-      const newCompletionStatus = !currentTask.isCompleted;
-
-      // Optimistically update the Redux home data
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: taskId,
-          updates: { isCompleted: newCompletionStatus },
-        }),
-      );
-
-      // Call API directly
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-        body: JSON.stringify({ isCompleted: newCompletionStatus }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId,
-            updates: result,
-          }),
-        );
-        await refreshHomeData();
-      } else {
-        // Revert optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId,
-            updates: { isCompleted: currentTask.isCompleted },
-          }),
-        );
-        console.error(
-          'Failed to toggle task completion:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      console.error('Failed to toggle task completion:', error);
-    } finally {
-      setIsToggling(false);
+      console.error('Error toggling resolution:', error);
     }
-  }
+  };
 
   const openAddForm = () => {
     setEditingTask(null);
@@ -399,15 +234,13 @@ export default function NewYearResolutionTrackerPage() {
     return sorted;
   };
 
-  const sortedResolutions = getSortedResolutions().map(transformTaskWithAssignment);
+  const sortedResolutions = getSortedResolutions();
   const incompleteResolutions = sortedResolutions.filter(
     (task: any) => !task.isCompleted,
   );
   const completedResolutions = sortedResolutions.filter(
     (task: any) => task.isCompleted,
   );
-
-  // Form fields configuration removed - now using Enhanced Compatibility Layer
 
   return (
     <div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -422,13 +255,13 @@ export default function NewYearResolutionTrackerPage() {
       />
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
-        {' '}
         <AddButton
           title="Resolution"
           onClick={openAddForm}
           color="orange"
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || createLoading}
         />
+
         {/* Task Sections */}
         <TaskSection
           title="Pending Resolutions"
@@ -495,7 +328,7 @@ export default function NewYearResolutionTrackerPage() {
         title="Add New Resolution"
         fields={
           getFormConfigEnhanced('tasks', 'add', {
-            holidayKey: 'new-year',
+            holidayKey: 'new-year' as any,
             shareMembers: shareMembers,
             auth0User: auth0User,
           }).fields
@@ -503,8 +336,8 @@ export default function NewYearResolutionTrackerPage() {
         initialValues={{}}
         onSubmit={handleAddResolution}
         onClose={closeForm}
-        loading={isSubmitting}
-        submitText={isSubmitting ? 'Processing...' : 'Add Resolution'}
+        loading={createLoading}
+        submitText={createLoading ? 'Adding...' : 'Add Resolution'}
         cancelText="Cancel"
         cardClassName="card-events-new-year"
       />
@@ -515,7 +348,7 @@ export default function NewYearResolutionTrackerPage() {
         title="Edit Resolution"
         fields={
           getFormConfigEnhanced('tasks', 'edit', {
-            holidayKey: 'new-year',
+            holidayKey: 'new-year' as any,
             shareMembers: shareMembers,
             auth0User: auth0User,
           }).fields
@@ -524,23 +357,20 @@ export default function NewYearResolutionTrackerPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assigned_to: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate ? editingTask.dueDate.split('T')[0] : '', // CRITICAL: Format date for input
+          assignedTo: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate ? editingTask.dueDate.split('T')[0] : '',
         }}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setEditingTask(null);
         }}
-        loading={isEditSubmitting}
-        submitText={isEditSubmitting ? 'Processing...' : 'Update Resolution'}
+        loading={updateLoading}
+        submitText={updateLoading ? 'Updating...' : 'Update Resolution'}
         cancelText="Cancel"
         cardClassName="card-events-new-year"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

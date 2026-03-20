@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
@@ -10,12 +12,6 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -78,12 +74,22 @@ const defaultKwanzaaPrinciples = [
 
 export default function DailyPrinciplesPage() {
   const dispatch = useAppDispatch();
-  const { holidayId, auth0User } = useFormModalMutation();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  // Use standardized mutation hooks for task operations
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -97,40 +103,11 @@ export default function DailyPrinciplesPage() {
   const shareMembers = shareData?.members || [];
 
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
-  );
   const displayTasks =
     holidayData?.tasks?.filter(
       (task: any) => task.category === 'Daily Principles',
     ) || [];
   const isLoading = !homeInitialized;
-  const error = null;
-
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   // State management
   const [showFormModal, setShowFormModal] = useState(false);
@@ -139,10 +116,6 @@ export default function DailyPrinciplesPage() {
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check if default principles exist
   useEffect(() => {
@@ -154,119 +127,49 @@ export default function DailyPrinciplesPage() {
   const handleToggleTask = async (taskId: string) => {
     if (!holidayId || !auth0User) return;
 
-    setIsToggling(true);
+    const principle = displayTasks.find((t: any) => t.id === taskId);
+    if (!principle) return;
+
     try {
-      const currentTask = displayTasks.find((task: any) => task.id === taskId);
-      if (!currentTask) {
-        console.error('Task not found:', taskId);
-        return;
-      }
+      const result = await updateTask(taskId, {
+        isCompleted: !principle.isCompleted,
+      });
 
-      const newCompletionStatus = !currentTask.isCompleted;
-
-      // Optimistically update Redux state
+      // Update Redux state
       dispatch(
         updateTaskInHomeData({
           holidayId: holidayId,
           taskId: taskId,
-          updates: { isCompleted: newCompletionStatus },
+          updates: { isCompleted: !principle.isCompleted },
         }),
       );
 
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newCompletionStatus,
-        }),
-      });
-
-      if (!response.ok) {
-        // Revert optimistic update on error
-        const currentTask = displayTasks.find((task: any) => task.id === taskId);
-        if (currentTask) {
-          dispatch(
-            updateTaskInHomeData({
-              holidayId: holidayId,
-              taskId: taskId,
-              updates: { isCompleted: currentTask.isCompleted },
-            }),
-          );
-        }
-        console.error(
-          'Failed to toggle task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      console.error('Failed to toggle task:', error);
-    } finally {
-      setIsToggling(false);
+      console.error('Error toggling principle:', error);
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     if (!holidayId || !auth0User) return;
 
-    // Find the task to delete for potential rollback
-    const taskToDelete = displayTasks.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
-
-    setIsDeleting(true);
     try {
-      // Optimistically update Redux state first
+      await deleteTask(taskId);
+
+      // Remove from Redux state on success
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
 
-      // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${holidayId}/tasks/${taskId}`;
-      console.log('Delete API URL:', apiUrl); // Debug logging
-      console.log('Daily Principles before delete:', displayTasks.length);
-      const response = await fetch(apiUrl, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
-      if (!response.ok) {
-        // If API failed, revert the optimistic update
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
-        console.error(
-          'Failed to delete task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        console.log('Task deleted successfully');
-        // Check if this was the last task and re-show default principles prompt
-        const remainingTasks = displayTasks.filter(c => c.id !== taskId);
-        console.log('Daily Principles after delete:', remainingTasks.length);
-        if (remainingTasks.length === 0) {
-          console.log('No tasks remaining, showing default principles prompt');
-          setShowDefaultPrinciples(true);
-        }
+      // Check if this was the last task and re-show default principles prompt
+      const remainingTasks = displayTasks.filter((c: any) => c.id !== taskId);
+      if (remainingTasks.length === 0) {
+        setShowDefaultPrinciples(true);
       }
     } catch (error) {
-      // If API failed, revert the optimistic update
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
-      console.error('Failed to delete task:', error);
-    } finally {
-      setIsDeleting(false);
+      console.error('Error deleting principle:', error);
     }
   };
 
@@ -274,87 +177,33 @@ export default function DailyPrinciplesPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Daily Principles',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
-
     try {
-      // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-      // API call with snake_case mapping
-      const apiPayload = {
+      const result = await createTask({
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined,
         category: 'Daily Principles',
-        due_date: values.dueDate || undefined, // snake_case for API
-        isCompleted: false,
-      };
-
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify(apiPayload),
+        dueDate: values.dueDate || undefined,
       });
 
-      if (response.ok) {
-        // Replace temporary task with real task from API
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+      // Update Redux state immediately
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
-        // CRITICAL: Refresh home data for proper UI updates
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error('Failed to add task:', response.status, response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
       setShowFormModal(false);
     } catch (error) {
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Failed to add task:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error creating principle:', error);
     }
   }
 
   async function addDefaultPrinciples() {
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
     try {
-      // Add default principles one at a time with refreshHomeData after each
+      // Add default principles one at a time
       for (let i = 0; i < defaultKwanzaaPrinciples.length; i++) {
         const principle = defaultKwanzaaPrinciples[i];
 
@@ -362,127 +211,55 @@ export default function DailyPrinciplesPage() {
           `Adding principle ${i + 1}/${defaultKwanzaaPrinciples.length}: ${principle.name}`,
         );
 
-        try {
-          const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            },
-            body: JSON.stringify({
-              title: principle.name,
-              description: principle.description,
-              priority: principle.priority,
-              category: 'Daily Principles',
-              isCompleted: false,
-            }),
-          });
+        const result = await createTask({
+          title: principle.name,
+          description: principle.description,
+          priority: principle.priority,
+          category: 'Daily Principles',
+        });
 
-          if (response.ok) {
-            const result = await response.json();
-            console.log(`✅ Added principle ${i + 1}: ${result.title}`);
-
-            // Add to Redux
-            dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-
-            // Refresh home data after each principle to ensure consistency
-            await refreshHomeData();
-          } else {
-            console.error(
-              `❌ Failed to add principle ${i + 1}:`,
-              response.status,
-              response.statusText,
-            );
-          }
-        } catch (taskError) {
-          console.error(`❌ Error adding principle ${i + 1}:`, taskError);
-        }
+        // Update Redux state immediately
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
       }
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       console.log('✅ All default principles added successfully');
       setShowDefaultPrinciples(false);
     } catch (error) {
       console.error('Failed to add default principles:', error);
-    } finally {
-      setIsAdding(false);
     }
   }
 
   async function handleEditTask(values: Record<string, any>) {
     if (!selectedTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
     try {
-      // Optimistically update Redux state
+      const result = await updateTask(selectedTask.id, {
+        title: values.title,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assigned_to || undefined,
+        dueDate: values.dueDate || undefined,
+      });
+
+      // Update Redux state
       dispatch(
         updateTaskInHomeData({
           holidayId: holidayId,
           taskId: selectedTask.id,
-          updates: {
-            title: values.title,
-            description: values.description || undefined,
-            priority: values.priority,
-            assignedTo: values.assignedTo || undefined, // camelCase for Redux
-            dueDate: values.dueDate || undefined, // camelCase for Redux
-          },
+          updates: result,
         }),
       );
 
-      // API call with snake_case mapping
-      const apiPayload = {
-        title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
-        due_date: values.dueDate || undefined, // snake_case for API
-      };
-
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${selectedTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
-
-      if (!response.ok) {
-        // Revert optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: selectedTask.id,
-            updates: {
-              title: selectedTask.title,
-              description: selectedTask.description,
-              priority: selectedTask.priority,
-              assignedTo: selectedTask.assignedTo,
-              category: selectedTask.category,
-              dueDate: selectedTask.dueDate,
-            },
-          }),
-        );
-        console.error(
-          'Failed to update task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setSelectedTask(null);
       setShowFormModal(false);
     } catch (error) {
-      console.error('Failed to update task:', error);
-    } finally {
-      setIsUpdating(false);
+      console.error('Error updating principle:', error);
     }
   }
 
@@ -527,8 +304,6 @@ export default function DailyPrinciplesPage() {
         return tasksToSort;
     }
   }
-
-  const loading = isAdding || isUpdating || isDeleting || isToggling;
 
   // Show loading only if home data is not initialized
   if (isLoading) {
@@ -673,8 +448,16 @@ export default function DailyPrinciplesPage() {
         }
         onSubmit={selectedTask ? handleEditTask : handleAddTask}
         onClose={closeForm}
-        loading={loading}
-        submitText={selectedTask ? 'Update Principle' : 'Add Principle'}
+        loading={selectedTask ? updateLoading : createLoading}
+        submitText={
+          selectedTask
+            ? updateLoading
+              ? 'Updating...'
+              : 'Update Principle'
+            : createLoading
+              ? 'Adding...'
+              : 'Add Principle'
+        }
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"

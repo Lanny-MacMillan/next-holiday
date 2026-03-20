@@ -1,203 +1,231 @@
 # Next Holiday 🎄
 
-A comprehensive holiday planning application built with Next.js, React, and Redux Toolkit. Plan, organize, and track all your holiday celebrations in one beautiful, gamified interface.
+A comprehensive, database-backed holiday planning platform built with Next.js, MySQL, and modern web technologies. Create, organize, and collaborate on holiday celebrations with your family and friends through a beautiful, multi-tenant architecture.
 
-## 🌟 Features
+## 🌟 Overview
 
-### 🎯 Core Functionality
+Next Holiday is a full-stack holiday planning application that transforms the chaos of holiday preparation into an organized, collaborative experience. Built on a robust MySQL database with Prisma ORM, the platform supports multi-user collaboration through a sophisticated account and sharing system.
 
-- **Multi-Holiday Support**: Plan for 15+ different holidays and celebrations
-- **Gamified UI**: Toggle between professional and gamified display modes
-- **Dark/Light Theme**: Full theme customization with smooth transitions
-- **Progress Tracking**: Visual progress indicators for all holiday preparations
-- **Countdown Timers**: Real-time countdown to upcoming holidays
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+### Key Capabilities
 
-### 🔐 Authentication & User Management
+- **Multi-Tenant Architecture**: Account-based organization for families and households
+- **Database-Backed Persistence**: MySQL database with 18+ tables for reliable data storage
+- **Real-Time Collaboration**: Share holidays with family members and friends
+- **15+ Holiday Types**: Comprehensive support from Christmas to Baby Showers
+- **Professional & Gamified UI**: Toggle between business-like and colorful interfaces
+- **Progressive Web App**: Works seamlessly across desktop, tablet, and mobile
 
-- **Auth0 Integration**: Secure OAuth authentication with multiple providers
-- **User Profiles**: Customizable profile pictures, names, and email addresses
-- **Settings Management**: Comprehensive user preferences and holiday selections
-- **Data Persistence**: Redux Persist for maintaining user data across sessions
+## 🚀 Features
 
-### 🎁 Gift Management
+### 🏠 Multi-Tenant Account System
 
-- **Gift Lists**: Create and manage gift lists for each holiday
-- **Budget Tracking**: Set and monitor individual holiday budgets
-- **Recipient Management**: Link gifts to contacts from your address book
-- **Store Information**: Track where gifts are purchased
-- **Product Links**: Store direct links to gift items
-- **Completion Tracking**: Mark gifts as purchased/wrapped/delivered
-- **Sorting Options**: Sort by recipient, store, price (high/low)
+- **Household Accounts**: Create family or friend group accounts for shared planning
+- **Member Management**: Add users to accounts with role-based permissions
+- **Account Ownership**: Primary account owners can manage members and settings
+- **Data Isolation**: Secure multi-tenant data separation with row-level security
 
-### 📝 Task Management
+### 🤝 Holiday Sharing & Collaboration
 
-- **To-Do Lists**: Create detailed task lists for each holiday
-- **Priority Levels**: Set high, medium, or low priority for tasks
-- **Due Dates**: Assign deadlines to tasks
-- **Categories**: Organize tasks by category
-- **Assignment**: Assign tasks to specific people
-- **Progress Tracking**: Visual completion status
-- **Sorting**: Sort by priority, due date, assigned person, or category
+- **Share Holidays**: Share specific holidays with other users for collaborative planning
+- **Invitation System**: Send invitations via email with status tracking
+- **Member Roles**: Manage who can edit, view, and invite others to shared holidays
+- **Real-Time Updates**: Changes sync across all collaborative members instantly
 
-### 📧 Card Management
+### 🎁 Comprehensive Holiday Planning
 
-- **Greeting Cards**: Track holiday cards for each celebration
-- **Recipient Lists**: Manage who receives cards
-- **Address Storage**: Store mailing addresses
-- **Personal Messages**: Add custom messages to each card
-- **Completion Status**: Track which cards have been sent
-- **Sorting**: Sort by recipient, address, message, or creation date
+#### Supported Holidays
 
-### 👥 Address Book
+- **Traditional**: Christmas, Easter, Thanksgiving, Halloween, New Year
+- **Cultural**: Hanukkah, Kwanzaa
+- **Personal**: Birthday, Anniversary, Graduation, Baby Shower
+- **Seasonal**: Valentine's Day, Mother's Day, Father's Day, Fourth of July
 
-- **Contact Management**: Comprehensive contact database
-- **Relationship Categories**: Organize contacts by relationship type
-- **Address Storage**: Complete address information with US state support
-- **Contact Details**: Phone, email, and additional notes
-- **Sorting Options**: Sort alphabetically, by relationship, or location
-- **Search & Filter**: Easy contact lookup and organization
+#### Planning Features
 
-### 🎉 Holiday-Specific Features
+- **Gift Lists**: Track recipients, budgets, stores, and purchase status
+- **Task Management**: Organize preparation tasks with priorities and due dates
+- **Card Management**: Manage greeting cards with addresses and messages
+- **Budget Tracking**: Set budgets and track spending with detailed transactions
+- **Contact Integration**: Address book with full contact management
+- **Progress Tracking**: Visual completion indicators for all activities
 
-#### Christmas
+### 🔐 Authentication & Security
 
-- Gift lists with budget tracking
-- Holiday card management
-- Task organization
-- Address book integration
-- Countdown timer
+- **Auth0 Integration**: Secure OAuth authentication with social login support
+- **User Sync**: Automatic user creation and profile management
+- **Session Management**: Secure session handling with automatic token refresh
+- **Multi-Factor Authentication**: Support for MFA through Auth0
+- **Data Encryption**: SSL/TLS for data in transit, encrypted storage at rest
 
-#### Hanukkah
+### 🎨 User Experience
 
-- Gift planning for 8 nights
-- Candle lighting schedule
-- Traditional gift categories
-- Progress tracking
+- **Display Modes**: Toggle between Professional and Gamified interfaces
+- **Theme Support**: Full dark/light theme with smooth transitions
+- **Holiday Themes**: Each holiday has custom color schemes and styling
+- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+- **Accessibility**: Keyboard navigation and screen reader support
+- **Loading States**: Smooth animations and progress indicators
 
-#### Kwanzaa
+### 📊 Advanced Features
 
-- Daily principles tracking
-- Gift management
-- Event planning
-- Cultural celebration features
-
-#### Valentine's Day
-
-- Romantic gift planning
-- Date idea suggestions
-- Restaurant reservations
-- Special event tracking
-
-#### Easter
-
-- Easter basket planning
-- Egg hunt organization
-- Gift management
-- Decoration planning
-
-#### Halloween
-
-- Costume planning
-- Trick-or-treat preparation
-- Decoration management
-- Party planning
-
-#### Thanksgiving
-
-- Meal planning
-- Guest list management
-- Shopping lists
-- Decoration checklists
-
-#### Mother's Day & Father's Day
-
-- Special gift planning
-- Event organization
-- Card management
-- Celebration tracking
-
-#### Birthday & Anniversary
-
-- Personal celebration planning
-- Gift tracking
-- Event organization
-- Contact management
-
-#### Graduation
-
-- Academic celebration planning
-- Gift management
-- Event coordination
-- Guest list organization
-
-#### Baby Shower
-
-- Gift registry management
-- Guest list planning
-- Event coordination
-- Contact organization
-
-#### New Year
-
-- Resolution tracking
-- Party planning
-- Decoration management
-- Event organization
-
-#### Fourth of July
-
-- Patriotic celebration planning
-- Event organization
-- Decoration management
-- Task tracking
-
-### 🎨 UI/UX Features
-
-- **Gamified Mode**: Colorful, engaging interface with gradients and animations
-- **Professional Mode**: Clean, business-like interface
-- **Holiday-Specific Colors**: Each holiday has its own color scheme
-- **Progress Indicators**: Visual progress bars and completion tracking
-- **Toast Notifications**: User feedback for actions
-- **Loading States**: Smooth loading animations
-- **Error Handling**: Graceful error states and recovery
-
-### ⚙️ Settings & Customization
-
-- **Holiday Preferences**: Select which holidays to track
-- **Budget Management**: Set individual budgets for each holiday
-- **Notification Settings**: Configure reminder preferences
-- **Theme Customization**: Dark/light mode and display mode
-- **User Profile**: Edit name, email, and profile picture
+- **Subscription Management**: Free and premium tiers with payment processing
+- **User Preferences**: Comprehensive settings for notifications, themes, and behavior
+- **Audit Logging**: Track user actions for debugging and compliance
+- **Data Export**: Export holiday data for backup or migration
+- **Search & Filtering**: Advanced filtering and sorting across all data types
 
 ## 🛠️ Technology Stack
 
 ### Frontend
 
-- **Next.js 15.4.2**: React framework with App Router
-- **React 19.1.0**: UI library
-- **TypeScript**: Type-safe development
-- **Tailwind CSS 4**: Utility-first CSS framework
-- **Redux Toolkit**: State management
-- **Redux Persist**: Data persistence
+- **Next.js 15.4.2**: React framework with App Router architecture
+- **React 19.1.0**: Latest React with concurrent features
+- **TypeScript**: Type-safe development with strict mode
+- **Tailwind CSS 3.4.0**: Utility-first CSS framework with custom configurations
+- **Redux Toolkit 2.8.2**: State management with RTK Query for API calls
+- **Redux Persist**: Client-side state persistence for user preferences
+
+### Backend & Database
+
+- **MySQL**: Production-grade relational database
+- **Prisma ORM 6.14.0**: Type-safe database access with migrations
+- **18+ Database Tables**: Comprehensive schema for multi-tenant holiday planning
+- **UUID Primary Keys**: Distributed-system-friendly unique identifiers
+- **Foreign Key Constraints**: Data integrity with cascade delete rules
 
 ### Authentication
 
-- **Auth0**: OAuth authentication provider
-- **@auth0/auth0-react**: React SDK for Auth0
+- **Auth0 2.4.0**: Enterprise OAuth provider with social login
+- **JWT Tokens**: Secure authentication with automatic refresh
+- **User Management**: Profile sync and automatic account creation
+- **Multi-Factor Authentication**: Optional MFA for enhanced security
 
-### Development Tools
+### Development & Testing
 
-- **ESLint**: Code linting
-- **Turbopack**: Fast development bundler
-- **PostCSS**: CSS processing
+- **Jest**: Testing framework with comprehensive test coverage
+- **Testing Library**: Component and integration testing utilities
+- **ESLint**: Code linting with Next.js and TypeScript rules
+- **TypeScript**: Strict type checking across frontend and backend
+- **Turbopack**: Fast development bundler for rapid iteration
+
+### Deployment & Infrastructure
+
+- **AWS Amplify**: Serverless deployment with CI/CD pipeline
+- **SSL/TLS**: HTTPS encryption for all data in transit
+- **Environment Management**: Separate dev, staging, and production environments
+- **Database Hosting**: Managed MySQL with automated backups
+
+## 📁 Project Structure
+
+```
+next-holiday/
+├── prisma/                     # Database schema and migrations
+│   ├── schema.prisma          # Prisma schema definition
+│   └── migrations/            # Database migration files
+├── src/
+│   ├── app/                   # Next.js App Router pages
+│   │   ├── api/               # REST API endpoints (50+ routes)
+│   │   │   ├── users/         # User management APIs
+│   │   │   ├── accounts/      # Account and member management
+│   │   │   ├── holidays/      # Holiday CRUD operations
+│   │   │   ├── shares/        # Holiday sharing APIs
+│   │   │   ├── invites/       # Invitation management
+│   │   │   └── payment/       # Subscription processing
+│   │   ├── christmas/         # Holiday-specific pages
+│   │   ├── hanukkah/
+│   │   ├── birthday/
+│   │   ├── [holiday]/         # Dynamic holiday routes
+│   │   ├── settings/          # User settings and preferences
+│   │   ├── address-book/      # Contact management
+│   │   └── page.tsx           # Home page with holiday selection
+│   ├── components/            # React components
+│   │   ├── auth/              # Authentication components
+│   │   ├── cards/             # Card UI components
+│   │   ├── common/            # Shared components
+│   │   ├── modals/            # Modal dialogs
+│   │   └── animations/        # Animation components
+│   ├── store/                 # Redux store and slices
+│   │   ├── api.ts             # RTK Query API definitions
+│   │   ├── slices/            # Redux slices for state management
+│   │   └── index.ts           # Store configuration
+│   ├── lib/                   # Utility libraries
+│   │   ├── auth.ts            # Auth0 configuration
+│   │   ├── prisma.ts          # Database client setup
+│   │   └── server/            # Server-side utilities
+│   ├── hooks/                 # Custom React hooks (25+ hooks)
+│   ├── config/                # Configuration files
+│   ├── data/                  # Static data and type definitions
+│   ├── types/                 # TypeScript type definitions
+│   └── utils/                 # Helper functions
+├── docs/                      # Documentation
+│   ├── db/                    # Database documentation
+│   └── holidays/              # Holiday-specific docs
+├── scripts/                   # Utility scripts
+├── db/                        # Database schema files
+├── amplify.yml                # AWS Amplify deployment config
+├── jest.config.js             # Testing configuration
+├── tailwind.config.js         # Tailwind CSS configuration
+├── next.config.ts             # Next.js configuration
+└── package.json               # Dependencies and scripts
+```
+
+## 🗄️ Database Architecture
+
+### Schema Overview
+
+The MySQL database consists of 18+ interconnected tables designed for multi-tenant holiday planning:
+
+**📊 [View Live ERD Diagram](https://mermaid.ai/app/projects/5a13959b-bcd3-4844-834d-1f664ae6f043/diagrams/3605b52a-9a41-4a09-a764-2c6ee2d62a92/version/v0.1/edit)** - Interactive database schema visualization
+
+#### Core Tables
+
+- **users**: Auth0 user profiles and authentication data
+- **accounts**: Multi-tenant households/families for collaboration
+- **account_members**: Many-to-many relationship between users and accounts
+- **user_preferences**: Individual user settings and preferences
+
+#### Holiday Management
+
+- **holidays**: Holiday instances with metadata and configuration
+- **tasks**: Generic and holiday-specific tasks with priorities
+- **task_assignees**: Multi-user task assignment support
+- **gifts**: Gift lists with recipients, budgets, and purchase tracking
+- **cards**: Greeting cards with addresses and sending status
+- **budgets**: Budget tracking with spending limits
+- **budget_transactions**: Detailed expense tracking
+
+#### Collaboration System
+
+- **shares**: Holiday sharing for multi-user collaboration
+- **share_members**: Many-to-many relationship for share membership
+- **invites**: Invitation system with status tracking and email notifications
+
+#### Contact Management
+
+- **contacts**: Address book entries for recipients and addresses
+- **guest_lists**: Event guest lists with RSVP tracking
+
+#### Specialized Tables
+
+- **kwanzaa_principles**: Daily principle tracking for Kwanzaa celebrations
+- **audit_log**: System activity tracking for debugging and compliance
+
+### Key Relationships
+
+- Users belong to multiple accounts through account_members
+- Accounts own multiple holidays with full lifecycle management
+- Holidays can be shared with other users through the sharing system
+- All planning data (tasks, gifts, cards) is scoped to accounts for data isolation
+- Contacts can be linked to gifts, cards, and guest lists across holidays
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- npm, yarn, pnpm, or bun
+- **Node.js 18+**: Latest LTS version recommended
+- **MySQL 8.0+**: Database server (local or cloud-hosted)
+- **Auth0 Account**: For authentication services
+- **npm/yarn/pnpm**: Package manager
 
 ### Installation
 
@@ -219,16 +247,50 @@ A comprehensive holiday planning application built with Next.js, React, and Redu
    ```
 
 3. **Set up environment variables**
-   Create a `.env.local` file in the root directory:
+
+   Create a `.env.local` file:
 
    ```env
-   AUTH0_DOMAIN=your-auth0-domain
-   AUTH0_CLIENT_ID=your-auth0-client-id
-   AUTH0_CLIENT_SECRET=your-auth0-client-secret
-   AUTH0_CALLBACK_URL=http://localhost:3000
+   # Database Configuration
+   DATABASE_URL="mysql://username:password@localhost:3306/next_holiday"
+
+   # Auth0 Configuration
+   AUTH0_SECRET="your-auth0-secret-key"
+   AUTH0_BASE_URL="http://localhost:3000"
+   AUTH0_ISSUER_BASE_URL="https://your-domain.auth0.com"
+   AUTH0_CLIENT_ID="your-auth0-client-id"
+   AUTH0_CLIENT_SECRET="your-auth0-client-secret"
+
+   # Optional: Payment Processing (Test Mode)
+   PAYMENT_TEST_MODE="true"
+
+   # Optional: Feature Flags
+   DELETE_HOLIDAY_CASCADE_ENABLED="false"
+   DELETE_HOLIDAY_ROW_THRESHOLD="1000"
    ```
 
-4. **Run the development server**
+4. **Set up the database**
+
+   ```bash
+   # Generate Prisma client
+   npx prisma generate
+
+   # Run database migrations
+   npx prisma migrate dev --name init
+
+   # Optional: Seed the database
+   npx prisma db seed
+   ```
+
+5. **Configure Auth0**
+
+   In your Auth0 dashboard:
+   - Set Callback URLs: `http://localhost:3000/api/auth/callback/auth0`
+   - Set Logout URLs: `http://localhost:3000`
+   - Enable social login providers (optional)
+   - Configure user profile settings
+
+6. **Run the development server**
 
    ```bash
    npm run dev
@@ -238,136 +300,379 @@ A comprehensive holiday planning application built with Next.js, React, and Redu
    pnpm dev
    ```
 
-5. **Open your browser**
+7. **Access the application**
+
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### Building for Production
+### Database Management
 
 ```bash
-npm run build
-npm start
+# View database schema
+npx prisma studio
+
+# Reset database (development only)
+npx prisma migrate reset
+
+# Deploy to production
+npx prisma migrate deploy
+
+# Generate new migration
+npx prisma migrate dev --name feature_name
 ```
 
-## 📁 Project Structure
+### Development Scripts
 
-```
-next-holiday/
-├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── [holiday]/          # Holiday-specific pages
-│   │   │   ├── gift-list/      # Gift management
-│   │   │   ├── tasks/          # Task management
-│   │   │   ├── cards/          # Card management
-│   │   │   ├── address-book/   # Contact management
-│   │   │   └── page.tsx        # Holiday main page
-│   │   ├── settings/           # User settings
-│   │   ├── layout.tsx          # Root layout
-│   │   └── page.tsx            # Home page
-│   ├── components/             # Reusable components
-│   │   ├── auth/               # Authentication components
-│   │   ├── cards/              # Card components
-│   │   ├── common/             # Shared components
-│   │   ├── modals/             # Modal components
-│   │   └── examples/           # Example components
-│   ├── store/                  # Redux store
-│   │   ├── slices/             # Redux slices
-│   │   │   ├── [holiday]/      # Holiday-specific slices
-│   │   │   └── index.ts        # Store configuration
-│   │   ├── hooks.ts            # Redux hooks
-│   │   └── provider.tsx        # Redux provider
-│   ├── config/                 # Configuration files
-│   ├── data/                   # Static data
-│   └── utils/                  # Utility functions
-├── public/                     # Static assets
-├── package.json                # Dependencies and scripts
-└── README.md                   # This file
+```bash
+# Development with Turbopack
+npm run dev:turbo
+
+# Testing
+npm run test                    # Run all tests
+npm run test:watch             # Watch mode
+npm run test:coverage          # Generate coverage report
+
+# Database operations
+npm run db:migrate             # Run migrations
+npm run db:reset              # Reset database (dev only)
+npm run db:studio             # Open Prisma Studio
+npm run db:seed               # Seed database
+
+# Build and deployment
+npm run build                 # Production build
+npm run start                 # Start production server
+npm run lint                  # Run ESLint
+npm run type-check           # TypeScript checks
 ```
 
-## 🎯 Key Features in Detail
+## 🧪 Testing
 
-### Holiday Management
+### Test Suite Overview
 
-Each holiday has its own dedicated section with:
+- **Jest**: Primary testing framework with React Testing Library
+- **Coverage**: Comprehensive test coverage across components and API routes
+- **Test Types**: Unit tests, integration tests, and API endpoint tests
+- **Mock Data**: Realistic test fixtures and database mocking
 
-- **Main Dashboard**: Overview of all holiday activities
-- **Gift Lists**: Track gifts, recipients, and budgets
-- **Task Management**: Organize preparation tasks
-- **Card Management**: Handle greeting cards
-- **Address Book**: Manage contacts and addresses
-- **Progress Tracking**: Visual completion indicators
+### Running Tests
 
-### Data Management
+```bash
+# Run all tests
+npm run test
 
-- **Redux State**: Centralized state management
-- **Local Storage**: Data persistence across sessions
-- **Real-time Updates**: Immediate UI updates
-- **Error Handling**: Graceful error recovery
+# Watch mode for development
+npm run test:watch
 
-### User Experience
+# Generate coverage report
+npm run test:coverage
 
-- **Responsive Design**: Works on all device sizes
-- **Accessibility**: Keyboard navigation and screen reader support
-- **Performance**: Optimized loading and rendering
-- **Offline Support**: Basic functionality without internet
+# Test specific files
+npm run test -- --testPathPattern=components
+```
 
-## 🔧 Configuration
+### Test Structure
 
-### Auth0 Setup
-
-1. Create an Auth0 application
-2. Configure callback URLs
-3. Set up social login providers (optional)
-4. Add environment variables
-
-### Customization
-
-- **Holiday Colors**: Modify color schemes in `holidayData.ts`
-- **Form Fields**: Customize forms in `formConfigs.ts`
-- **Validation**: Update validation rules in `formValidation.ts`
-- **Styling**: Modify Tailwind classes and CSS variables
+```
+src/
+├── __tests__/
+│   ├── api/                   # API endpoint tests
+│   ├── auth/                  # Authentication tests
+│   ├── components/            # Component tests
+│   ├── routes/                # Page route tests
+│   ├── server/                # Server-side tests
+│   └── store/                 # Redux store tests
+```
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### AWS Amplify Deployment
 
-1. Connect your GitHub repository
-2. Configure environment variables
-3. Deploy automatically on push
+The application is configured for AWS Amplify with the provided `amplify.yml`:
 
-### Other Platforms
+1. **Connect Repository**: Link your GitHub repository to AWS Amplify
+2. **Environment Variables**: Configure production environment variables
+3. **Database Setup**: Set up managed MySQL instance (RDS/Aurora)
+4. **Domain Configuration**: Configure custom domain and SSL certificates
+5. **Deploy**: Automatic deployment on push to main branch
 
-- **Netlify**: Similar to Vercel deployment
-- **AWS Amplify**: Full-stack deployment
-- **Docker**: Containerized deployment
+### Environment Configuration
 
-## 🤝 Contributing
+**Production Environment Variables:**
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+```env
+DATABASE_URL="mysql://user:password@production-host:3306/next_holiday"
+AUTH0_SECRET="production-secret-key"
+AUTH0_BASE_URL="https://yourdomain.com"
+# ... other production configs
+```
 
-## 📝 License
+### Database Deployment
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+```bash
+# Deploy migrations to production
+npx prisma migrate deploy
 
-## 🆘 Support
+# Verify deployment
+npx prisma migrate status
+```
 
-For support and questions:
+### Performance Considerations
 
-- Create an issue on GitHub
-- Check the documentation
-- Review the code comments
+- **Database Indexing**: Optimized indexes for multi-tenant queries
+- **Connection Pooling**: Prisma connection pooling for scalability
+- **Caching**: Redis caching for frequently accessed data (optional)
+- **CDN**: Static asset delivery through AWS CloudFront
 
-## 🎉 Acknowledgments
+## 🤝 Collaboration Features
 
-- Built with Next.js and React
-- Styled with Tailwind CSS
-- State management with Redux Toolkit
-- Authentication powered by Auth0
-- Icons and assets from various sources
+### Holiday Sharing System
+
+1. **Create Share**: Holiday owners can create shareable links
+2. **Send Invitations**: Invite users via email with custom messages
+3. **Accept/Decline**: Recipients can accept or decline invitations
+4. **Member Management**: Add/remove members from shared holidays
+5. **Permission Control**: Role-based access to editing and inviting
+
+### Multi-User Planning
+
+- **Collaborative Editing**: Multiple users can edit tasks, gifts, and cards
+- **Task Assignment**: Assign tasks to specific team members
+- **Real-Time Updates**: Changes sync across all connected users
+- **Activity Tracking**: Audit log shows who made what changes
+- **Conflict Resolution**: Optimistic updates with conflict handling
+
+### Account Management
+
+- **Household Accounts**: Create accounts for families or friend groups
+- **Member Roles**: Owner, Admin, and Member permission levels
+- **Invitation System**: Invite users to join your account
+- **Data Sharing**: Share contacts, budgets, and preferences within accounts
+
+## 🔧 Configuration & Customization
+
+### Holiday Configuration
+
+Customize holidays in `src/data/holidayData.ts`:
+
+```typescript
+export const holidayData = {
+  christmas: {
+    name: 'Christmas',
+    colors: { light: '#dc2626', dark: '#ef4444' },
+    // ... other configurations
+  },
+  // ... other holidays
+};
+```
+
+### Form Customization
+
+Modify form fields in `src/config/formConfigs.ts`:
+
+```typescript
+export const giftsFormConfig: FormConfig = {
+  title: 'Add New Gift',
+  fields: [
+    { id: 'recipient', type: 'text', placeholder: 'Recipient*', required: true },
+    // ... other fields
+  ],
+};
+```
+
+### Theme Customization
+
+Update Tailwind configuration in `tailwind.config.js`:
+
+```javascript
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        // Custom color schemes
+      },
+    },
+  },
+};
+```
+
+### User Preferences
+
+Default preferences are configured in `src/lib/constants/userPreferences.ts`:
+
+```typescript
+export const DEFAULT_USER_PREFERENCES = {
+  theme: 'light',
+  displayMode: 'professional',
+  emailNotifications: false,
+  // ... other defaults
+};
+```
+
+## 📚 API Documentation
+
+### REST API Endpoints
+
+The application provides 50+ REST API endpoints organized by feature:
+
+#### User Management
+
+- `GET /api/users/me` - Get current user profile
+- `POST /api/users` - Create/update user profile
+- `PUT /api/users/preferences` - Update user preferences
+
+#### Account Management
+
+- `GET /api/accounts` - List user accounts
+- `POST /api/accounts` - Create new account
+- `POST /api/accounts/:id/members` - Add account member
+
+#### Holiday Management
+
+- `GET /api/holidays` - List holidays for account
+- `POST /api/holidays` - Create new holiday
+- `PUT /api/holidays/:id` - Update holiday
+- `DELETE /api/holidays/:id` - Delete holiday (with cascade)
+
+#### Task Management
+
+- `GET /api/holidays/:id/tasks` - Get holiday tasks
+- `POST /api/holidays/:id/tasks` - Create task
+- `PUT /api/tasks/:id` - Update task
+- `DELETE /api/tasks/:id` - Delete task
+
+#### Gift Management
+
+- `GET /api/holidays/:id/gifts` - Get holiday gifts
+- `POST /api/holidays/:id/gifts` - Create gift
+- `PUT /api/gifts/:id` - Update gift
+- `DELETE /api/gifts/:id` - Delete gift
+
+#### Sharing & Collaboration
+
+- `POST /api/holidays/:id/share` - Create holiday share
+- `GET /api/shares/:id` - Get share details
+- `POST /api/shares/:id/invites` - Send invitation
+- `POST /api/invites/:id/accept` - Accept invitation
+- `POST /api/invites/:id/decline` - Decline invitation
+
+#### Contact Management
+
+- `GET /api/contacts` - List account contacts
+- `POST /api/contacts` - Create contact
+- `PUT /api/contacts/:id` - Update contact
+- `DELETE /api/contacts/:id` - Delete contact
+
+### API Authentication
+
+All API calls require authentication via Auth0 JWT tokens:
+
+```typescript
+// Example API call with authentication
+const response = await fetch('/api/holidays', {
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+});
+```
+
+## 🔒 Security & Privacy
+
+### Data Security
+
+- **Encryption**: All data encrypted in transit and at rest
+- **Authentication**: Secure OAuth 2.0 with Auth0
+- **Authorization**: Row-level security for multi-tenant data isolation
+- **Input Validation**: Comprehensive validation on all API endpoints
+- **SQL Injection Prevention**: Parameterized queries through Prisma ORM
+
+### Privacy Features
+
+- **Data Ownership**: Users own their data within account boundaries
+- **Data Portability**: Export functionality for user data
+- **Account Deletion**: Complete data removal on account deletion
+- **Access Logs**: Audit trail for data access and modifications
+- **GDPR Compliance**: Privacy controls and data subject rights
+
+### Multi-Tenant Security
+
+- **Account Isolation**: Strict data separation between accounts
+- **Permission Checking**: Authorization checks on all data access
+- **Share Validation**: Secure sharing with proper permission validation
+- **Invite Security**: Secure invitation tokens with expiration
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+**Database Connection Errors**
+
+```bash
+# Check database connection
+npx prisma db pull
+
+# Reset database in development
+npx prisma migrate reset
+```
+
+**Auth0 Configuration Issues**
+
+- Verify callback URLs match exactly
+- Check environment variables are set correctly
+- Ensure Auth0 application type is set to "Single Page Application"
+
+**Build Errors**
+
+```bash
+# Clear Next.js cache
+rm -rf .next
+
+# Regenerate Prisma client
+npx prisma generate
+
+# Type check
+npm run type-check
+```
+
+**Performance Issues**
+
+- Check database query performance in Prisma Studio
+- Monitor Redux DevTools for unnecessary re-renders
+- Use React Profiler for component performance analysis
+
+### Debug Mode
+
+Enable debug logging:
+
+```env
+# Enable Prisma query logging
+DEBUG="prisma:query"
+
+# Enable Next.js debug mode
+DEBUG="next:*"
+```
+
+### Support Resources
+
+- **GitHub Issues**: Report bugs and feature requests
+- **Documentation**: Comprehensive docs in `/docs` folder
+- **Database Schema**: Visual ERD in `docs/db/erd.md`
+- **Migration Notes**: Database migration guide in `docs/db/migration-notes.md`
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Next.js Team**: For the excellent React framework
+- **Prisma Team**: For the outstanding ORM and database tools
+- **Auth0**: For secure authentication services
+- **Tailwind CSS**: For the utility-first CSS framework
+- **Redux Toolkit**: For efficient state management
+- **AWS Amplify**: For seamless deployment and hosting
 
 ---
 
-**Next Holiday** - Making holiday planning fun and organized! 🎄✨
+**Next Holiday** - Bringing families and friends together through organized, collaborative holiday planning! 🎄✨
+
+_Built with ❤️ using Next.js, MySQL, Prisma, and Auth0_

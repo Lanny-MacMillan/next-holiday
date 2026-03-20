@@ -2,12 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
-import { useKwanzaaTasksMutations } from '@/hooks/useKwanzaaTasksMutations';
+import {
+  updateTaskInHomeData,
+  addTaskToHomeData,
+  removeTaskFromHomeData,
+} from '@/store/slices/homeSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
-import EditTaskModal from '@/components/modals/EditTaskModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -16,201 +25,81 @@ import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
-type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
+type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
 export default function KwanzaaTasksPage() {
   const dispatch = useAppDispatch();
 
-  // Get contacts for Enhanced Compatibility Layer
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
-
-  // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector(state =>
-    selectShareByHolidayKey(state, 'kwanzaa'),
-  );
-  const shareMembers = shareData?.members || [];
-
-  useEffect(() => {
-    // Fetch contacts for Enhanced Compatibility Layer
-    dispatch(fetchContacts());
-  }, [dispatch]);
-
-  // Helper function to resolve assignedTo UUID to user name
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
-
-  // Transform tasks to include assignedToName for display
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
-
-  // Use the Kwanzaa tasks mutations hook
+  // Hook implementations
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
   const {
-    holidayId,
-    auth0User,
-    tasks,
-    loading,
-    error,
-    initialized,
     createTask,
     updateTask,
-    editTask,
     deleteTask,
-    createTaskState,
-    updateTaskState,
-    editTaskState,
-    deleteTaskState,
-    getTasksByCategory,
-  } = useKwanzaaTasksMutations();
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+  const { refreshHomeData } = useRefreshHomeData();
 
-  const [sortBy, setSortBy] = useState<SortOption>('none');
+  // Redux & Sharing
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'kwanzaa'),
+  );
+  const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+
+  // State management
   const [showForm, setShowForm] = useState(false);
-  const [showSortModal, setShowSortModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('none');
 
-  async function handleAddTask(formValues: Record<string, any>) {
-    if (!formValues.title?.trim()) return;
-    if (!holidayId || !auth0User) return;
+  const themeColor = '#dc2626'; // Red for Kwanzaa
 
-    try {
-      const payload = {
-        title: formValues.title,
-        description: formValues.description || undefined,
-        priority: formValues.priority as 'low' | 'medium' | 'high',
-        assignedTo: formValues.assignedTo || undefined,
-        category: formValues.category || 'Tasks',
-        dueDate: formValues.dueDate || undefined,
-        isCompleted: false,
-      };
-
-      await createTask({ holidayId, payload, auth0User }).unwrap();
-      setShowForm(false);
-    } catch (error) {
-      console.error('Error creating task:', error);
+  // Load contacts if holiday is shared
+  useEffect(() => {
+    if (isHolidayShared && auth0User) {
+      dispatch(fetchContacts(auth0User.sub));
     }
-  }
+  }, [isHolidayShared, auth0User, dispatch]);
 
-  function openForm() {
-    setShowForm(true);
-  }
+  // Task data processing
+  const tasks =
+    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
 
-  function closeForm() {
-    setShowForm(false);
-  }
+  // Sort function following working pattern
+  function getSortedTasks() {
+    if (sortBy === 'none') return tasks;
 
-  async function handleToggleTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
-
-    try {
-      const task = tasks.find((t: any) => t.id === taskId);
-      if (task) {
-        await updateTask({
-          holidayId,
-          taskId,
-          isCompleted: !task.isCompleted,
-          auth0User,
-        }).unwrap();
-      }
-    } catch (error) {
-      console.error('Error updating task:', error);
-    }
-  }
-
-  function handleDeleteTask(taskId: string) {
-    const task = tasks.find((t: any) => t.id === taskId);
-    setTaskToDelete(task);
-    setShowDeleteModal(true);
-  }
-
-  function handleEditTask(task: any) {
-    setEditingTask(task);
-    setShowEditModal(true);
-  }
-
-  async function handleEditTaskSubmit(formValues: Record<string, any>) {
-    if (!editingTask || !holidayId || !auth0User) return;
-
-    try {
-      await editTask({
-        holidayId,
-        taskId: editingTask.id,
-        payload: formValues,
-        auth0User,
-      }).unwrap();
-      setShowEditModal(false);
-      setEditingTask(null);
-    } catch (error) {
-      console.error('Error editing task:', error);
-    }
-  }
-
-  function handleCloseEdit() {
-    setShowEditModal(false);
-    setEditingTask(null);
-  }
-
-  async function confirmDelete() {
-    if (taskToDelete) {
-      try {
-        await deleteTask({
-          holidayId: holidayId || '',
-          taskId: taskToDelete.id,
-          auth0User,
-        }).unwrap();
-        setShowDeleteModal(false);
-        setTaskToDelete(null);
-      } catch (error) {
-        console.error('Error deleting task:', error);
-      }
-    }
-  }
-
-  function cancelDelete() {
-    setShowDeleteModal(false);
-    setTaskToDelete(null);
-  }
-
-  function sortTasks(tasksToSort: any[]): any[] {
-    switch (sortBy) {
-      case 'priority':
-        const priorityOrder: { [key: string]: number } = {
-          high: 3,
-          medium: 2,
-          low: 1,
-        };
-        return [...tasksToSort].sort(
-          (a, b) =>
-            (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0),
-        );
-      case 'dateDue':
-        return [...tasksToSort].sort((a, b) => {
+    return [...tasks].sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          return (
+            (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) -
+            (priorityOrder[a.priority as keyof typeof priorityOrder] || 0)
+          );
+        case 'dueDate':
           if (!a.dueDate && !b.dueDate) return 0;
           if (!a.dueDate) return 1;
           if (!b.dueDate) return -1;
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        });
-      case 'assignedTo':
-        return [...tasksToSort].sort((a, b) =>
-          (a.assignedTo || '').localeCompare(b.assignedTo || ''),
-        );
-      case 'category':
-        return [...tasksToSort].sort((a, b) =>
-          (a.category || '').localeCompare(b.category || ''),
-        );
-      default:
-        return tasksToSort;
-    }
+        case 'assignedTo':
+          return (a.assignedTo || '').localeCompare(b.assignedTo || '');
+        default:
+          return 0;
+      }
+    });
   }
 
-  if (loading && !initialized) {
+  // Show loading only if home data is not initialized
+  if (!homeInitialized) {
     return (
       <div className="min-h-screen kwanzaa-gradient flex items-center justify-center">
         <div className="text-center">
@@ -221,11 +110,149 @@ export default function KwanzaaTasksPage() {
     );
   }
 
-  // Filter tasks by category
-  const tasksByCategory = getTasksByCategory('Tasks');
-  const sortedTasks = sortTasks(tasksByCategory.map(transformTaskWithAssignment));
+  const sortedTasks = getSortedTasks();
   const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
+  const pendingTasks = sortedTasks.filter((task: any) => !task.isCompleted);
+
+  // Task toggle function
+  async function handleTaskToggle(taskId: string) {
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (!task || !holidayId) return;
+
+    const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
+    dispatch(
+      updateTaskInHomeData({
+        holidayId,
+        taskId,
+        updates: { isCompleted: !task.isCompleted },
+      }),
+    );
+    await refreshHomeData(auth0User, holidayId);
+  }
+
+  // Modal handlers
+  const openForm = () => setShowForm(true);
+  const closeForm = () => setShowForm(false);
+
+  const handleEditModalOpen = (task: any) => {
+    setEditingTask(task);
+    setShowEditModal(true);
+  };
+
+  const handleEditModalClose = () => {
+    setEditingTask(null);
+    setShowEditModal(false);
+  };
+
+  const handleDeleteModalOpen = (task: any) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteModalClose = () => {
+    setTaskToDelete(null);
+    setShowDeleteModal(false);
+  };
+
+  // CRUD operations
+  const handleAddTask = async (formData: any) => {
+    if (!holidayId) return;
+
+    const taskData = {
+      ...formData,
+      category: 'Tasks',
+      isCompleted: false,
+    };
+
+    const result = await createTask(taskData);
+    if (result) {
+      dispatch(addTaskToHomeData({ holidayId, task: result }));
+      await refreshHomeData(auth0User, holidayId);
+      closeForm();
+    }
+  };
+
+  const handleEditTask = async (formData: any) => {
+    if (!editingTask || !holidayId) return;
+
+    const result = await updateTask(editingTask.id, formData);
+    if (result) {
+      dispatch(
+        updateTaskInHomeData({
+          holidayId,
+          taskId: editingTask.id,
+          updates: formData,
+        }),
+      );
+      await refreshHomeData(auth0User, holidayId);
+      handleEditModalClose();
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete || !holidayId) return;
+
+    const result = await deleteTask(taskToDelete.id);
+    if (result) {
+      dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
+      await refreshHomeData(auth0User, holidayId);
+      handleDeleteModalClose();
+    }
+  };
+
+  // Sort handler
+  function handleSort(option: SortOption) {
+    setSortBy(option);
+    setShowSortModal(false);
+  }
+
+  // Dynamic form fields
+  const formFields = [
+    {
+      id: 'title',
+      type: 'text' as const,
+      placeholder: 'Task Title*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'textarea' as const,
+      placeholder: 'Description',
+      rows: 2,
+    },
+    {
+      id: 'priority',
+      type: 'select' as const,
+      placeholder: 'Priority',
+      options: [
+        { value: 'low', label: 'Low Priority' },
+        { value: 'medium', label: 'Medium Priority' },
+        { value: 'high', label: 'High Priority' },
+      ],
+    },
+    // Conditionally include assignedTo field only for shared holidays
+    ...(isHolidayShared
+      ? [
+          {
+            id: 'assignedTo',
+            type: 'text' as const,
+            placeholder: 'Assigned To',
+          },
+        ]
+      : []),
+    {
+      id: 'dueDate',
+      type: 'date' as const,
+      placeholder: 'Due Date',
+    },
+  ];
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Get form configuration
   const formConfig = getFormConfigEnhanced('tasks', editingTask ? 'edit' : 'add', {
@@ -238,28 +265,30 @@ export default function KwanzaaTasksPage() {
   return (
     <div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
-        title="To-Do List"
+        title="Kwanzaa Tasks"
         backHref="/kwanzaa"
         onSortClick={() => setShowSortModal(true)}
         sortTitle="Sort tasks"
-        error={error ? 'API Error' : undefined}
+        description="Stay on top of your holiday to-dos"
+        holidayColor={themeColor}
       />
+
       <main className="w-full max-w-4xl flex flex-col gap-6">
         <AddButton title="Task" onClick={openForm} color="red" />
+
+        {/* Sort indicator */}
         <div className="flex items-center justify-center">
           {sortBy !== 'none' && (
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-              {sortBy === 'priority' && 'Sorted by Priority'}
-              {sortBy === 'dateDue' && 'Sorted by Date Due'}
-              {sortBy === 'assignedTo' && 'Sorted by Assigned To'}
-              {sortBy === 'category' && 'Sorted by Category'}
+              Sorted by {sortBy === 'dueDate' ? 'due date' : sortBy}
             </div>
           )}
         </div>
 
+        {/* Incomplete Tasks Section */}
         <TaskSection
           title="Incomplete"
-          items={incompleteTasks}
+          items={pendingTasks}
           isCompleted={false}
           emptyMessage="All tasks completed! 🕯️"
           completedMessage=""
@@ -267,41 +296,57 @@ export default function KwanzaaTasksPage() {
             <ToDoCard
               key={task.id}
               task={task}
-              onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
-              onEdit={handleEditTask}
-              theme={{
-                accentColor: '#dc2626', // Red for Kwanzaa
-              }}
-              borderColor="rgb(var(--color-red-500))" // Red border for Kwanzaa
+              onToggleComplete={handleTaskToggle}
+              onEdit={() => handleEditModalOpen(task)}
+              onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              theme={{ accentColor: themeColor }}
+              borderColor={themeColor}
             />
           )}
         />
 
-        <TaskSection
-          title="Completed"
-          items={completedTasks}
-          isCompleted={true}
-          emptyMessage="No completed tasks yet."
-          completedMessage=""
-          renderItem={(task: any) => (
-            <ToDoCard
-              key={task.id}
-              task={task}
-              onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
-              onEdit={handleEditTask}
-              className="opacity-60"
-              theme={{
-                accentColor: '#dc2626', // Red for Kwanzaa
-              }}
-              borderColor="rgb(var(--color-red-500))" // Red border for Kwanzaa
-            />
-          )}
-        />
+        {/* Completed Tasks Section */}
+        {completedTasks.length > 0 && (
+          <TaskSection
+            title="Completed"
+            items={completedTasks}
+            isCompleted={true}
+            emptyMessage=""
+            completedMessage={`Great job! You've completed ${completedTasks.length} task${completedTasks.length !== 1 ? 's' : ''}.`}
+            renderItem={(task: any) => (
+              <ToDoCard
+                key={task.id}
+                task={task}
+                onToggleComplete={handleTaskToggle}
+                onEdit={() => handleEditModalOpen(task)}
+                onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                theme={{ accentColor: themeColor }}
+                borderColor={themeColor}
+              />
+            )}
+          />
+        )}
       </main>
 
-      {/* Form Modal */}
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortBy={sortBy}
+        onSortChange={(option: string) => setSortBy(option as SortOption)}
+        sortOptions={[
+          { value: 'none', label: 'None' },
+          { value: 'title', label: 'Title' },
+          { value: 'priority', label: 'Priority' },
+          { value: 'dueDate', label: 'Due Date' },
+          ...(isHolidayShared
+            ? [{ value: 'assignedTo', label: 'Assigned To' }]
+            : []),
+        ]}
+        title="Sort Tasks"
+      />
+
+      {/* Add Modal */}
       <FormModal
         isOpen={showForm}
         title="Add New Task"
@@ -314,63 +359,53 @@ export default function KwanzaaTasksPage() {
         }
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={loading}
-        submitText={loading ? 'Processing...' : 'Add Task'}
+        loading={createLoading}
+        submitText={createLoading ? 'Adding...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"
       />
 
-      {/* Edit Task Modal */}
+      {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formConfig.fields}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assignedTo: editingTask?.assignedTo || '',
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
-        onSubmit={handleEditTaskSubmit}
-        onClose={handleCloseEdit}
-        loading={editTaskState.isLoading}
-        submitText="Update Task"
+        onSubmit={handleEditTask}
+        onClose={handleEditModalClose}
+        loading={updateLoading}
+        submitText={updateLoading ? 'Updating...' : 'Update Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Modal */}
       <DeleteModal
         isOpen={showDeleteModal}
+        onCancel={handleDeleteModalClose}
+        onConfirm={handleDeleteTask}
+        loading={deleteLoading}
         title={deleteConfig.title}
         message={deleteConfig.message}
         itemName={taskToDelete?.title}
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-        loading={deleteTaskState.isLoading}
-        cardClassName={deleteConfig.cardClassName}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
+        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
-      />
-
-      {/* Sort Modal */}
-      <SortModal
-        isOpen={showSortModal}
-        onClose={() => setShowSortModal(false)}
-        sortBy={sortBy}
-        onSortChange={(sortOption: string) => setSortBy(sortOption as SortOption)}
-        sortOptions={[
-          { value: 'none', label: 'None' },
-          { value: 'priority', label: 'Priority' },
-          { value: 'dateDue', label: 'Date Due' },
-          { value: 'assignedTo', label: 'Assigned To' },
-          { value: 'category', label: 'Category' },
-        ]}
-        title="Sort Tasks"
       />
     </div>
   );

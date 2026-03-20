@@ -1,27 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
+import { useState, useEffect, useMemo } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
 } from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { RootState } from '@/store';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
-import { transformCardPayload } from '@/utils/formTransformers';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import MailCardStatus from '@/components/cards/MailCardStatus';
 import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
@@ -31,56 +26,80 @@ import DeleteModal from '@/components/modals/DeleteModal';
 export default function ValentinesCardsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
+
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get Redux selectors
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get current Redux state for skip logic
-  // Get holiday ID for Valentines - try to resolve from home data, fallback to route-based resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/valentines', holidayPreferences)
-    : getHolidayIdFromRoute('/valentines', holidayPreferences); // Allow fallback for cold entry
-
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, resolvedHolidayId),
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'valentines'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector(state =>
+  const shareData = useAppSelector((state: RootState) =>
     selectShareByHolidayKey(state, 'valentines'),
   );
-  const shareMembers = shareData?.members || [];
+  const baseMembers = shareData?.members || [];
 
-  // Helper function to resolve assignedTo UUID to user name
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
 
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  // Helper function to extract recipient from title if needed
+  const extractRecipientFromTitle = (title: string) => {
+    if (title?.startsWith('Card for ')) {
+      return title.substring(9); // Remove 'Card for ' prefix
+    }
+    return title || '';
   };
 
-  // Transform cards to include assignedToName for display
-  const transformCardWithAssignment = (card: any) => ({
-    ...card,
-    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
-  });
+  // Cards are stored as tasks with category 'Cards'
+  const cards = useMemo(() => {
+    const cardTasks =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
 
-  // Get holiday data from Redux - single source of truth
+    // Debug logging to see the actual task structure
+    if (cardTasks.length > 0) {
+      console.log('Card tasks from API:', cardTasks);
+    }
 
-  // Use Redis data directly - no individual API calls needed
-  const cardsData = holidayData?.cards || [];
-  const cards = cardsData.map(transformCardWithAssignment);
+    // Map task structure to card structure for MailCard component
+    return cardTasks.map((task: any) => ({
+      id: task.id,
+      recipient: task.recipient || extractRecipientFromTitle(task.title),
+      message: task.message || task.description || '',
+      address: task.address || '',
+      notes: task.notes || '',
+      isCompleted: task.isCompleted || false,
+      // Keep original task data for reference
+      ...task,
+    }));
+  }, [holidayData?.tasks]);
   const isLoading = !homeInitialized;
-  const error = null; // Error handling through home data loading
+  const error = null;
 
   const [showForm, setShowForm] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
@@ -93,32 +112,6 @@ export default function ValentinesCardsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Function to refresh home data after mutations
-  async function refreshHomeData() {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  }
-
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
@@ -126,26 +119,29 @@ export default function ValentinesCardsPage() {
 
   async function handleAddCard(values: Record<string, any>) {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
-    if (!resolvedHolidayId || !mutation) return;
+    if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
     try {
-      const payload = transformCardPayload(values, contacts);
-      await mutation({
-        holidayId: resolvedHolidayId || '',
-        payload,
-        auth0User,
-      }).unwrap();
+      const newTask = {
+        title: `Card for ${values.recipient}`,
+        description: values.message || '',
+        category: 'Cards',
+        priority: 'medium' as const,
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+        // Store card-specific fields
+        recipient: values.recipient,
+        message: values.message || '',
+        address: values.address || '',
+      };
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      const result = await createTask(newTask);
+      console.log('Created card task:', result);
 
+      await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
-    } finally {
-      setIsAdding(false);
     }
   }
 
@@ -158,7 +154,7 @@ export default function ValentinesCardsPage() {
   }
 
   const handleDeleteCard = async (cardId: string) => {
-    const card = cards.find(c => c.id === cardId);
+    const card = cards.find((c: any) => c.id === cardId);
     setCardToDelete(card);
     setShowDeleteModal(true);
   };
@@ -169,22 +165,11 @@ export default function ValentinesCardsPage() {
   };
 
   const confirmDelete = async () => {
-    if (cardToDelete && mutation) {
+    if (cardToDelete && holidayId) {
       try {
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload: {
-            id: cardToDelete.id,
-            action: 'delete',
-            recipient: cardToDelete.recipient,
-            message: cardToDelete.message || '',
-            address: cardToDelete.address || '',
-          },
-          auth0User,
-        }).unwrap();
+        await deleteTask(cardToDelete.id);
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
+        await refreshHomeData(auth0User, holidayId);
 
         setShowDeleteModal(false);
         setCardToDelete(null);
@@ -195,101 +180,48 @@ export default function ValentinesCardsPage() {
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && mutation) {
-      setIsUpdating(true);
+    if (cardToEdit && holidayId && auth0User) {
       try {
-        const payload = {
-          ...transformCardPayload(values, contacts),
-          id: cardToEdit.id,
-          action: 'update',
+        const updates = {
+          title: `Card for ${values.recipient}`,
+          description: values.message || '',
+          category: 'Cards',
+          priority: cardToEdit.priority || 'medium',
+          ...(isAuthorizedForSharing &&
+            isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+          // Store card-specific fields
+          recipient: values.recipient,
+          message: values.message || '',
+          address: values.address || '',
         };
 
-        // Optimistically update the Redux home data
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: values.recipient,
-              message: values.message,
-              address: values.address,
-            },
-          }),
-        );
+        const result = await updateTask(cardToEdit.id, updates);
+        console.log('Updated card task:', result);
 
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload,
-          auth0User,
-        }).unwrap();
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
+        await refreshHomeData(auth0User, holidayId);
 
         setShowEditModal(false);
         setCardToEdit(null);
       } catch (error) {
         console.error('Error updating card:', error);
-        // Revert the optimistic update on error
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: cardToEdit.recipient,
-              message: cardToEdit.message,
-              address: cardToEdit.address,
-            },
-          }),
-        );
-      } finally {
-        setIsUpdating(false);
       }
     }
   };
 
   const handleToggleCompletion = async (cardId: string) => {
-    if (mutation) {
+    if (holidayId) {
       try {
-        const card = cards.find(c => c.id === cardId);
+        const card = cards.find((c: any) => c.id === cardId);
         if (card) {
-          const payload = {
-            id: cardId,
-            action: 'update',
+          await updateTask(cardId, {
+            ...card,
             isCompleted: !card.isCompleted,
-            recipient: card.recipient,
-            message: card.message || '',
-            address: card.address || '',
-          };
+          });
 
-          // Optimistically update the Redux home data
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: !card.isCompleted },
-            }),
-          );
-
-          await mutation({
-            holidayId: resolvedHolidayId || '',
-            payload,
-            auth0User,
-          }).unwrap();
+          await refreshHomeData(auth0User, holidayId);
         }
       } catch (error) {
         console.error('Error toggling card completion:', error);
-        // Revert the optimistic update on error
-        const card = cards.find(c => c.id === cardId);
-        if (card) {
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: card.isCompleted },
-            }),
-          );
-        }
       }
     }
   };
@@ -307,8 +239,10 @@ export default function ValentinesCardsPage() {
     }
   });
 
-  const completedCards = cards.filter(card => card.isCompleted);
-  const incompleteCards = cards.filter(card => !card.isCompleted);
+  const completedCards = cards.filter((card: any) => card.isCompleted);
+  const incompleteCards = cards.filter((card: any) => !card.isCompleted);
+
+  const loading = createLoading || updateLoading || deleteLoading;
 
   // Form fields configuration using Enhanced Compatibility Layer
   const formFields = getFormConfigEnhanced('cards', 'add', {
@@ -325,7 +259,7 @@ export default function ValentinesCardsPage() {
         onSortClick={() => setShowSortModal(true)}
         description="Keep track of your Valentines cards!"
         holidayColor="pink-500"
-        error={mutationError ? 'API Error' : undefined}
+        error={error ? 'API Error' : undefined}
         sortTitle="Sort Cards"
       />
 
@@ -405,8 +339,8 @@ export default function ValentinesCardsPage() {
         shareMembers={shareMembers}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        loading={isAdding}
-        submitText="Add Card"
+        loading={createLoading}
+        submitText={createLoading ? 'Adding...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ec4899"
@@ -420,14 +354,23 @@ export default function ValentinesCardsPage() {
         title="Edit Card"
         fields={formFields}
         shareMembers={shareMembers}
-        initialValues={cardToEdit}
+        initialValues={
+          cardToEdit
+            ? {
+                recipient: cardToEdit.recipient || '',
+                message: cardToEdit.message || cardToEdit.description || '',
+                address: cardToEdit.address || '',
+                assigned_to: cardToEdit.assignedTo || '',
+              }
+            : undefined
+        }
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        loading={isUpdating}
-        submitText="Update Card"
+        loading={updateLoading}
+        submitText={updateLoading ? 'Updating...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ec4899"
@@ -462,10 +405,7 @@ export default function ValentinesCardsPage() {
         ]}
         title="Sort Cards"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }
