@@ -18,6 +18,7 @@ import {
   selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
@@ -33,6 +34,21 @@ export default function NewYearEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { holidayId, auth0User } = useFormModalMutation();
+
+  // Enhanced Compatibility Layer
+  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
@@ -82,14 +98,14 @@ export default function NewYearEventsPage() {
   };
 
   // State management
-  const [showForm, setShowForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -102,7 +118,7 @@ export default function NewYearEventsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
+    setIsSubmitting(true);
 
     const newTask = {
       id: `temp-${Date.now()}`, // Temporary ID for optimistic update
@@ -125,7 +141,7 @@ export default function NewYearEventsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Events',
         due_date: values.dueDate || undefined, // API expects due_date (snake_case)
         isCompleted: false,
@@ -174,13 +190,13 @@ export default function NewYearEventsPage() {
         dispatch(addTaskToHomeData({ holidayId: holidayId, task: result.data }));
       }
 
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       // Remove the optimistic update if there was an error
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to create task:', error);
     } finally {
-      setIsAdding(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -192,13 +208,13 @@ export default function NewYearEventsPage() {
   async function handleEditTaskSubmit(values: Record<string, any>) {
     if (!editingTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
+    setIsEditSubmitting(true);
     try {
       const updatedTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Events',
         due_date: values.dueDate || undefined, // For API call
       };
@@ -208,7 +224,7 @@ export default function NewYearEventsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assignedTo: values.assigned_to || undefined,
         category: 'Events',
         dueDate: values.dueDate || undefined, // Redux expects camelCase
       };
@@ -274,7 +290,7 @@ export default function NewYearEventsPage() {
     } catch (error) {
       console.error('Failed to update task:', error);
     } finally {
-      setIsUpdating(false);
+      setIsEditSubmitting(false);
     }
   }
 
@@ -423,8 +439,14 @@ export default function NewYearEventsPage() {
     });
   };
 
-  const sortedUpcomingEvents = sortTasks(upcomingEvents, sortBy);
-  const sortedCompletedEvents = sortTasks(completedEvents, sortBy);
+  const sortedUpcomingEvents = sortTasks(
+    upcomingEvents.map(transformTaskWithAssignment),
+    sortBy,
+  );
+  const sortedCompletedEvents = sortTasks(
+    completedEvents.map(transformTaskWithAssignment),
+    sortBy,
+  );
 
   return (
     <div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -439,10 +461,10 @@ export default function NewYearEventsPage() {
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Add New Event Button */}
         <AddButton
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowAddModal(true)}
           title="Add New Event"
           color="yellow"
-          disabled={isAdding}
+          disabled={isSubmitting}
         />
 
         {/* Event Status Summary */}
@@ -522,59 +544,22 @@ export default function NewYearEventsPage() {
       </main>
 
       {/* Form Modal for Adding */}
-      {showForm && (
+      {showAddModal && (
         <FormModal
-          isOpen={showForm}
-          onClose={() => setShowForm(false)}
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
           onSubmit={handleAddTask}
           title="Add New Event Task"
-          fields={[
-            {
-              id: 'title',
-              type: 'text' as const,
-              placeholder: 'Task Title*',
-              required: true,
-            },
-            {
-              id: 'description',
-              type: 'textarea' as const,
-              placeholder: 'Description',
-              rows: 2,
-            },
-            {
-              id: 'priority',
-              type: 'select' as const,
-              placeholder: 'Priority',
-              options: [
-                { value: 'low', label: 'Low Priority' },
-                { value: 'medium', label: 'Medium Priority' },
-                { value: 'high', label: 'High Priority' },
-              ],
-            },
-            ...(isHolidayShared
-              ? [
-                  {
-                    id: 'assignedTo' as const,
-                    type: 'text' as const,
-                    placeholder: 'Assigned To',
-                  },
-                ]
-              : []),
-            {
-              id: 'dueDate' as const,
-              type: 'date' as const,
-              placeholder: 'Due Date',
-            },
-          ]}
-          initialValues={{
-            title: '',
-            description: '',
-            priority: 'medium',
-            ...(isHolidayShared ? { assignedTo: '' } : {}),
-            dueDate: '',
-          }}
-          loading={isAdding}
-          submitText="Add Task"
+          fields={
+            getFormConfigEnhanced('tasks', 'add', {
+              holidayKey: 'new-year',
+              shareMembers: shareMembers,
+              auth0User: auth0User,
+            }).fields
+          }
+          initialValues={{}}
+          loading={isSubmitting}
+          submitText={isSubmitting ? 'Processing...' : 'Add Task'}
           cardClassName="card-tasks"
         />
       )}
@@ -589,55 +574,24 @@ export default function NewYearEventsPage() {
           }}
           onSubmit={handleEditTaskSubmit}
           title="Edit Event Task"
-          fields={[
-            {
-              id: 'title',
-              type: 'text' as const,
-              placeholder: 'Task Title*',
-              required: true,
-            },
-            {
-              id: 'description',
-              type: 'textarea' as const,
-              placeholder: 'Description',
-              rows: 2,
-            },
-            {
-              id: 'priority',
-              type: 'select' as const,
-              placeholder: 'Priority',
-              options: [
-                { value: 'low', label: 'Low Priority' },
-                { value: 'medium', label: 'Medium Priority' },
-                { value: 'high', label: 'High Priority' },
-              ],
-            },
-            ...(isHolidayShared
-              ? [
-                  {
-                    id: 'assignedTo' as const,
-                    type: 'text' as const,
-                    placeholder: 'Assigned To',
-                  },
-                ]
-              : []),
-            {
-              id: 'dueDate' as const,
-              type: 'date' as const,
-              placeholder: 'Due Date',
-            },
-          ]}
+          fields={
+            getFormConfigEnhanced('tasks', 'edit', {
+              holidayKey: 'new-year',
+              shareMembers: shareMembers,
+              auth0User: auth0User,
+            }).fields
+          }
           initialValues={{
             title: editingTask.title || '',
             description: editingTask.description || '',
             priority: editingTask.priority || 'medium',
-            ...(isHolidayShared ? { assignedTo: editingTask.assignedTo || '' } : {}),
+            assigned_to: editingTask.assignedTo || '',
             dueDate: editingTask.dueDate
               ? new Date(editingTask.dueDate).toISOString().split('T')[0]
               : '',
           }}
-          loading={isUpdating}
-          submitText="Update Task"
+          loading={isEditSubmitting}
+          submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
           cardClassName="card-tasks"
         />
       )}

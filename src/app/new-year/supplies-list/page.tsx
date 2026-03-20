@@ -23,7 +23,7 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfig, getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -41,6 +41,9 @@ export default function NewYearSuppliesListPage() {
     error: mutationError,
     auth0User,
   } = useFormModalMutation();
+
+  // Enhanced Compatibility Layer
+  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
 
   // Get current Redux state for skip logic
   const holidayData = useAppSelector(state =>
@@ -99,14 +102,15 @@ export default function NewYearSuppliesListPage() {
   // Use only Redux data - no GET API calls on holiday pages
 
   // Local loading states for mutations
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
@@ -121,11 +125,12 @@ export default function NewYearSuppliesListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !mutation) return;
 
+    setIsSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await mutation({ holidayId, payload, auth0User }).unwrap();
 
       // Update Redux state directly
@@ -134,7 +139,7 @@ export default function NewYearSuppliesListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData();
 
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
       // Show user-friendly error message
@@ -143,16 +148,18 @@ export default function NewYearSuppliesListPage() {
       } else {
         alert('Error creating gift. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   function openForm() {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
-  function closeForm() {
-    setShowFormModal(false);
+  function closeAddForm() {
+    setShowAddModal(false);
     setSelectedGift(null);
   }
 
@@ -167,7 +174,7 @@ export default function NewYearSuppliesListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      setUpdateLoading(true);
+      setIsEditSubmitting(true);
       // Update the gift in the database with direct API call
       await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
         method: 'PATCH',
@@ -191,7 +198,7 @@ export default function NewYearSuppliesListPage() {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
     } finally {
-      setUpdateLoading(false);
+      setIsEditSubmitting(false);
     }
   }
 
@@ -241,15 +248,15 @@ export default function NewYearSuppliesListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
 
-    setEditLoading(true);
+    setIsEditSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       // Direct API call instead of RTK mutation
       const response = await fetch(
         `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
@@ -276,7 +283,7 @@ export default function NewYearSuppliesListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData();
 
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
@@ -287,7 +294,7 @@ export default function NewYearSuppliesListPage() {
         alert('Error updating gift. Please try again.');
       }
     } finally {
-      setEditLoading(false);
+      setIsEditSubmitting(false);
     }
   }
 
@@ -363,7 +370,7 @@ export default function NewYearSuppliesListPage() {
       onToggle={handleToggleGift}
       onEdit={handleEditGift}
       onDelete={(giftId: string) => handleDeleteGift(gift)}
-      loading={updateLoading}
+      loading={isEditSubmitting}
       theme={{
         accentColor: '#f59e0b', // Amber for New Year
       }}
@@ -379,7 +386,7 @@ export default function NewYearSuppliesListPage() {
       onToggle={handleToggleGift}
       onEdit={handleEditGift}
       onDelete={(giftId: string) => handleDeleteGift(gift)}
-      loading={updateLoading}
+      loading={isEditSubmitting}
       theme={{
         accentColor: '#f59e0b', // Amber for New Year
       }}
@@ -388,68 +395,7 @@ export default function NewYearSuppliesListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Supply Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
-  // Initial values for editing
-  const getInitialValues = () => {
-    if (!selectedGift) return {};
-
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
-    return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price ? selectedGift.price.toString() : '',
-      store: selectedGift.store || '',
-      product_link: selectedGift.productLink || '',
-      notes: selectedGift.notes || '',
-    };
-  };
+  // Form fields configuration removed - now using Enhanced Compatibility Layer
 
   return (
     <div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -501,21 +447,61 @@ export default function NewYearSuppliesListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Supply Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Supply' : 'Add New Supply'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-        onClose={closeForm}
-        loading={mutationLoading || editLoading}
-        submitText={selectedGift ? 'Update Supply' : 'Add Supply'}
+        isOpen={showAddModal}
+        title="Add New Supply"
+        fields={
+          getFormConfigEnhanced('gifts', 'add', {
+            holidayKey: 'new-year',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
+        onSubmit={handleAddGift}
+        onClose={closeAddForm}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Supply'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Supply Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Supply"
+        fields={
+          getFormConfigEnhanced('gifts', 'edit', {
+            holidayKey: 'new-year',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{
+          recipient: selectedGift?.recipient || '',
+          name: selectedGift?.name || '',
+          description: selectedGift?.description || '',
+          price: selectedGift?.price ? selectedGift.price.toString() : '',
+          store: selectedGift?.store || '',
+          product_link: selectedGift?.productLink || '',
+          notes: selectedGift?.notes || '',
+        }}
+        onSubmit={handleUpdateGift}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedGift(null);
+        }}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Supply'}
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#f59e0b"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

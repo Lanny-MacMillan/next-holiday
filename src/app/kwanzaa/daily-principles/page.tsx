@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
   setHomeData,
@@ -15,7 +16,10 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -85,6 +89,12 @@ export default function DailyPrinciplesPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'kwanzaa'),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
   const holidayData = useAppSelector(state =>
@@ -538,46 +548,6 @@ export default function DailyPrinciplesPage() {
   const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // Form fields with conditional shared holiday support
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Daily Principle*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
-
   return (
     <div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
@@ -680,14 +650,21 @@ export default function DailyPrinciplesPage() {
       <FormModal
         isOpen={showFormModal}
         title={selectedTask ? 'Edit Principle' : 'Add Principle'}
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', selectedTask ? 'edit' : 'add', {
+            customTitle: selectedTask ? 'Edit Principle' : 'Add Principle',
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           selectedTask
             ? {
                 title: selectedTask.title || '',
                 description: selectedTask.description || '',
                 priority: selectedTask.priority || 'medium',
-                assignedTo: selectedTask.assignedTo || '',
+                assigned_to: selectedTask.assignedTo || '',
                 dueDate: selectedTask.dueDate
                   ? toDateOnlyString(new Date(selectedTask.dueDate))
                   : '',

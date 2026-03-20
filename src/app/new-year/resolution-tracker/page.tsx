@@ -17,6 +17,7 @@ import {
   selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -30,6 +31,21 @@ export default function NewYearResolutionTrackerPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { holidayId, auth0User } = useFormModalMutation();
+
+  // Enhanced Compatibility Layer
+  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
@@ -87,14 +103,14 @@ export default function NewYearResolutionTrackerPage() {
   };
 
   // State management
-  const [showForm, setShowForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -114,7 +130,7 @@ export default function NewYearResolutionTrackerPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
+    setIsSubmitting(true);
 
     const newTask = {
       id: `temp-${Date.now()}`, // Temporary ID for optimistic update
@@ -137,7 +153,7 @@ export default function NewYearResolutionTrackerPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Resolutions',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
@@ -171,13 +187,13 @@ export default function NewYearResolutionTrackerPage() {
         console.error('Failed to add task:', response.status, response.statusText);
       }
 
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       // Remove optimistic update on error
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add task:', error);
     } finally {
-      setIsAdding(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -191,14 +207,14 @@ export default function NewYearResolutionTrackerPage() {
   async function handleEditSubmit(values: Record<string, any>) {
     if (!editingTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
+    setIsEditSubmitting(true);
     try {
       // CRITICAL: Map camelCase to snake_case for API
       const apiPayload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Resolutions',
         due_date: values.dueDate || undefined, // snake_case for API
       };
@@ -240,7 +256,7 @@ export default function NewYearResolutionTrackerPage() {
     } catch (error) {
       console.error('Failed to update task:', error);
     } finally {
-      setIsUpdating(false);
+      setIsEditSubmitting(false);
     }
   }
 
@@ -348,11 +364,11 @@ export default function NewYearResolutionTrackerPage() {
 
   const openAddForm = () => {
     setEditingTask(null);
-    setShowForm(true);
+    setShowAddModal(true);
   };
 
   const closeForm = () => {
-    setShowForm(false);
+    setShowAddModal(false);
     setEditingTask(null);
   };
 
@@ -383,7 +399,7 @@ export default function NewYearResolutionTrackerPage() {
     return sorted;
   };
 
-  const sortedResolutions = getSortedResolutions();
+  const sortedResolutions = getSortedResolutions().map(transformTaskWithAssignment);
   const incompleteResolutions = sortedResolutions.filter(
     (task: any) => !task.isCompleted,
   );
@@ -391,45 +407,7 @@ export default function NewYearResolutionTrackerPage() {
     (task: any) => task.isCompleted,
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Resolution Goal*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Target Date',
-    },
-  ];
+  // Form fields configuration removed - now using Enhanced Compatibility Layer
 
   return (
     <div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -449,7 +427,7 @@ export default function NewYearResolutionTrackerPage() {
           title="Resolution"
           onClick={openAddForm}
           color="orange"
-          disabled={isLoading || isAdding}
+          disabled={isLoading || isSubmitting}
         />
         {/* Task Sections */}
         <TaskSection
@@ -513,14 +491,20 @@ export default function NewYearResolutionTrackerPage() {
 
       {/* Add Form Modal */}
       <FormModal
-        isOpen={showForm}
+        isOpen={showAddModal}
         title="Add New Resolution"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'new-year',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{}}
         onSubmit={handleAddResolution}
         onClose={closeForm}
-        loading={isAdding}
-        submitText="Add Resolution"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Resolution'}
         cancelText="Cancel"
         cardClassName="card-events-new-year"
       />
@@ -529,27 +513,27 @@ export default function NewYearResolutionTrackerPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Resolution"
-        fields={formFields}
-        initialValues={
-          editingTask
-            ? {
-                title: editingTask.title,
-                description: editingTask.description || '',
-                priority: editingTask.priority,
-                assignedTo: editingTask.assignedTo || '',
-                dueDate: editingTask.dueDate
-                  ? editingTask.dueDate.split('T')[0]
-                  : '', // CRITICAL: Format date for input
-              }
-            : {}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'new-year',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
         }
+        initialValues={{
+          title: editingTask?.title || '',
+          description: editingTask?.description || '',
+          priority: editingTask?.priority || 'medium',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate ? editingTask.dueDate.split('T')[0] : '', // CRITICAL: Format date for input
+        }}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setEditingTask(null);
         }}
-        loading={isUpdating}
-        submitText="Update Resolution"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Resolution'}
         cancelText="Cancel"
         cardClassName="card-events-new-year"
       />

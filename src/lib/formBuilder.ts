@@ -78,8 +78,8 @@ export function buildFormConfig(
     (config as any).showAddressBook = true;
   }
 
-  // Populate assignTo options with share members if there are any
-  if (shareMembers.length > 0) {
+  // Populate assignTo options with share members if conditions are met
+  if (shouldShowAssignTo(shareMembers)) {
     config.fields = config.fields.map((field: any) => {
       if (field.id === 'assigned_to') {
         return {
@@ -96,7 +96,7 @@ export function buildFormConfig(
       return field;
     });
   } else {
-    // Remove assignTo field if no share members (not shared holiday)
+    // Remove assignTo field if conditions not met (not enough members)
     config.fields = config.fields.filter((field: any) => field.id !== 'assigned_to');
   }
 
@@ -140,7 +140,11 @@ export function buildAssignToField(shareMembers: ShareMember[]): FormField {
  * Utility function to check if a holiday should show assignTo fields
  */
 export function shouldShowAssignTo(shareMembers: ShareMember[]): boolean {
-  return shareMembers.length >= 1; // Show when there's at least one member (including self-assignment)
+  // Filter out invalid members (no UUID) and count valid assignable members
+  const validMembers = shareMembers.filter(
+    member => member.uuid && member.uuid.trim() !== '',
+  );
+  return validMembers.length > 1; // Only show when there are multiple valid members for assignment
 }
 
 /**

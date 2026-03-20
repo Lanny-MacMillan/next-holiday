@@ -559,6 +559,7 @@ export function getFormConfigEnhanced(
   if (options?.holidayKey) {
     const contentTypeMapping: Partial<Record<typeof type, ContentType>> = {
       tasks: 'task',
+      events: 'task', // Events are stored as tasks with category="Events"
       gifts: 'gift',
       cards: 'card',
     };

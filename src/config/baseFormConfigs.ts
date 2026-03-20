@@ -157,6 +157,21 @@ export const HOLIDAY_CUSTOMIZATIONS = {
         'card card-cards bg-gradient-to-br from-red-50 to-blue-50 dark:from-red-900/20 dark:to-blue-900/20',
     },
   },
+  kwanzaa: {
+    task: {
+      cardClassName:
+        "bg-gradient-to-br from-red-50 to-green-50 dark:from-red-900/20 dark:to-green-900/20 rounded-lg shadow-lg",
+    },
+    gift: {
+      cardClassName:
+        "card bg-gradient-to-br from-red-50 to-green-50 dark:from-red-900/20 dark:to-green-900/20",
+    },
+    card: {
+      cardClassName:
+        "card card-cards bg-gradient-to-br from-red-50 to-green-50 dark:from-red-900/20 dark:to-green-900/20",
+    },
+  },
+
 } as const;
 
 export type ContentType = keyof typeof BASE_FORM_CONFIGS;

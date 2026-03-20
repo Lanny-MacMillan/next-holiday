@@ -7,6 +7,10 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
@@ -23,7 +27,7 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -46,6 +50,12 @@ export default function KwanzaaGiftListPage() {
   const holidayData = useAppSelector(state =>
     selectHolidayPrefById(state, holidayId),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Get home data and holiday data from Redux
   const homeData = useAppSelector(selectHomeData);
@@ -121,11 +131,11 @@ export default function KwanzaaGiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !mutation) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await mutation({ holidayId, payload, auth0User }).unwrap();
 
       // Update Redux state directly
@@ -249,7 +259,7 @@ export default function KwanzaaGiftListPage() {
 
     setEditLoading(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       // Direct API call instead of RTK mutation
       const response = await fetch(
         `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
@@ -390,6 +400,13 @@ export default function KwanzaaGiftListPage() {
     />
   );
 
+  // Enhanced Compatibility Layer configuration
+  const formConfig = getFormConfigEnhanced('gifts', selectedGift ? 'edit' : 'add', {
+    holidayKey: 'kwanzaa',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
   // Form fields configuration
   const formFields = [
     {
@@ -439,7 +456,7 @@ export default function KwanzaaGiftListPage() {
 
     return {
       recipient: selectedGift.recipient || '',
-      giftName: selectedGift.name,
+      name: selectedGift.name,
       description: selectedGift.description || '',
       price: selectedGift.price.toString(),
       store: selectedGift.store || '',
@@ -502,17 +519,23 @@ export default function KwanzaaGiftListPage() {
       <FormModal
         isOpen={showFormModal}
         title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
+        fields={formConfig.fields}
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
         loading={mutationLoading || editLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        submitText={
+          mutationLoading || editLoading
+            ? 'Processing...'
+            : selectedGift
+              ? 'Update Gift'
+              : 'Add Gift'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#dc2626"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

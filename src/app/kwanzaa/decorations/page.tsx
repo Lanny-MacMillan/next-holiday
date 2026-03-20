@@ -16,7 +16,11 @@ import {
   selectHomeData,
   selectHolidayPrefById,
 } from '@/store/selectors/home';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -94,6 +98,26 @@ export default function KwanzaaDecorationsPage() {
     selectIsHolidayShared(state, 'kwanzaa'),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - decorations are stored as tasks with category "Decorations"
   const holidayData = useAppSelector(state =>
     selectHolidayPrefById(state, holidayId!),
@@ -164,7 +188,7 @@ export default function KwanzaaDecorationsPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       category: 'Decorations',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
@@ -181,7 +205,7 @@ export default function KwanzaaDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
@@ -391,7 +415,7 @@ export default function KwanzaaDecorationsPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       dueDate: values.dueDate || undefined,
     };
 
@@ -410,7 +434,7 @@ export default function KwanzaaDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         due_date: values.dueDate || undefined, // snake_case for API
         category: 'Decorations',
         isCompleted: editingTask.isCompleted,
@@ -543,46 +567,6 @@ export default function KwanzaaDecorationsPage() {
     }
   }
 
-  // Form fields with date formatting fix
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Decoration Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
-
   // Loading state
   if (isLoading) {
     return (
@@ -596,7 +580,9 @@ export default function KwanzaaDecorationsPage() {
   }
 
   // Sort and separate decorations
-  const sortedDecorations = sortTasks(decorations || []);
+  const sortedDecorations = sortTasks(
+    (decorations || []).map(transformTaskWithAssignment),
+  );
   const incompleteDecorations = sortedDecorations.filter(
     (decoration: any) => !decoration.isCompleted,
   );
@@ -715,12 +701,19 @@ export default function KwanzaaDecorationsPage() {
       <FormModal
         isOpen={showForm}
         title="Add Decoration Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            customTitle: 'Add Decoration Task',
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{}}
         onSubmit={handleAddDecoration}
         onClose={() => setShowForm(false)}
         loading={isAdding}
-        submitText="Add Decoration"
+        submitText={isAdding ? 'Processing...' : 'Add Decoration'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626" // Kwanzaa red
@@ -730,14 +723,21 @@ export default function KwanzaaDecorationsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            customTitle: 'Edit Decoration Task',
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                assignedTo: editingTask.assignedTo || '',
+                assigned_to: editingTask.assignedTo || '',
                 // CRITICAL: Format date for input field
                 dueDate: editingTask.dueDate
                   ? editingTask.dueDate.includes('T')
@@ -753,7 +753,7 @@ export default function KwanzaaDecorationsPage() {
           setEditingTask(null);
         }}
         loading={isUpdating}
-        submitText="Update Decoration"
+        submitText={isUpdating ? 'Processing...' : 'Update Decoration'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626" // Kwanzaa red

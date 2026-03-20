@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { useKwanzaaTasksMutations } from '@/hooks/useKwanzaaTasksMutations';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
@@ -11,13 +13,41 @@ import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
 export default function KwanzaaTasksPage() {
   const dispatch = useAppDispatch();
+
+  // Get contacts for Enhanced Compatibility Layer
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  useEffect(() => {
+    // Fetch contacts for Enhanced Compatibility Layer
+    dispatch(fetchContacts());
+  }, [dispatch]);
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Use the Kwanzaa tasks mutations hook
   const {
@@ -193,12 +223,16 @@ export default function KwanzaaTasksPage() {
 
   // Filter tasks by category
   const tasksByCategory = getTasksByCategory('Tasks');
-  const sortedTasks = sortTasks(tasksByCategory);
+  const sortedTasks = sortTasks(tasksByCategory.map(transformTaskWithAssignment));
   const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
 
   // Get form configuration
-  const formConfig = getFormConfig('tasks', editingTask ? 'edit' : 'add');
+  const formConfig = getFormConfigEnhanced('tasks', editingTask ? 'edit' : 'add', {
+    holidayKey: 'kwanzaa',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
   const deleteConfig = getDeleteConfig('tasks');
 
   return (
@@ -271,11 +305,17 @@ export default function KwanzaaTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={getFormConfig('tasks', 'add').fields}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={loading}
-        submitText={loading ? 'Adding...' : 'Add Task'}
+        submitText={loading ? 'Processing...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"

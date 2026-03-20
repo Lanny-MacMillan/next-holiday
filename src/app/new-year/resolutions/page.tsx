@@ -1,8 +1,13 @@
 'use client';
 
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 
 export default function NewYearResolutionsPage() {
+  // Enhanced Compatibility Layer for future use when this page is implemented
+  // const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  // const { user: auth0User } = useAuth0();
+
   return (
     <div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader

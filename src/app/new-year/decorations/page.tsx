@@ -17,6 +17,7 @@ import {
   selectHolidayPrefById,
 } from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -64,6 +65,21 @@ export default function NewYearDecorationsPage() {
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { holidayId, auth0User } = useFormModalMutation();
 
+  // Enhanced Compatibility Layer
+  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Get Redux data
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
   const homeInitialized = useAppSelector(selectHomeInitialized);
@@ -103,15 +119,15 @@ export default function NewYearDecorationsPage() {
   };
 
   // State management
-  const [showForm, setShowForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -130,7 +146,7 @@ export default function NewYearDecorationsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
+    setIsSubmitting(true);
 
     const newTask = {
       id: `temp-${Date.now()}`,
@@ -153,7 +169,7 @@ export default function NewYearDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
         due_date: values.dueDate || undefined, // snake_case for API
         isCompleted: false,
@@ -195,20 +211,20 @@ export default function NewYearDecorationsPage() {
         );
       }
 
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       // Remove optimistic update on error
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add decoration:', error);
     } finally {
-      setIsAdding(false);
+      setIsSubmitting(false);
     }
   }
 
   async function addDefaultDecorationTasks() {
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
+    setIsSubmitting(true);
     try {
       for (const task of defaultDecorationTasks) {
         const newTask = {
@@ -273,7 +289,7 @@ export default function NewYearDecorationsPage() {
     } catch (error) {
       console.error('Failed to add default decoration tasks:', error);
     } finally {
-      setIsAdding(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -340,13 +356,13 @@ export default function NewYearDecorationsPage() {
   async function handleEditDecorationSubmit(values: Record<string, any>) {
     if (!editingTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
+    setIsEditSubmitting(true);
     try {
       const updatedTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assignedTo: values.assigned_to || undefined,
         category: 'Decorations',
         dueDate: values.dueDate || undefined,
       };
@@ -365,7 +381,7 @@ export default function NewYearDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
         due_date: values.dueDate || undefined, // snake_case for API
       };
@@ -410,7 +426,7 @@ export default function NewYearDecorationsPage() {
     } catch (error) {
       console.error('Failed to update decoration:', error);
     } finally {
-      setIsUpdating(false);
+      setIsEditSubmitting(false);
     }
   }
 
@@ -458,11 +474,11 @@ export default function NewYearDecorationsPage() {
   }
 
   function openForm() {
-    setShowForm(true);
+    setShowAddModal(true);
   }
 
   function closeForm() {
-    setShowForm(false);
+    setShowAddModal(false);
   }
 
   function closeEditModal() {
@@ -501,7 +517,7 @@ export default function NewYearDecorationsPage() {
     }
   }
 
-  const loading = isAdding || isUpdating || isDeleting || isToggling;
+  const loading = isSubmitting || isEditSubmitting || isDeleting || isToggling;
 
   if (isLoading) {
     return (
@@ -514,49 +530,11 @@ export default function NewYearDecorationsPage() {
     );
   }
 
-  const sortedTasks = sortTasks(decorations);
+  const sortedTasks = sortTasks(decorations.map(transformTaskWithAssignment));
   const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedDecorations = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // FormModal fields configuration
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Decoration Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Form fields configuration removed - now using Enhanced Compatibility Layer
 
   return (
     <div className="min-h-screen new-year-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -582,9 +560,10 @@ export default function NewYearDecorationsPage() {
             <div className="flex gap-2">
               <button
                 onClick={addDefaultDecorationTasks}
-                className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors text-sm"
+                disabled={isSubmitting}
+                className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors text-sm disabled:opacity-50"
               >
-                Add Default Decorations
+                {isSubmitting ? 'Adding...' : 'Add Default Decorations'}
               </button>
               <button
                 onClick={() => setShowDefaultTasks(false)}
@@ -679,22 +658,22 @@ export default function NewYearDecorationsPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Form Modal */}
       <FormModal
-        isOpen={showForm}
+        isOpen={showAddModal}
         title="Add New Decoration Task"
-        fields={formFields}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
-          dueDate: '',
-        }}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'new-year',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
         onSubmit={handleAddDecoration}
         onClose={closeForm}
-        loading={isAdding}
-        submitText="Add Decoration"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Decoration'}
         cardClassName="card-tasks"
       />
 
@@ -702,26 +681,26 @@ export default function NewYearDecorationsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={formFields}
-        initialValues={
-          editingTask
-            ? {
-                title: editingTask.title || '',
-                description: editingTask.description || '',
-                priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
-                dueDate: editingTask.dueDate
-                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
-                  : '',
-              }
-            : {}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'new-year',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
         }
+        initialValues={{
+          title: editingTask?.title || '',
+          description: editingTask?.description || '',
+          priority: editingTask?.priority || 'medium',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
+        }}
         onSubmit={handleEditDecorationSubmit}
         onClose={closeEditModal}
-        loading={isUpdating}
-        submitText="Update Decoration"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Decoration'}
         cardClassName="card-tasks"
       />
 
