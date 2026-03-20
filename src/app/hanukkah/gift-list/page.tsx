@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import Link from 'next/link';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -16,14 +12,12 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -34,20 +28,23 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function HanukkahGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
 
-  // Get home data and holiday data from Redux
-  const homeData = useAppSelector(selectHomeData);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
+  // Use centralized holiday page data hook
+  const { holidayId, holidayData, homeInitialized, auth0User } =
+    useHolidayPageData();
+
+  // Use standardized mutation hooks
+  const {
+    createGift,
+    updateGift,
+    deleteGift,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -55,9 +52,6 @@ export default function HanukkahGiftListPage() {
     operation: 'add' | 'update' | 'delete',
   ) => {
     if (!holidayId) return;
-
-    console.log(`updateGiftInRedux - ${operation}:`, giftData);
-    console.log('Available contacts:', contacts);
 
     // For add and update operations, ensure the recipient field is populated
     let processedGiftData = giftData;
@@ -67,14 +61,11 @@ export default function HanukkahGiftListPage() {
       contacts
     ) {
       const contact = contacts.find((c: any) => c.id === giftData.contactId);
-      console.log('Found contact for gift:', contact);
       processedGiftData = {
         ...giftData,
         recipient: contact?.name || giftData.recipient || 'Unknown',
       };
     }
-
-    console.log(`Processed gift data for ${operation}:`, processedGiftData);
 
     switch (operation) {
       case 'add':
@@ -100,38 +91,13 @@ export default function HanukkahGiftListPage() {
     }
   };
 
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
-
   // Use Redux data instead of RTK Query
   const gifts = holidayData?.gifts || [];
   const loading = !homeInitialized;
   const error = null;
   const initialized = homeInitialized;
 
-  // Local loading states for mutations
+  // Local state for UI
   const [sortBy, setSortBy] = useState('recipient');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -139,9 +105,6 @@ export default function HanukkahGiftListPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
-  const [updateLoading, setUpdateLoading] = useState<string | null>(null);
-  const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch contacts for address book functionality
@@ -153,19 +116,19 @@ export default function HanukkahGiftListPage() {
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.giftName?.trim() || !values.recipient?.trim()) return;
-    if (!holidayId || !mutation || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
     try {
       const payload = transformGiftPayload(values, contacts);
       console.log('Add gift payload:', payload);
-      const result = await mutation({ holidayId, payload, auth0User }).unwrap();
+      const result = await createGift(payload);
       console.log('Add gift result:', result);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'add');
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowAddModal(false);
     } catch (error) {
@@ -189,15 +152,14 @@ export default function HanukkahGiftListPage() {
     setSelectedGift(null);
   }
 
-  function closeEditModal() {
-    setShowEditModal(false);
-    setSelectedGift(null);
-  }
+  // function closeEditModal() {
+  //   setShowEditModal(false);
+  //   setSelectedGift(null);
+  // }
 
   async function handleToggleGift(giftId: string) {
     if (!holidayId || !auth0User) return;
 
-    setUpdateLoading(giftId);
     try {
       // Find the current gift to get its completion status
       const currentGift = gifts.find((gift: any) => gift.id === giftId);
@@ -206,29 +168,16 @@ export default function HanukkahGiftListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      // Update the gift in the database with direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newIsCompleted,
-        }),
-      });
+      // Update the gift using standardized hook
+      const result = await updateGift(giftId, { isCompleted: newIsCompleted });
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
-    } finally {
-      setUpdateLoading(null);
     }
   }
 
@@ -240,30 +189,19 @@ export default function HanukkahGiftListPage() {
   async function confirmDelete() {
     if (!selectedGift || !holidayId || !auth0User) return;
 
-    setDeleteLoading(selectedGift.id);
     try {
-      // Direct API call
-      await fetch(`/api/holidays/${holidayId}/gifts/${selectedGift.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      // Delete using standardized hook
+      await deleteGift(selectedGift.id);
 
       updateGiftInRedux({ id: selectedGift.id }, 'delete');
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
-    } finally {
-      setDeleteLoading(null);
     }
   }
 
@@ -280,39 +218,20 @@ export default function HanukkahGiftListPage() {
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
 
-    setEditLoading(true);
     try {
       const payload = transformGiftPayload(values, contacts);
 
-      // Direct API call
-      const response = await fetch(
-        `/api/holidays/${holidayId}/gifts/${selectedGift.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(payload),
-        },
-      );
+      // Update using standardized hook
+      const result = await updateGift(selectedGift.id, payload);
+      updateGiftInRedux(result, 'update');
 
-      if (response.ok) {
-        const result = await response.json();
-        updateGiftInRedux(result, 'update');
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
-    } finally {
-      setEditLoading(false);
     }
   }
 
@@ -333,17 +252,6 @@ export default function HanukkahGiftListPage() {
       default:
         return giftsToSort;
     }
-  }
-
-  if (loading && !initialized) {
-    return (
-      <div className="min-h-screen hanukkah-gifts-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading gifts...</p>
-        </div>
-      </div>
-    );
   }
 
   const sortedGifts = sortGifts(gifts);
@@ -474,7 +382,7 @@ export default function HanukkahGiftListPage() {
         ]}
         initialValues={{}}
         onSubmit={handleAddGift}
-        loading={mutationLoading}
+        loading={createLoading}
         submitText="Add Gift"
         cancelText="Cancel"
         cardClassName="card"

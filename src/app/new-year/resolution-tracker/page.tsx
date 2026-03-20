@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -10,16 +12,11 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
@@ -29,12 +26,21 @@ type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 export default function NewYearResolutionTrackerPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { holidayId, auth0User } = useFormModalMutation();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -42,49 +48,14 @@ export default function NewYearResolutionTrackerPage() {
   );
 
   // Redux data access - resolutions are stored as tasks with category "Resolutions"
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
+  const resolutions = useMemo(
+    () =>
+      holidayData?.tasks?.filter((task: any) => task.category === 'Resolutions') ||
+      [],
+    [holidayData?.tasks],
   );
-  const resolutions =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Resolutions') || [];
   const isLoading = !homeInitialized;
   const error = null;
-
-  // Debug logging to understand the state
-  console.log('New Year Resolutions Debug:', {
-    holidayId,
-    holidayData: holidayData
-      ? { ...holidayData, tasks: holidayData.tasks?.length || 0 }
-      : null,
-    allTasks: holidayData?.tasks?.length || 0,
-    resolutionTasks: resolutions.length,
-    resolutions: resolutions.map(r => ({
-      id: r.id,
-      title: r.title,
-      category: r.category,
-      isCompleted: r.isCompleted,
-    })),
-  });
-
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -92,10 +63,6 @@ export default function NewYearResolutionTrackerPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -109,242 +76,122 @@ export default function NewYearResolutionTrackerPage() {
     }
   }, [resolutions, homeInitialized]);
 
-  // CRUD Operations
-  async function handleAddResolution(values: Record<string, any>) {
-    if (!values.title?.trim()) return;
-    if (!holidayId || !auth0User) return;
-
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Resolutions',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
+  const handleAddResolution = async (values: Record<string, any>) => {
+    if (!values.title?.trim() || !holidayId) return;
 
     try {
-      // Optimistically update Redux state first
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-      // CRITICAL: Map camelCase to snake_case for API
-      const apiPayload = {
+      const result = await createTask({
         title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        description: values.description,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
         category: 'Resolutions',
-        due_date: values.dueDate || undefined, // snake_case for API
-        isCompleted: false,
-      };
-
-      console.log('🐛 [NewYearResolutionsAdd] API payload:', apiPayload);
-
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-        body: JSON.stringify(apiPayload), // Use mapped payload
+        dueDate: values.dueDate,
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+      // Update Redux state immediately
+      dispatch(addTaskToHomeData({ holidayId, task: result }));
 
-        // CRITICAL: Refresh home data for proper UI updates
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }),
-        );
-        console.error('Failed to add task:', response.status, response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
-      // Remove optimistic update on error
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Failed to add task:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error creating resolution:', error);
     }
-  }
+  };
 
-  async function handleEditResolution(task: any) {
-    if (!holidayId || !auth0User) return;
-
+  const handleEditResolution = (task: any) => {
     setEditingTask(task);
     setShowEditModal(true);
-  }
+  };
 
-  async function handleEditSubmit(values: Record<string, any>) {
-    if (!editingTask || !holidayId || !auth0User) return;
+  const handleEditSubmit = async (values: Record<string, any>) => {
+    if (!editingTask || !holidayId) return;
 
-    setIsUpdating(true);
     try {
-      // CRITICAL: Map camelCase to snake_case for API
-      const apiPayload = {
+      const updates = {
         title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        description: values.description,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
         category: 'Resolutions',
-        due_date: values.dueDate || undefined, // snake_case for API
+        dueDate: values.dueDate,
       };
 
-      console.log('🐛 [NewYearResolutionsEdit] API payload:', apiPayload);
+      await updateTask(editingTask.id, updates);
 
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: editingTask.id,
-            updates: result,
-          }),
-        );
-
-        setShowEditModal(false);
-        setEditingTask(null);
-        await refreshHomeData();
-      } else {
-        console.error(
-          'Failed to update task:',
-          response.status,
-          response.statusText,
-        );
-      }
-    } catch (error) {
-      console.error('Failed to update task:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  }
-
-  async function handleDelete(taskId: string) {
-    if (!holidayId || !auth0User) return;
-
-    // Find the task to get its title for confirmation
-    const taskToDelete = resolutions.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
-
-    if (window.confirm(`Are you sure you want to delete "${taskToDelete.title}"?`)) {
-      setIsDeleting(true);
-      try {
-        const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify(auth0User),
-          },
-        });
-
-        if (response.ok) {
-          dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
-          await refreshHomeData();
-        } else {
-          console.error(
-            'Failed to delete task:',
-            response.status,
-            response.statusText,
-          );
-        }
-      } catch (error) {
-        console.error('Failed to delete task:', error);
-      } finally {
-        setIsDeleting(false);
-      }
-    }
-  }
-
-  async function handleToggleCompletion(taskId: string) {
-    if (!holidayId || !auth0User) return;
-
-    setIsToggling(true);
-    try {
-      // Find the current task to get its completion status
-      const currentTask = resolutions.find((task: any) => task.id === taskId);
-      if (!currentTask) {
-        console.error('Task not found:', taskId);
-        return;
-      }
-
-      // Toggle the completion status
-      const newCompletionStatus = !currentTask.isCompleted;
-
-      // Optimistically update the Redux home data
+      // Update Redux state immediately
       dispatch(
         updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: taskId,
-          updates: { isCompleted: newCompletionStatus },
+          holidayId,
+          taskId: editingTask.id,
+          updates,
         }),
       );
-
-      // Call API directly
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify(auth0User),
-        },
-        body: JSON.stringify({ isCompleted: newCompletionStatus }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId,
-            updates: result,
-          }),
-        );
-        await refreshHomeData();
-      } else {
-        // Revert optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId,
-            updates: { isCompleted: currentTask.isCompleted },
-          }),
-        );
-        console.error(
-          'Failed to toggle task completion:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+      setShowEditModal(false);
+      setEditingTask(null);
     } catch (error) {
-      console.error('Failed to toggle task completion:', error);
-    } finally {
-      setIsToggling(false);
+      console.error('Error updating resolution:', error);
     }
-  }
+  };
+
+  const handleDelete = async (taskId: string) => {
+    // Find the task to get its title for confirmation
+    const taskToDelete = resolutions.find((task: any) => task.id === taskId);
+    if (!taskToDelete || !holidayId) return;
+
+    if (window.confirm(`Are you sure you want to delete "${taskToDelete.title}"?`)) {
+      try {
+        await deleteTask(taskId);
+
+        // Update Redux state immediately
+        dispatch(
+          removeTaskFromHomeData({
+            holidayId,
+            taskId,
+          }),
+        );
+
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData(auth0User, holidayId);
+      } catch (error) {
+        console.error('Error deleting resolution:', error);
+      }
+    }
+  };
+
+  const handleToggleCompletion = async (taskId: string) => {
+    // Find the current task to get its completion status
+    const currentTask = resolutions.find((task: any) => task.id === taskId);
+    if (!currentTask || !holidayId) {
+      console.error('Task not found or no holiday ID:', taskId, holidayId);
+      return;
+    }
+
+    const newCompletionStatus = !currentTask.isCompleted;
+
+    try {
+      // Update API
+      await updateTask(taskId, { isCompleted: newCompletionStatus });
+
+      // Update Redux state immediately - no refreshHomeData
+      dispatch(
+        updateTaskInHomeData({
+          holidayId,
+          taskId,
+          updates: {
+            ...currentTask,
+            isCompleted: newCompletionStatus,
+          },
+        }),
+      );
+    } catch (error) {
+      console.error('Error toggling resolution:', error);
+    }
+  };
 
   const openAddForm = () => {
     setEditingTask(null);
@@ -449,7 +296,7 @@ export default function NewYearResolutionTrackerPage() {
           title="Resolution"
           onClick={openAddForm}
           color="orange"
-          disabled={isLoading || isAdding}
+          disabled={isLoading || createLoading}
         />
         {/* Task Sections */}
         <TaskSection
@@ -519,7 +366,7 @@ export default function NewYearResolutionTrackerPage() {
         initialValues={{}}
         onSubmit={handleAddResolution}
         onClose={closeForm}
-        loading={isAdding}
+        loading={createLoading}
         submitText="Add Resolution"
         cancelText="Cancel"
         cardClassName="card-events-new-year"
@@ -548,15 +395,12 @@ export default function NewYearResolutionTrackerPage() {
           setShowEditModal(false);
           setEditingTask(null);
         }}
-        loading={isUpdating}
+        loading={updateLoading}
         submitText="Update Resolution"
         cancelText="Cancel"
         cardClassName="card-events-new-year"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

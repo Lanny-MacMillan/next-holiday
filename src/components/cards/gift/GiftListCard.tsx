@@ -54,7 +54,8 @@ export function useGiftListCardData(holiday?: string, providedHolidayId?: string
   const config = getHolidayGiftListConfig(holiday);
 
   // Determine data source based on holiday
-  const isThanksgiving = holiday === 'Thanksgiving';
+  const isThanksgiving =
+    holiday === 'Thanksgiving' || holiday?.includes('Thanksgiving');
 
   const { user: auth0User } = useAuth0();
   const giftHolidayPreferences = useAppSelector(
@@ -190,6 +191,14 @@ export default function GiftListCard({
     preferences?.displayMode === 'gamified' || settings.displayMode === 'gamified';
   const isDarkMode = preferences?.theme === 'dark' || settings.theme === 'dark';
 
+  // Check for holidays that might have emojis in their names
+  const isThanksgiving =
+    holiday === 'Thanksgiving' || holiday?.includes('Thanksgiving');
+  const isEaster = holiday === 'Easter' || holiday?.includes('Easter');
+  const isNewYear = holiday === 'New Year' || holiday?.includes('New Year');
+  const isFourthOfJuly =
+    holiday === 'Fourth of July' || holiday?.includes('Fourth of July');
+
   // Use holiday-specific data if holiday prop is provided, otherwise use passed props
   // Prioritize props over hook data to avoid API calls
   // Only call the hook if we don't have the required props
@@ -215,14 +224,6 @@ export default function GiftListCard({
         })()
       : 'No budget set');
 
-  // Debug: Log what data the GiftListCard is receiving
-  console.log('=== GiftListCard DEBUG ===');
-  console.log('holiday:', holiday);
-  console.log('giftList prop:', giftList);
-  console.log('holidayData:', holidayData);
-  console.log('finalGiftList:', finalGiftList);
-  console.log('=== END GiftListCard DEBUG ===');
-
   // Use holiday prop for display name, fallback to holidayName, then default
   const displayHolidayName = holiday || holidayName || 'Holiday';
 
@@ -245,9 +246,13 @@ export default function GiftListCard({
   // Generate href if not provided
   const finalHref =
     href ||
-    (holiday?.toLowerCase() === 'easter'
-      ? '/easter/basket-list'
-      : `/${holiday?.toLowerCase()}/gift-list`) ||
+    (isThanksgiving
+      ? '/thanksgiving/shopping-list'
+      : isEaster
+        ? '/easter/basket-list'
+        : isNewYear
+          ? '/new-year/supplies-list'
+          : `/${holiday?.toLowerCase().replace(' ', '-')}/gift-list`) ||
     '/gift-list';
 
   // Get gamified background gradient based on holiday
@@ -344,7 +349,7 @@ export default function GiftListCard({
             <div className="mb-4 sm:mb-6">
               <div className="flex justify-between items-start mb-3 sm:mb-4">
                 <h3 className="font-bold text-white text-base sm:text-lg">
-                  {holiday === 'Thanksgiving'
+                  {isThanksgiving
                     ? `${displayHolidayName} Shopping Budget`
                     : `${displayHolidayName} Budget`}
                 </h3>
@@ -406,22 +411,30 @@ export default function GiftListCard({
           <div className={isAuthorizedPlusMember ? 'mt-4 sm:mt-6' : ''}>
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-bold text-white text-base sm:text-lg">
-                {holiday === 'Thanksgiving'
+                {isThanksgiving
                   ? 'Shopping List'
-                  : holiday === 'Easter'
+                  : isEaster
                     ? 'Basket List'
-                    : 'Gift List'}
+                    : isNewYear
+                      ? '✨ Supplies List'
+                      : isFourthOfJuly
+                        ? 'Supplies List'
+                        : 'Gift List'}
               </h4>
               <span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full bg-white bg-opacity-20 text-white">
                 {finalGiftList.totalItems}
               </span>
             </div>
             <p className="text-white opacity-90 text-xs sm:text-sm mb-3">
-              {holiday === 'Thanksgiving'
+              {isThanksgiving
                 ? 'Track your Thanksgiving shopping budget'
-                : holiday === 'Easter'
+                : isEaster
                   ? 'Track your Easter basket items'
-                  : `Track your ${displayHolidayName} gift ideas`}
+                  : isNewYear
+                    ? 'Track your ✨ New Year supplies'
+                    : isFourthOfJuly
+                      ? 'Track your Fourth of July supplies'
+                      : `Track your ${displayHolidayName} gift ideas`}
             </p>
 
             {/* Gift List Progress bar */}
@@ -480,7 +493,7 @@ export default function GiftListCard({
           <div className="mb-4 sm:mb-6">
             <div className="flex justify-between items-start mb-3 sm:mb-4">
               <h3 className="font-bold text-gray-900 text-base sm:text-lg">
-                {holiday === 'Thanksgiving'
+                {isThanksgiving
                   ? `${displayHolidayName} Shopping Budget`
                   : `${displayHolidayName} Budget`}
               </h3>
@@ -527,7 +540,15 @@ export default function GiftListCard({
         <div className={isAuthorizedPlusMember ? 'mt-4 sm:mt-6' : ''}>
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-bold text-gray-900 text-base sm:text-lg">
-              {getHolidayGiftListConfig(holiday).displayText}
+              {isThanksgiving
+                ? 'Shopping List'
+                : isEaster
+                  ? 'Basket List'
+                  : isNewYear
+                    ? '✨ Supplies List'
+                    : isFourthOfJuly
+                      ? 'Supplies List'
+                      : 'Gift List'}
             </h4>
             <span
               className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full"
@@ -540,9 +561,13 @@ export default function GiftListCard({
             </span>
           </div>
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3">
-            {holiday === 'Thanksgiving'
+            {isThanksgiving
               ? 'Track your Thanksgiving shopping budget'
-              : `Track your ${displayHolidayName} gift ideas`}
+              : isNewYear
+                ? 'Track your ✨ New Year supplies'
+                : isFourthOfJuly
+                  ? 'Track your Fourth of July supplies'
+                  : `Track your ${displayHolidayName} gift ideas`}
           </p>
 
           {/* Gift List Progress bar */}

@@ -1,22 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformCardPayload } from '@/utils/formTransformers';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import MailCardStatus from '@/components/cards/MailCardStatus';
 import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
@@ -26,36 +20,31 @@ import DeleteModal from '@/components/modals/DeleteModal';
 export default function GraduationCardsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Use new standardized hooks
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get Redux selectors
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get current Redux state for skip logic
-  // Get holiday ID for Graduation - try to resolve from home data, fallback to route-based resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/graduation', holidayPreferences)
-    : getHolidayIdFromRoute('/graduation', holidayPreferences); // Allow fallback for cold entry
-
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, resolvedHolidayId),
+  // Filter cards from holiday data using Cards category
+  const cards = useMemo(
+    () => holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [],
+    [holidayData?.tasks],
   );
 
-  // Get holiday data from Redux - single source of truth
-
-  // Use Redux data directly - no individual API calls needed
-  const cards = holidayData?.cards || [];
   const isLoading = !homeInitialized;
-  const error = null; // Error handling through home data loading
 
+  // State management
   const [showForm, setShowForm] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -64,202 +53,111 @@ export default function GraduationCardsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
 
-  // Function to refresh home data after mutations
-  async function refreshHomeData() {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  }
-
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  async function handleAddCard(values: Record<string, any>) {
+  // CRUD Operations using new hooks
+  const handleAddCard = async (values: Record<string, any>) => {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
-    if (!resolvedHolidayId || !mutation) return;
+    if (!holidayId) return;
 
     try {
-      const payload = transformCardPayload(values, contacts);
-      await mutation({
-        holidayId: resolvedHolidayId || '',
-        payload,
-        auth0User,
-      }).unwrap();
+      const transformedPayload = transformCardPayload(values, contacts);
+      const payload = {
+        title: `Card for ${values.recipient}`,
+        category: 'Cards',
+        priority: 'medium' as const,
+        ...transformedPayload,
+      };
+
+      await createTask(payload);
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
     }
-  }
-
-  function openForm() {
-    setShowForm(true);
-  }
-
-  function closeForm() {
-    setShowForm(false);
-  }
-
-  const handleDeleteCard = async (cardId: string) => {
-    const card = cards.find(c => c.id === cardId);
-    setCardToDelete(card);
-    setShowDeleteModal(true);
-  };
-
-  const handleEditCard = async (card: any) => {
-    setCardToEdit(card);
-    setShowEditModal(true);
   };
 
   const confirmDelete = async () => {
-    if (cardToDelete && mutation) {
-      try {
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload: {
-            id: cardToDelete.id,
-            action: 'delete',
-            recipient: cardToDelete.recipient,
-            message: cardToDelete.message || '',
-            address: cardToDelete.address || '',
-          },
-          auth0User,
-        }).unwrap();
+    if (!cardToDelete || !holidayId) return;
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
+    try {
+      await deleteTask(cardToDelete.id);
 
-        setShowDeleteModal(false);
-        setCardToDelete(null);
-      } catch (error) {
-        console.error('Error deleting card:', error);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setCardToDelete(null);
+    } catch (error) {
+      console.error('Error deleting card:', error);
     }
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && mutation) {
-      try {
-        const payload = {
-          ...transformCardPayload(values, contacts),
-          id: cardToEdit.id,
-          action: 'update',
-        };
+    if (!cardToEdit || !holidayId) return;
 
-        // Optimistically update the Redux home data
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: values.recipient,
-              message: values.message,
-              address: values.address,
-            },
-          }),
-        );
+    try {
+      const transformedPayload = transformCardPayload(values, contacts);
+      const payload = {
+        title: `Card for ${values.recipient}`,
+        category: 'Cards',
+        priority: 'medium' as const,
+        ...transformedPayload,
+      };
 
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload,
-          auth0User,
-        }).unwrap();
+      await updateTask(cardToEdit.id, payload);
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
-        setShowEditModal(false);
-        setCardToEdit(null);
-      } catch (error) {
-        console.error('Error updating card:', error);
-        // Revert the optimistic update on error
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: cardToEdit.recipient,
-              message: cardToEdit.message,
-              address: cardToEdit.address,
-            },
-          }),
-        );
-      }
+      setShowEditModal(false);
+      setCardToEdit(null);
+    } catch (error) {
+      console.error('Error updating card:', error);
     }
   };
 
   const handleToggleCompletion = async (cardId: string) => {
-    if (mutation) {
-      try {
-        const card = cards.find(c => c.id === cardId);
-        if (card) {
-          const payload = {
-            id: cardId,
-            action: 'update',
-            isCompleted: !card.isCompleted,
-            recipient: card.recipient,
-            message: card.message || '',
-            address: card.address || '',
-          };
+    const card = cards.find((c: any) => c.id === cardId);
+    if (!card || !holidayId) return;
 
-          // Optimistically update the Redux home data
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: !card.isCompleted },
-            }),
-          );
+    try {
+      await updateTask(cardId, {
+        isCompleted: !card.isCompleted,
+      });
 
-          await mutation({
-            holidayId: resolvedHolidayId || '',
-            payload,
-            auth0User,
-          }).unwrap();
-        }
-      } catch (error) {
-        console.error('Error toggling card completion:', error);
-        // Revert the optimistic update on error
-        const card = cards.find(c => c.id === cardId);
-        if (card) {
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: card.isCompleted },
-            }),
-          );
-        }
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+    } catch (error) {
+      console.error('Error toggling card completion:', error);
     }
   };
 
-  const sortedCards = [...cards].sort((a, b) => {
+  // Helper functions
+  const openForm = () => setShowForm(true);
+  const closeForm = () => setShowForm(false);
+
+  const handleDeleteCard = (cardId: string) => {
+    const card = cards.find((c: any) => c.id === cardId);
+    setCardToDelete(card);
+    setShowDeleteModal(true);
+  };
+
+  const handleEditCard = (card: any) => {
+    setCardToEdit(card);
+    setShowEditModal(true);
+  };
+
+  // Loading state from hooks
+  const loading = createLoading || updateLoading || deleteLoading;
+
+  const sortedCards = [...cards].sort((a: any, b: any) => {
     switch (sortBy) {
       case 'recipient':
         return a.recipient.localeCompare(b.recipient);
@@ -272,10 +170,38 @@ export default function GraduationCardsPage() {
     }
   });
 
-  const completedCards = cards.filter(card => card.isCompleted);
-  const incompleteCards = cards.filter(card => !card.isCompleted);
+  const completedCards = cards.filter((card: any) => card.isCompleted);
+  const incompleteCards = cards.filter((card: any) => !card.isCompleted);
+
+  // Transform task data to card format for MailCard component
+  const transformTaskToCard = (task: any) => {
+    // Extract recipient from title "Card for [Recipient Name]"
+    const recipient = task.title?.replace(/^Card for /, '') || 'Unknown';
+
+    return {
+      ...task,
+      recipient,
+      message: task.message || task.description || '',
+      address: task.address || '',
+    };
+  };
 
   // Form fields configuration for cards
+  const getEditInitialValues = (card: any) => {
+    if (!card) return {};
+
+    console.log('Card data for editing:', card); // Debug log
+
+    // Extract recipient from title "Card for [Recipient Name]"
+    const recipientFromTitle = card.title?.replace(/^Card for /, '') || '';
+
+    return {
+      recipient: card.recipient || recipientFromTitle,
+      message: card.message || card.description || '',
+      address: card.address || '',
+    };
+  };
+
   const formFields = [
     {
       id: 'recipient',
@@ -308,7 +234,7 @@ export default function GraduationCardsPage() {
         onSortClick={() => setShowSortModal(true)}
         description="Keep track of your Graduation cards!"
         holidayColor="purple-500"
-        error={mutationError ? 'API Error' : undefined}
+        error={undefined}
         sortTitle="Sort Cards"
       />
 
@@ -324,60 +250,44 @@ export default function GraduationCardsPage() {
         <AddButton title="Card" onClick={openForm} color="purple" />
 
         {/* Card List */}
-        {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Loading cards...</p>
-          </div>
-        ) : sortedCards.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600 dark:text-gray-400">No cards added yet.</p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
-            >
-              Add your first card
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <TaskSection
-              title="Cards to Send"
-              items={incompleteCards}
-              isCompleted={false}
-              emptyMessage="No cards to send yet."
-              completedMessage="All cards sent!"
-              renderItem={card => (
-                <MailCard
-                  key={card.id}
-                  card={card}
-                  onToggleCompletion={handleToggleCompletion}
-                  onEditCard={handleEditCard}
-                  onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-                />
-              )}
-            />
 
-            <TaskSection
-              title="Sent Cards"
-              items={completedCards}
-              isCompleted={true}
-              emptyMessage="No cards sent yet."
-              completedMessage="No sent cards to display."
-              renderItem={card => (
-                <MailCard
-                  key={card.id}
-                  card={card}
-                  onToggleCompletion={handleToggleCompletion}
-                  onEditCard={handleEditCard}
-                  onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
-                />
-              )}
-            />
-          </div>
-        )}
+        <div className="space-y-6">
+          <TaskSection
+            title="Cards to Send"
+            items={incompleteCards}
+            isCompleted={false}
+            emptyMessage="No cards to send yet."
+            completedMessage="All cards sent!"
+            renderItem={card => (
+              <MailCard
+                key={card.id}
+                card={transformTaskToCard(card)}
+                onToggleCompletion={handleToggleCompletion}
+                onEditCard={handleEditCard}
+                onDeleteCard={handleDeleteCard}
+                holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+              />
+            )}
+          />
+
+          <TaskSection
+            title="Sent Cards"
+            items={completedCards}
+            isCompleted={true}
+            emptyMessage="No cards sent yet."
+            completedMessage="No sent cards to display."
+            renderItem={card => (
+              <MailCard
+                key={card.id}
+                card={transformTaskToCard(card)}
+                onToggleCompletion={handleToggleCompletion}
+                onEditCard={handleEditCard}
+                onDeleteCard={handleDeleteCard}
+                holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+              />
+            )}
+          />
+        </div>
       </main>
 
       {/* Form Modal */}
@@ -400,7 +310,7 @@ export default function GraduationCardsPage() {
         isOpen={showEditModal}
         title="Edit Card"
         fields={formFields}
-        initialValues={cardToEdit}
+        initialValues={getEditInitialValues(cardToEdit)}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
@@ -439,10 +349,7 @@ export default function GraduationCardsPage() {
         ]}
         title="Sort Cards"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -138,7 +138,9 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
             // }}
           >
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {items.map(item => renderItem(item))}
+              {items.map((item, index) => (
+                <div key={item.id || item.email || index}>{renderItem(item)}</div>
+              ))}
             </div>
           </div>
         )}
@@ -170,11 +172,11 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
           </div>
         </div>
       ) : (
-        <div
-          className={`card ${cardClassName} rounded shadow`}
-        >
+        <div className={`card ${cardClassName} rounded shadow`}>
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-            {items.map(item => renderItem(item))}
+            {items.map((item, index) => (
+              <li key={item.id || item.email || index}>{renderItem(item)}</li>
+            ))}
           </ul>
         </div>
       )}

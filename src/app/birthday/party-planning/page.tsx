@@ -1,23 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
-import { getHolidayDataFromRedux } from '@/utils/holidayData';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -74,65 +63,37 @@ const defaultPartyPlanningTasks = [
 export default function BirthdayPartyPlanningPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { user: auth0User } = useAuth0();
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  // No need for custom mutations hook - using direct API calls like Kwanzaa
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get current Redux state for data access
-  const currentState = useAppSelector((state: any) => state);
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Holiday ID resolution
-  const holidayId = 'birthday';
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
+  // Get party planning tasks from holiday data
+  const partyPlanning = useMemo(
+    () =>
+      holidayData?.tasks?.filter(
+        (task: any) => task.category === 'Party Planning',
+      ) || [],
+    [holidayData?.tasks],
   );
-  const resolvedHolidayId = holidayData?.holidayId;
 
-  // Check if the holiday is shared to conditionally show assign to field
+  const isLoading = !homeInitialized;
+
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'birthday'),
   );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
-
-  // Redux data access - party planning tasks are stored as tasks with category "Party Planning"
-  const reduxHolidayData = getHolidayDataFromRedux(resolvedHolidayId, currentState);
-  const partyPlanning =
-    reduxHolidayData?.tasks?.filter(
-      (task: any) => task.category === 'Party Planning',
-    ) || [];
-  const isLoading = !homeInitialized;
-  const error = null;
-
-  // Refresh home data function (like Kwanzaa)
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !resolvedHolidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -141,10 +102,6 @@ export default function BirthdayPartyPlanningPage() {
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -210,7 +167,7 @@ export default function BirthdayPartyPlanningPage() {
       return;
     }
 
-    if (!resolvedHolidayId) {
+    if (!holidayId) {
       alert('Holiday data is still loading, please try again in a moment');
       return;
     }
@@ -220,137 +177,49 @@ export default function BirthdayPartyPlanningPage() {
       return;
     }
 
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
-      category: 'Party Planning',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: resolvedHolidayId,
-    };
-
     try {
-      // Optimistically update Redux state first (like Kwanzaa)
-      dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: newTask }));
-
-      // Call API - map camelCase to snake_case for API
-      const apiPayload = {
+      await createTask({
         title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
+        description: values.description,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
         category: 'Party Planning',
-        due_date: values.dueDate || undefined, // snake_case for API
-        isCompleted: false,
-      };
-
-      const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify(apiPayload),
+        dueDate: values.dueDate,
       });
 
-      if (response.ok) {
-        // Replace temporary task with real task from API (like Kwanzaa)
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: resolvedHolidayId, task: result }));
-
-        // Also refresh home data like Kwanzaa does
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error('Failed to add task:', response.status, response.statusText);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
-      // Remove optimistic update on error (like Kwanzaa)
-      dispatch(
-        removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId: newTask.id }),
-      );
-      console.error('Failed to add task:', error);
-    } finally {
-      setIsAdding(false);
+      console.error('Error creating task:', error);
+      alert('Failed to add task. Please try again.');
     }
   }
 
   async function addDefaultPartyPlanningTasks() {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
     try {
-      // Make all API calls WITHOUT optimistic updates during bulk addition
+      // Make all API calls using the hook
       for (const task of defaultPartyPlanningTasks) {
-        try {
-          const response = await fetch(`/api/holidays/${resolvedHolidayId}/tasks`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            },
-            body: JSON.stringify({
-              ...task,
-              category: 'Party Planning',
-              isCompleted: false,
-            }),
-          });
-
-          if (!response.ok) {
-            console.error(
-              'Failed to add default task:',
-              response.status,
-              response.statusText,
-            );
-          }
-        } catch (taskError) {
-          console.error('Failed to add default task:', taskError);
-        }
+        await createTask({
+          ...task,
+          category: 'Party Planning',
+        });
       }
 
       // Refresh home data ONCE after all tasks are added
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
       setShowDefaultTasks(false);
     } catch (error) {
       console.error('Failed to add default tasks:', error);
-    } finally {
-      setIsAdding(false);
     }
   }
 
   async function handleToggleTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
-    setIsToggling(true);
     try {
       // Find the current task to get its completion status
       const currentTask = partyPlanning.find((task: any) => task.id === taskId);
@@ -361,55 +230,12 @@ export default function BirthdayPartyPlanningPage() {
       // Toggle the completion status
       const newCompletionStatus = !currentTask.isCompleted;
 
-      // Optimistically update the Redux home data
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
-          taskId: taskId,
-          updates: { isCompleted: newCompletionStatus },
-        }),
-      );
+      await updateTask(taskId, { isCompleted: newCompletionStatus });
 
-      // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-      const response = await fetch(apiUrl, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          isCompleted: newCompletionStatus,
-        }),
-      });
-
-      if (!response.ok) {
-        // Revert the optimistic update on error
-        const currentTask = partyPlanning.find((task: any) => task.id === taskId);
-        if (currentTask) {
-          dispatch(
-            updateTaskInHomeData({
-              holidayId: resolvedHolidayId,
-              taskId: taskId,
-              updates: { isCompleted: currentTask.isCompleted },
-            }),
-          );
-        }
-        console.error(
-          'Failed to toggle task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      console.error('Failed to toggle task:', error);
-    } finally {
-      setIsToggling(false);
+      console.error('Error toggling task:', error);
     }
   }
 
@@ -419,145 +245,52 @@ export default function BirthdayPartyPlanningPage() {
   };
 
   async function handleEditTaskSubmit(values: Record<string, any>) {
-    if (!editingTask || !resolvedHolidayId || !auth0User) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
     try {
       const updatedTask = {
         title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
-        category: 'Party Planning',
-        dueDate: values.dueDate || undefined,
+        description: values.description,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
+        dueDate: values.dueDate,
       };
 
-      // Optimistically update the Redux home data
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: resolvedHolidayId,
-          taskId: editingTask.id,
-          updates: updatedTask,
-        }),
-      );
+      await updateTask(editingTask.id, updatedTask);
 
-      // Call API directly instead of using custom hook - map camelCase to snake_case
-      const apiPayload = {
-        title: values.title,
-        description: values.description || undefined,
-        priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined, // snake_case for API
-        category: 'Party Planning',
-        due_date: values.dueDate || undefined, // snake_case for API
-      };
-
-      const response = await fetch(
-        `/api/holidays/${resolvedHolidayId}/tasks/${editingTask.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
-
-      if (!response.ok) {
-        // Revert the optimistic update on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: resolvedHolidayId,
-            taskId: editingTask.id,
-            updates: {
-              title: editingTask.title,
-              description: editingTask.description,
-              priority: editingTask.priority,
-              assignedTo: editingTask.assignedTo,
-              category: editingTask.category,
-              dueDate: editingTask.dueDate,
-            },
-          }),
-        );
-        console.error(
-          'Failed to update task:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
-      console.error('Failed to update task:', error);
-    } finally {
-      setIsUpdating(false);
+      console.error('Error updating task:', error);
     }
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!resolvedHolidayId || !auth0User) return;
+    if (!holidayId || !auth0User) return;
 
-    // Find the task to delete for potential rollback
-    const taskToDelete = partyPlanning.find((task: any) => task.id === taskId);
-    if (!taskToDelete) return;
-
-    setIsDeleting(true);
     try {
-      // Optimistically update Redux state first
-      dispatch(removeTaskFromHomeData({ holidayId: resolvedHolidayId, taskId }));
+      await deleteTask(taskId);
 
-      // Call API directly instead of using custom hook
-      const apiUrl = `/api/holidays/${resolvedHolidayId}/tasks/${taskId}`;
-      const response = await fetch(apiUrl, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
-      if (!response.ok) {
-        // If API failed, revert the optimistic update
-        dispatch(
-          addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-        );
-        console.error(
-          'Failed to delete task:',
-          response.status,
-          response.statusText,
-        );
-      } else {
-        // Check if this was the last task and re-show default tasks prompt
-        const remainingTasks = partyPlanning.filter(t => t.id !== taskId);
-        if (remainingTasks.length === 0) {
-          setShowDefaultTasks(true);
-        }
+      // Check if this was the last task and re-show default tasks prompt
+      const remainingTasks = partyPlanning.filter((t: any) => t.id !== taskId);
+      if (remainingTasks.length === 1) {
+        // Will be 0 after deletion
+        setShowDefaultTasks(true);
       }
     } catch (error) {
-      // If API failed, revert the optimistic update
-      dispatch(
-        addTaskToHomeData({ holidayId: resolvedHolidayId, task: taskToDelete }),
-      );
-      console.error('Failed to delete task:', error);
-    } finally {
-      setIsDeleting(false);
+      console.error('Error deleting task:', error);
     }
   }
 
   function openForm() {
     // Add guard to prevent opening form when conditions are not met
-    if (!homeInitialized || !resolvedHolidayId || !auth0User) {
+    if (!homeInitialized || !holidayId || !auth0User) {
       return;
     }
     setShowForm(true);
@@ -621,7 +354,7 @@ export default function BirthdayPartyPlanningPage() {
         sortTitle="Sort Party Planning"
         description="Plan your birthday party with style!"
         holidayColor="yellow-500"
-        error={error ? 'An error occurred' : undefined}
+        error={undefined}
       />
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
@@ -637,13 +370,13 @@ export default function BirthdayPartyPlanningPage() {
             <div className="flex gap-3">
               <button
                 onClick={addDefaultPartyPlanningTasks}
-                disabled={isAdding}
+                disabled={createLoading}
                 className="bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isAdding && (
+                {createLoading && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-200"></div>
                 )}
-                {isAdding ? 'Adding Tasks...' : 'Add Default Tasks'}
+                {createLoading ? 'Adding Tasks...' : 'Add Default Tasks'}
               </button>
               <button
                 onClick={() => setShowDefaultTasks(false)}
@@ -659,10 +392,10 @@ export default function BirthdayPartyPlanningPage() {
           title="Task"
           onClick={openForm}
           color="amber"
-          disabled={!homeInitialized || !resolvedHolidayId || !auth0User}
+          disabled={!homeInitialized || !holidayId || !auth0User}
         />
 
-        {(!homeInitialized || !resolvedHolidayId || !auth0User) && (
+        {(!homeInitialized || !holidayId || !auth0User) && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
             <p className="text-yellow-800">
               {!auth0User
@@ -705,7 +438,7 @@ export default function BirthdayPartyPlanningPage() {
           </div>
         )}
 
-        {isAdding ? (
+        {createLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-4"></div>
@@ -739,7 +472,7 @@ export default function BirthdayPartyPlanningPage() {
           />
         )}
 
-        {!isAdding && (
+        {!createLoading && (
           <TaskSection
             title="Completed"
             items={completedPartyPlanningTasks}
@@ -813,7 +546,7 @@ export default function BirthdayPartyPlanningPage() {
         }}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={isAdding}
+        loading={createLoading}
         submitText="Add Task"
         cardClassName="card-tasks"
         submitButtonColor="#f59e0b"
@@ -874,7 +607,7 @@ export default function BirthdayPartyPlanningPage() {
         }
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}
-        loading={isUpdating}
+        loading={updateLoading}
         submitText="Update Task"
         cardClassName="card-tasks"
         submitButtonColor="#f59e0b"

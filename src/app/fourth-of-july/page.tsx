@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import GuestListCard from '@/components/cards/guest/GuestListCard';
@@ -10,12 +9,6 @@ import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
 import CountdownWithInvite from '@/components/common/CountdownWithInvite';
 import SharedIndicator from '@/components/common/SharedIndicator';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 
 const fourthOfJulySubsections = [
   {
@@ -26,6 +19,14 @@ const fourthOfJulySubsections = [
     type: 'gift-list',
   },
   {
+    name: 'Tasks',
+    description: 'Stay on top of your Fourth of July to-dos',
+    href: '/fourth-of-july/tasks',
+    sliceKey: 'tasks',
+    category: 'Tasks',
+    type: 'task' as const,
+  },
+  {
     name: 'Event Planning',
     description: 'Plan your Fourth of July celebrations',
     href: '/fourth-of-july/events',
@@ -34,7 +35,7 @@ const fourthOfJulySubsections = [
   },
   {
     name: 'Guest List',
-    description: 'Manage your guest list',
+    description: 'Manage your Fourth of July guest list',
     href: '/fourth-of-july/guest-list',
     sliceKey: 'guestList',
     type: 'guest-list',
@@ -49,23 +50,14 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-  const { holidayId, auth0User } = useFormModalMutation();
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-
-  // Get data from Redux home state first, fallback to RTK Query if needed
-  const homeData = useAppSelector(selectHomeData);
-
-  // Get holiday data from Redux using memoized selector
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId),
-  );
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
   // Show message if holiday doesn't exist
   if (!holidayId) {
     return (
       <div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
         <HolidayHeader
-          holidayName="🎆 Fourth of July"
+          holidayName="Fourth of July"
           description="Celebrate independence and freedom!"
         />
         <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">

@@ -1,22 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 import { transformCardPayload } from '@/utils/formTransformers';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
+import Footer from '@/components/common/Footer';
 import MailCardStatus from '@/components/cards/MailCardStatus';
 import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
@@ -26,33 +20,26 @@ import DeleteModal from '@/components/modals/DeleteModal';
 export default function ChristmasCardsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Use standardized hooks
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
   const {
-    holidayId,
-    mutation,
-    isLoading: mutationLoading,
-    error: mutationError,
-    auth0User,
-  } = useFormModalMutation();
+    createCard,
+    updateCard,
+    deleteCard,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
-  // Get Redux selectors
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
-  const homeData = useAppSelector(selectHomeData);
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
-  // Get current Redux state for skip logic
-  // Get holiday ID for Christmas - try to resolve from home data, fallback to route-based resolution
-  const resolvedHolidayId = homeInitialized
-    ? getHolidayIdFromRoute('/christmas', holidayPreferences)
-    : getHolidayIdFromRoute('/christmas', holidayPreferences); // Allow fallback for cold entry
+  // Use memoized cards filtering from holiday data
+  const cards = useMemo(() => holidayData?.cards || [], [holidayData?.cards]);
 
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, resolvedHolidayId),
-  );
-
-  // Get holiday data from Redux - single source of truth
-
-  // Use Redux data directly - no individual API calls needed
-  const cards = holidayData?.cards || [];
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
 
@@ -64,32 +51,6 @@ export default function ChristmasCardsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
 
-  // Function to refresh home data after mutations
-  async function refreshHomeData() {
-    if (!auth0User) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  }
-
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
@@ -97,18 +58,16 @@ export default function ChristmasCardsPage() {
 
   async function handleAddCard(values: Record<string, any>) {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
-    if (!resolvedHolidayId || !mutation) return;
+    if (!holidayId || !auth0User) return;
 
     try {
       const payload = transformCardPayload(values, contacts);
-      await mutation({
-        holidayId: resolvedHolidayId || '',
-        payload,
-        auth0User,
-      }).unwrap();
+
+      // Use the standardized hook function
+      await createCard(payload);
 
       // Refresh home data to ensure UI is in sync
-      await refreshHomeData();
+      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
@@ -126,7 +85,7 @@ export default function ChristmasCardsPage() {
   }
 
   const handleDeleteCard = async (cardId: string) => {
-    const card = cards.find(c => c.id === cardId);
+    const card = cards.find((c: any) => c.id === cardId);
     setCardToDelete(card);
     setShowDeleteModal(true);
   };
@@ -137,22 +96,13 @@ export default function ChristmasCardsPage() {
   };
 
   const confirmDelete = async () => {
-    if (cardToDelete && mutation) {
+    if (cardToDelete && holidayId && auth0User) {
       try {
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload: {
-            id: cardToDelete.id,
-            action: 'delete',
-            recipient: cardToDelete.recipient,
-            message: cardToDelete.message || '',
-            address: cardToDelete.address || '',
-          },
-          auth0User,
-        }).unwrap();
+        // Use the standardized hook function
+        await deleteCard(cardToDelete.id, cardToDelete);
 
         // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
+        await refreshHomeData(auth0User, holidayId);
 
         setShowDeleteModal(false);
         setCardToDelete(null);
@@ -163,103 +113,45 @@ export default function ChristmasCardsPage() {
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && mutation) {
+    if (cardToEdit && holidayId && auth0User) {
       try {
-        const payload = {
-          ...transformCardPayload(values, contacts),
-          id: cardToEdit.id,
-          action: 'update',
-        };
+        const payload = transformCardPayload(values, contacts);
 
-        // Optimistically update the Redux home data
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: values.recipient,
-              message: values.message,
-              address: values.address,
-            },
-          }),
-        );
-
-        await mutation({
-          holidayId: resolvedHolidayId || '',
-          payload,
-          auth0User,
-        }).unwrap();
+        // Use the standardized hook function
+        await updateCard(cardToEdit.id, payload);
 
         // Refresh home data to ensure UI is in sync
-        await refreshHomeData();
+        await refreshHomeData(auth0User, holidayId);
 
         setShowEditModal(false);
         setCardToEdit(null);
       } catch (error) {
         console.error('Error updating card:', error);
-        // Revert the optimistic update on error
-        dispatch(
-          updateCardInHomeData({
-            holidayId: resolvedHolidayId || '',
-            cardId: cardToEdit.id,
-            updates: {
-              recipient: cardToEdit.recipient,
-              message: cardToEdit.message,
-              address: cardToEdit.address,
-            },
-          }),
-        );
       }
     }
   };
 
   const handleToggleCompletion = async (cardId: string) => {
-    if (mutation) {
-      try {
-        const card = cards.find(c => c.id === cardId);
-        if (card) {
-          const payload = {
-            id: cardId,
-            action: 'update',
-            isCompleted: !card.isCompleted,
-            recipient: card.recipient,
-            message: card.message || '',
-            address: card.address || '',
-          };
+    try {
+      const card = cards.find((c: any) => c.id === cardId);
+      if (card && holidayId && auth0User) {
+        // Use the standardized hook function
+        await updateCard(cardId, {
+          recipient: card.recipient,
+          message: card.message || '',
+          address: card.address || '',
+          isCompleted: !card.isCompleted,
+        });
 
-          // Optimistically update the Redux home data
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: !card.isCompleted },
-            }),
-          );
-
-          await mutation({
-            holidayId: resolvedHolidayId || '',
-            payload,
-            auth0User,
-          }).unwrap();
-        }
-      } catch (error) {
-        console.error('Error toggling card completion:', error);
-        // Revert the optimistic update on error
-        const card = cards.find(c => c.id === cardId);
-        if (card) {
-          dispatch(
-            updateCardInHomeData({
-              holidayId: resolvedHolidayId || '',
-              cardId: cardId,
-              updates: { isCompleted: card.isCompleted },
-            }),
-          );
-        }
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData(auth0User, holidayId);
       }
+    } catch (error) {
+      console.error('Error toggling card completion:', error);
     }
   };
 
-  const sortedCards = [...cards].sort((a, b) => {
+  const sortedCards = [...cards].sort((a: any, b: any) => {
     switch (sortBy) {
       case 'recipient':
         return a.recipient.localeCompare(b.recipient);
@@ -272,8 +164,8 @@ export default function ChristmasCardsPage() {
     }
   });
 
-  const completedCards = cards.filter(card => card.isCompleted);
-  const incompleteCards = cards.filter(card => !card.isCompleted);
+  const completedCards = cards.filter((card: any) => card.isCompleted);
+  const incompleteCards = cards.filter((card: any) => !card.isCompleted);
 
   // Form fields configuration for cards
   const formFields = [
@@ -300,6 +192,8 @@ export default function ChristmasCardsPage() {
     },
   ];
 
+  const loading = createLoading || updateLoading || deleteLoading;
+
   return (
     <div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
@@ -308,7 +202,7 @@ export default function ChristmasCardsPage() {
         onSortClick={() => setShowSortModal(true)}
         description="Keep track of your cards!"
         holidayColor="red-500"
-        error={mutationError ? 'API Error' : undefined}
+        error={error ? 'Failed to load cards' : undefined}
         sortTitle="Sort Cards"
       />
 
@@ -439,10 +333,7 @@ export default function ChristmasCardsPage() {
         ]}
         title="Sort Cards"
       />
-
-      <footer className="w-full max-w-md py-4 text-center text-xs text-gray-500 dark:text-gray-500 mt-8">
-        &copy; {new Date().getFullYear()} Next Holiday
-      </footer>
+      <Footer />
     </div>
   );
 }
