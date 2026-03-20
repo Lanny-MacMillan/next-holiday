@@ -1,21 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import { RootState } from '@/store';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateTaskInHomeData,
-  setHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-} from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -33,30 +25,59 @@ import AddButton from '@/components/common/AddButton';
 export default function HanukkahEventsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { holidayId, auth0User } = useFormModalMutation();
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
-  // Get Redux data
-  const holidayPreferences = useAppSelector(selectHolidayPreferences);
-  const homeInitialized = useAppSelector(selectHomeInitialized);
+  // Use centralized holiday page data hook
+  const { holidayId, holidayData, auth0User, homeInitialized } =
+    useHolidayPageData();
+
+  // Use standardized mutation hooks for task operations
+  const {
+    createTask,
+    updateTask,
+    deleteTask,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
+
+  // Use standardized data refresh hook
+  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
-  const holidayData = useAppSelector(state =>
-    selectHolidayPrefById(state, holidayId!),
+  const events = useMemo(
+    () =>
+      holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [],
+    [holidayData?.tasks],
   );
-  const events =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
 
   // Sharing status (for conditional form fields)
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'hanukkah'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector(state =>
+  const shareData = useAppSelector((state: RootState) =>
     selectShareByHolidayKey(state, 'hanukkah'),
   );
-  const shareMembers = shareData?.members || [];
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+      ]
+    : baseMembers;
 
   // State management
   const [showFormModal, setShowFormModal] = useState(false);
@@ -65,9 +86,6 @@ export default function HanukkahEventsPage() {
   const [eventToDelete, setEventToDelete] = useState<any>(null);
   const [showSortModal, setShowSortModal] = useState(false);
   const [sortBy, setSortBy] = useState<string>('datetime');
-  const [isAdding, setIsAdding] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -81,111 +99,33 @@ export default function HanukkahEventsPage() {
     }
   }, [events, homeInitialized]);
 
-  // Refresh home data function
-  const refreshHomeData = async () => {
-    if (!auth0User?.sub || !holidayId) return;
-
-    try {
-      const response = await fetch('/api/home', {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        dispatch(setHomeData(result.data));
-      }
-    } catch (error) {
-      console.error('Error refreshing home data:', error);
-    }
-  };
-
-  // CRUD Operations Pattern (like Kwanzaa)
+  // CRUD Operations Pattern (using standardized hooks)
   async function handleAddEvent(values: Record<string, any>) {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
-
-    const newTask = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assigned_to || undefined,
-      category: 'Events',
-      dueDate: values.dueDate || undefined,
-      isCompleted: false,
-      holidayId: holidayId,
-    };
-
     try {
-      // Optimistically update Redux state first (like Kwanzaa)
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
-
-      // Call API - map camelCase to snake_case for API
-      const apiPayload = {
+      const newTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined, // snake_case for API
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
         category: 'Events',
-        due_date: values.dueDate || undefined, // snake_case for API
+        dueDate: values.dueDate || undefined,
         isCompleted: false,
+        holidayId: holidayId,
       };
 
-      console.log('🐛 [HanukkahAdd] API payload:', apiPayload);
+      // Use the standardized hook function
+      await createTask(newTask);
 
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify(apiPayload),
-      });
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
-      if (response.ok) {
-        // Replace temporary task with real task from API (like Kwanzaa)
-        const result = await response.json();
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-
-        // Also refresh home data like Kwanzaa does
-        await refreshHomeData();
-      } else {
-        // Remove optimistic update on error
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: newTask.id,
-          }),
-        );
-        console.error('Failed to add task:', response.status, response.statusText);
-      }
-    } catch (error) {
-      // Remove optimistic update on error (like Kwanzaa)
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
-      console.error('Error creating event:', error);
-    } finally {
-      setIsAdding(false);
       setShowFormModal(false);
+    } catch (error) {
+      console.error('Error creating event:', error);
     }
   }
 
@@ -195,54 +135,13 @@ export default function HanukkahEventsPage() {
     const event = events.find((e: any) => e.id === eventId);
     if (!event) return;
 
-    // Optimistic update
-    dispatch(
-      updateTaskInHomeData({
-        holidayId: holidayId,
-        taskId: eventId,
-        updates: { isCompleted: !event.isCompleted },
-      }),
-    );
-
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${eventId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
-            sub: auth0User.sub,
-            email: auth0User.email,
-            name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({ isCompleted: !event.isCompleted }),
-      });
+      // Use the standardized hook function
+      await updateTask(eventId, { isCompleted: !event.isCompleted });
 
-      if (!response.ok) {
-        // Revert on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: eventId,
-            updates: { isCompleted: event.isCompleted },
-          }),
-        );
-        console.error(
-          'Failed to toggle event:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
-      // Revert on error
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: eventId,
-          updates: { isCompleted: event.isCompleted },
-        }),
-      );
       console.error('Error toggling event:', error);
     }
   }
@@ -255,89 +154,27 @@ export default function HanukkahEventsPage() {
   async function handleEditSubmit(values: Record<string, any>) {
     if (!selectedEvent || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
-    const updates = {
-      title: values.title,
-      description: values.description || undefined,
-      priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assigned_to || undefined,
-      dueDate: values.dueDate || undefined,
-    };
-
     try {
-      // Optimistic update
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: selectedEvent.id,
-          updates,
-        }),
-      );
-
-      // Map camelCase to snake_case for API
-      const apiPayload = {
+      const updatedTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assigned_to || undefined, // snake_case for API
-        due_date: values.dueDate || undefined, // snake_case for API
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+        dueDate: values.dueDate || undefined,
       };
 
-      console.log('🐛 [HanukkahEdit] API payload:', apiPayload);
+      // Use the standardized hook function
+      await updateTask(selectedEvent.id, updatedTask);
 
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${selectedEvent.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-          body: JSON.stringify(apiPayload),
-        },
-      );
-
-      if (!response.ok) {
-        // Revert on error
-        dispatch(
-          updateTaskInHomeData({
-            holidayId: holidayId,
-            taskId: selectedEvent.id,
-            updates: selectedEvent,
-          }),
-        );
-        console.error(
-          'Failed to update event:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
       setSelectedEvent(null);
     } catch (error) {
-      // Revert on error
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: selectedEvent.id,
-          updates: selectedEvent,
-        }),
-      );
       console.error('Error updating event:', error);
-    } finally {
-      setIsUpdating(false);
     }
-  }
-
-  function handleDeleteEvent(event: any) {
-    setEventToDelete(event);
-    setShowDeleteModal(true);
   }
 
   function handleDelete(taskId: string, taskTitle: string) {
@@ -351,46 +188,17 @@ export default function HanukkahEventsPage() {
   async function confirmDelete() {
     if (!eventToDelete || !holidayId || !auth0User) return;
 
-    setIsDeleting(true);
     try {
-      const response = await fetch(
-        `/api/holidays/${holidayId}/tasks/${eventToDelete.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-test-user': JSON.stringify({
-              sub: auth0User.sub,
-              email: auth0User.email,
-              name: auth0User.name,
-              picture: auth0User.picture,
-            }),
-          },
-        },
-      );
+      // Use the standardized hook function
+      await deleteTask(eventToDelete.id);
 
-      if (response.ok) {
-        // Remove from Redux state on success
-        dispatch(
-          removeTaskFromHomeData({
-            holidayId: holidayId,
-            taskId: eventToDelete.id,
-          }),
-        );
-      } else {
-        console.error(
-          'Failed to delete event:',
-          response.status,
-          response.statusText,
-        );
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setEventToDelete(null);
     } catch (error) {
       console.error('Error deleting event:', error);
-    } finally {
-      setIsDeleting(false);
     }
   }
 
@@ -404,11 +212,11 @@ export default function HanukkahEventsPage() {
     setSelectedEvent(null);
   }
 
-  // Helper function to resolve assignedTo UUID to user name
+  // Helper function to resolve assignedTo name for display
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;
 
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    const member = shareMembers.find((m: any) => m.userId === assignedToUuid);
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
@@ -442,18 +250,14 @@ export default function HanukkahEventsPage() {
   const incompleteEvents = sortedEvents.filter((event: any) => !event.isCompleted);
   const completedEvents = sortedEvents.filter((event: any) => event.isCompleted);
 
-  // Contact options for assigned to field
-  const contactOptions = contacts.map((contact: any) => ({
-    value: contact.id,
-    label: contact.name,
-  }));
-
   // Form fields configuration using Enhanced Compatibility Layer
   const formFields = getFormConfigEnhanced('tasks', 'add', {
     holidayKey: 'hanukkah',
     shareMembers: shareMembers,
     auth0User: auth0User,
   }).fields;
+
+  const loading = createLoading || updateLoading || deleteLoading;
 
   if (isLoading) {
     return (
@@ -569,15 +373,15 @@ export default function HanukkahEventsPage() {
         title="Add New Event Task"
         fields={formFields}
         onSubmit={handleAddEvent}
-        loading={isAdding}
-        submitText="Add Task"
+        loading={loading}
+        submitText={loading ? 'Adding...' : 'Add Task'}
         submitButtonColor="#3b82f6"
         shareMembers={shareMembers}
         initialValues={{
           title: '',
           description: '',
           priority: 'medium',
-          assigned_to: '',
+          assignedTo: '',
           dueDate: '',
         }}
       />
@@ -587,22 +391,30 @@ export default function HanukkahEventsPage() {
         isOpen={showFormModal && !!selectedEvent}
         onClose={closeForm}
         title="Edit Event Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'hanukkah',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         onSubmit={handleEditSubmit}
-        loading={isUpdating}
-        submitText="Update Task"
+        loading={loading}
+        submitText={loading ? 'Updating...' : 'Update Task'}
         submitButtonColor="#3b82f6"
         shareMembers={shareMembers}
         initialValues={
           selectedEvent
             ? {
-                ...selectedEvent,
-                assigned_to: selectedEvent.assignedTo || '',
+                title: selectedEvent.title || '',
+                description: selectedEvent.description || '',
+                priority: selectedEvent.priority || 'medium',
+                assignedTo: selectedEvent.assignedTo || '',
                 dueDate: selectedEvent.dueDate
                   ? new Date(selectedEvent.dueDate).toISOString().split('T')[0]
                   : '',
               }
-            : {}
+            : undefined
         }
       />
 
@@ -613,7 +425,7 @@ export default function HanukkahEventsPage() {
         onConfirm={confirmDelete}
         title="Delete Event"
         message={`Are you sure you want to delete "${eventToDelete?.title}"?`}
-        loading={isDeleting}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}
