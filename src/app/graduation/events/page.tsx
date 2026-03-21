@@ -6,9 +6,15 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -70,8 +76,26 @@ export default function GraduationEventsPage() {
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, holidayId!),
+    selectIsHolidayShared(state, 'graduation'),
   );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'graduation'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Filter events from holiday data using Events category
   const events = useMemo(
@@ -89,6 +113,10 @@ export default function GraduationEventsPage() {
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Check if default event tasks exist
   useEffect(() => {
@@ -138,22 +166,22 @@ export default function GraduationEventsPage() {
   const handleAddEvent = async (values: any) => {
     if (!values.title?.trim() || !holidayId) return;
 
+    setIsSubmitting(true);
     try {
       const result = await createTask({
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || undefined, // Snake case for API
+        due_date: values.dueDate || undefined, // Snake case for API
         category: 'Events',
-        dueDate: values.dueDate,
       });
-
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -163,6 +191,8 @@ export default function GraduationEventsPage() {
         title: task.title,
         description: task.description,
         priority: task.priority,
+        assigned_to: undefined, // Use proper snake_case field mapping
+        due_date: undefined, // Use proper snake_case field mapping
         category: 'Events',
       });
     }
@@ -195,38 +225,53 @@ export default function GraduationEventsPage() {
   const handleEditEventSubmit = async (values: any) => {
     if (!editingTask || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
       const updates = {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to || null, // Snake case for API
+        due_date: values.dueDate || null, // Snake case for API
       };
 
       await updateTask(editingTask.id, updates);
-
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
       console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
-  const handleDelete = async (taskId: string) => {
-    if (!holidayId) return;
+  const handleDelete = (taskId: string, taskTitle: string) => {
+    const task = events.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete({ ...task, title: taskTitle });
+      setShowDeleteModal(true);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete?.id || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
-
-      // Refresh home data to ensure UI is in sync
+      await deleteTask(taskToDelete.id);
       await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   };
 
   // Helper functions
@@ -240,54 +285,24 @@ export default function GraduationEventsPage() {
   // Loading state from hooks
   const loading = createLoading || updateLoading || deleteLoading;
 
-  const sortedTasks = sortTasks(events);
+  const sortedTasks = sortTasks(events).map(transformTaskWithAssignment);
   const incompleteEvents = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedEvents = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      label: 'Event Title',
-      placeholder: 'Enter event title',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      label: 'Description',
-      placeholder: 'Event description...',
-      rows: 3,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      label: 'Priority',
-      options: [
-        { value: 'low', label: 'Low' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'high', label: 'High' },
-      ],
-      defaultValue: 'medium',
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            label: 'Assigned To',
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      label: 'Due Date',
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form config (using fallback approach)
+  const formConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('tasks');
 
   return (
     <div className="min-h-screen graduation-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -344,7 +359,8 @@ export default function GraduationEventsPage() {
                 task={task}
                 onToggleComplete={handleToggleCompletion}
                 onEdit={handleEditEvent}
-                onDelete={handleDelete}
+                onDelete={() => handleDelete(task.id, task.title)}
+                disableInternalModal={true}
               />
             )}
           />
@@ -361,7 +377,8 @@ export default function GraduationEventsPage() {
                 task={task}
                 onToggleComplete={handleToggleCompletion}
                 onEdit={handleEditEvent}
-                onDelete={handleDelete}
+                onDelete={() => handleDelete(task.id, task.title)}
+                disableInternalModal={true}
               />
             )}
           />
@@ -372,28 +389,28 @@ export default function GraduationEventsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Event"
-        fields={formFields}
+        fields={formConfig.fields}
         onSubmit={handleAddEvent}
         onClose={closeForm}
-        loading={loading}
-        submitText="Add Event"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Event'}
         cardClassName="card-events-graduation"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Event"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
+                assigned_to: editingTask.assignedTo || '', // API field → Form field
                 dueDate: editingTask.dueDate
                   ? new Date(editingTask.dueDate).toISOString().split('T')[0]
                   : '',
@@ -402,10 +419,29 @@ export default function GraduationEventsPage() {
         }
         onSubmit={handleEditEventSubmit}
         onClose={closeEditModal}
-        loading={loading}
-        submitText="Update Event"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Event'}
         cardClassName="card-events-graduation"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title={deleteConfig.title}
+          message={deleteConfig.message}
+          itemName={taskToDelete.title}
+          confirmText={deleteConfig.confirmText}
+          cancelText={deleteConfig.cancelText}
+          cardClassName={deleteConfig.cardClassName}
+          confirmButtonColor={deleteConfig.confirmButtonColor}
+          loading={deleteLoading}
+        />
+      )}
 
       {/* Sort Modal */}
       <SortModal

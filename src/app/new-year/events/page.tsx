@@ -15,10 +15,12 @@ import {
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
@@ -84,6 +86,8 @@ export default function NewYearEventsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -99,9 +103,9 @@ export default function NewYearEventsPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Events',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -131,9 +135,9 @@ export default function NewYearEventsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || null,
         category: 'Events',
-        dueDate: values.dueDate,
+        due_date: values.dueDate || null,
       };
 
       await updateTask(editingTask.id, updates);
@@ -148,19 +152,33 @@ export default function NewYearEventsPage() {
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!holidayId) return;
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = events.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete({ ...task, title: taskTitle });
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete?.id || !holidayId || !auth0User) return;
 
     try {
-      // Use the standardized hook function
-      await deleteTask(taskId);
-
-      // Refresh home data to update progress on main holiday page
+      await deleteTask(taskToDelete.id);
       await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
-  };
+  }
+
+  function handleCancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
+  }
 
   const handleToggleTask = async (taskId: string) => {
     const task = events.find((t: any) => t.id === taskId);
@@ -275,7 +293,7 @@ export default function NewYearEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditTask}
               theme={{
                 accentColor: '#fbbf24', // New Year gold
@@ -298,7 +316,7 @@ export default function NewYearEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditTask}
               theme={{
                 accentColor: '#fbbf24', // New Year gold
@@ -329,6 +347,8 @@ export default function NewYearEventsPage() {
           loading={createLoading}
           submitText={createLoading ? 'Adding...' : 'Add Task'}
           cardClassName="card-tasks"
+          contacts={contacts}
+          shareMembers={shareMembers}
         />
       )}
 
@@ -353,7 +373,7 @@ export default function NewYearEventsPage() {
             title: editingTask.title || '',
             description: editingTask.description || '',
             priority: editingTask.priority || 'medium',
-            assignedTo: editingTask.assignedTo || '',
+            assigned_to: editingTask.assignedTo || '',
             dueDate: editingTask.dueDate
               ? new Date(editingTask.dueDate).toISOString().split('T')[0]
               : '',
@@ -361,6 +381,20 @@ export default function NewYearEventsPage() {
           loading={updateLoading}
           submitText={updateLoading ? 'Updating...' : 'Update Task'}
           cardClassName="card-tasks"
+          contacts={contacts}
+          shareMembers={shareMembers}
+        />
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title="Delete Event"
+          message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+          loading={deleteLoading}
         />
       )}
 

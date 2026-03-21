@@ -12,7 +12,13 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -38,17 +44,26 @@ export default function FathersDayGiftListPage() {
 
   const { refreshHomeData } = useRefreshHomeData();
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'fathers-day'),
+  );
+  const baseMembers = shareData?.members || [];
+  const shareMembers = baseMembers;
+
   const displayGifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
   const isLoading = !homeInitialized;
   const error = null;
-  const [editLoading, setEditLoading] = useState(false);
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -56,32 +71,38 @@ export default function FathersDayGiftListPage() {
   }, [dispatch]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId) return;
-
+    setIsSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       await createGift(payload);
       await refreshHomeData(auth0User, holidayId);
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
-      // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
       } else {
         alert('Error creating gift. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   function openForm() {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
   function closeForm() {
-    setShowFormModal(false);
+    setShowAddModal(false);
+    setSelectedGift(null);
+  }
+
+  function closeEditModal() {
+    setShowEditModal(false);
     setSelectedGift(null);
   }
 
@@ -125,26 +146,27 @@ export default function FathersDayGiftListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId) return;
-
+    setIsEditSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       await updateGift(selectedGift.id, payload);
       await refreshHomeData(auth0User, holidayId);
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
-      // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
       } else {
         alert('Error updating gift. Please try again.');
       }
+    } finally {
+      setIsEditSubmitting(false);
     }
   }
 
@@ -215,66 +237,34 @@ export default function FathersDayGiftListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer for form configuration
+  const addFormConfig = getFormConfigEnhanced('gifts', 'add', {
+    holidayKey: 'fathers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('gifts', 'edit', {
+    holidayKey: 'fathers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('gifts');
 
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
     return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price ? selectedGift.price.toString() : '',
-      store: selectedGift.store || '',
-      product_link: selectedGift.productLink || '',
-      notes: selectedGift.notes || '',
+      name: selectedGift?.name || selectedGift?.description || '',
+      recipient: selectedGift?.recipient || '',
+      description: selectedGift?.description || '',
+      price: selectedGift?.price ? selectedGift.price.toString() : '',
+      store: selectedGift?.store || '',
+      product_link: selectedGift?.productLink || '',
+      assigned_to: selectedGift?.assignedTo || '',
+      notes: selectedGift?.notes || '',
     };
   };
 
@@ -327,31 +317,52 @@ export default function FathersDayGiftListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
+        isOpen={showAddModal}
+        title="Add New Gift"
+        fields={addFormConfig.fields}
+        onSubmit={handleAddGift}
         onClose={closeForm}
-        loading={editLoading || createLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Gift'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#3b82f6"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Gift"
+        fields={editFormConfig.fields}
+        initialValues={getInitialValues()}
+        onSubmit={handleUpdateGift}
+        onClose={closeEditModal}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Gift'}
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#3b82f6"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
       <DeleteModal
         isOpen={showDeleteModal}
-        title="Delete Gift"
-        message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
-        onConfirm={confirmDelete}
         onCancel={cancelDelete}
+        onConfirm={confirmDelete}
         loading={deleteLoading}
+        title={deleteConfig.title}
+        message={deleteConfig.message}
+        itemName={giftToDelete?.name}
+        confirmText={deleteConfig.confirmText}
+        cancelText={deleteConfig.cancelText}
+        cardClassName={deleteConfig.cardClassName}
+        confirmButtonColor={deleteConfig.confirmButtonColor}
       />
 
       {/* Sort Modal */}

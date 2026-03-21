@@ -11,7 +11,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -20,6 +23,7 @@ import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
@@ -43,6 +47,9 @@ export default function HalloweenTasksPage() {
     selectIsHolidayShared(state, 'halloween'),
   );
   const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+  const shareMembers =
+    useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
+      ?.members || [];
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -52,8 +59,22 @@ export default function HalloweenTasksPage() {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   const themeColor = '#f97316'; // Orange for Halloween
+
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Load contacts if holiday is shared
   useEffect(() => {
@@ -93,7 +114,7 @@ export default function HalloweenTasksPage() {
     });
   }
 
-  const sortedTasks = getSortedTasks();
+  const sortedTasks = getSortedTasks().map(transformTaskWithAssignment);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
   const pendingTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 
@@ -137,38 +158,64 @@ export default function HalloweenTasksPage() {
     setShowDeleteModal(false);
   };
 
-  // CRUD operations
+  // CRUD operations with proper error handling and loading states
   const handleAddTask = async (formData: any) => {
     if (!holidayId) return;
 
-    const taskData = {
-      ...formData,
-      category: 'To-Do',
-      isCompleted: false,
-    };
+    setIsSubmitting(true);
+    try {
+      const taskData = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        assigned_to: formData.assigned_to || undefined, // Use snake_case for API
+        due_date: formData.dueDate || undefined, // Use snake_case for API
+        category: 'To-Do',
+        isCompleted: false,
+      };
 
-    const result = await createTask(taskData);
-    if (result) {
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
-      await refreshHomeData(auth0User, holidayId);
-      closeForm();
+      const result = await createTask(taskData);
+      if (result) {
+        dispatch(addTaskToHomeData({ holidayId, task: result }));
+        await refreshHomeData(auth0User, holidayId);
+        closeForm();
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
-    if (result) {
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates: formData,
-        }),
-      );
-      await refreshHomeData(auth0User, holidayId);
-      handleEditModalClose();
+    setIsEditSubmitting(true);
+    try {
+      const updates = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        assigned_to: formData.assigned_to || null, // Use snake_case for API
+        due_date: formData.dueDate || null, // Use snake_case for API
+      };
+
+      const result = await updateTask(editingTask.id, updates);
+      if (result) {
+        dispatch(
+          updateTaskInHomeData({
+            holidayId,
+            taskId: editingTask.id,
+            updates,
+          }),
+        );
+        await refreshHomeData(auth0User, holidayId);
+        handleEditModalClose();
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -189,46 +236,18 @@ export default function HalloweenTasksPage() {
     setShowSortModal(false);
   }
 
-  // Dynamic form fields
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form configurations
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'halloween',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'halloween',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   const deleteConfig = getDeleteConfig('tasks');
 
@@ -271,6 +290,7 @@ export default function HalloweenTasksPage() {
               onDelete={(taskId: string) => handleDeleteModalOpen(task)}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
+              disableInternalModal={true}
             />
           )}
         />
@@ -292,6 +312,7 @@ export default function HalloweenTasksPage() {
                 onDelete={(taskId: string) => handleDeleteModalOpen(task)}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
+                disableInternalModal={true}
               />
             )}
           />
@@ -320,39 +341,39 @@ export default function HalloweenTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={formFields}
+        fields={addFormConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={createLoading}
-        submitText={createLoading ? 'Adding...' : 'Add Task'}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '', // API field → Form field
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}
-        loading={updateLoading}
-        submitText={updateLoading ? 'Updating...' : 'Update Task'}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}

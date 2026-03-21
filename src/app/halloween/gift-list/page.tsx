@@ -18,7 +18,11 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -28,6 +32,11 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function HalloweenGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Add shareMembers selector for Enhanced Compatibility Layer
+  const shareMembers =
+    useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
+      ?.members || [];
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -61,6 +70,8 @@ export default function HalloweenGiftListPage() {
     show: false,
     giftId: null,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -69,27 +80,15 @@ export default function HalloweenGiftListPage() {
 
   // CRUD Operations - Add Gift with optimistic updates + refreshHomeData
   const handleAddGift = async (values: any) => {
-    if (!values.recipient?.trim() || !holidayId) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
+    if (!holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
     try {
       // Use standardized payload transformation with proper contact lookup
-      const payload = {
-        ...transformGiftPayload(
-          {
-            giftName: values.description || values.recipient, // Map description to giftName
-            recipient: values.recipient,
-            description: values.notes,
-            price: values.price,
-            store: values.store,
-            product_link: values.productLink,
-            notes: values.notes,
-          },
-          contacts,
-        ),
-        isPurchased: false,
-      };
+      const payload = transformGiftPayload(values, contacts, shareMembers);
 
-      const result = await createGift(payload);
+      const result = await createGift({ ...payload, isPurchased: false });
 
       // Update Redux state immediately
       dispatch(addGiftToHomeData({ holidayId, gift: result }));
@@ -106,6 +105,8 @@ export default function HalloweenGiftListPage() {
       } else {
         alert('Error creating gift. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -148,20 +149,10 @@ export default function HalloweenGiftListPage() {
   const handleEditGiftSubmit = async (values: any) => {
     if (!editingGift || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
       // Use standardized payload transformation with proper contact lookup
-      const updates = transformGiftPayload(
-        {
-          giftName: values.description || values.recipient, // Map description to giftName
-          recipient: values.recipient,
-          description: values.notes,
-          price: values.price,
-          store: values.store,
-          product_link: values.productLink,
-          notes: values.notes,
-        },
-        contacts,
-      );
+      const updates = transformGiftPayload(values, contacts, shareMembers);
 
       await updateGift(editingGift.id, updates);
 
@@ -187,6 +178,8 @@ export default function HalloweenGiftListPage() {
       } else {
         alert('Error updating gift. Please try again.');
       }
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -367,39 +360,54 @@ export default function HalloweenGiftListPage() {
       {/* Form Modal */}
       <FormModal
         isOpen={showForm}
-        {...getFormConfig('gifts', 'add')}
-        initialValues={{
-          recipient: '',
-          description: '',
-          price: '',
-          store: '',
-          productLink: '',
-          notes: '',
-        }}
+        title="Add New Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'add', {
+            holidayKey: 'halloween',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
         onSubmit={handleAddGift}
         onClose={closeForm}
-        loading={createLoading}
-        showAddressBook={true}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Gift'}
+        cardClassName="card"
+        submitButtonColor="#f97316"
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
-        {...getFormConfig('gifts', 'edit')}
+        title="Edit Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'edit', {
+            holidayKey: 'halloween',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{
+          name: editingGift?.name || editingGift?.description || '',
           recipient: editingGift?.recipient || '',
           description: editingGift?.description || '',
-          price: editingGift?.price || '',
+          price: editingGift?.price ? editingGift.price.toString() : '',
           store: editingGift?.store || '',
-          productLink: editingGift?.url || '',
+          product_link: editingGift?.productLink || '',
+          assigned_to: editingGift?.assignedTo || '',
           notes: editingGift?.notes || '',
         }}
         onSubmit={handleEditGiftSubmit}
         onClose={closeEditModal}
-        loading={updateLoading}
-        showAddressBook={true}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Gift'}
+        cardClassName="card"
+        submitButtonColor="#f97316"
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
@@ -408,9 +416,12 @@ export default function HalloweenGiftListPage() {
         onCancel={cancelDelete}
         onConfirm={confirmDelete}
         loading={deleteLoading}
-        cardClassName="card-tasks"
         title="Confirm Delete"
         message="Are you sure you want to delete this gift? This action cannot be undone."
+        cardClassName="bg-white rounded-lg shadow-lg"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonColor="#ef4444"
       />
 
       {/* Sort Modal */}

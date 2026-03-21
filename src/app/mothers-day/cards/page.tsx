@@ -18,6 +18,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 export default function MothersDayCardsPage() {
   const dispatch = useAppDispatch();
@@ -39,6 +40,10 @@ export default function MothersDayCardsPage() {
 
   // Data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
+
+  // Loading states for Enhanced Compatibility
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Helper function to extract recipient from title if needed
   const extractRecipientFromTitle = (title: string) => {
@@ -86,9 +91,9 @@ export default function MothersDayCardsPage() {
     dispatch(fetchContacts());
   }, [dispatch]);
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
-    if (!holidayId || !auth0User) return;
+    if (!values.recipient?.trim() || !holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
     try {
       const payload = {
         title: `Card for ${values.recipient}`,
@@ -110,6 +115,8 @@ export default function MothersDayCardsPage() {
     } catch (error) {
       console.error('Error creating card:', error);
       // Handle error (could show a toast notification)
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -151,6 +158,7 @@ export default function MothersDayCardsPage() {
   const handleEditSubmit = async (values: Record<string, any>) => {
     if (!cardToEdit || !holidayId || !auth0User) return;
 
+    setIsEditSubmitting(true);
     try {
       const payload = {
         title: `Card for ${values.recipient}`,
@@ -196,6 +204,8 @@ export default function MothersDayCardsPage() {
           },
         }),
       );
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -257,30 +267,18 @@ export default function MothersDayCardsPage() {
   const completedCards = cards.filter((card: any) => card.isCompleted);
   const incompleteCards = cards.filter((card: any) => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('cards', 'add', {
+    holidayKey: 'mothers-day',
+    shareMembers: [],
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('cards', 'edit', {
+    holidayKey: 'mothers-day',
+    shareMembers: [],
+    auth0User: auth0User,
+  });
 
   return (
     <div className="min-h-screen mothers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -366,10 +364,11 @@ export default function MothersDayCardsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Card"
-        fields={formFields}
+        fields={addFormConfig.fields}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ec4899"
@@ -381,17 +380,24 @@ export default function MothersDayCardsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
-        initialValues={cardToEdit}
+        fields={editFormConfig.fields}
+        initialValues={{
+          recipient: cardToEdit?.recipient || '',
+          message: cardToEdit?.message || '',
+          address: cardToEdit?.address || '',
+        }}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        submitText="Update Card"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ec4899"
+        showAddressBook={true}
+        contacts={contacts}
       />
 
       {/* Delete Modal */}

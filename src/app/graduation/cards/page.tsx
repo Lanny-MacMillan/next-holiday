@@ -6,6 +6,11 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { transformCardPayload } from '@/utils/formTransformers';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
@@ -20,6 +25,15 @@ import DeleteModal from '@/components/modals/DeleteModal';
 export default function GraduationCardsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'graduation'),
+  );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'graduation'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Use new standardized hooks
   const { holidayId, holidayData, auth0User, homeInitialized } =
@@ -52,6 +66,8 @@ export default function GraduationCardsPage() {
   const [cardToEdit, setCardToEdit] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -63,6 +79,7 @@ export default function GraduationCardsPage() {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
     if (!holidayId) return;
 
+    setIsSubmitting(true);
     try {
       const transformedPayload = transformCardPayload(values, contacts);
       const payload = {
@@ -73,13 +90,12 @@ export default function GraduationCardsPage() {
       };
 
       await createTask(payload);
-
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -102,6 +118,7 @@ export default function GraduationCardsPage() {
   const handleEditSubmit = async (values: Record<string, any>) => {
     if (!cardToEdit || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
       const transformedPayload = transformCardPayload(values, contacts);
       const payload = {
@@ -112,14 +129,13 @@ export default function GraduationCardsPage() {
       };
 
       await updateTask(cardToEdit.id, payload);
-
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
       setShowEditModal(false);
       setCardToEdit(null);
     } catch (error) {
       console.error('Error updating card:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -160,7 +176,7 @@ export default function GraduationCardsPage() {
   const sortedCards = [...cards].sort((a: any, b: any) => {
     switch (sortBy) {
       case 'recipient':
-        return a.recipient.localeCompare(b.recipient);
+        return (a.recipient || '').localeCompare(b.recipient || '');
       case 'completed':
         return a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
       case 'message':
@@ -186,45 +202,32 @@ export default function GraduationCardsPage() {
     };
   };
 
-  // Form fields configuration for cards
+  // Enhanced Compatibility Layer form config
+  const formConfig = getFormConfigEnhanced('cards', 'add', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('cards', 'edit', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  // Helper function for edit initial values
   const getEditInitialValues = (card: any) => {
     if (!card) return {};
 
-    console.log('Card data for editing:', card); // Debug log
-
-    // Extract recipient from title "Card for [Recipient Name]"
     const recipientFromTitle = card.title?.replace(/^Card for /, '') || '';
 
     return {
       recipient: card.recipient || recipientFromTitle,
       message: card.message || card.description || '',
       address: card.address || '',
+      assigned_to: card.assignedTo || '', // API field → Form field
     };
   };
-
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your graduation message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
 
   return (
     <div className="min-h-screen graduation-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -294,32 +297,36 @@ export default function GraduationCardsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Card"
-        fields={formFields}
+        fields={formConfig.fields}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#8b5cf6"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={getEditInitialValues(cardToEdit)}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        submitText="Update Card"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#8b5cf6"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}

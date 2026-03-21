@@ -149,7 +149,7 @@ export default function NewYearDecorationsPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assignedTo || undefined }),
         category: 'Decorations',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -172,6 +172,8 @@ export default function NewYearDecorationsPage() {
         title: task.title,
         description: task.description,
         priority: task.priority,
+        assigned_to: undefined, // Use proper snake_case field mapping
+        due_date: undefined, // Use proper snake_case field mapping
         category: 'Decorations',
       });
     }
@@ -219,8 +221,8 @@ export default function NewYearDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assignedTo,
+        due_date: values.dueDate,
       };
 
       await updateTask(editingTask.id, updates);

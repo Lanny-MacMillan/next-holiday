@@ -11,6 +11,12 @@ import {
   removeGuestFromHomeData,
 } from '@/store/slices/homeSlice';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
@@ -40,6 +46,15 @@ interface Guest {
 export default function GraduationGuestListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'graduation'),
+  );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'graduation'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Use new standardized hooks
   const { holidayId, holidayData, auth0User, homeInitialized } =
@@ -89,11 +104,19 @@ export default function GraduationGuestListPage() {
   // State management
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
-  const [guestToDelete, setGuestToDelete] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean;
+    guestId: string | null;
+  }>({
+    show: false,
+    guestId: null,
+  });
   useEffect(() => {
     // Fetch contacts for address book functionality
     if (homeInitialized) {
@@ -106,8 +129,8 @@ export default function GraduationGuestListPage() {
     if (!values.name?.trim()) return;
     if (!holidayId) return;
 
+    setIsSubmitting(true);
     try {
-      // Find the contact if selected from address book
       const selectedContact = contacts?.find((c: any) => c.name === values.name);
 
       await createGuest({
@@ -122,13 +145,12 @@ export default function GraduationGuestListPage() {
         },
         auth0User,
       });
-
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating guest:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -175,6 +197,7 @@ export default function GraduationGuestListPage() {
   const handleEditGuest = async (values: Record<string, any>) => {
     if (!selectedGuest || !holidayId || !auth0User) return;
 
+    setIsEditSubmitting(true);
     try {
       await updateGuest({
         holidayId,
@@ -182,59 +205,63 @@ export default function GraduationGuestListPage() {
         isCompleted: values.rsvpStatus === 'confirmed',
         auth0User,
       });
-
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGuest(null);
     } catch (error) {
       console.error('Error updating guest:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
   const confirmDelete = async () => {
-    if (!guestToDelete || !holidayId) return;
+    if (deleteConfirm.guestId && holidayId && auth0User) {
+      try {
+        await deleteGuest({
+          holidayId,
+          guestId: deleteConfirm.guestId,
+          auth0User,
+        });
 
-    try {
-      await deleteGuest({
-        holidayId,
-        guestId: guestToDelete.id,
-        auth0User,
-      });
+        // Refresh data after successful deletion
+        await refreshHomeData(auth0User, holidayId);
+      } catch (error) {
+        console.error('Failed to delete guest:', error);
+      }
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
-      setShowDeleteModal(false);
-      setGuestToDelete(null);
-    } catch (error) {
-      console.error('Error deleting guest:', error);
+      setDeleteConfirm({ show: false, guestId: null });
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, guestId: null });
   };
 
   // Helper functions
   const openForm = () => {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGuest(null);
   };
 
-  const closeForm = () => {
-    setShowFormModal(false);
+  const closeAddForm = () => {
+    setShowAddModal(false);
     setSelectedGuest(null);
   };
 
-  const handleDeleteGuest = (guest: any) => {
-    setGuestToDelete(guest);
-    setShowDeleteModal(true);
+  const closeEditForm = () => {
+    setShowEditModal(false);
+    setSelectedGuest(null);
+  };
+
+  const handleDeleteGuest = (guestId: string) => {
+    setDeleteConfirm({ show: true, guestId });
   };
 
   const handleEditGuestOpen = (guest: any) => {
     setSelectedGuest(guest);
-    setShowFormModal(true);
+    setShowEditModal(true);
   };
-
-  const handleFormSubmit = selectedGuest ? handleEditGuest : handleAddGuest;
 
   // Loading state from hooks
   const loading =
@@ -284,46 +311,31 @@ export default function GraduationGuestListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'name',
-      type: 'text' as const,
-      label: 'Guest Name',
-      placeholder: 'Enter guest name',
-      required: true,
-    },
-    {
-      id: 'email',
-      type: 'email' as const,
-      label: 'Email',
-      placeholder: 'Enter email address',
-    },
-    {
-      id: 'phone',
-      type: 'tel' as const,
-      label: 'Phone',
-      placeholder: 'Enter phone number',
-    },
-    {
-      id: 'rsvpStatus',
-      type: 'select' as const,
-      label: 'RSVP Status',
-      options: [
-        { value: 'pending', label: 'Pending' },
-        { value: 'confirmed', label: 'Confirmed' },
-        { value: 'declined', label: 'Declined' },
-      ],
-      defaultValue: 'pending',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      label: 'Notes',
-      placeholder: 'Additional notes...',
-      rows: 3,
-    },
-  ];
+  // Enhanced Compatibility Layer form config (using guest-list type)
+  const formConfig = getFormConfigEnhanced('guests', 'add', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('guests', 'edit', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  // Helper function for edit initial values
+  const getEditInitialValues = (guest: any) => {
+    if (!guest) return {};
+
+    return {
+      name: guest.name || '',
+      email: guest.email || '',
+      phone: guest.phone || '',
+      rsvpStatus: guest.rsvpStatus || 'pending',
+      notes: guest.notes || '',
+    };
+  };
 
   return (
     <div className="min-h-screen graduation-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -391,44 +403,42 @@ export default function GraduationGuestListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGuest ? 'Edit Guest' : 'Add New Guest'}
-        fields={formFields}
-        initialValues={
-          selectedGuest
-            ? {
-                name: selectedGuest.name || '',
-                email: selectedGuest.email || '',
-                phone: selectedGuest.phone || '',
-                rsvpStatus: selectedGuest.rsvpStatus || 'pending',
-                notes: selectedGuest.notes || '',
-              }
-            : {}
-        }
-        onSubmit={handleFormSubmit}
-        onClose={closeForm}
-        loading={loading}
-        submitText={selectedGuest ? 'Update Guest' : 'Add Guest'}
+        isOpen={showAddModal}
+        title="Add New Guest"
+        fields={formConfig.fields}
+        onSubmit={handleAddGuest}
+        onClose={closeAddForm}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Guest'}
         cardClassName="card-guests-graduation"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
-      {/* Delete Modal */}
-      <DeleteModal
-        isOpen={showDeleteModal}
-        title="Delete Guest"
-        itemName={guestToDelete?.name}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setShowDeleteModal(false);
-          setGuestToDelete(null);
-        }}
-        loading={loading}
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Guest"
+        fields={editFormConfig.fields}
+        initialValues={getEditInitialValues(selectedGuest)}
+        onSubmit={handleEditGuest}
+        onClose={closeEditForm}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Guest'}
         cardClassName="card-guests-graduation"
-        confirmButtonColor="#8b5cf6"
+        contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={deleteConfirm.show}
+        {...getDeleteConfig('guests')}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        loading={deleteGuestState.isLoading}
       />
 
       {/* Sort Modal */}

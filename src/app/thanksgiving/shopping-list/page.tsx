@@ -19,7 +19,7 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -34,6 +34,23 @@ export default function ThanksgivingShoppingListPage() {
   // Use centralized holiday page data hook
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareMembers =
+    useAppSelector((state: any) => state.shares.shareMembers) || [];
+
+  // Enhanced Compatibility Layer - Gift form configuration (without holidayKey restriction)
+  const addFormConfig = getFormConfigEnhanced('shopping', 'add', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('shopping', 'edit', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   // Use standardized mutation hooks for gifts
   const {
@@ -72,11 +89,11 @@ export default function ThanksgivingShoppingListPage() {
   }, [dispatch, homeInitialized]);
 
   const handleAddGift = async (values: Record<string, any>) => {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await createGift(payload);
 
       // Update Redux state immediately
@@ -181,7 +198,7 @@ export default function ThanksgivingShoppingListPage() {
     if (!selectedGift || !holidayId) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       // Update gift using hook
       const result = await updateGift(selectedGift.id, payload);
 
@@ -277,65 +294,17 @@ export default function ThanksgivingShoppingListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
-  // Initial values for editing
+  // Get initial values for edit modal (Enhanced Compatibility pattern)
   const getInitialValues = () => {
     if (!selectedGift) return {};
-
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
     return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
+      name: selectedGift.name || selectedGift.description || '',
+      recipient: selectedGift.recipient || '',
       description: selectedGift.description || '',
       price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
+      assigned_to: selectedGift.assignedTo || '',
       notes: selectedGift.notes || '',
     };
   };
@@ -359,7 +328,7 @@ export default function ThanksgivingShoppingListPage() {
           holidayId={holidayId || undefined}
         />
 
-        <AddButton title="Gift" onClick={openForm} color="amber" />
+        <AddButton title="Item" onClick={openForm} color="amber" />
         <div className="flex items-center justify-center">
           {sortBy !== 'none' && (
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -393,24 +362,32 @@ export default function ThanksgivingShoppingListPage() {
       {/* Form Modal */}
       <FormModal
         isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
+        title={selectedGift ? 'Edit Item' : 'Add New Item'}
+        fields={selectedGift ? editFormConfig.fields : addFormConfig.fields}
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
         loading={selectedGift ? updateLoading : createLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        submitText={
+          selectedGift
+            ? updateLoading
+              ? 'Processing...'
+              : 'Update Item'
+            : createLoading
+              ? 'Processing...'
+              : 'Add Item'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#d97706"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
       <DeleteModal
         isOpen={showDeleteModal}
-        title="Delete Gift"
+        title="Delete Item"
         message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}

@@ -125,18 +125,6 @@ export default function ValentinesReservationsPage() {
         ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
       ]
     : baseMembers;
-    updateTask,
-    deleteTask,
-    createLoading,
-    updateLoading,
-    deleteLoading,
-  } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
-
-  const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, 'valentines'),
-  );
 
   const reservations = useMemo(
     () =>
@@ -179,7 +167,7 @@ export default function ValentinesReservationsPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Reservations',
-        dueDate: values.dueDate,
+        due_date: values.dueDate || undefined,
       };
 
       const result = await createTask(newTask);
@@ -252,7 +240,7 @@ export default function ValentinesReservationsPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Reservations',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       };
 
       await updateTask(editingTask.id, updates);

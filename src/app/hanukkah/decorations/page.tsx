@@ -53,20 +53,8 @@ export default function HanukkahDecorationsPage() {
   );
   const baseMembers = shareData?.members || [];
 
-  // Always include current user in shareMembers for assignTo functionality
-  const shareMembers = auth0User
-    ? [
-        // Add current user first
-        {
-          userId: auth0User.sub || '',
-          name: auth0User.name || 'Me',
-          email: auth0User.email || '',
-          role: 'owner' as const,
-        },
-        // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
-      ]
-    : baseMembers;
+  // Let Enhanced Compatibility Layer handle shareMembers enhancement automatically
+  const shareMembers = baseMembers;
 
   // Redux data access - decorations are stored as tasks with category "Decorations"
   const decorations = useMemo(
@@ -171,7 +159,7 @@ export default function HanukkahDecorationsPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Decorations',
         dueDate: values.dueDate || undefined,
       };
@@ -198,7 +186,7 @@ export default function HanukkahDecorationsPage() {
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;
 
-    const member = shareMembers.find((m: any) => m.userId === assignedToUuid);
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
@@ -334,7 +322,7 @@ export default function HanukkahDecorationsPage() {
           title: '',
           description: '',
           priority: 'medium',
-          assignedTo: '',
+          assigned_to: '',
           dueDate: '',
         }}
         onSubmit={handleAddDecoration}
@@ -362,7 +350,7 @@ export default function HanukkahDecorationsPage() {
                 title: editingTask?.title || '',
                 description: editingTask?.description || '',
                 priority: editingTask?.priority || 'medium',
-                assignedTo: editingTask?.assignedTo || '',
+                assigned_to: editingTask?.assignedTo || '',
                 dueDate: editingTask?.dueDate
                   ? editingTask.dueDate.split('T')[0]
                   : '', // Format for date input

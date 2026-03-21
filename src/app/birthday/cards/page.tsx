@@ -19,6 +19,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 export default function BirthdayCardsPage() {
   const dispatch = useAppDispatch();
@@ -43,9 +44,9 @@ export default function BirthdayCardsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [cardToDelete, setCardToDelete] = useState<any>(null);
   const [cardToEdit, setCardToEdit] = useState<any>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
 
   useEffect(() => {
@@ -101,50 +102,50 @@ export default function BirthdayCardsPage() {
   };
 
   const confirmDelete = async () => {
-    if (cardToDelete && holidayId) {
-      try {
-        await deleteCard({
-          holidayId,
-          cardId: cardToDelete.id,
-          auth0User,
-        }).unwrap();
+    if (!cardToDelete || !holidayId) return;
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+    try {
+      await deleteCard({
+        holidayId,
+        cardId: cardToDelete.id,
+        auth0User,
+      }).unwrap();
 
-        setShowDeleteModal(false);
-        setCardToDelete(null);
-      } catch (error) {
-        console.error('Error deleting card:', error);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setCardToDelete(null);
+    } catch (error) {
+      console.error('Error deleting card:', error);
     }
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && holidayId) {
-      try {
-        const payload = {
-          id: cardToEdit.id,
-          action: 'update' as const,
-          recipient: values.recipient,
-          message: values.message || '',
-          address: values.address || null,
-        };
+    if (!cardToEdit || !holidayId) return;
 
-        await cardOperation({
-          holidayId,
-          payload,
-          auth0User,
-        }).unwrap();
+    try {
+      const payload = {
+        id: cardToEdit.id,
+        action: 'update' as const,
+        recipient: values.recipient,
+        message: values.message || '',
+        address: values.address || null,
+      };
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+      await cardOperation({
+        holidayId,
+        payload,
+        auth0User,
+      }).unwrap();
 
-        setShowEditModal(false);
-        setCardToEdit(null);
-      } catch (error) {
-        console.error('Error updating card:', error);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowEditModal(false);
+      setCardToEdit(null);
+    } catch (error) {
+      console.error('Error updating card:', error);
     }
   };
 
@@ -206,30 +207,18 @@ export default function BirthdayCardsPage() {
   const completedCards = displayCards.filter((card: any) => card.isCompleted);
   const incompleteCards = displayCards.filter((card: any) => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer form config
+  const formConfig = getFormConfigEnhanced('cards', 'add', {
+    holidayKey: 'birthday',
+    shareMembers: [],
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('cards', 'edit', {
+    holidayKey: 'birthday',
+    shareMembers: [],
+    auth0User: auth0User,
+  });
 
   return (
     <div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -315,14 +304,14 @@ export default function BirthdayCardsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Card"
-        fields={formFields}
+        fields={formConfig.fields}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        loading={createLoading}
+        submitText={createLoading ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#f59e0b"
-        showAddressBook={true}
         contacts={contacts}
       />
 
@@ -330,17 +319,23 @@ export default function BirthdayCardsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
-        initialValues={cardToEdit}
+        fields={editFormConfig.fields}
+        initialValues={{
+          recipient: cardToEdit?.recipient || '',
+          message: cardToEdit?.message || '',
+          address: cardToEdit?.address || '',
+        }}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        submitText="Update Card"
+        loading={updateLoading}
+        submitText={updateLoading ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#f59e0b"
+        contacts={contacts}
       />
 
       {/* Delete Modal */}
@@ -353,6 +348,7 @@ export default function BirthdayCardsPage() {
           setShowDeleteModal(false);
           setCardToDelete(null);
         }}
+        loading={deleteLoading}
         cardClassName="card card-valentines"
         confirmButtonColor="#f59e0b"
       />

@@ -19,6 +19,9 @@ import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
@@ -48,15 +51,78 @@ export default function ThanksgivingDecorationsPage() {
     selectIsHolidayShared(state, 'thanksgiving'),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareMembers =
+    useAppSelector((state: any) => state.shares.shareMembers) || [];
+
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Enhanced Compatibility Layer - Task form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
   // Redux data access - decorations are stored as tasks with category "Decorations"
   const decorations = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
+
+  // Delete modal handlers
+  const handleDeleteModalOpen = (task: any) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteModalClose = () => {
+    setTaskToDelete(null);
+    setShowDeleteModal(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete?.id || !holidayId) return;
+
+    try {
+      await deleteTask(taskToDelete.id);
+      dispatch(
+        removeTaskFromHomeData({
+          holidayId: holidayId,
+          taskId: taskToDelete.id,
+        }),
+      );
+      await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    }
+  };
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -64,6 +130,8 @@ export default function ThanksgivingDecorationsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -79,9 +147,9 @@ export default function ThanksgivingDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || undefined,
+        due_date: values.dueDate || undefined,
         category: 'Decorations',
-        dueDate: values.dueDate,
       });
 
       // Update Redux state immediately
@@ -132,19 +200,11 @@ export default function ThanksgivingDecorationsPage() {
     }
   };
 
-  function handleDeleteTask(taskId: string) {
-    // Find the task to get its title for confirmation
-    const task = decorations.find((d: any) => d.id === taskId);
-    const taskTitle = task?.title || 'this task';
-
-    // For delete, we'll use the existing approach with confirmation
-    // We can implement a simple confirm dialog in place of DeleteModal
-    if (
-      confirm(
-        `Are you sure you want to delete "${taskTitle}"? This action cannot be undone.`,
-      )
-    ) {
-      confirmDelete(taskId);
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = decorations.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete({ ...task, title: taskTitle });
+      setShowDeleteModal(true);
     }
   }
 
@@ -166,8 +226,8 @@ export default function ThanksgivingDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to || null,
+        due_date: values.dueDate || null,
       };
 
       await updateTask(editingTask.id, updates);
@@ -195,27 +255,6 @@ export default function ThanksgivingDecorationsPage() {
     setShowEditModal(false);
     setEditingTask(null);
   }
-
-  const confirmDelete = async (taskId: string) => {
-    if (!holidayId) return;
-
-    try {
-      await deleteTask(taskId);
-
-      // Update Redux state immediately
-      dispatch(
-        removeTaskFromHomeData({
-          holidayId,
-          taskId,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-    } catch (error) {
-      console.error('Error deleting task:', error);
-    }
-  };
 
   function sortTasks(tasksToSort: any[]): any[] {
     switch (sortBy) {
@@ -266,46 +305,6 @@ export default function ThanksgivingDecorationsPage() {
   const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedDecorations = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // Form configuration with conditional assign to field
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Decoration Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
-
   return (
     <div className="min-h-screen thanksgiving-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
@@ -341,7 +340,7 @@ export default function ThanksgivingDecorationsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditDecoration}
               theme={{
                 accentColor: '#d97706', // Amber for Thanksgiving
@@ -363,7 +362,7 @@ export default function ThanksgivingDecorationsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditDecoration}
               theme={{
                 accentColor: '#d97706', // Amber for Thanksgiving
@@ -379,38 +378,35 @@ export default function ThanksgivingDecorationsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Decoration Task"
-        fields={formFields}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          assignedTo: '',
-          dueDate: '',
-        }}
+        fields={addFormConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={createLoading}
-        submitText="Add Task"
+        submitText={createLoading ? 'Processing...' : 'Add Task'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}
         loading={updateLoading}
-        submitText="Update Task"
+        submitText={updateLoading ? 'Processing...' : 'Update Task'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Sort Modal */}
@@ -428,6 +424,21 @@ export default function ThanksgivingDecorationsPage() {
         ]}
         title="Sort Tasks"
       />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleDeleteModalClose}
+          loading={deleteLoading}
+          title={getDeleteConfig('tasks').title}
+          message={getDeleteConfig('tasks').message}
+          itemName={taskToDelete.title}
+          confirmText={getDeleteConfig('tasks').confirmText}
+          cancelText={getDeleteConfig('tasks').cancelText}
+        />
+      )}
     </div>
   );
 }

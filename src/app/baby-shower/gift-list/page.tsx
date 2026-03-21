@@ -6,6 +6,10 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
@@ -14,6 +18,7 @@ import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -23,7 +28,13 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 
 export default function BabyShowerGiftListPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'baby-shower'),
+  );
+  const shareMembers = shareData?.members || [];
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -49,63 +60,51 @@ export default function BabyShowerGiftListPage() {
   }, [holidayData?.giftList, holidayData?.gifts, holidayData]);
 
   // Local loading states for specific operations
-  const [editLoading, setEditLoading] = useState(false);
-
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Fetch contacts for address book functionality
-    // Only fetch if home data is initialized (which contains contacts)
     if (homeInitialized) {
       dispatch(fetchContacts());
     }
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    try {
-      console.log('Creating gift with payload:', values); // Debug log
-      const payload = transformGiftPayload(values, contacts);
-      console.log('Transformed payload:', payload); // Debug log
+    console.log('Creating gift with payload:', values); // Debug log
+    const payload = transformGiftPayload(values, contacts, shareMembers);
+    console.log('Transformed payload:', payload); // Debug log
 
-      const result = await createGift(payload);
-      console.log('Gift created successfully:', result); // Debug log
+    const result = await createGift(payload);
+    console.log('Gift created successfully:', result); // Debug log
 
-      // Force refresh the home data to ensure UI updates
-      console.log('Refreshing home data...'); // Debug log
+    // Force refresh the home data to ensure UI updates
+    console.log('Refreshing home data...'); // Debug log
 
-      // Add a small delay to ensure the API has processed the request
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Add a small delay to ensure the API has processed the request
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-      await refreshHomeData(auth0User, holidayId);
-      console.log('Home data refreshed'); // Debug log
+    await refreshHomeData(auth0User, holidayId);
+    console.log('Home data refreshed'); // Debug log
 
-      setShowFormModal(false);
-    } catch (error) {
-      console.error('Error creating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error creating gift. Please try again.');
-      }
-    }
+    setShowAddModal(false);
   }
 
   function openForm() {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
   function closeForm() {
-    setShowFormModal(false);
+    setShowAddModal(false);
     setSelectedGift(null);
   }
 
@@ -153,30 +152,17 @@ export default function BabyShowerGiftListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
 
-    setEditLoading(true);
-    try {
-      const payload = transformGiftPayload(values, contacts);
-      await updateGift(selectedGift.id, payload);
-      await refreshHomeData(auth0User, holidayId);
-      setShowFormModal(false);
-      setSelectedGift(null);
-    } catch (error) {
-      console.error('Error updating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
-      }
-    } finally {
-      setEditLoading(false);
-    }
+    const payload = transformGiftPayload(values, contacts, shareMembers);
+    await updateGift(selectedGift.id, payload);
+    await refreshHomeData(auth0User, holidayId);
+    setShowEditModal(false);
+    setSelectedGift(null);
   }
 
   function sortGifts(giftsToSort: any[]): any[] {
@@ -201,6 +187,19 @@ export default function BabyShowerGiftListPage() {
   const sortedGifts = sortGifts(displayGifts || []);
   const incompleteGifts = sortedGifts.filter((gift: any) => !gift.isCompleted);
   const completedGifts = sortedGifts.filter((gift: any) => gift.isCompleted);
+
+  // Enhanced Compatibility Layer form configurations
+  const addFormConfig = getFormConfigEnhanced('gifts', 'add', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('gifts', 'edit', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   const renderGiftItem = (gift: any) => (
     <GiftCardItem
@@ -347,21 +346,49 @@ export default function BabyShowerGiftListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Gift Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
+        isOpen={showAddModal}
+        title="Add New Gift"
+        fields={addFormConfig.fields}
+        onSubmit={handleAddGift}
         onClose={closeForm}
-        loading={selectedGift ? editLoading || updateLoading : createLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        loading={createLoading}
+        submitText={createLoading ? 'Processing...' : 'Add Gift'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#06b6d4"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Gift Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Gift"
+        fields={editFormConfig.fields}
+        initialValues={{
+          name: selectedGift?.name || selectedGift?.description || '',
+          recipient: selectedGift?.recipient || '',
+          description: selectedGift?.description || '',
+          price: selectedGift?.price ? selectedGift.price.toString() : '',
+          store: selectedGift?.store || '',
+          product_link: selectedGift?.productLink || '',
+          assigned_to: selectedGift?.assignedTo || '',
+          notes: selectedGift?.notes || '',
+        }}
+        onSubmit={handleUpdateGift}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedGift(null);
+        }}
+        loading={updateLoading}
+        submitText={updateLoading ? 'Processing...' : 'Update Gift'}
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#06b6d4"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

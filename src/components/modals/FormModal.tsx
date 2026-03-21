@@ -187,23 +187,13 @@ export default function FormModal({
       [fieldId]: processedValue,
     }));
 
-    // Show address book message when user types in name field and address book is enabled
+    // Show address book message when user types in field with address book enabled
     const currentField = fields.find(f => f.id === fieldId);
-    const fieldHasAddressBook =
-      currentField?.showAddressBook === true ||
-      (showAddressBook && (fieldId === 'recipient' || fieldId === 'name'));
+    const fieldHasAddressBook = currentField?.showAddressBook === true;
 
-    if (
-      (fieldId === 'name' || fieldId === 'recipient') &&
-      fieldHasAddressBook &&
-      value.trim()
-    ) {
+    if (fieldHasAddressBook && value.trim()) {
       setShowAddressBookMessage(true);
-    } else if (
-      (fieldId === 'name' || fieldId === 'recipient') &&
-      fieldHasAddressBook &&
-      !value.trim()
-    ) {
+    } else if (fieldHasAddressBook && !value.trim()) {
       setShowAddressBookMessage(false);
     }
   };
@@ -298,9 +288,7 @@ export default function FormModal({
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {fieldsWithOptions.map(field => {
             // Check if this specific field should show address book
-            const fieldShowsAddressBook =
-              field.showAddressBook === true ||
-              (showAddressBook && field.id === 'recipient'); // Default behavior for backward compatibility
+            const fieldShowsAddressBook = field.showAddressBook === true;
 
             return (
               <div key={field.id}>

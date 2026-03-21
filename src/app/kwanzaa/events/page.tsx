@@ -117,7 +117,7 @@ export default function KwanzaaEventsPage() {
         priority: values.priority as 'low' | 'medium' | 'high',
         assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Events',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -173,9 +173,9 @@ export default function KwanzaaEventsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assigned_to || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Events',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state

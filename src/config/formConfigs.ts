@@ -175,6 +175,52 @@ export const giftsFormConfig: FormConfig = {
   showAddressBook: true,
 };
 
+// Shopping list form configuration (based on gifts but with Item Name)
+export const shoppingListFormConfig: FormConfig = {
+  title: 'Add New Item',
+  fields: [
+    {
+      id: 'recipient',
+      type: 'text',
+      placeholder: 'Recipient*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'text',
+      placeholder: 'Item Name*',
+      required: true,
+    },
+    {
+      id: 'price',
+      type: 'number',
+      placeholder: 'Price',
+      step: '0.01',
+    },
+    {
+      id: 'store',
+      type: 'text',
+      placeholder: 'Store',
+    },
+    {
+      id: 'productLink',
+      type: 'url',
+      placeholder: 'Product Link (optional)',
+    },
+    {
+      id: 'notes',
+      type: 'textarea',
+      placeholder: 'Notes',
+      rows: 2,
+    },
+  ],
+  submitText: 'Add Item',
+  cancelText: 'Cancel',
+  cardClassName: 'card',
+  submitButtonColor: '#eab308', // Yellow
+  showAddressBook: true,
+};
+
 // Supplies form configuration (for New Year supplies-list)
 export const suppliesFormConfig: FormConfig = {
   title: 'Add New Supply Item',
@@ -254,6 +300,12 @@ export const editSuppliesFormConfig: FormConfig = {
   ...suppliesFormConfig,
   title: 'Edit Supply Item',
   submitText: 'Update Supply Item',
+};
+
+export const editShoppingListFormConfig: FormConfig = {
+  ...shoppingListFormConfig,
+  title: 'Edit Item',
+  submitText: 'Update Item',
 };
 
 // Guest list form configuration (simplified for current database schema)
@@ -464,7 +516,9 @@ export function getFormConfig(
     | 'gifts'
     | 'guests'
     | 'addressBook'
-    | 'supplies',
+    | 'supplies'
+    | 'shopping-list'
+    | 'shopping',
   mode: 'add' | 'edit' = 'add',
   customTitle?: string,
   customFieldLabel?: string,
@@ -478,6 +532,9 @@ export function getFormConfig(
     supplies: mode === 'add' ? suppliesFormConfig : editSuppliesFormConfig,
     guests: mode === 'add' ? guestsFormConfig : editGuestsFormConfig,
     addressBook: mode === 'add' ? addressBookFormConfig : editAddressBookFormConfig,
+    'shopping-list':
+      mode === 'add' ? shoppingListFormConfig : editShoppingListFormConfig,
+    shopping: mode === 'add' ? giftsFormConfig : editGiftsFormConfig, // Use gifts config as base for shopping
   };
 
   const baseConfig = configs[type];
@@ -538,7 +595,9 @@ export function getFormConfigEnhanced(
     | 'gifts'
     | 'guests'
     | 'addressBook'
-    | 'supplies',
+    | 'supplies'
+    | 'shopping-list'
+    | 'shopping',
   mode: 'add' | 'edit' = 'add',
   options?: {
     customTitle?: string;
@@ -562,6 +621,10 @@ export function getFormConfigEnhanced(
       events: 'task', // Events are stored as tasks with category="Events"
       gifts: 'gift',
       cards: 'card',
+      guests: 'guest-list', // Map guests to guest-list configuration
+      'shopping-list': 'shopping', // Map shopping-list to shopping configuration
+      shopping: 'shopping', // Map shopping to shopping configuration
+      supplies: 'shopping', // Map supplies to shopping configuration for address book functionality
     };
 
     const contentType = contentTypeMapping[type];

@@ -39,8 +39,8 @@ export default function DeleteModal({
         className={`${cardClassName} bg-white rounded-lg p-4 sm:p-6 max-w-sm mx-auto w-full`}
       >
         <h3
-          className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white"
-          style={{ color: '#111827' }}
+          className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-700 dark:text-white"
+          style={{ color: '#3a3737' }}
         >
           {title}
         </h3>

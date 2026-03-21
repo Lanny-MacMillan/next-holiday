@@ -11,7 +11,11 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -20,6 +24,7 @@ import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
@@ -38,11 +43,34 @@ export default function ThanksgivingTasksPage() {
   const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
-  const dispatch = useAppDispatch();
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'thanksgiving'),
   );
-  const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'thanksgiving'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
+  const shareMembers =
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.sub || '', // Use auth0 sub as UUID for assignments
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ]
+      : baseMembers;
+
+  const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -54,7 +82,7 @@ export default function ThanksgivingTasksPage() {
   const [sortBy, setSortBy] = useState<SortOption>('none');
 
   const themeColor = '#f59e0b'; // Amber for Thanksgiving
-
+  console.log('shareMembers', shareMembers);
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
@@ -62,15 +90,29 @@ export default function ThanksgivingTasksPage() {
     }
   }, [isHolidayShared, auth0User, dispatch]);
 
-  // Task data processing
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Task data processing with assignment transformation
   const tasks =
     holidayData?.tasks?.filter((task: any) => task.category === 'To-Do') || [];
 
+  const transformedTasks = tasks.map(transformTaskWithAssignment);
+
   // Sort function following working pattern
   function getSortedTasks() {
-    if (sortBy === 'none') return tasks;
+    if (sortBy === 'none') return transformedTasks;
 
-    return [...tasks].sort((a, b) => {
+    return [...transformedTasks].sort((a, b) => {
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -143,6 +185,8 @@ export default function ThanksgivingTasksPage() {
 
     const taskData = {
       ...formData,
+      assigned_to: formData.assigned_to || undefined,
+      due_date: formData.dueDate || undefined,
       category: 'To-Do',
       isCompleted: false,
     };
@@ -158,13 +202,19 @@ export default function ThanksgivingTasksPage() {
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
+    const updateData = {
+      ...formData,
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.dueDate || null,
+    };
+
+    const result = await updateTask(editingTask.id, updateData);
     if (result) {
       dispatch(
         updateTaskInHomeData({
           holidayId,
           taskId: editingTask.id,
-          updates: formData,
+          updates: updateData,
         }),
       );
       await refreshHomeData(auth0User, holidayId);
@@ -189,46 +239,18 @@ export default function ThanksgivingTasksPage() {
     setShowSortModal(false);
   }
 
-  // Dynamic form fields
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer - Task form configuration
+  const formConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   const deleteConfig = getDeleteConfig('tasks');
 
@@ -269,6 +291,7 @@ export default function ThanksgivingTasksPage() {
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
               onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              disableInternalModal={true}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
             />
@@ -290,6 +313,7 @@ export default function ThanksgivingTasksPage() {
                 onToggleComplete={handleTaskToggle}
                 onEdit={() => handleEditModalOpen(task)}
                 onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                disableInternalModal={true}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
               />
@@ -320,7 +344,7 @@ export default function ThanksgivingTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={formFields}
+        fields={formConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={createLoading}
@@ -328,20 +352,20 @@ export default function ThanksgivingTasksPage() {
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTask}
@@ -351,8 +375,8 @@ export default function ThanksgivingTasksPage() {
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}

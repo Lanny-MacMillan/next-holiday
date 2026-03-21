@@ -6,13 +6,19 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 export default function AnniversaryDateIdeasPage() {
   const dispatch = useAppDispatch();
@@ -36,6 +42,12 @@ export default function AnniversaryDateIdeasPage() {
     selectIsHolidayShared(state, 'anniversary'),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'anniversary'),
+  );
+  const shareMembers = shareData?.members || [];
+
   const dateIdeas = useMemo(
     () =>
       holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
@@ -45,16 +57,48 @@ export default function AnniversaryDateIdeasPage() {
   const isLoading = !homeInitialized;
   const error = null;
 
-  // State management
-  const [showAddForm, setShowAddForm] = useState(false);
+  // State management - separate add/edit modals and loading states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [showSortModal, setShowSortModal] = useState(false);
   const [sortBy, setSortBy] = useState<string>('priority');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
+
+  // Enhanced Compatibility Layer form configs
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'anniversary',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'anniversary',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('tasks');
+
+  // Name resolution helpers for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Sort options for date ideas
   const sortOptions = [
@@ -104,24 +148,22 @@ export default function AnniversaryDateIdeasPage() {
     }
   };
 
-  const sortedDateTasks = sortTasks(dateIdeas, sortBy);
+  // Apply name resolution transformation to sorted data
+  const transformedDateIdeas = dateIdeas.map(transformTaskWithAssignment);
+  const sortedDateTasks = sortTasks(transformedDateIdeas, sortBy);
 
-  useEffect(() => {
-    // Always fetch contacts for address book functionality
-    dispatch(fetchContacts());
-  }, [dispatch]);
-
-  // CRUD Operations
+  // CRUD Operations with proper field mapping and loading states
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
     try {
       const payload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Date Ideas',
         due_date: values.dueDate || undefined,
         isCompleted: false,
@@ -129,9 +171,11 @@ export default function AnniversaryDateIdeasPage() {
 
       await createTask(payload);
       await refreshHomeData(auth0User, holidayId);
-      setShowAddForm(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating date idea:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -139,39 +183,59 @@ export default function AnniversaryDateIdeasPage() {
     if (!values.title?.trim() || !editingTask?.id) return;
     if (!holidayId || !auth0User) return;
 
+    setIsEditSubmitting(true);
     try {
       const payload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || null,
         category: 'Date Ideas',
-        due_date: values.dueDate || undefined,
+        due_date: values.dueDate || null,
       };
 
       await updateTask(editingTask.id, payload);
       await refreshHomeData(auth0User, holidayId);
       setEditingTask(null);
-      setShowAddForm(false);
+      setShowEditModal(false);
     } catch (error) {
       console.error('Error updating date idea:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   }
 
   const handleEdit = (task: any) => {
     setEditingTask(task);
-    setShowAddForm(true);
+    setShowEditModal(true);
   };
 
   async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+    const task = sortedDateTasks.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete?.id || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
       await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting date idea:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
+  }
+
+  function handleCancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   async function handleToggleTask(taskId: string) {
@@ -209,46 +273,6 @@ export default function AnniversaryDateIdeasPage() {
     );
   }
 
-  // Form configuration - matching Kwanzaa events pattern
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Date Idea Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
-
   return (
     <div className="min-h-screen anniversary-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
@@ -264,7 +288,7 @@ export default function AnniversaryDateIdeasPage() {
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         <AddButton
           title="Date Idea"
-          onClick={() => setShowAddForm(true)}
+          onClick={() => setShowAddModal(true)}
           color="pink"
         />
 
@@ -279,15 +303,15 @@ export default function AnniversaryDateIdeasPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDeleteTask(taskId)}
               onEdit={handleEdit}
+              disableInternalModal={true}
               theme={{
                 accentColor: '#ec4899', // Pink for Anniversary
                 hoverColor: 'hover:bg-pink-50 dark:hover:bg-pink-900/10',
               }}
               borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
               gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
-              disableInternalModal={true}
             />
           )}
         />
@@ -303,8 +327,9 @@ export default function AnniversaryDateIdeasPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDeleteTask(taskId)}
               onEdit={handleEdit}
+              disableInternalModal={true}
               className="opacity-60"
               theme={{
                 accentColor: '#ec4899', // Pink for Anniversary
@@ -312,7 +337,6 @@ export default function AnniversaryDateIdeasPage() {
               }}
               borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
               gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
-              disableInternalModal={true}
             />
           )}
         />
@@ -328,35 +352,66 @@ export default function AnniversaryDateIdeasPage() {
         title="Sort Date Ideas"
       />
 
-      {/* Form Modal */}
+      {/* Add Form Modal */}
       <FormModal
-        isOpen={showAddForm}
-        title={editingTask ? 'Edit Date Idea' : 'Add New Date Idea'}
-        fields={formFields}
-        initialValues={
-          editingTask
-            ? {
-                title: editingTask.title || '',
-                description: editingTask.description || '',
-                priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
-                dueDate: editingTask.dueDate
-                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
-                  : '',
-              }
-            : { priority: 'medium' }
-        }
-        onSubmit={editingTask ? handleEditTaskSubmit : handleAddTask}
+        isOpen={showAddModal}
+        title="Add New Date Idea"
+        fields={addFormConfig.fields}
+        initialValues={{ priority: 'medium' }}
+        onSubmit={handleAddTask}
         onClose={() => {
-          setShowAddForm(false);
+          setShowAddModal(false);
           setEditingTask(null);
         }}
-        loading={loading}
-        submitText={editingTask ? 'Update Date Idea' : 'Add Date Idea'}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Date Idea'}
         submitButtonColor="#ec4899"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
+
+      {/* Edit Form Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Date Idea"
+        fields={editFormConfig.fields}
+        initialValues={{
+          title: editingTask?.title || '',
+          description: editingTask?.description || '',
+          priority: editingTask?.priority || 'medium',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
+        }}
+        onSubmit={handleEditTaskSubmit}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingTask(null);
+        }}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Date Idea'}
+        submitButtonColor="#ec4899"
+        contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title={deleteConfig.title}
+          message={deleteConfig.message}
+          itemName={taskToDelete.title}
+          confirmText={deleteConfig.confirmText}
+          cancelText={deleteConfig.cancelText}
+          cardClassName={deleteConfig.cardClassName}
+          confirmButtonColor={deleteConfig.confirmButtonColor}
+          loading={deleteLoading}
+        />
+      )}
     </div>
   );
 }

@@ -13,7 +13,7 @@ import RSVPSection from '@/components/common/RSVPSection';
 import ReservationsTracker from '@/components/cards/reservation/ReservationsTracker';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import {
   useCreateGuestMutation,
@@ -38,6 +38,7 @@ interface Guest {
 
 export default function FourthOfJulyGuestListPage() {
   const dispatch = useAppDispatch();
+  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
   const { refreshHomeData } = useRefreshHomeData();
@@ -359,7 +360,13 @@ export default function FourthOfJulyGuestListPage() {
       <FormModal
         isOpen={showForm}
         title={editingGuest ? 'Edit Guest' : 'Add New Guest'}
-        fields={getFormConfig('guests', editingGuest ? 'edit' : 'add').fields}
+        fields={
+          getFormConfigEnhanced('guests', editingGuest ? 'edit' : 'add', {
+            holidayKey: 'fourth-of-july',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           editingGuest
             ? {

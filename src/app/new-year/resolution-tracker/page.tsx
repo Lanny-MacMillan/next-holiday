@@ -13,8 +13,10 @@ import {
   selectShareByHolidayKey,
 } from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import Footer from '@/components/common/Footer';
 import AddButton from '@/components/common/AddButton';
@@ -85,6 +87,8 @@ export default function NewYearResolutionTrackerPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
 
@@ -111,7 +115,7 @@ export default function NewYearResolutionTrackerPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assignedTo || undefined }),
         category: 'Resolutions',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -141,9 +145,9 @@ export default function NewYearResolutionTrackerPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assignedTo,
         category: 'Resolutions',
-        dueDate: values.dueDate,
+        due_date: values.dueDate,
       };
 
       await updateTask(editingTask.id, updates);
@@ -158,22 +162,30 @@ export default function NewYearResolutionTrackerPage() {
     }
   };
 
-  const handleDelete = async (taskId: string) => {
-    // Find the task to get its title for confirmation
+  const handleDelete = (taskId: string) => {
     const taskToDelete = resolutions.find((task: any) => task.id === taskId);
+    if (!taskToDelete) return;
+
+    setTaskToDelete(taskToDelete);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     if (!taskToDelete || !holidayId) return;
 
-    if (window.confirm(`Are you sure you want to delete "${taskToDelete.title}"?`)) {
-      try {
-        // Use the standardized hook function
-        await deleteTask(taskId);
-
-        // Refresh home data to update progress on main holiday page
-        await refreshHomeData(auth0User, holidayId);
-      } catch (error) {
-        console.error('Error deleting resolution:', error);
-      }
+    try {
+      await deleteTask(taskToDelete.id);
+      await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting resolution:', error);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   };
 
   const handleToggleCompletion = async (taskId: string) => {
@@ -241,6 +253,8 @@ export default function NewYearResolutionTrackerPage() {
   const completedResolutions = sortedResolutions.filter(
     (task: any) => task.isCompleted,
   );
+
+  const deleteConfig = getDeleteConfig('tasks');
 
   return (
     <div className="min-h-screen new-year-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -370,6 +384,38 @@ export default function NewYearResolutionTrackerPage() {
         cancelText="Cancel"
         cardClassName="card-events-new-year"
       />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        loading={deleteLoading}
+        title={deleteConfig.title}
+        message={deleteConfig.message}
+        itemName={taskToDelete?.title}
+        confirmText={deleteConfig.confirmText}
+        cancelText={deleteConfig.cancelText}
+        cardClassName={deleteConfig.cardClassName}
+        confirmButtonColor={deleteConfig.confirmButtonColor}
+      />
+
+      {/* Sort Modal */}
+      <SortModal
+        isOpen={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        sortBy={sortBy}
+        onSortChange={(sortOption: string) => setSortBy(sortOption as SortOption)}
+        sortOptions={[
+          { value: 'none', label: 'None' },
+          { value: 'priority', label: 'Priority' },
+          { value: 'dateDue', label: 'Due Date' },
+          { value: 'assignedTo', label: 'Assigned To' },
+          { value: 'category', label: 'Category' },
+        ]}
+        title="Sort Resolutions"
+      />
+
       <Footer />
     </div>
   );

@@ -12,7 +12,11 @@ import {
   removeTaskFromHomeData,
   updateTaskInHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -45,6 +49,10 @@ export default function HalloweenCostumeIdeasPage() {
     selectIsHolidayShared(state, holidayId!),
   );
 
+  const shareMembers =
+    useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
+      ?.members || [];
+
   const costumeIdeas = useMemo(
     () =>
       holidayData?.tasks?.filter((task: any) => task.category === 'Costume Ideas') ||
@@ -67,6 +75,20 @@ export default function HalloweenCostumeIdeasPage() {
     show: false,
     taskId: null,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -77,14 +99,15 @@ export default function HalloweenCostumeIdeasPage() {
   const handleAddCostumeIdea = async (values: any) => {
     if (!values.title?.trim() || !holidayId) return;
 
+    setIsSubmitting(true);
     try {
       const result = await createTask({
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || undefined, // Use snake_case for API
+        due_date: values.dueDate || undefined, // Use snake_case for API
         category: 'Costume Ideas',
-        dueDate: values.dueDate,
       });
 
       // Update Redux state immediately
@@ -96,6 +119,8 @@ export default function HalloweenCostumeIdeasPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -135,13 +160,14 @@ export default function HalloweenCostumeIdeasPage() {
   const handleEditCostumeIdeaSubmit = async (values: any) => {
     if (!editingTask || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
       const updates = {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to || null, // Use snake_case for API
+        due_date: values.dueDate || null, // Use snake_case for API
       };
 
       await updateTask(editingTask.id, updates);
@@ -162,6 +188,8 @@ export default function HalloweenCostumeIdeasPage() {
       setShowEditModal(false);
     } catch (error) {
       console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -325,113 +353,42 @@ export default function HalloweenCostumeIdeasPage() {
       {/* Form Modal */}
       <FormModal
         isOpen={showForm}
-        title="Add New Costume Idea"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Costume Idea*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          assignedTo: '',
-          dueDate: '',
-        }}
+        {...getFormConfigEnhanced('tasks', 'add', {
+          holidayKey: 'halloween',
+          shareMembers: shareMembers,
+          auth0User: auth0User,
+        })}
         onSubmit={handleAddCostumeIdea}
         onClose={closeForm}
-        loading={createLoading}
-        submitText="Add Costume Idea"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Costume Idea'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
-        title="Edit Costume Idea"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Costume Idea*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
+        {...getFormConfigEnhanced('tasks', 'edit', {
+          holidayKey: 'halloween',
+          shareMembers: shareMembers,
+          auth0User: auth0User,
+        })}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assignedTo: editingTask?.assignedTo || '',
+          assigned_to: editingTask?.assignedTo || '', // API field → Form field
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditCostumeIdeaSubmit}
         onClose={closeEditModal}
-        loading={updateLoading}
-        submitText="Update Costume Idea"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Costume Idea'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
@@ -440,9 +397,12 @@ export default function HalloweenCostumeIdeasPage() {
         onCancel={cancelDelete}
         onConfirm={confirmDelete}
         loading={deleteLoading}
-        cardClassName="card-tasks"
-        title="Confirm Delete"
+        title="Delete Task?"
         message="Are you sure you want to delete this costume idea? This action cannot be undone."
+        cardClassName="bg-white rounded-lg shadow-lg"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonColor="#ef4444"
       />
 
       {/* Sort Modal */}

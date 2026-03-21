@@ -146,7 +146,7 @@ export default function KwanzaaDecorationsPage() {
         priority: values.priority as 'low' | 'medium' | 'high',
         assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -170,6 +170,8 @@ export default function KwanzaaDecorationsPage() {
           title: task.title,
           description: task.description,
           priority: task.priority,
+          assigned_to: undefined, // Use proper snake_case field mapping
+          due_date: undefined, // Use proper snake_case field mapping
           category: 'Decorations',
         });
 
@@ -222,7 +224,7 @@ export default function KwanzaaDecorationsPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         assigned_to: values.assigned_to || undefined, // snake_case for API
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state

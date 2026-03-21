@@ -12,7 +12,11 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import FormModal from '@/components/modals/FormModal';
@@ -46,6 +50,10 @@ export default function HalloweenDecorationsPage() {
     selectIsHolidayShared(state, holidayId!),
   );
 
+  const shareMembers =
+    useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
+      ?.members || [];
+
   // Data filtering using holidayData from the hook
   const decorations = useMemo(
     () =>
@@ -69,6 +77,20 @@ export default function HalloweenDecorationsPage() {
     show: false,
     taskId: null,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -79,14 +101,15 @@ export default function HalloweenDecorationsPage() {
   const handleAddDecoration = async (values: any) => {
     if (!values.title?.trim() || !holidayId) return;
 
+    setIsSubmitting(true);
     try {
       const result = await createTask({
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || undefined, // Use snake_case for API
+        due_date: values.dueDate || undefined, // Use snake_case for API
         category: 'Decorations',
-        dueDate: values.dueDate,
       });
 
       // Update Redux state immediately
@@ -98,6 +121,8 @@ export default function HalloweenDecorationsPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -149,13 +174,14 @@ export default function HalloweenDecorationsPage() {
   const handleEditDecorationSubmit = async (values: any) => {
     if (!editingTask || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
       const updates = {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to || null, // Use snake_case for API
+        due_date: values.dueDate || null, // Use snake_case for API
       };
 
       await updateTask(editingTask.id, updates);
@@ -176,6 +202,8 @@ export default function HalloweenDecorationsPage() {
       setShowEditModal(false);
     } catch (error) {
       console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -322,113 +350,42 @@ export default function HalloweenDecorationsPage() {
       {/* Form Modal */}
       <FormModal
         isOpen={showForm}
-        title="Add New Decoration Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Decoration Task*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          assignedTo: '',
-          dueDate: '',
-        }}
+        {...getFormConfigEnhanced('tasks', 'add', {
+          holidayKey: 'halloween',
+          shareMembers: shareMembers,
+          auth0User: auth0User,
+        })}
         onSubmit={handleAddDecoration}
         onClose={closeForm}
-        loading={createLoading}
-        submitText="Add Decoration"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Decoration'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
-        title="Edit Decoration Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Decoration Task*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
+        {...getFormConfigEnhanced('tasks', 'edit', {
+          holidayKey: 'halloween',
+          shareMembers: shareMembers,
+          auth0User: auth0User,
+        })}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assignedTo: editingTask?.assignedTo || '',
+          assigned_to: editingTask?.assignedTo || '', // API field → Form field
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditDecorationSubmit}
         onClose={closeEditModal}
-        loading={updateLoading}
-        submitText="Update Decoration"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Decoration'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

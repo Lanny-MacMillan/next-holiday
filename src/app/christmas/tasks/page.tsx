@@ -11,6 +11,7 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
+import { fetchContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import EditTaskModal from '@/components/modals/EditTaskModal';
@@ -18,7 +19,9 @@ import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
@@ -84,6 +87,9 @@ export default function TasksPage() {
       ]
     : baseMembers;
 
+  // Get contacts for Enhanced Compatibility Layer
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+
   // Use memoized tasks filtering from holiday data
   const tasks = useMemo(() => holidayData?.tasks || [], [holidayData?.tasks]);
 
@@ -96,6 +102,13 @@ export default function TasksPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
   async function handleAddTask(formValues: Record<string, any>) {
     if (!formValues.title?.trim() || !holidayId || !auth0User) return;
@@ -106,9 +119,9 @@ export default function TasksPage() {
         description: formValues.description || undefined,
         priority: formValues.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: formValues.assignedTo || undefined }),
+          isHolidayShared && { assigned_to: formValues.assigned_to || undefined }),
         category: formValues.category || 'Tasks',
-        dueDate: formValues.dueDate || undefined,
+        due_date: formValues.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -159,18 +172,32 @@ export default function TasksPage() {
     }
   }
 
-  async function handleDeleteTask(taskId: string) {
-    if (!auth0User || !holidayId) return;
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete({ ...task, title: taskTitle });
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete?.id || !holidayId || !auth0User) return;
 
     try {
-      // Use the standardized hook function
-      await deleteTask(taskId);
-
-      // Refresh home data to ensure UI is in sync
+      await deleteTask(taskToDelete.id);
       await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
-      console.error('Failed to delete task:', error);
+      console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
+  }
+
+  function handleCancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   function handleEditTask(task: Task) {
@@ -185,10 +212,9 @@ export default function TasksPage() {
           title: formValues.title,
           description: formValues.description || undefined,
           priority: formValues.priority as 'low' | 'medium' | 'high',
-          ...(isAuthorizedForSharing &&
-            isHolidayShared && { assigned_to: formValues.assignedTo || undefined }),
+          assigned_to: formValues.assigned_to || null,
           category: formValues.category || 'Tasks',
-          dueDate: formValues.dueDate || undefined,
+          due_date: formValues.dueDate || null,
           isCompleted: formValues.isCompleted || false,
         };
 
@@ -290,7 +316,7 @@ export default function TasksPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditTask}
               theme={{
                 accentColor: '#22c55e', // Green for Christmas
@@ -313,7 +339,7 @@ export default function TasksPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditTask}
               className="opacity-60"
               theme={{
@@ -345,6 +371,7 @@ export default function TasksPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#22c55e"
+        contacts={contacts}
         shareMembers={shareMembers}
       />
 
@@ -366,6 +393,7 @@ export default function TasksPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#22c55e"
+        contacts={contacts}
         shareMembers={shareMembers}
         initialValues={
           editingTask
@@ -373,7 +401,7 @@ export default function TasksPage() {
                 title: editingTask.title,
                 description: editingTask.description || '',
                 priority: editingTask.priority,
-                assignedTo: editingTask.assignedTo || '',
+                assigned_to: editingTask.assignedTo || '',
                 category: editingTask.category || 'Tasks',
                 dueDate: editingTask.dueDate || '',
                 isCompleted: editingTask.isCompleted,
@@ -381,6 +409,18 @@ export default function TasksPage() {
             : undefined
         }
       />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title="Delete Task"
+          message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+          loading={deleteLoading}
+        />
+      )}
 
       {/* Sort Modal */}
       <SortModal

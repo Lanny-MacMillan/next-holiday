@@ -184,7 +184,7 @@ export default function DailyPrinciplesPage() {
         priority: values.priority as 'low' | 'medium' | 'high',
         assigned_to: values.assigned_to || undefined,
         category: 'Daily Principles',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -203,9 +203,17 @@ export default function DailyPrinciplesPage() {
     if (!holidayId || !auth0User) return;
 
     try {
+      // Calculate Kwanzaa dates (Dec 26, 2026 - Jan 1, 2027)
+      const kwanzaaStartDate = new Date('2026-12-26');
+
       // Add default principles one at a time
       for (let i = 0; i < defaultKwanzaaPrinciples.length; i++) {
         const principle = defaultKwanzaaPrinciples[i];
+
+        // Calculate due date based on day number
+        const dueDate = new Date(kwanzaaStartDate);
+        dueDate.setDate(kwanzaaStartDate.getDate() + (principle.dayNumber - 1));
+        const dueDateString = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
         console.log(
           `Adding principle ${i + 1}/${defaultKwanzaaPrinciples.length}: ${principle.name}`,
@@ -215,6 +223,8 @@ export default function DailyPrinciplesPage() {
           title: principle.name,
           description: principle.description,
           priority: principle.priority,
+          assigned_to: undefined,
+          due_date: dueDateString,
           category: 'Daily Principles',
         });
 
@@ -241,7 +251,7 @@ export default function DailyPrinciplesPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         assigned_to: values.assigned_to || undefined,
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state

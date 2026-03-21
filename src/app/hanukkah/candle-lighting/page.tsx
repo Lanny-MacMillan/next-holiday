@@ -107,20 +107,8 @@ export default function CandleLightingPage() {
   );
   const baseMembers = shareData?.members || [];
 
-  // Always include current user in shareMembers for assignTo functionality
-  const shareMembers = auth0User
-    ? [
-        // Add current user first
-        {
-          userId: auth0User.sub || '',
-          name: auth0User.name || 'Me',
-          email: auth0User.email || '',
-          role: 'owner' as const,
-        },
-        // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
-      ]
-    : baseMembers;
+  // Let Enhanced Compatibility Layer handle shareMembers enhancement automatically
+  const shareMembers = baseMembers;
 
   // Redux data access - candle lighting are stored as tasks with category "Candle Lighting"
   const candleLighting = useMemo(

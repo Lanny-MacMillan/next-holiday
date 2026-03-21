@@ -7,8 +7,11 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -52,6 +55,12 @@ const defaultDecorationTasks = [
 export default function EasterDecorationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const shareMembers = useAppSelector(
+    (state: any) =>
+      state.shares.shares?.find((share: any) => share.holidayId === 'easter')
+        ?.members || [],
+  );
+
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
@@ -71,9 +80,22 @@ export default function EasterDecorationsPage() {
     selectIsHolidayShared(state, 'easter'),
   );
 
-  // Redux data access - decorations are stored as tasks with category "Decorations"
+  // Redux data access with name resolution - decorations are stored as tasks with category "Decorations"
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   const decorations =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
+    holidayData?.tasks
+      ?.filter((task: any) => task.category === 'Decorations')
+      .map(transformTaskWithAssignment) || [];
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -84,8 +106,15 @@ export default function EasterDecorationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Delete config
+  const deleteConfig = getDeleteConfig('tasks');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -102,9 +131,9 @@ export default function EasterDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assignedTo || undefined,
         category: 'Decorations',
-        dueDate: values.dueDate,
+        due_date: values.dueDate || undefined,
       });
 
       // Refresh home data to ensure UI is in sync
@@ -158,9 +187,9 @@ export default function EasterDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assignedTo || null,
         category: 'Decorations',
-        dueDate: values.dueDate,
+        due_date: values.dueDate || null,
         isCompleted: editingTask.isCompleted,
       });
 
@@ -174,16 +203,27 @@ export default function EasterDecorationsPage() {
     }
   }
 
-  async function handleDelete(taskId: string, taskTitle: string) {
-    if (!holidayId || !auth0User) return;
+  const handleDeleteModalOpen = (task: any) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteModalClose = () => {
+    setTaskToDelete(null);
+    setShowDeleteModal(false);
+  };
+
+  async function handleDeleteTask() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
-      // Refresh home data for proper UI updates
       await refreshHomeData(auth0User, holidayId);
+      handleDeleteModalClose();
     } catch (error) {
-      console.error('Failed to delete task:', error);
+      console.error('Error deleting task:', error);
+      handleDeleteModalClose();
     }
   }
 
@@ -319,7 +359,7 @@ export default function EasterDecorationsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              onDelete={() => handleDeleteModalOpen(task)}
               onEdit={handleEditDecoration}
               theme={{
                 accentColor: '#a855f7', // Purple for Easter
@@ -341,7 +381,7 @@ export default function EasterDecorationsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              onDelete={() => handleDeleteModalOpen(task)}
               onEdit={handleEditDecoration}
               theme={{
                 accentColor: '#a855f7', // Purple for Easter
@@ -409,6 +449,23 @@ export default function EasterDecorationsPage() {
         ]}
         title="Sort Tasks"
       />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onCancel={handleDeleteModalClose}
+          onConfirm={handleDeleteTask}
+          loading={deleteLoading}
+          title={getDeleteConfig('tasks').title}
+          message={getDeleteConfig('tasks').message}
+          itemName={taskToDelete.title}
+          confirmText={getDeleteConfig('tasks').confirmText}
+          cancelText={getDeleteConfig('tasks').cancelText}
+          cardClassName={getDeleteConfig('tasks').cardClassName}
+          confirmButtonColor={getDeleteConfig('tasks').confirmButtonColor}
+        />
+      )}
     </div>
   );
 }

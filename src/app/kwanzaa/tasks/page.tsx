@@ -160,7 +160,11 @@ export default function KwanzaaTasksPage() {
     if (!holidayId) return;
 
     const taskData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      assigned_to: formData.assigned_to || undefined,
+      due_date: formData.dueDate || undefined,
       category: 'Tasks',
       isCompleted: false,
     };
@@ -176,13 +180,22 @@ export default function KwanzaaTasksPage() {
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
+    const updates = {
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority || 'medium',
+      isCompleted: formData.isCompleted || editingTask.isCompleted,
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.dueDate || null,
+    };
+
+    const result = await updateTask(editingTask.id, updates);
     if (result) {
       dispatch(
         updateTaskInHomeData({
           holidayId,
           taskId: editingTask.id,
-          updates: formData,
+          updates: result,
         }),
       );
       await refreshHomeData(auth0User, holidayId);
@@ -299,6 +312,7 @@ export default function KwanzaaTasksPage() {
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
               onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              disableInternalModal={true}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
             />
@@ -320,6 +334,7 @@ export default function KwanzaaTasksPage() {
                 onToggleComplete={handleTaskToggle}
                 onEdit={() => handleEditModalOpen(task)}
                 onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                disableInternalModal={true}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
               />
@@ -364,6 +379,8 @@ export default function KwanzaaTasksPage() {
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
@@ -391,6 +408,8 @@ export default function KwanzaaTasksPage() {
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
