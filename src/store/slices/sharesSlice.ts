@@ -94,7 +94,20 @@ export const createShare = createAsyncThunk(
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create share');
+      // Extract error message from API response
+      try {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error ||
+            errorData.message ||
+            `Failed to create share (${response.status})`,
+        );
+      } catch (jsonError) {
+        // If response isn't JSON, use status text
+        throw new Error(
+          response.statusText || `Failed to create share (${response.status})`,
+        );
+      }
     }
 
     return await response.json();

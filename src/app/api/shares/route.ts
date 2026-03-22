@@ -36,31 +36,74 @@ export async function POST(request: NextRequest) {
 
     const holidayDisplayName = holidayKeyToDisplayName[holidayKey] || holidayKey;
 
-    // First, find the holiday by holidayType (using display name)
-    const holiday = await prisma.holiday.findFirst({
-      where: { holidayType: holidayDisplayName },
-    });
-
-    if (!holiday) {
-      return NextResponse.json({ error: 'Holiday not found' }, { status: 404 });
-    }
-
-    // Check if share already exists for this holiday
-    const existingShare = await prisma.share.findFirst({
-      where: { holidayId: holiday.id },
-    });
-
-    if (existingShare) {
-      return NextResponse.json(existingShare);
-    }
-
-    // Look up the actual user ID from the Auth0 sub
+    // Look up the actual user ID from the Auth0 sub first
     const ownerUser = await prisma.user.findUnique({
       where: { auth0Sub: ownerUserId },
     });
 
     if (!ownerUser) {
       return NextResponse.json({ error: 'Owner user not found' }, { status: 404 });
+    }
+
+    // Get the user's account to scope holiday lookup
+    const userAccount = await prisma.account.findFirst({
+      where: { ownerUserId: ownerUser.id },
+    });
+
+    if (!userAccount) {
+      return NextResponse.json({ error: 'User account not found' }, { status: 404 });
+    }
+
+    // Find holiday by holidayType scoped to the user's account
+    const holiday = await prisma.holiday.findFirst({
+      where: {
+        holidayType: holidayDisplayName,
+        accountId: userAccount.id,
+      },
+    });
+
+    if (!holiday) {
+      return NextResponse.json(
+        {
+          error:
+            'Holiday not found. Please configure this holiday in settings first.',
+        },
+        { status: 404 },
+      );
+    }
+
+    // Check if share already exists for this holiday
+    const existingShare = await prisma.share.findFirst({
+      where: { holidayId: holiday.id },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                auth0Sub: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (existingShare) {
+      // Check if user is already a member
+      const isUserMember = existingShare.members.some(
+        member => member.user.auth0Sub === ownerUserId,
+      );
+
+      return NextResponse.json({
+        ...existingShare,
+        shareStatus: isUserMember ? 'already_member' : 'joined_existing',
+        message: isUserMember
+          ? `You are already a member of this ${holidayDisplayName} share`
+          : `Joined existing ${holidayDisplayName} share`,
+      });
     }
 
     // Create new share using the internal user ID
@@ -79,7 +122,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(share);
+    return NextResponse.json({
+      ...share,
+      shareStatus: 'created_new',
+      message: `Created new ${holidayDisplayName} share`,
+    });
   } catch (error) {
     console.error('Error creating share:', error);
     return NextResponse.json({ error: 'Failed to create share' }, { status: 500 });
@@ -93,9 +140,58 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     if (holidayKey) {
-      // Find holiday by holidayType, then find share
+      if (!userId) {
+        return NextResponse.json(
+          { error: 'userId required when querying by holidayKey' },
+          { status: 400 },
+        );
+      }
+
+      // Look up the user first
+      const user = await prisma.user.findUnique({
+        where: { auth0Sub: userId },
+      });
+
+      if (!user) {
+        return NextResponse.json(null);
+      }
+
+      // Get the user's account
+      const userAccount = await prisma.account.findFirst({
+        where: { ownerUserId: user.id },
+      });
+
+      if (!userAccount) {
+        return NextResponse.json(null);
+      }
+
+      // Convert holidayKey to display name for database lookup
+      const holidayKeyToDisplayName: Record<string, string> = {
+        christmas: 'Christmas',
+        hanukkah: 'Hanukkah',
+        kwanzaa: 'Kwanzaa',
+        'new-year': 'New Year',
+        valentines: "Valentine's Day",
+        easter: 'Easter',
+        halloween: 'Halloween',
+        thanksgiving: 'Thanksgiving',
+        'mothers-day': "Mother's Day",
+        'fathers-day': "Father's Day",
+        'fourth-of-july': 'Fourth of July',
+        birthday: 'Birthday',
+        anniversary: 'Anniversary',
+        graduation: 'Graduation',
+        'baby-shower': 'Baby Shower',
+      };
+
+      const holidayDisplayName = holidayKeyToDisplayName[holidayKey] || holidayKey;
+
+      // Find holiday by holidayType scoped to user's account
       const holiday = await prisma.holiday.findFirst({
-        where: { holidayType: holidayKey },
+        where: {
+          holidayType: holidayDisplayName,
+          accountId: userAccount.id,
+        },
       });
 
       if (!holiday) {

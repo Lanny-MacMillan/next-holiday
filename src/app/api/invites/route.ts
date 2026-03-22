@@ -35,6 +35,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
 
+    // Check for existing pending invite to prevent duplicates
+    const existingInvite = await prisma.invite.findFirst({
+      where: {
+        shareId,
+        OR: [{ toUserId }, { toEmail }],
+        status: 'pending',
+      },
+    });
+
+    if (existingInvite) {
+      return NextResponse.json(
+        {
+          error: 'A pending invite already exists for this user',
+          inviteStatus: 'duplicate_pending',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Check if trying to invite someone who already declined (allow re-invite)
+    const declinedInvite = await prisma.invite.findFirst({
+      where: {
+        shareId,
+        OR: [{ toUserId }, { toEmail }],
+        status: 'declined',
+      },
+    });
+
     // Create invite using the internal user ID
     const invite = await prisma.invite.create({
       data: {
@@ -56,7 +84,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(invite);
+    // Add status to response for frontend handling
+    const response = {
+      ...invite,
+      inviteStatus: declinedInvite ? 'reinvite_after_decline' : 'new_invite',
+      message: declinedInvite
+        ? 'Reinvite sent successfully'
+        : 'Invite sent successfully',
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error creating invite:', error);
     return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 });

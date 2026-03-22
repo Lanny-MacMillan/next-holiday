@@ -27,6 +27,7 @@ interface SharedIndicatorEnhancedProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   maxVisibleMembers?: number;
   showLabel?: boolean;
+  customText?: string; // Add custom text prop
 }
 
 export default function SharedIndicatorEnhanced({
@@ -35,6 +36,7 @@ export default function SharedIndicatorEnhanced({
   size = 'sm',
   maxVisibleMembers = 5,
   showLabel = true,
+  customText,
 }: SharedIndicatorEnhancedProps) {
   const { user } = useAuth0();
   const dispatch = useAppDispatch();
@@ -250,53 +252,62 @@ export default function SharedIndicatorEnhanced({
     <>
       <button
         onClick={handleContainerClick}
-        className={`flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity ${className}`}
+        className={`${customText ? 'justify-center' : 'flex items-center gap-2'} cursor-pointer hover:opacity-80 transition-opacity ${className}`}
         title="Click to view all shared members"
       >
-        {/* Shared label with icon - positioned on the left */}
-        {showLabel && (
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border-2 flex-shrink-0 ${
-              members.length > 1
-                ? 'bg-green-500 text-white border-green-300'
-                : share.hasPendingInvites
-                  ? 'bg-blue-500 text-white border-blue-300'
-                  : 'bg-gray-500 text-white border-gray-300'
-            }`}
-          >
-            <svg
-              className="w-2.5 h-2.5 mr-1"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {members.length > 1
-              ? 'Shared'
-              : share.hasPendingInvites && isCurrentUserOwner
-                ? 'Invite Sent'
-                : 'Shareable'}
-          </span>
-        )}
+        {customText ? (
+          // Show custom text (like "Guest") as a simple button
+          <span>{customText}</span>
+        ) : (
+          <>
+            {/* Shared label with icon - positioned on the left */}
+            {showLabel && (
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border-2 flex-shrink-0 ${
+                  members.length > 1
+                    ? 'bg-green-500 text-white border-green-300'
+                    : share.hasPendingInvites
+                      ? 'bg-blue-500 text-white border-blue-300'
+                      : 'bg-gray-500 text-white border-gray-300'
+                }`}
+              >
+                <svg
+                  className="w-2.5 h-2.5 mr-1"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {members.length > 1
+                  ? 'Shared'
+                  : share.hasPendingInvites && isCurrentUserOwner
+                    ? 'Invite Sent'
+                    : 'Shareable'}
+              </span>
+            )}
 
-        {/* User avatars list using SharedUserList */}
-        <SharedUserList
-          members={members}
-          maxVisible={maxVisibleMembers}
-          size={size}
-          showSharedIcon={false}
-          onOpenModal={() => setShowMembersModal(true)}
-          className=""
-        />
+            {/* User avatars list using SharedUserList */}
+            <SharedUserList
+              members={members}
+              maxVisible={maxVisibleMembers}
+              size={size}
+              showSharedIcon={false}
+              onOpenModal={() => setShowMembersModal(true)}
+              className=""
+            />
 
-        {/* Member count info - positioned on the right */}
-        {members.length >= 1 && (
-          <span className="hidden sm:block text-xs text-white ml-1 flex-shrink-0">
-            {members.length} member{members.length !== 1 ? 's' : ''}
-            {members.length === 1 && share.hasPendingInvites && isCurrentUserOwner
-              ? ' (invite sent)'
-              : ''}
-          </span>
+            {/* Member count info - positioned on the right */}
+            {members.length >= 1 && (
+              <span className="hidden sm:block text-xs text-white ml-1 flex-shrink-0">
+                {members.length} member{members.length !== 1 ? 's' : ''}
+                {members.length === 1 &&
+                share.hasPendingInvites &&
+                isCurrentUserOwner
+                  ? ' (invite sent)'
+                  : ''}
+              </span>
+            )}
+          </>
         )}
       </button>
 
@@ -436,6 +447,13 @@ export default function SharedIndicatorEnhanced({
                     </div>
                   );
                 })}
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  {isCurrentUserOwner
+                    ? 'You are the owner of this shared holiday'
+                    : 'You are a guest member of this shared holiday'}
+                </p>
               </div>
             </div>
           </div>,

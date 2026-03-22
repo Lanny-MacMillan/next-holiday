@@ -4,7 +4,12 @@ import { useState, useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { createShare, ShareMember, refreshShares } from '@/store/slices/sharesSlice';
-import { createInvite, fetchOutgoingInvites } from '@/store/slices/invitesSlice';
+import {
+  createInvite,
+  fetchOutgoingInvites,
+  selectOutgoingInvites,
+  Invite,
+} from '@/store/slices/invitesSlice';
 import {
   selectShareByHolidayKey,
   selectIsUserInShare,
@@ -12,6 +17,7 @@ import {
 } from '@/store/slices/sharesSlice';
 import FormModal from '../modals/FormModal';
 import Toast from './Toast';
+import SharedIndicatorEnhanced from './SharedIndicatorEnhanced';
 import { createPortal } from 'react-dom';
 
 interface InviteButtonProps {
@@ -35,6 +41,11 @@ export default function InviteButton({
 
   // Get current user's share for this holiday
   const share = useAppSelector(state => selectShareByHolidayKey(state, holidayKey));
+
+  // Get outgoing invites to check for pending invites
+  const outgoingInvites = useAppSelector(state =>
+    user?.sub ? selectOutgoingInvites(state, user.sub) : [],
+  );
 
   // Memoize the selector parameters to prevent unnecessary re-renders
   const isUserInShare = useMemo(() => {
@@ -83,7 +94,22 @@ export default function InviteButton({
       return;
     }
 
-    // Validation 3: Prevent inviting existing members
+    // Validation 3: Check for pending invites to this email for this holiday
+    const hasPendingInvite = outgoingInvites.some(
+      (invite: Invite) =>
+        invite.holidayKey === holidayKey &&
+        invite.toEmail === inviteEmail &&
+        invite.status === 'pending',
+    );
+
+    if (hasPendingInvite) {
+      showToastMessage(
+        `A pending invite to ${inviteEmail} already exists for ${holidayName}!`,
+      );
+      return;
+    }
+
+    // Validation 4: Prevent inviting existing members
     if (share?.members) {
       const existingMemberByEmail = share.members.find(
         (member: ShareMember) => member.email?.toLowerCase() === inviteEmail,
@@ -131,11 +157,30 @@ export default function InviteButton({
             memberUserIds: [user.sub],
           }),
         ).unwrap();
+
+        // Handle share creation status messages
+        if (shareResult.shareStatus) {
+          const statusMessages: Record<string, string> = {
+            created_new: `Created new ${holidayName} share`,
+            joined_existing: `Joined existing ${holidayName} share`,
+            already_member: `You are already sharing ${holidayName}`,
+          };
+
+          const message =
+            shareResult.message ||
+            statusMessages[shareResult.shareStatus] ||
+            `${holidayName} share updated`;
+          const toastType =
+            shareResult.shareStatus === 'created_new' ? 'success' : 'info';
+
+          showToastMessage(message, toastType);
+        }
+
         currentShare = shareResult;
       }
 
       // Create invite
-      await dispatch(
+      const inviteResult = await dispatch(
         createInvite({
           shareId: currentShare.id || currentShare.shareId, // Handle both field names
           fromUserId: user.sub,
@@ -145,6 +190,22 @@ export default function InviteButton({
         }),
       ).unwrap();
 
+      // Handle invite status messages
+      if (inviteResult.inviteStatus) {
+        const statusMessages: Record<string, string> = {
+          new_invite: `Invite sent to ${values.email} successfully!`,
+          reinvite_after_decline: `Reinvite sent to ${values.email} successfully!`,
+        };
+
+        const message =
+          inviteResult.message ||
+          statusMessages[inviteResult.inviteStatus] ||
+          `Invite sent to ${values.email} successfully!`;
+        showToastMessage(message, 'success');
+      } else {
+        showToastMessage(`Invite sent to ${values.email} successfully!`, 'success');
+      }
+
       // Refetch outgoing invites to update the alerts bell
       await dispatch(fetchOutgoingInvites(user.sub));
 
@@ -152,11 +213,51 @@ export default function InviteButton({
       await dispatch(refreshShares(user.sub));
 
       setShowInviteModal(false);
-      // Show success toast
-      showToastMessage(`Invite sent to ${values.email} successfully!`, 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send invite:', error);
-      showToastMessage('Failed to send invite. Please try again.');
+      console.log('Error object structure:', {
+        message: error?.message,
+        error: error?.error,
+        dataError: error?.data?.error,
+        type: typeof error,
+        fullError: error,
+      }); // Debug log
+
+      // Extract error message from different possible error structures
+      let errorMessage = 'Failed to send invite. Please try again.';
+
+      // Check for API error message in various formats
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.error) {
+        errorMessage = error.error;
+      } else if (error?.data?.error) {
+        errorMessage = error.data.error;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      console.log('Extracted error message:', errorMessage); // Debug log
+
+      // Use the actual API error message directly if it's informative
+      if (
+        errorMessage &&
+        errorMessage.length > 15 &&
+        !errorMessage.toLowerCase().includes('failed to create') &&
+        !errorMessage.includes('500') &&
+        !errorMessage.includes('Internal Server Error')
+      ) {
+        // Show the exact API error message
+        showToastMessage(errorMessage);
+      } else if (errorMessage.toLowerCase().includes('conflict')) {
+        // Handle 409 Conflict specifically - this usually means duplicate invite
+        showToastMessage(
+          `A pending invite to ${values.email} already exists for ${holidayName}.`,
+        );
+      } else {
+        // Fallback for generic or unhelpful error messages
+        showToastMessage('Failed to send invite. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +265,19 @@ export default function InviteButton({
 
   // Only show invite button if user is the owner (or no share exists yet)
   if (!isUserOwner) {
-    return null;
+    // Show guest indicator that looks similar to invite button
+    return (
+      <>
+        <SharedIndicatorEnhanced
+          holidayKey={holidayKey}
+          className={`px-4 py-2 bg-blue-600 hover:scale-110 text-white rounded-lg font-medium transition-colors cursor-pointer ${className}`}
+          size="sm"
+          maxVisibleMembers={10}
+          showLabel={false}
+          customText="Guest"
+        />
+      </>
+    );
   }
 
   const inviteFields = [
@@ -188,7 +301,7 @@ export default function InviteButton({
     <>
       <button
         onClick={handleInviteClick}
-        className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors ${className}`}
+        className={`px-4 py-2 bg-blue-600 hover:scale-110 text-white rounded-lg font-medium transition-colors ${className}`}
         disabled={isLoading}
       >
         {isLoading ? 'Sending...' : 'Invite'}
