@@ -15,6 +15,7 @@ const updateGiftSchema = z.object({
     .optional(),
   notes: z.string().nullable().optional(),
   contact_id: z.string().uuid().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional().or(z.literal('')), // Allow empty string
   isCompleted: z.boolean().optional(),
 });
 
@@ -57,6 +58,10 @@ export async function PATCH(
         ...(data.product_link !== undefined && { productLink: data.product_link }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.contact_id !== undefined && { contactId: data.contact_id }),
+        ...(data.assigned_to !== undefined && {
+          assignedTo:
+            data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null,
+        }),
         ...(data.isCompleted !== undefined && { isCompleted: data.isCompleted }),
       },
     });

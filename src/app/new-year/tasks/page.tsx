@@ -188,8 +188,8 @@ export default function NewYearTasksPage() {
       title: formData.title,
       description: formData.description || undefined,
       priority: formData.priority || 'medium',
-      assignedTo: formData.assigned_to || null,
-      dueDate: formData.dueDate || null,
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.dueDate || null,
       isCompleted:
         formData.isCompleted !== undefined
           ? formData.isCompleted

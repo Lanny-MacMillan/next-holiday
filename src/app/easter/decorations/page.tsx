@@ -5,8 +5,12 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -55,11 +59,12 @@ const defaultDecorationTasks = [
 export default function EasterDecorationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const shareMembers = useAppSelector(
-    (state: any) =>
-      state.shares.shares?.find((share: any) => share.holidayId === 'easter')
-        ?.members || [],
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'easter'),
   );
+  const shareMembers = shareData?.members || [];
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -74,24 +79,28 @@ export default function EasterDecorationsPage() {
   } = useHolidayMutations({ holidayId, auth0User });
 
   const { refreshHomeData } = useRefreshHomeData();
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'easter'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Redux data access with name resolution - decorations are stored as tasks with category "Decorations"
+  // Helper function to resolve assignedTo UUID to user name
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;
     const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
+  // Transform tasks to include assignedToName for display
   const transformTaskWithAssignment = (task: any) => ({
     ...task,
     assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
   });
 
+  // Redux data access with name resolution - decorations are stored as tasks with category "Decorations"
   const decorations =
     holidayData?.tasks
       ?.filter((task: any) => task.category === 'Decorations')
@@ -131,7 +140,7 @@ export default function EasterDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assigned_to: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Decorations',
         due_date: values.dueDate || undefined,
       });
@@ -187,7 +196,7 @@ export default function EasterDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assigned_to: values.assignedTo || null,
+        assigned_to: values.assigned_to || null,
         category: 'Decorations',
         due_date: values.dueDate || null,
         isCompleted: editingTask.isCompleted,
@@ -267,45 +276,18 @@ export default function EasterDecorationsPage() {
   const sortedIncompleteDecorations = sortTasks(incompleteDecorations, sortBy);
   const sortedCompletedDecorations = sortTasks(completedDecorations, sortBy);
 
-  // Form field configuration with conditional assign to field
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Decoration Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer for form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'easter',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'easter',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   // Loading state
   if (isLoading) {
@@ -397,12 +379,12 @@ export default function EasterDecorationsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Decoration Task"
-        fields={formFields}
+        fields={addFormConfig.fields}
         initialValues={{
           title: '',
           description: '',
           priority: 'medium',
-          assignedTo: '',
+          assigned_to: '',
           dueDate: '',
         }}
         onSubmit={handleAddTask}
@@ -410,19 +392,23 @@ export default function EasterDecorationsPage() {
         loading={createLoading}
         submitText="Add Task"
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assignedTo: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTaskSubmit}
         onClose={() => {
@@ -432,6 +418,8 @@ export default function EasterDecorationsPage() {
         loading={updateLoading}
         submitText="Update Task"
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Sort Modal */}

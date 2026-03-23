@@ -5,13 +5,17 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
@@ -37,18 +41,34 @@ export default function EasterTasksPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
   const { refreshHomeData } = useRefreshHomeData();
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Redux & Sharing
   const dispatch = useAppDispatch();
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'easter'),
   );
-  const shareMembers = useAppSelector(
-    (state: any) =>
-      state.shares.shares?.find((share: any) => share.holidayId === 'easter')
-        ?.members || [],
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'easter'),
   );
+  const shareMembers = shareData?.members || [];
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -69,16 +89,6 @@ export default function EasterTasksPage() {
   }, [dispatch]);
 
   // Task data processing with name resolution
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
-
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
 
   const tasks =
     holidayData?.tasks
@@ -195,8 +205,8 @@ export default function EasterTasksPage() {
         title: formData.title,
         description: formData.description,
         priority: formData.priority,
-        assignedTo: formData.assigned_to || null,
-        dueDate: formData.dueDate || null,
+        assigned_to: formData.assigned_to || null,
+        due_date: formData.dueDate || null,
       };
 
       const result = await updateTask(editingTask.id, updateData);
@@ -376,7 +386,9 @@ export default function EasterTasksPage() {
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
           assigned_to: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}

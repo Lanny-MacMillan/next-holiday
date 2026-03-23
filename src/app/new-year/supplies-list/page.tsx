@@ -62,14 +62,35 @@ export default function NewYearSuppliesListPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Prefer existing uuid field, fallback to userId only if uuid missing
+          })),
       ]
     : baseMembers;
+
+  // Debug shareMembers to identify UUID issues
+  console.log('ShareMembers debug info:', {
+    baseMembers: baseMembers.map(m => ({
+      userId: m.userId,
+      uuid: m.uuid,
+      name: m.name,
+    })),
+    finalShareMembers: shareMembers.map(m => ({
+      userId: m.userId,
+      uuid: m.uuid,
+      name: m.name,
+    })),
+    auth0User: { sub: auth0User?.sub, id: auth0User?.id, name: auth0User?.name },
+  });
 
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
@@ -94,14 +115,34 @@ export default function NewYearSuppliesListPage() {
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
-    dispatch(fetchContacts());
-  }, [dispatch]);
+    if (auth0User) {
+      console.log('Fetching contacts for user:', auth0User.sub);
+      dispatch(fetchContacts());
+    }
+  }, [dispatch, auth0User]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    console.log('handleAddGift called with values:', values);
+    console.log('Available contacts:', contacts);
+    console.log('Form validation check:', {
+      nameValid: !!values.name?.trim(),
+      recipientValid: !!values.recipient?.trim(),
+      name: values.name,
+      recipient: values.recipient,
+    });
+
+    // Enhanced Compatibility Layer uses 'name' field, not 'giftName'
+    if (!values.name?.trim() || !values.recipient?.trim()) {
+      console.log('Validation failed - missing required fields');
+      alert('Please fill in both Gift Name and Recipient fields');
+      return;
+    }
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      console.log('Attempting to transform payload...');
+      const payload = transformGiftPayload(values, contacts, shareMembers);
+      console.log('Payload created successfully:', payload);
+
       const result = await createGift(payload);
       updateGiftInRedux(result, 'add');
 
@@ -111,16 +152,39 @@ export default function NewYearSuppliesListPage() {
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
+      // Show user-friendly error message with specific guidance
+      if (error instanceof Error) {
+        if (error.message.includes('Address book is empty')) {
+          alert(
+            '❌ Address Book Required\n\nTo add supplies, you need to:\n1. Go to Settings > Address Book\n2. Add at least one contact\n3. Return here and select the recipient from the dropdown\n\nThis helps track who supplies are for!',
+          );
+        } else if (
+          error.message.includes('must be selected from the address book dropdown')
+        ) {
+          alert(
+            '❌ Please Select from Dropdown\n\nDon\'t type the recipient name - click the dropdown arrow next to "Recipient" and select from your address book contacts.\n\nIf you don\'t see the person you want, add them in Settings > Address Book first.',
+          );
+        } else if (error.message.includes('address book')) {
+          alert(
+            "Please select a recipient from the address book dropdown (don't type manually)",
+          );
+        } else {
+          alert('Error creating supply: ' + error.message);
+        }
       } else {
-        alert('Error creating gift. Please try again.');
+        alert('Error creating supply. Please try again.');
       }
     }
   }
 
   function openForm() {
+    console.log('Opening Add Supply modal');
+    console.log(
+      'Contacts available:',
+      contacts?.length || 0,
+      contacts?.map(c => c.name),
+    );
+    console.log('ShareMembers available:', shareMembers?.length || 0);
     setShowAddModal(true);
     setSelectedGift(null);
   }
@@ -139,6 +203,9 @@ export default function NewYearSuppliesListPage() {
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
+
+      // Refresh home data to ensure UI is in sync and progress updates
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
@@ -183,10 +250,16 @@ export default function NewYearSuppliesListPage() {
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift) return;
 
+    console.log('handleUpdateGift called with values:', values);
+    console.log('shareMembers available:', shareMembers);
+
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
+      console.log('Update payload created:', payload);
+
       // Update using the hook
       const result = await updateGift(selectedGift.id, payload);
+      console.log('Update result:', result);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
@@ -356,11 +429,12 @@ export default function NewYearSuppliesListPage() {
         }
         initialValues={{
           recipient: selectedGift?.recipient || '',
-          giftName: selectedGift?.name || '',
+          name: selectedGift?.name || '',
           description: selectedGift?.description || '',
           price: selectedGift?.price ? selectedGift.price.toString() : '',
           store: selectedGift?.store || '',
           product_link: selectedGift?.productLink || '',
+          assigned_to: selectedGift?.assignedTo || '',
           notes: selectedGift?.notes || '',
         }}
         onSubmit={handleUpdateGift}

@@ -65,21 +65,42 @@ export default function ValentinesDateIdeasPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Ensure uuid field exists - prefer existing uuid over userId
+          })),
       ]
     : baseMembers;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Redux Data Access (Date Ideas are stored as tasks with category "Date Ideas")
   const dateIdeas = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -111,7 +132,7 @@ export default function ValentinesDateIdeasPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Date Ideas',
-        dueDate: values.dueDate,
+        due_date: values.dueDate,
       };
 
       const result = await createTask(newTask);
@@ -147,7 +168,7 @@ export default function ValentinesDateIdeasPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Date Ideas',
-        dueDate: values.dueDate ? values.dueDate.split('T')[0] : undefined, // Format date for API
+        due_date: values.dueDate ? values.dueDate.split('T')[0] : undefined, // Format date for API
       };
 
       await updateTask(editingTask.id, updates);

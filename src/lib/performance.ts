@@ -46,26 +46,50 @@ class PerformanceMonitor {
       // Try to get location from timezone first (most reliable)
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      // For more detailed location, you can add an IP geolocation service
-      // This is a free service with good accuracy
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      // For more detailed location, try IP geolocation service with CORS handling
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-      const response = await fetch('https://ipapi.co/json/', {
-        signal: controller.signal,
-      }).catch(() => null);
+        const response = await fetch('https://ipapi.co/json/', {
+          signal: controller.signal,
+          mode: 'cors', // Explicitly set CORS mode
+        });
 
-      clearTimeout(timeoutId);
-      const locationData = response ? await response.json().catch(() => null) : null;
+        clearTimeout(timeoutId);
 
+        if (response.ok) {
+          const locationData = await response.json();
+          return {
+            timezone,
+            country: locationData?.country_name,
+            region: locationData?.region,
+            city: locationData?.city,
+          };
+        }
+      } catch (ipApiError) {
+        // Silently handle CORS and other IP API errors
+        console.warn(
+          'IP geolocation service unavailable (CORS or network error):',
+          ipApiError instanceof Error ? ipApiError.message : String(ipApiError),
+        );
+      }
+
+      // Fallback to timezone-only location info
       return {
         timezone,
-        country: locationData?.country_name,
-        region: locationData?.region,
-        city: locationData?.city,
+        country: 'Unknown',
+        region: 'Unknown',
+        city: 'Unknown',
       };
-    } catch {
-      return { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    } catch (error) {
+      // Ultimate fallback
+      return {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        country: 'Unknown',
+        region: 'Unknown',
+        city: 'Unknown',
+      };
     }
   }
 

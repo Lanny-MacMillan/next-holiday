@@ -7,7 +7,10 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -41,26 +44,29 @@ export default function EasterEventsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'easter'),
   );
-  const shareMembers = useAppSelector(
-    (state: any) =>
-      state.shares.shares?.find((share: any) => share.holidayId === 'easter')
-        ?.members || [],
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'easter'),
   );
+  const shareMembers = shareData?.members || [];
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Redux data access with name resolution - events are stored as tasks with category "Events"
+  // Helper function to resolve assignedTo UUID to user name
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;
     const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
+  // Transform tasks to include assignedToName for display
   const transformTaskWithAssignment = (task: any) => ({
     ...task,
     assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
   });
 
+  // Redux data access with name resolution - events are stored as tasks with category "Events"
   const events =
     holidayData?.tasks
       ?.filter((task: any) => task.category === 'Events')
@@ -161,9 +167,9 @@ export default function EasterEventsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assigned_to || null,
+        assigned_to: values.assigned_to || null,
         category: 'Events',
-        dueDate: values.dueDate || null,
+        due_date: values.dueDate || null,
         isCompleted: editingTask.isCompleted,
       });
 

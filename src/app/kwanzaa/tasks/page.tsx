@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -63,13 +63,38 @@ export default function KwanzaaTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts(auth0User.id));
     }
   }, [isHolidayShared, auth0User, dispatch]);
 
-  // Task data processing
-  const tasks =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Task data processing with assignment name resolution
+  const tasks = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
 
   // Sort function following working pattern
   function getSortedTasks() {
@@ -260,12 +285,6 @@ export default function KwanzaaTasksPage() {
       placeholder: 'Due Date',
     },
   ];
-
-  // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector(state =>
-    selectShareByHolidayKey(state, 'kwanzaa'),
-  );
-  const shareMembers = shareData?.members || [];
 
   // Get form configuration
   const formConfig = getFormConfigEnhanced('tasks', editingTask ? 'edit' : 'add', {

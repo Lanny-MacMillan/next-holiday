@@ -152,9 +152,9 @@ export default function CandleLightingPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Candle Lighting',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -240,9 +240,9 @@ export default function CandleLightingPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Candle Lighting',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       };
 
       // Use the standardized hook function
@@ -344,7 +344,7 @@ export default function CandleLightingPage() {
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;
 
-    const member = shareMembers.find((m: any) => m.userId === assignedToUuid);
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
@@ -520,7 +520,7 @@ export default function CandleLightingPage() {
                 title: editingTask?.title || '',
                 description: editingTask?.description || '',
                 priority: editingTask?.priority || 'medium',
-                assignedTo: editingTask?.assignedTo || '',
+                assigned_to: editingTask?.assignedTo || '',
                 dueDate: editingTask?.dueDate || '',
               }
             : undefined

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -82,8 +82,13 @@ export default function KwanzaaEventsPage() {
   });
 
   // Redux data access - events are stored as tasks with category "Events" like in Hanukkah
-  const events =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+  const events = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Events') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   // Removed refreshHomeData helper to prevent infinite loops

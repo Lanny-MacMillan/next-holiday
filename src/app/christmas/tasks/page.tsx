@@ -78,20 +78,42 @@ export default function TasksPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+          })),
       ]
     : baseMembers;
 
   // Get contacts for Enhanced Compatibility Layer
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-  // Use memoized tasks filtering from holiday data
-  const tasks = useMemo(() => holidayData?.tasks || [], [holidayData?.tasks]);
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Use memoized tasks filtering from holiday data with assignment names
+  const tasks = useMemo(
+    () => (holidayData?.tasks || []).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
 
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
@@ -403,7 +425,9 @@ export default function TasksPage() {
                 priority: editingTask.priority,
                 assigned_to: editingTask.assignedTo || '',
                 category: editingTask.category || 'Tasks',
-                dueDate: editingTask.dueDate || '',
+                dueDate: editingTask.dueDate
+                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+                  : '',
                 isCompleted: editingTask.isCompleted,
               }
             : undefined

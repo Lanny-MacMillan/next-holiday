@@ -15,6 +15,7 @@ import {
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -71,7 +72,9 @@ export default function HanukkahDecorationsPage() {
   const [showSortModal, setShowSortModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -89,9 +92,9 @@ export default function HanukkahDecorationsPage() {
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Decorations',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -131,18 +134,34 @@ export default function HanukkahDecorationsPage() {
     }
   }
 
-  async function handleDelete(taskId: string) {
-    if (!holidayId || !auth0User) return;
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = decorations.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
       // Use the standardized hook function
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
+  }
+
+  function cancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   const handleEditDecoration = (task: any) => {
@@ -161,7 +180,7 @@ export default function HanukkahDecorationsPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Decorations',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       };
 
       // Use the standardized hook function
@@ -363,6 +382,18 @@ export default function HanukkahDecorationsPage() {
         submitText={loading ? 'Updating...' : 'Update Decoration'}
         cardClassName="card-tasks"
         shareMembers={shareMembers}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Confirm Delete"
+        message={`Are you sure you want to delete "${taskToDelete?.title || 'this decoration task'}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

@@ -8,23 +8,155 @@ export function transformGiftPayload(
   contacts: any[],
   shareMembers?: any[],
 ) {
-  console.log('transformGiftPayload called with:');
-  console.log('- values:', values);
-  console.log('- shareMembers:', shareMembers);
-
   const contact = contacts.find(c => c.name === values.recipient);
 
-  // Ensure recipient is selected from address book
+  // Provide detailed error messages for address book issues
   if (!contact) {
-    throw new Error('Recipient must be selected from address book');
+    console.error('Contact not found for recipient:', values.recipient);
+
+    if (!contacts || contacts.length === 0) {
+      throw new Error(
+        'Address book is empty. Please go to Settings > Address Book and add contacts first, then return to add supplies.',
+      );
+    }
+    throw new Error(
+      `Recipient "${values.recipient}" must be selected from the address book dropdown, not typed manually. Available contacts: ${contacts.map(c => c.name).join(', ')}`,
+    );
   }
 
   // Handle assigned_to mapping from Auth0 userId to proper UUID
-  let assignedTo = values.assigned_to || null;
+  // Support both camelCase (assignedTo) and snake_case (assigned_to) from forms
+  let assignedTo = values.assigned_to || values.assignedTo || null;
   console.log('Original assigned_to:', assignedTo);
 
   if (assignedTo && shareMembers && shareMembers.length > 0) {
     console.log('=== ASSIGNMENT MAPPING DEBUG ===');
+    console.log('Looking for assignedTo:', assignedTo);
+    console.log(
+      'Available shareMembers:',
+      shareMembers.map(m => ({ userId: m.userId, uuid: m.uuid, name: m.name })),
+    );
+
+    // Check if it's already a valid UUID format
+    const isValidUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        assignedTo,
+      );
+    console.log('Is already valid UUID format:', isValidUUID);
+
+    // If assigned_to contains Auth0 ID format, try to map it to the proper UUID
+    if (!isValidUUID) {
+      console.log('Converting Auth0 ID to UUID...');
+      // Find the member with matching Auth0 user ID
+      const member = shareMembers.find(m => {
+        const matches = m.userId === assignedTo;
+        console.log(
+          `Checking member ${m.name} (${m.userId}): ${matches ? '✅ MATCH' : '❌ no match'}`,
+        );
+        return matches;
+      });
+      console.log('Found member for assignment:', member);
+
+      if (member && member.uuid) {
+        // Validate that the UUID we're about to use is actually a valid UUID
+        const isValidMemberUUID =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            member.uuid,
+          );
+        if (isValidMemberUUID) {
+          const oldAssignedTo = assignedTo;
+          assignedTo = member.uuid; // Use the UUID for assignment
+          console.log(
+            `✅ Mapped ${member.name} from Auth0 ID (${oldAssignedTo}) to UUID (${assignedTo})`,
+          );
+        } else {
+          console.error(
+            `❌ Member ${member.name} has invalid UUID format: ${member.uuid}`,
+          );
+          console.log(
+            'This indicates a shareMembers configuration issue where Auth0 subject IDs are being used as UUIDs',
+          );
+          console.log(
+            'The member should have a proper database UUID, not an Auth0 subject ID',
+          );
+          assignedTo = null; // Set to null if UUID is invalid
+        }
+      } else {
+        console.warn(
+          '❌ Could not find UUID for assigned user, setting to null:',
+          assignedTo,
+        );
+        assignedTo = null; // Set to null if we can't find the UUID
+      }
+    } else {
+      console.log('✅ Assignment value is already a valid UUID:', assignedTo);
+    }
+  } else {
+    console.log('No shareMembers available or assignedTo is empty');
+    if (assignedTo) {
+      console.log(
+        'WARNING: assignedTo provided but no shareMembers available:',
+        assignedTo,
+      );
+      // If no shareMembers but assignedTo is provided, validate it's a UUID
+      const isValidUUID =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          assignedTo,
+        );
+      if (!isValidUUID) {
+        console.warn(
+          'Invalid UUID format without shareMembers, clearing assignment',
+        );
+        assignedTo = null;
+      }
+    }
+  }
+
+  console.log('Final assignedTo value for gift payload:', assignedTo);
+
+  return {
+    name: values.name || values.giftName || values.description || '', // Enhanced Compatibility uses 'name'
+    description: values.description || '',
+    price: values.price ? parseFloat(values.price) : 0,
+    store: values.store || '',
+    product_link: values.product_link || '',
+    notes: values.notes || '',
+    contact_id: contact.id,
+    assigned_to: assignedTo, // Use snake_case to match server expectations
+  };
+}
+
+/**
+ * Transform form values to Thanksgiving shopping item API payload
+ */
+export function transformThanksgivingShoppingPayload(values: Record<string, any>) {
+  return {
+    name: values.giftName || '',
+    description: values.description || '',
+    price: values.price ? parseFloat(values.price) : 0,
+    store: values.store || '',
+    product_link: values.product_link || '',
+    notes: values.notes || '',
+    contact_id: null, // No recipient needed for Thanksgiving shopping items
+  };
+}
+
+/**
+ * Transform form values to card API payload
+ */
+export function transformCardPayload(
+  values: Record<string, any>,
+  contacts: any[],
+  shareMembers?: any[],
+) {
+  const contact = contacts.find(c => c.name === values.recipient);
+
+  // Handle assigned_to mapping from Auth0 userId to proper UUID
+  // Support both camelCase (assignedTo) and snake_case (assigned_to) from forms
+  let assignedTo = values.assigned_to || values.assignedTo || null;
+
+  if (assignedTo && shareMembers && shareMembers.length > 0) {
+    console.log('=== CARD ASSIGNMENT MAPPING DEBUG ===');
     console.log('Looking for assignedTo:', assignedTo);
     console.log(
       'Available shareMembers:',
@@ -63,48 +195,15 @@ export function transformGiftPayload(
       }
     }
   } else {
-    console.log('No shareMembers available or assignedTo is empty');
+    console.log('No shareMembers available or assignedTo is empty for card');
   }
-
-  return {
-    name: values.name || values.giftName || '', // Support both field names for backward compatibility
-    description: values.description || '',
-    price: values.price ? parseFloat(values.price) : 0,
-    store: values.store || '',
-    product_link: values.product_link || '',
-    notes: values.notes || '',
-    contact_id: contact.id,
-    assigned_to: assignedTo,
-  };
-}
-
-/**
- * Transform form values to Thanksgiving shopping item API payload
- */
-export function transformThanksgivingShoppingPayload(values: Record<string, any>) {
-  return {
-    name: values.giftName || '',
-    description: values.description || '',
-    price: values.price ? parseFloat(values.price) : 0,
-    store: values.store || '',
-    product_link: values.product_link || '',
-    notes: values.notes || '',
-    contact_id: null, // No recipient needed for Thanksgiving shopping items
-  };
-}
-
-/**
- * Transform form values to card API payload
- */
-export function transformCardPayload(values: Record<string, any>, contacts: any[]) {
-  const contact = contacts.find(c => c.name === values.recipient);
 
   return {
     recipient: values.recipient || '',
     message: values.message || '',
     address: values.address || '',
     contact_id: contact?.id || null,
-    assigned_to: values.assigned_to || null,
+    assigned_to: assignedTo, // Use snake_case to match server expectations
   };
 }
 

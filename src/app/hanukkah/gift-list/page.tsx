@@ -83,7 +83,7 @@ export default function HanukkahGiftListPage() {
   }, [dispatch]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
     try {
@@ -341,12 +341,12 @@ export default function HanukkahGiftListPage() {
           selectedGift
             ? {
                 recipient: selectedGift?.contact?.name || '',
-                giftName: selectedGift?.name || '',
+                name: selectedGift?.name || '',
                 description: selectedGift?.description || '',
                 price: selectedGift?.price || '',
                 store: selectedGift?.store || '',
                 productLink: selectedGift?.productLink || '',
-                assignedTo: selectedGift?.assignedTo || '',
+                assigned_to: selectedGift?.assignedTo || '',
                 notes: selectedGift?.notes || '',
               }
             : undefined

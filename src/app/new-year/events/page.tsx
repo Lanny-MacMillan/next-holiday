@@ -60,22 +60,46 @@ export default function NewYearEventsPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Prefer existing uuid field, fallback to userId only if uuid missing
+          })),
       ]
     : baseMembers;
 
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    // Preserve original assignedTo field for form editing (UUID)
+    assignedTo: task.assignedTo,
+    // Add display name for UI
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - events are stored as tasks with category "Events"
   const events = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Events') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -135,7 +159,7 @@ export default function NewYearEventsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assigned_to: values.assigned_to || null,
+        assigned_to: values.assigned_to === '' ? null : values.assigned_to,
         category: 'Events',
         due_date: values.dueDate || null,
       };

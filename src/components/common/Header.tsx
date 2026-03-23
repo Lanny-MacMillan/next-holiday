@@ -8,7 +8,7 @@ import ThemeToggle from '../ThemeToggle';
 import DisplayModeToggle from '../DisplayModeToggle';
 import UpgradeModal from '../modals/UpgradeModal';
 import UpgradeBanner from './UpgradeBanner';
-import AlertsBell from './AlertsBell';
+import NotificationCenter from './NotificationCenter';
 
 export default function Header() {
   const { logout } = useAuth0();
@@ -71,9 +71,9 @@ export default function Header() {
               </h1>
             </div>
 
-            {/* Right side - Alerts bell, Display mode toggle, Theme toggle and burger menu */}
+            {/* Right side - Notifications, Display mode toggle, Theme toggle and burger menu */}
             <div className="flex items-center space-x-2">
-              <AlertsBell />
+              <NotificationCenter />
               {isAuthorizedPlusMember && <DisplayModeToggle />}
               <ThemeToggle />
 

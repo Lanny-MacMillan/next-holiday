@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -102,11 +102,30 @@ export default function DailyPrinciplesPage() {
   );
   const shareMembers = shareData?.members || [];
 
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
-  const displayTasks =
-    holidayData?.tasks?.filter(
-      (task: any) => task.category === 'Daily Principles',
-    ) || [];
+  const displayTasks = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter(
+          (task: any) => task.category === 'Daily Principles',
+        ) || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   // State management

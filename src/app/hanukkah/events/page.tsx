@@ -100,7 +100,7 @@ export default function HanukkahEventsPage() {
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Events',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
         isCompleted: false,
         holidayId: holidayId,
       };
@@ -149,7 +149,7 @@ export default function HanukkahEventsPage() {
         priority: values.priority as 'low' | 'medium' | 'high',
         ...(isAuthorizedForSharing &&
           isHolidayShared && { assigned_to: values.assigned_to || undefined }),
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       };
 
       // Use the standardized hook function

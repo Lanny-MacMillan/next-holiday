@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -62,8 +62,25 @@ export default function KwanzaaGiftListPage() {
   );
   const shareMembers = shareData?.members || [];
 
-  // Redux data access - gifts from holiday data
-  const gifts = holidayData?.gifts || [];
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform gifts to include assignedToName for display
+  const transformGiftWithAssignment = (gift: any) => ({
+    ...gift,
+    assignedToName: gift.assignedTo ? getAssignedUserName(gift.assignedTo) : null,
+  });
+
+  // Redux data access - gifts from holiday data with assignment name resolution
+  const gifts = useMemo(
+    () => (holidayData?.gifts || []).map(transformGiftWithAssignment),
+    [holidayData?.gifts, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
@@ -82,7 +99,7 @@ export default function KwanzaaGiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.description?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
     try {
@@ -288,19 +305,64 @@ export default function KwanzaaGiftListPage() {
     auth0User: auth0User,
   });
 
+  // Debug: Log form config to see what fields are generated
+  console.log('Gift form config fields:', formConfig.fields);
+  console.log('ShareMembers for form:', shareMembers);
+
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
-    return {
+    // For assigned_to, try multiple approaches since Enhanced Compatibility Layer might expect different formats
+    let assignedToValue = '';
+    if (selectedGift.assignedTo) {
+      console.log('Processing assignment for gift:', selectedGift);
+      console.log('Gift assignedTo UUID:', selectedGift.assignedTo);
+      console.log('Available shareMembers:', shareMembers);
+
+      // First try: Use UUID directly (Enhanced system might expect this)
+      assignedToValue = selectedGift.assignedTo;
+      console.log('Trying UUID directly:', assignedToValue);
+
+      // Second try: Find the member and use userId (Auth0 ID)
+      const assignedMember = shareMembers.find(
+        (m: any) => m.uuid === selectedGift.assignedTo,
+      );
+      if (assignedMember) {
+        const userIdValue = assignedMember.userId;
+        console.log(
+          `Found member: ${assignedMember.name} (UUID: ${assignedMember.uuid}, userId: ${userIdValue})`,
+        );
+
+        // Try userId approach as backup
+        // assignedToValue = userIdValue;
+        console.log('Using UUID for assignment field:', assignedToValue);
+      } else {
+        console.warn(
+          `Could not find member for UUID ${selectedGift.assignedTo} in shareMembers`,
+        );
+        console.warn(
+          'ShareMembers available:',
+          shareMembers.map(m => ({ uuid: m.uuid, userId: m.userId, name: m.name })),
+        );
+      }
+    }
+
+    const initialValues = {
       recipient: selectedGift.recipient || '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price?.toString() || '',
+      name: selectedGift.name || '',
+      description: selectedGift.name || selectedGift.description || '',
+      price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
+      productLink: selectedGift.productLink || '',
       product_link: selectedGift.productLink || '',
+      assigned_to: assignedToValue,
       notes: selectedGift.notes || '',
     };
+
+    console.log('Final initial values for edit form:', initialValues);
+
+    return initialValues;
   };
 
   return (

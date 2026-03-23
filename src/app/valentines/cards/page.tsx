@@ -59,21 +59,34 @@ export default function ValentinesCardsPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '',
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.userId || member.uuid, // Ensure uuid field exists
+          })),
       ]
     : baseMembers;
-
+  console.log('auth0User', { auth0User });
   // Helper function to extract recipient from title if needed
   const extractRecipientFromTitle = (title: string) => {
     if (title?.startsWith('Card for ')) {
       return title.substring(9); // Remove 'Card for ' prefix
     }
     return title || '';
+  };
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
   // Cards are stored as tasks with category 'Cards'
@@ -94,10 +107,12 @@ export default function ValentinesCardsPage() {
       address: task.address || '',
       notes: task.notes || '',
       isCompleted: task.isCompleted || false,
+      assignedTo: task.assignedTo,
+      assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
       // Keep original task data for reference
       ...task,
     }));
-  }, [holidayData?.tasks]);
+  }, [holidayData?.tasks, shareMembers]);
   const isLoading = !homeInitialized;
   const error = null;
 

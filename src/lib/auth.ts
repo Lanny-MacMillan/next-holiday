@@ -31,6 +31,26 @@ async function getAuth0Session(request: NextRequest): Promise<Auth0Session | nul
       };
     }
 
+    // Also check for test user data in query parameters (for SSE endpoints)
+    const url = new URL(request.url);
+    const queryTestUser = url.searchParams.get('testUser');
+
+    if (queryTestUser) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(queryTestUser));
+        return {
+          user: {
+            sub: userData.sub || 'test-auth0-sub',
+            email: userData.email || 'test@example.com',
+            name: userData.name || 'Test User',
+            picture: userData.picture || null,
+          },
+        };
+      } catch (parseError) {
+        console.error('Error parsing test user from query params:', parseError);
+      }
+    }
+
     // For now, return null (no session)
     // TODO: Implement proper Auth0 session handling for Next.js 15
     // This will be handled by the frontend calling the API with user data

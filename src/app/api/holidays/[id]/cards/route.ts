@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
 import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import {
+  broadcastAssignment,
+  broadcastCompletion,
+  broadcastNotification,
+} from '@/lib/realTimeNotifications';
 
 const createBodySchema = z.object({
   recipient: z.string().min(1),
@@ -39,6 +44,13 @@ export async function POST(
       return badRequest(parsed.error.issues);
     }
 
+    // Fetch holiday name for better notifications
+    const holiday = await prisma.holiday.findUnique({
+      where: { id },
+      select: { name: true },
+    });
+    const holidayName = holiday?.name || 'Holiday';
+
     const data = parsed.data;
     const card = await prisma.card.create({
       data: {
@@ -56,6 +68,8 @@ export async function POST(
     if (data.assigned_to && data.assigned_to !== user.id) {
       try {
         const assignerName = await getUserName(user.id);
+
+        // Database notification (existing system) - this is the primary system
         await createAssignmentNotification({
           userId: data.assigned_to,
           fromUserId: user.id,
@@ -65,12 +79,36 @@ export async function POST(
           title: 'Card Assignment',
           message: `${assignerName} assigned you a card for ${card.recipient}`,
         });
+
+        // Real-time notification (enhancement layer) - completely isolated
+        // This will NEVER affect the main API operation
+        setTimeout(async () => {
+          try {
+            await broadcastAssignment(
+              data.assigned_to!, // assigneeUserId - we know it's not null from the if condition
+              assignerName, // assignerName
+              'card', // entityType
+              `Card for ${card.recipient}`, // entityName
+              card.id, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          } catch (broadcastError) {
+            // Silently log broadcast failures - they never affect the API
+            console.warn(
+              'Real-time notification broadcast failed (card assignment succeeded):',
+              broadcastError,
+            );
+          }
+        }, 0); // Run in next tick to completely isolate from main operation
       } catch (notificationError) {
-        // Log notification error but don't fail the card creation
+        // CRITICAL: Even if database notification fails, card creation still succeeds
+        // This maintains backward compatibility with existing behavior
         console.error(
-          'Failed to create assignment notification:',
+          'Notification system failed (card assignment succeeded):',
           notificationError,
         );
+        // Note: The card was still created successfully
       }
     }
 
@@ -122,6 +160,12 @@ export async function PUT(
       // Only update isCompleted if it's provided
       if (data.isCompleted !== undefined) {
         updateData.isCompleted = data.isCompleted;
+      }
+
+      // Handle assigned_to field
+      if (data.assigned_to !== undefined) {
+        updateData.assignedTo =
+          data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null;
       }
 
       // First check if the card exists

@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
 import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import {
+  broadcastAssignment,
+  broadcastCompletion,
+  broadcastNotification,
+} from '@/lib/realTimeNotifications';
 
 // Base schema without contact_id
 const baseSchema = z.object({
@@ -16,7 +21,7 @@ const baseSchema = z.object({
     .union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
     .optional(),
   notes: z.string().nullable().optional(),
-  assigned_to: z.string().uuid().nullable().optional(), // NEW
+  assigned_to: z.string().uuid().nullable().optional().or(z.literal('')), // Allow empty string
 });
 
 // Schema for holidays that require contact_id (like Christmas)
@@ -60,6 +65,8 @@ export async function POST(
       return badRequest('Holiday not found');
     }
 
+    const holidayName = holiday.name || 'Holiday';
+
     const json = await request.json();
 
     // Use different schema based on holiday
@@ -75,6 +82,13 @@ export async function POST(
     }
 
     const data = parsed.data;
+    
+    // Debug logging for assignment field
+    console.log('🔍 Gift creation debug:');
+    console.log('  Raw assigned_to from request:', data.assigned_to);
+    console.log('  Parsed data keys:', Object.keys(data));
+    console.log('  assigned_to type:', typeof data.assigned_to);
+    
     const gift = await prisma.gift.create({
       data: {
         holidayId: id,
@@ -89,15 +103,23 @@ export async function POST(
             : null,
         notes: data.notes ?? null,
         contactId: data.contact_id,
-        assignedTo: data.assigned_to, // NEW
+        assignedTo: data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null, // Handle empty string
         createdBy: user.id,
       },
     });
+    
+    // Debug logging for created gift
+    console.log('🎁 Gift created:');
+    console.log('  Gift ID:', gift.id);
+    console.log('  assignedTo field in DB:', gift.assignedTo);
+    console.log('  Original assigned_to:', data.assigned_to);
 
     // Create assignment notification if assigned to someone other than creator
     if (data.assigned_to && data.assigned_to !== user.id) {
       try {
         const assignerName = await getUserName(user.id);
+
+        // Database notification (existing system) - this is the primary system
         await createAssignmentNotification({
           userId: data.assigned_to,
           fromUserId: user.id,
@@ -107,12 +129,36 @@ export async function POST(
           title: 'Gift Assignment',
           message: `${assignerName} assigned you a gift: ${gift.name}`,
         });
+
+        // Real-time notification (enhancement layer) - completely isolated
+        // This will NEVER affect the main API operation
+        setTimeout(async () => {
+          try {
+            await broadcastAssignment(
+              data.assigned_to!, // assigneeUserId - we know it's not null from the if condition
+              assignerName, // assignerName
+              'gift', // entityType
+              gift.name, // entityName
+              gift.id, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          } catch (broadcastError) {
+            // Silently log broadcast failures - they never affect the API
+            console.warn(
+              'Real-time notification broadcast failed (gift assignment succeeded):',
+              broadcastError,
+            );
+          }
+        }, 0); // Run in next tick to completely isolate from main operation
       } catch (notificationError) {
-        // Log notification error but don't fail the gift creation
+        // CRITICAL: Even if database notification fails, gift creation still succeeds
+        // This maintains backward compatibility with existing behavior
         console.error(
-          'Failed to create assignment notification:',
+          'Notification system failed (gift assignment succeeded):',
           notificationError,
         );
+        // Note: The gift was still created successfully
       }
     }
 

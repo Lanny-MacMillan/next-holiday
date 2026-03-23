@@ -148,18 +148,18 @@ export default function DateIdeaCard({
                     )}
                     {task.assignedToName && (
                       <div>
-                        <span
+                        <div
                           className="text-white opacity-80"
                           style={{ fontFamily: 'var(--font-family-fredoka)' }}
                         >
                           Assigned to:
-                        </span>
-                        <span
-                          className="ml-1 font-medium text-white"
+                        </div>
+                        <div
+                          className="font-medium text-white"
                           style={{ fontFamily: 'var(--font-family-fredoka)' }}
                         >
                           {task.assignedToName}
-                        </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -260,13 +260,13 @@ export default function DateIdeaCard({
                   </div>
                 )}
                 {task.assignedToName && (
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-500">
+                  <div className="mb-2">
+                    <div className="text-gray-500 dark:text-gray-500">
                       Assigned to:
-                    </span>
-                    <span className="ml-1 font-medium text-gray-800 dark:text-white">
+                    </div>
+                    <div className="font-medium text-gray-800 dark:text-white">
                       {task.assignedToName}
-                    </span>
+                    </div>
                   </div>
                 )}
               </div>

@@ -67,12 +67,18 @@ export default function ValentinesGiftListPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Ensure uuid field exists - prefer existing uuid over userId
+          })),
       ]
     : baseMembers;
 
@@ -139,11 +145,13 @@ export default function ValentinesGiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    // Enhanced Compatibility Layer uses 'name' field, not 'giftName'
+    const giftName = values.name || values.giftName || '';
+    if (!giftName?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await createGift(payload);
 
       // Update Redux state directly
@@ -240,7 +248,7 @@ export default function ValentinesGiftListPage() {
     if (!selectedGift || !holidayId || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await updateGift(selectedGift.id, payload);
 
       // Update Redux state directly
@@ -435,7 +443,7 @@ export default function ValentinesGiftListPage() {
         }
         initialValues={{
           recipient: selectedGift?.contact?.name || '',
-          giftName: selectedGift?.name || '',
+          name: selectedGift?.name || '', // Enhanced Compatibility Layer uses 'name' field
           description: selectedGift?.description || '',
           price: selectedGift?.price || '',
           store: selectedGift?.store || '',

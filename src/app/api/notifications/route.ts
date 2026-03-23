@@ -124,11 +124,20 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Handle invite notifications separately (they're not in the notifications table)
-    const inviteIds = notificationIds
+    // Filter out any null/undefined values first to prevent errors
+    const validNotificationIds = notificationIds.filter(
+      id => id != null && typeof id === 'string',
+    );
+
+    if (validNotificationIds.length === 0) {
+      return badRequest('No valid notification IDs provided');
+    }
+
+    const inviteIds = validNotificationIds
       .filter(id => id.startsWith('invite-'))
       .map(id => id.replace('invite-', ''));
 
-    const regularNotificationIds = notificationIds.filter(
+    const regularNotificationIds = validNotificationIds.filter(
       id => !id.startsWith('invite-'),
     );
 

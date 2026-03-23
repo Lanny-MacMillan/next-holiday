@@ -59,13 +59,18 @@ export default function ThanksgivingTasksPage() {
           // Add current user first
           {
             userId: auth0User.sub || '',
-            uuid: auth0User.sub || '', // Use auth0 sub as UUID for assignments
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
             name: auth0User.name || 'Me',
             email: auth0User.email || '',
             role: 'owner' as const,
           },
           // Add other members, filtering out current user if already present
-          ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.userId || member.uuid, // Ensure uuid field exists
+            })),
         ]
       : baseMembers;
 

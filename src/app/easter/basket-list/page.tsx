@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -23,11 +24,12 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function EasterBasketListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const shareMembers = useAppSelector(
-    (state: any) =>
-      state.shares.shares?.find((share: any) => share.holidayId === 'easter')
-        ?.members || [],
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'easter'),
   );
+  const shareMembers = shareData?.members || [];
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -359,6 +361,7 @@ export default function EasterBasketListPage() {
           store: selectedGift?.store || '',
           product_link: selectedGift?.productLink || '',
           notes: selectedGift?.notes || '',
+          assigned_to: selectedGift?.assignedTo || '',
         }}
         onSubmit={handleUpdateGift}
         onClose={closeForm}

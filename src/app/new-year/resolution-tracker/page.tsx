@@ -62,23 +62,47 @@ export default function NewYearResolutionTrackerPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
         },
         // Add other members, filtering out current user if already present
-        ...baseMembers.filter((member: any) => member.userId !== auth0User.sub),
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Prefer existing uuid field, fallback to userId only if uuid missing
+          })),
       ]
     : baseMembers;
 
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    // Preserve original assignedTo field for form editing (UUID)
+    assignedTo: task.assignedTo,
+    // Add display name for UI
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - resolutions are stored as tasks with category "Resolutions"
   const resolutions = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Resolutions') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Resolutions') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -112,8 +136,7 @@ export default function NewYearResolutionTrackerPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assignedTo || undefined }),
+        assigned_to: values.assigned_to || undefined,
         category: 'Resolutions',
         due_date: values.dueDate || undefined,
         isCompleted: false,
@@ -145,7 +168,7 @@ export default function NewYearResolutionTrackerPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assigned_to: values.assignedTo,
+        assigned_to: values.assigned_to,
         category: 'Resolutions',
         due_date: values.dueDate,
       };
@@ -236,7 +259,7 @@ export default function NewYearResolutionTrackerPage() {
           if (!b.dueDate) return -1;
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         case 'assignedTo':
-          return (a.assignedTo || '').localeCompare(b.assignedTo || '');
+          return (a.assignedToName || '').localeCompare(b.assignedToName || '');
         case 'category':
           return (a.category || '').localeCompare(b.category || '');
         default:
@@ -371,7 +394,7 @@ export default function NewYearResolutionTrackerPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assignedTo: editingTask?.assignedTo || '',
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate ? editingTask.dueDate.split('T')[0] : '',
         }}
         onSubmit={handleEditSubmit}
