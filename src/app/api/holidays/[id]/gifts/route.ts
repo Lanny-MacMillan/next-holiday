@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
@@ -24,9 +25,16 @@ const baseSchema = z.object({
   assigned_to: z.string().uuid().nullable().optional().or(z.literal('')), // Allow empty string
 });
 
-// Schema for holidays that require contact_id (like Christmas)
-const giftWithContactSchema = baseSchema.extend({
-  contact_id: z.string().uuid(),
+// Schema for flexible contact creation (like guest lists)
+const giftWithFlexibleContactSchema = baseSchema.extend({
+  contact_id: z.string().uuid().nullable().optional(),
+  // Fields for creating new contacts when contact_id not provided
+  recipient_name: z.string().nullable().optional(),
+  recipient_email: z
+    .union([z.string().email(), z.string().length(0), z.null(), z.undefined()])
+    .optional(),
+  recipient_phone: z.string().nullable().optional(),
+  recipient_address: z.string().nullable().optional(),
 });
 
 // Schema for holidays that don't require contact_id (like Thanksgiving)
@@ -74,7 +82,8 @@ export async function POST(
     if (holiday.name === 'Thanksgiving') {
       parsed = giftWithoutContactSchema.safeParse(json);
     } else {
-      parsed = giftWithContactSchema.safeParse(json);
+      // Use flexible contact schema for other holidays (supports creating new contacts)
+      parsed = giftWithFlexibleContactSchema.safeParse(json);
     }
 
     if (!parsed.success) {
@@ -82,13 +91,108 @@ export async function POST(
     }
 
     const data = parsed.data;
-    
+
+    // Handle contact creation/lookup for flexible schemas
+    let contactId = data.contact_id;
+    if (holiday.name !== 'Thanksgiving' && !contactId) {
+      // Type assertion for flexible contact data
+      const flexibleData = data as any;
+
+      if (flexibleData.recipient_name && flexibleData.recipient_name.trim()) {
+        // Get user's account
+        const account = await prisma.account.findFirst({
+          where: {
+            members: {
+              some: {
+                userId: user.id,
+              },
+            },
+          },
+          select: { id: true },
+        });
+
+        if (!account) {
+          return serverError('User account not found');
+        }
+
+        // Find or create contact like guest API does
+        let contact = null;
+        if (
+          flexibleData.recipient_email &&
+          typeof flexibleData.recipient_email === 'string' &&
+          flexibleData.recipient_email.trim()
+        ) {
+          // Try to find existing contact with same email
+          contact = await prisma.contact.findFirst({
+            where: {
+              accountId: account.id,
+              email: flexibleData.recipient_email.trim(),
+            },
+          });
+        }
+
+        if (!contact) {
+          // Create new contact
+          contact = await prisma.contact.create({
+            data: {
+              id: uuidv4(),
+              accountId: account.id,
+              name: flexibleData.recipient_name.trim(),
+              email:
+                flexibleData.recipient_email &&
+                typeof flexibleData.recipient_email === 'string' &&
+                flexibleData.recipient_email.trim()
+                  ? flexibleData.recipient_email.trim()
+                  : null,
+              phone:
+                flexibleData.recipient_phone &&
+                typeof flexibleData.recipient_phone === 'string' &&
+                flexibleData.recipient_phone.trim()
+                  ? flexibleData.recipient_phone.trim()
+                  : null,
+              streetAddress:
+                flexibleData.recipient_address &&
+                typeof flexibleData.recipient_address === 'string' &&
+                flexibleData.recipient_address.trim()
+                  ? flexibleData.recipient_address.trim()
+                  : null,
+              createdBy: user.id,
+            },
+          });
+        } else {
+          // Update existing contact if needed
+          contact = await prisma.contact.update({
+            where: { id: contact.id },
+            data: {
+              name: flexibleData.recipient_name.trim(),
+              phone:
+                flexibleData.recipient_phone &&
+                typeof flexibleData.recipient_phone === 'string' &&
+                flexibleData.recipient_phone.trim()
+                  ? flexibleData.recipient_phone.trim()
+                  : contact.phone,
+              streetAddress:
+                flexibleData.recipient_address &&
+                typeof flexibleData.recipient_address === 'string' &&
+                flexibleData.recipient_address.trim()
+                  ? flexibleData.recipient_address.trim()
+                  : contact.streetAddress,
+              updatedAt: new Date(),
+            },
+          });
+        }
+
+        contactId = contact.id;
+      }
+    }
+
     // Debug logging for assignment field
     console.log('🔍 Gift creation debug:');
     console.log('  Raw assigned_to from request:', data.assigned_to);
     console.log('  Parsed data keys:', Object.keys(data));
     console.log('  assigned_to type:', typeof data.assigned_to);
-    
+    console.log('  Final contactId:', contactId);
+
     const gift = await prisma.gift.create({
       data: {
         holidayId: id,
@@ -102,12 +206,13 @@ export async function POST(
             ? data.product_link
             : null,
         notes: data.notes ?? null,
-        contactId: data.contact_id,
-        assignedTo: data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null, // Handle empty string
+        contactId: contactId, // Use resolved contactId
+        assignedTo:
+          data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null, // Handle empty string
         createdBy: user.id,
       },
     });
-    
+
     // Debug logging for created gift
     console.log('🎁 Gift created:');
     console.log('  Gift ID:', gift.id);
@@ -308,7 +413,7 @@ export async function PATCH(
     if (holiday.name === 'Thanksgiving') {
       parsed = giftWithoutContactSchema.safeParse(updateData);
     } else {
-      parsed = giftWithContactSchema.safeParse(updateData);
+      parsed = giftWithFlexibleContactSchema.safeParse(updateData);
     }
 
     if (!parsed.success) {

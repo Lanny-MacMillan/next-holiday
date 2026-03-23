@@ -97,6 +97,10 @@ export default function GraduationGiftListPage() {
         assigned_to: values.assigned_to || undefined, // Snake case for API
       });
       await refreshHomeData(auth0User, holidayId);
+
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);

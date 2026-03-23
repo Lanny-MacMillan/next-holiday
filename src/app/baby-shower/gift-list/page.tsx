@@ -79,21 +79,14 @@ export default function BabyShowerGiftListPage() {
     if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    console.log('Creating gift with payload:', values); // Debug log
     const payload = transformGiftPayload(values, contacts, shareMembers);
-    console.log('Transformed payload:', payload); // Debug log
 
     const result = await createGift(payload);
-    console.log('Gift created successfully:', result); // Debug log
 
-    // Force refresh the home data to ensure UI updates
-    console.log('Refreshing home data...'); // Debug log
-
-    // Add a small delay to ensure the API has processed the request
-    await new Promise(resolve => setTimeout(resolve, 100));
-
+    // First refresh home data to get fresh contacts from database
     await refreshHomeData(auth0User, holidayId);
-    console.log('Home data refreshed'); // Debug log
+
+    dispatch(fetchContacts());
 
     setShowAddModal(false);
   }

@@ -160,6 +160,9 @@ export default function ValentinesGiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);

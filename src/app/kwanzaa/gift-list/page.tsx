@@ -112,6 +112,9 @@ export default function KwanzaaGiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
       setShowFormModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
@@ -343,7 +346,11 @@ export default function KwanzaaGiftListPage() {
         );
         console.warn(
           'ShareMembers available:',
-          shareMembers.map(m => ({ uuid: m.uuid, userId: m.userId, name: m.name })),
+          shareMembers.map((m: any) => ({
+            uuid: m.uuid,
+            userId: m.userId,
+            name: m.name,
+          })),
         );
       }
     }

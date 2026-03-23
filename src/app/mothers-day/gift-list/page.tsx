@@ -146,6 +146,9 @@ export default function GiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
       setShowFormModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);

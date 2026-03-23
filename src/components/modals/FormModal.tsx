@@ -117,6 +117,9 @@ export default function FormModal({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset address book states BEFORE setting form values to prevent flash
+      setShowAddressBookInternal(false);
+      setShowAddressBookMessage(false);
       setFormValues(initialValues);
     }
   }, [isOpen]);

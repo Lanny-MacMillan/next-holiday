@@ -8,21 +8,11 @@ export function transformGiftPayload(
   contacts: any[],
   shareMembers?: any[],
 ) {
+  // Look for existing contact but don't require it
   const contact = contacts.find(c => c.name === values.recipient);
 
-  // Provide detailed error messages for address book issues
-  if (!contact) {
-    console.error('Contact not found for recipient:', values.recipient);
-
-    if (!contacts || contacts.length === 0) {
-      throw new Error(
-        'Address book is empty. Please go to Settings > Address Book and add contacts first, then return to add supplies.',
-      );
-    }
-    throw new Error(
-      `Recipient "${values.recipient}" must be selected from the address book dropdown, not typed manually. Available contacts: ${contacts.map(c => c.name).join(', ')}`,
-    );
-  }
+  // If contact exists, use it; if not, let the API create it
+  const contactId = contact?.id || null;
 
   // Handle assigned_to mapping from Auth0 userId to proper UUID
   // Support both camelCase (assignedTo) and snake_case (assigned_to) from forms
@@ -121,7 +111,12 @@ export function transformGiftPayload(
     store: values.store || '',
     product_link: values.product_link || '',
     notes: values.notes || '',
-    contact_id: contact.id,
+    // For flexible contact creation like guests
+    contact_id: contactId,
+    recipient_name: values.recipient, // Pass recipient name for contact creation
+    recipient_email: values.email || null, // Optional email for new contact
+    recipient_phone: values.phone || null, // Optional phone for new contact
+    recipient_address: values.address || null, // Optional address for new contact
     assigned_to: assignedTo, // Use snake_case to match server expectations
   };
 }

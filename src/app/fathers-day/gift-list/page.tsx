@@ -78,6 +78,10 @@ export default function FathersDayGiftListPage() {
       const payload = transformGiftPayload(values, contacts, shareMembers);
       await createGift(payload);
       await refreshHomeData(auth0User, holidayId);
+
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
