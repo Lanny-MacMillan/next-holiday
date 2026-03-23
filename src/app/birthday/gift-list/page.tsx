@@ -13,7 +13,11 @@ import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
-import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -24,15 +28,57 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function BirthdayGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const shareMembers = useAppSelector(
-    (state: any) => selectShareByHolidayKey(state, 'birthday')?.shareMembers,
+
+  const { auth0User, holidayId, holidayData, homeInitialized } =
+    useHolidayPageData();
+
+  // Redux & Sharing - Enhanced Compatibility Layer
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'birthday'),
   );
+
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'birthday'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
+  const shareMembers =
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
+            })),
+        ]
+      : baseMembers;
 
   // Memoize shareMembers to prevent unnecessary re-renders
   const memoizedShareMembers = useMemo(() => shareMembers || [], [shareMembers]);
 
-  const { holidayId, holidayData, auth0User, homeInitialized } =
-    useHolidayPageData();
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !memoizedShareMembers.length) return null;
+    const member = memoizedShareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform gifts to include assignedToName for display
+  const transformGiftWithAssignment = (gift: any) => ({
+    ...gift,
+    assignedToName: gift.assignedTo ? getAssignedUserName(gift.assignedTo) : null,
+  });
 
   const {
     createGift,
@@ -45,8 +91,11 @@ export default function BirthdayGiftListPage() {
 
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Get gifts from holiday data
-  const gifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
+  // Get gifts from holiday data with assignment names
+  const gifts = useMemo(
+    () => (holidayData?.gifts || []).map(transformGiftWithAssignment),
+    [holidayData?.gifts, memoizedShareMembers],
+  );
 
   const isLoading = !homeInitialized;
 
@@ -66,7 +115,14 @@ export default function BirthdayGiftListPage() {
     if (homeInitialized) {
       dispatch(fetchContacts());
     }
-  }, [dispatch, homeInitialized]);
+  }, [homeInitialized]);
+
+  // Load contacts if holiday is shared for assignment functionality
+  useEffect(() => {
+    if (isHolidayShared && auth0User) {
+      dispatch(fetchContacts(auth0User.sub));
+    }
+  }, [isHolidayShared, auth0User]);
 
   async function handleAddGift(values: Record<string, any>) {
     if (!values.name?.trim() || !values.recipient?.trim()) return;

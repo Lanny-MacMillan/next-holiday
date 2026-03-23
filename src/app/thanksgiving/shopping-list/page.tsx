@@ -14,6 +14,11 @@ import {
   setHomeData,
 } from '@/store/slices/homeSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
@@ -35,9 +40,36 @@ export default function ThanksgivingShoppingListPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
-  // Get share members for Enhanced Compatibility Layer
+  // Redux & Sharing - Enhanced Compatibility Layer
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'thanksgiving'),
+  );
+
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'thanksgiving'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
   const shareMembers =
-    useAppSelector((state: any) => state.shares.shareMembers) || [];
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '',
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId,
+            })),
+        ]
+      : baseMembers;
 
   // Enhanced Compatibility Layer - Gift form configuration (without holidayKey restriction)
   const addFormConfig = getFormConfigEnhanced('shopping', 'add', {
@@ -81,12 +113,17 @@ export default function ThanksgivingShoppingListPage() {
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch contacts for address book functionality
-    // Only fetch if home data is initialized (which contains contacts)
     if (homeInitialized) {
       dispatch(fetchContacts());
     }
-  }, [dispatch, homeInitialized]);
+  }, [homeInitialized]);
+
+  // Load contacts if holiday is shared for assignment functionality
+  useEffect(() => {
+    if (isHolidayShared && auth0User) {
+      dispatch(fetchContacts(auth0User.sub));
+    }
+  }, [isHolidayShared, auth0User]);
 
   const handleAddGift = async (values: Record<string, any>) => {
     if (!values.name?.trim() || !values.recipient?.trim()) return;
@@ -96,16 +133,13 @@ export default function ThanksgivingShoppingListPage() {
       const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await createGift(payload);
 
-      // Update Redux state immediately
       dispatch(addGiftToHomeData({ holidayId, gift: result }));
 
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
-      // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
       } else {

@@ -13,7 +13,11 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -106,9 +110,35 @@ export default function ThanksgivingMealPlanningPage() {
     selectIsHolidayShared(state, 'thanksgiving'),
   );
 
-  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'thanksgiving'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
   const shareMembers =
-    useAppSelector((state: any) => state.shares.shareMembers) || [];
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
+            })),
+        ]
+      : baseMembers;
+
+  console.log('Meal Planning - shareMembers:', shareMembers);
+  console.log('Meal Planning - isHolidayShared:', isHolidayShared);
 
   // Name resolution helper functions
   const getAssignedUserName = (assignedToUuid: string): string | null => {

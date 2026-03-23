@@ -54,12 +54,26 @@ export default function HalloweenDecorationsPage() {
     useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
       ?.members || [];
 
-  // Data filtering using holidayData from the hook
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Data filtering using holidayData from the hook with assignment name resolution
   const decorations = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -79,18 +93,6 @@ export default function HalloweenDecorationsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-
-  // Name resolution for assignment display
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
-
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -376,8 +378,10 @@ export default function HalloweenDecorationsPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assigned_to: editingTask?.assignedTo || '', // API field → Form field
-          dueDate: editingTask?.dueDate || '',
+          assigned_to: editingTask?.assignedTo || '', // Form expects UUID directly
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditDecorationSubmit}
         onClose={closeEditModal}
@@ -394,7 +398,7 @@ export default function HalloweenDecorationsPage() {
         onCancel={cancelDelete}
         onConfirm={confirmDelete}
         loading={deleteLoading}
-        cardClassName="card-tasks"
+        // cardClassName="card-tasks"
         title="Confirm Delete"
         message="Are you sure you want to delete this decoration task? This action cannot be undone."
       />

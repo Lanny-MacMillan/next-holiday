@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -30,7 +33,10 @@ export default function FourthOfJulyEventsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fourth-of-july'),
   );
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -53,9 +59,6 @@ export default function FourthOfJulyEventsPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  // Redux data access - events are stored as tasks with category "Events"
-  const events =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -70,6 +73,13 @@ export default function FourthOfJulyEventsPage() {
     ...task,
     assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
   });
+
+  // Use memoized events filtering from holiday data with assignment names
+  const events = useMemo(() => {
+    const filteredEvents =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+    return filteredEvents.map(transformTaskWithAssignment);
+  }, [holidayData?.tasks, shareMembers]);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality

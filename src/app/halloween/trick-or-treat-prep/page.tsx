@@ -85,13 +85,27 @@ export default function HalloweenTrickOrTreatPrepPage() {
     useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
       ?.members || [];
 
-  // Data filtering using holidayData from the hook
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Data filtering using holidayData from the hook with assignment name resolution
   const trickOrTreatPrep = useMemo(
     () =>
-      holidayData?.tasks?.filter(
-        (task: any) => task.category === 'Trick or Treat Prep',
-      ) || [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter(
+          (task: any) => task.category === 'Trick or Treat Prep',
+        ) || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -112,18 +126,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-
-  // Name resolution for assignment display
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
-
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
 
   // Check if default trick-or-treat prep tasks exist
   useEffect(() => {
@@ -462,8 +464,19 @@ export default function HalloweenTrickOrTreatPrepPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assigned_to: editingTask?.assignedTo || '', // API field → Form field
-          dueDate: editingTask?.dueDate || '',
+          assigned_to: (() => {
+            // The form expects UUID as the value since buildAssignToField uses member.uuid
+            console.log('=== EDIT MODAL DEBUG ===');
+            console.log('editingTask?.assignedTo:', editingTask?.assignedTo);
+            console.log('shareMembers:', shareMembers);
+
+            // For Enhanced Compatibility Layer, the assigned_to field expects UUID values
+            // directly, not userId. The options are built with member.uuid as values.
+            return editingTask?.assignedTo || '';
+          })(),
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTrickOrTreatPrepSubmit}
         onClose={closeEditModal}

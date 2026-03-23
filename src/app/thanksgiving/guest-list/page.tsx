@@ -80,14 +80,26 @@ export default function ThanksgivingGuestListPage() {
     auth0User: auth0User,
   });
 
-  // Get guest lists from useGuestMutations hook (uses RTK Query)
-  // This ensures consistent data that auto-updates after mutations
-  const guestLists = guests;
+  // Get guest lists from Redux home data (consistent with other pages)
+  // This ensures immediate UI updates when Redux state changes
+  const guestLists = holidayData?.guestLists || [];
 
-  // Transform guest list data to match expected format (already done in useGuestMutations)
+  // Transform guest list data to match expected format with proper defaults
   const transformedGuests = useMemo(() => {
-    const result = guestLists;
-    return result;
+    return guestLists.map((guestList: any) => ({
+      id: guestList.id,
+      name: guestList.contact?.name || 'Unknown Guest', // Get name from nested contact object
+      email: guestList.contact?.email || undefined,
+      phone: guestList.contact?.phone || undefined,
+      address: guestList.contact?.streetAddress || undefined,
+      rsvpStatus: guestList.rsvpStatus || 'pending',
+      numberOfGuests: guestList.numberOfGuests || 1, // Ensure numberOfGuests is never NaN or undefined
+      notes: guestList.notes || undefined,
+      isCompleted:
+        guestList.rsvpStatus === 'confirmed' || guestList.isCompleted || false,
+      createdAt: guestList.createdAt,
+      updatedAt: guestList.updatedAt,
+    }));
   }, [guestLists]);
 
   const { contacts } = useAppSelector((state: any) => state.addressBook);
@@ -121,7 +133,7 @@ export default function ThanksgivingGuestListPage() {
     if (editingGuest) {
       // Update existing guest
       try {
-        await editGuest({
+        const result = await editGuest({
           holidayId,
           guestId: editingGuest.id,
           payload: {
@@ -133,12 +145,24 @@ export default function ThanksgivingGuestListPage() {
               | 'pending'
               | 'confirmed'
               | 'declined',
+            numberOfGuests: formValues.numberOfGuests || 1, // Ensure numberOfGuests defaults to 1
             notes: formValues.notes || undefined,
           },
           auth0User,
         }).unwrap();
 
-        // RTK Query will automatically refresh the data
+        // Update Redux state immediately (following pattern from other pages)
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: result,
+          }),
+        );
+
+        // Refresh home data to ensure UI is in sync (following pattern from other pages)
+        await refreshHomeData(auth0User, holidayId);
+
         setEditingGuest(null);
         setShowForm(false);
       } catch (error) {
@@ -158,11 +182,23 @@ export default function ThanksgivingGuestListPage() {
               | 'pending'
               | 'confirmed'
               | 'declined',
+            numberOfGuests: formValues.numberOfGuests || 1, // Ensure numberOfGuests defaults to 1
             notes: formValues.notes || undefined,
           },
           auth0User,
         }).unwrap();
-        // RTK Query will automatically refresh the data
+
+        // Update Redux state immediately (following pattern from other pages)
+        dispatch(
+          addGuestToHomeData({
+            holidayId,
+            guest: result,
+          }),
+        );
+
+        // Refresh home data to ensure UI is in sync (following pattern from other pages)
+        await refreshHomeData(auth0User, holidayId);
+
         setShowForm(false);
       } catch (error) {
         console.error('Failed to create guest:', error);
@@ -182,6 +218,7 @@ export default function ThanksgivingGuestListPage() {
   const handleToggleGuest = async (guestId: string) => {
     if (!holidayId || !auth0User) return;
 
+    // Find the original guestList data (not transformed) for the toggle operation
     const guestList = guestLists.find((gl: any) => gl.id === guestId);
     if (guestList) {
       // Toggle RSVP status: if confirmed, set to pending; if pending, set to confirmed
@@ -196,7 +233,7 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately
+        // Update Redux state immediately with the original structure (not transformed)
         const updatedGuestList = {
           ...guestList,
           rsvpStatus: newRsvpStatus,
@@ -234,7 +271,7 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately
+        // Update Redux state immediately (following pattern from other pages)
         dispatch(
           removeGuestFromHomeData({
             holidayId,
@@ -242,7 +279,7 @@ export default function ThanksgivingGuestListPage() {
           }),
         );
 
-        // Refresh home data to ensure UI is in sync
+        // Refresh home data to ensure UI is in sync (following pattern from other pages)
         await refreshHomeData(auth0User, holidayId);
 
         setDeleteConfirm({ show: false, guestId: null });
@@ -310,7 +347,7 @@ export default function ThanksgivingGuestListPage() {
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
         <ReservationsTracker
-          guests={guests}
+          guests={transformedGuests}
           title="Thanksgiving Guest Tracker"
           accentColor="#f97316"
         />

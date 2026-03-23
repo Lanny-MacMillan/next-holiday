@@ -56,6 +56,13 @@ export default function FathersDayCardsPage() {
   const baseMembers = shareData?.members || [];
   const shareMembers = baseMembers;
 
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
   // Cards are stored as tasks with category 'Cards'
   const cards = useMemo(() => {
     const cardTasks =
@@ -69,10 +76,12 @@ export default function FathersDayCardsPage() {
       address: task.address || '',
       notes: task.notes || '',
       isCompleted: task.isCompleted || false,
+      assignedTo: task.assignedTo,
+      assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
       // Keep original task data for reference
       ...task,
     }));
-  }, [holidayData?.tasks]);
+  }, [holidayData?.tasks, shareMembers]);
   const isLoading = !homeInitialized;
   const error = null;
 

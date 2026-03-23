@@ -11,6 +11,7 @@ import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
 } from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
@@ -69,17 +70,41 @@ const defaultPartyPlanningTasks = [
 export default function BirthdayPartyPlanningPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-
-  // Memoize shareMembers selector to prevent unnecessary rerenders
-  const shareMembers =
-    useAppSelector(
-      (state: any) => selectShareByHolidayKey(state, 'birthday')?.shareMembers,
-    ) || useMemo(() => [], []);
-
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
+  // Redux & Sharing - Enhanced Compatibility Layer
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'birthday'),
+  );
+
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'birthday'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
+  const shareMembers =
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
+            })),
+        ]
+      : baseMembers;
+
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const {
     createTask,
@@ -103,9 +128,6 @@ export default function BirthdayPartyPlanningPage() {
 
   const isLoading = !homeInitialized;
 
-  const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, 'birthday'),
-  );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // State management
@@ -134,6 +156,13 @@ export default function BirthdayPartyPlanningPage() {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
+
+  // Load contacts if holiday is shared for assignment functionality
+  useEffect(() => {
+    if (isHolidayShared && auth0User) {
+      dispatch(fetchContacts(auth0User.sub));
+    }
+  }, [isHolidayShared, auth0User]);
 
   // Check if default party planning tasks exist
   useEffect(() => {

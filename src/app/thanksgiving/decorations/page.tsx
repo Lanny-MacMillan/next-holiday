@@ -12,7 +12,11 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -46,14 +50,37 @@ export default function ThanksgivingDecorationsPage() {
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Check if the holiday is shared to conditionally show assign to field
+  // Redux & Sharing - Enhanced Compatibility Layer
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'thanksgiving'),
   );
 
-  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'thanksgiving'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
   const shareMembers =
-    useAppSelector((state: any) => state.shares.shareMembers) || [];
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
+            })),
+        ]
+      : baseMembers;
 
   // Name resolution helper functions
   const getAssignedUserName = (assignedToUuid: string): string | null => {
@@ -137,6 +164,13 @@ export default function ThanksgivingDecorationsPage() {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
+
+  // Load contacts if holiday is shared for assignment functionality
+  useEffect(() => {
+    if (isHolidayShared && auth0User) {
+      dispatch(fetchContacts(auth0User.sub));
+    }
+  }, [isHolidayShared, auth0User, dispatch]);
 
   // CRUD Operations - Using standardized hooks
   const handleAddTask = async (values: Record<string, any>) => {
@@ -398,7 +432,9 @@ export default function ThanksgivingDecorationsPage() {
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
           assigned_to: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}

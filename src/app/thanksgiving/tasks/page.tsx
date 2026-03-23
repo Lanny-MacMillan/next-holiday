@@ -69,7 +69,7 @@ export default function ThanksgivingTasksPage() {
             .filter((member: any) => member.userId !== auth0User.sub)
             .map((member: any) => ({
               ...member,
-              uuid: member.userId || member.uuid, // Ensure uuid field exists
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
             })),
         ]
       : baseMembers;
@@ -189,7 +189,9 @@ export default function ThanksgivingTasksPage() {
     if (!holidayId) return;
 
     const taskData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
       assigned_to: formData.assigned_to || undefined,
       due_date: formData.dueDate || undefined,
       category: 'To-Do',
@@ -208,7 +210,11 @@ export default function ThanksgivingTasksPage() {
     if (!editingTask || !holidayId) return;
 
     const updateData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      category: formData.category,
+      isCompleted: formData.isCompleted,
       assigned_to: formData.assigned_to || null,
       due_date: formData.dueDate || null,
     };
@@ -371,7 +377,9 @@ export default function ThanksgivingTasksPage() {
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
           assigned_to: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}

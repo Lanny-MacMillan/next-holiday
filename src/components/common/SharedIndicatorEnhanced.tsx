@@ -450,9 +450,15 @@ export default function SharedIndicatorEnhanced({
               </div>
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  {isCurrentUserOwner
-                    ? 'You are the owner of this shared holiday'
-                    : 'You are a guest member of this shared holiday'}
+                  {isCurrentUserOwner ? (
+                    'You are the owner of this shared holiday'
+                  ) : (
+                    <>
+                      You're a guest member
+                      <br />
+                      Only the holiday owner can invite or remove other members.
+                    </>
+                  )}
                 </p>
               </div>
             </div>

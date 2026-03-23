@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
@@ -30,7 +33,10 @@ export default function FourthOfJulyDecorationsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fourth-of-july'),
   );
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Use hooks for CRUD operations
   const {
@@ -42,9 +48,6 @@ export default function FourthOfJulyDecorationsPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  // Redux data access - decorations are stored as tasks with category "Decorations"
-  const decorations =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -59,6 +62,14 @@ export default function FourthOfJulyDecorationsPage() {
     ...task,
     assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
   });
+
+  // Use memoized decorations filtering from holiday data with assignment names
+  const decorations = useMemo(() => {
+    const filteredDecorations =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
+      [];
+    return filteredDecorations.map(transformTaskWithAssignment);
+  }, [holidayData?.tasks, shareMembers]);
 
   // State management
   const [showForm, setShowForm] = useState(false);

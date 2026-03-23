@@ -79,9 +79,9 @@ export default function HalloweenTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts(auth0User.id));
     }
-  }, [isHolidayShared, auth0User, dispatch]);
+  }, [isHolidayShared, auth0User]);
 
   // Task data processing - only include general to-do tasks
   const tasks =

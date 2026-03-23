@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -12,7 +12,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -43,8 +46,11 @@ export default function FourthOfJulyTasksPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fourth-of-july'),
   );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
   const contacts = useAppSelector((state: any) => state.addressBook.contacts);
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -62,9 +68,9 @@ export default function FourthOfJulyTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts());
     }
-  }, [isHolidayShared, auth0User, dispatch]);
+  }, [isHolidayShared, auth0User]);
 
   // Helper functions for name resolution
   const getAssignedUserName = (assignedToUuid: string): string | null => {
@@ -78,9 +84,12 @@ export default function FourthOfJulyTasksPage() {
     assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
   });
 
-  // Task data processing
-  const tasks =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+  // Use memoized tasks filtering from holiday data with assignment names
+  const tasks = useMemo(() => {
+    const filteredTasks =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+    return filteredTasks.map(transformTaskWithAssignment);
+  }, [holidayData?.tasks, shareMembers]);
 
   // Sort function following working pattern
   function getSortedTasks() {
@@ -356,7 +365,9 @@ export default function FourthOfJulyTasksPage() {
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
           assigned_to: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}

@@ -25,6 +25,7 @@ import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
 } from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
@@ -48,11 +49,32 @@ export default function BirthdayTasksPage() {
     selectIsHolidayShared(state, 'birthday'),
   );
 
-  // Memoize shareMembers selector to prevent unnecessary rerenders
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'birthday'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
   const shareMembers =
-    useAppSelector(
-      (state: any) => selectShareByHolidayKey(state, 'birthday')?.shareMembers,
-    ) || useMemo(() => [], []);
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
+            })),
+        ]
+      : baseMembers;
 
   const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
@@ -361,7 +383,9 @@ export default function BirthdayTasksPage() {
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
           assigned_to: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}

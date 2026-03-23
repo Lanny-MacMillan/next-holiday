@@ -29,12 +29,6 @@ export default function GraduationCardsPage() {
     selectIsHolidayShared(state, 'graduation'),
   );
 
-  // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector((state: any) =>
-    selectShareByHolidayKey(state, 'graduation'),
-  );
-  const shareMembers = shareData?.members || [];
-
   // Use new standardized hooks
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -50,11 +44,71 @@ export default function GraduationCardsPage() {
 
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Filter cards from holiday data using Cards category
-  const cards = useMemo(
-    () => holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [],
-    [holidayData?.tasks],
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'graduation'),
   );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+          })),
+      ]
+    : baseMembers;
+
+  // Helper function to extract recipient from title if needed
+  const extractRecipientFromTitle = (title: string) => {
+    if (title?.startsWith('Card for ')) {
+      return title.substring(9); // Remove 'Card for ' prefix
+    }
+    return title || '';
+  };
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Filter cards from holiday data using Cards category and transform for display
+  const cards = useMemo(() => {
+    const cardTasks =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
+
+    // Transform task data to card format for MailCard component
+    return cardTasks.map((task: any) => {
+      // Extract recipient from title "Card for [Recipient Name]"
+      const recipient = task.title?.replace(/^Card for /, '') || 'Unknown';
+
+      return {
+        ...task,
+        recipient,
+        message: task.message || task.description || '',
+        address: task.address || '',
+        notes: task.notes || '',
+        assignedTo: task.assignedTo,
+        assignedToName: task.assignedTo
+          ? getAssignedUserName(task.assignedTo)
+          : null,
+      };
+    });
+  }, [holidayData?.tasks]);
 
   const isLoading = !homeInitialized;
 
@@ -81,15 +135,19 @@ export default function GraduationCardsPage() {
 
     setIsSubmitting(true);
     try {
-      const transformedPayload = transformCardPayload(values, contacts);
-      const payload = {
+      const newTask = {
         title: `Card for ${values.recipient}`,
+        description: values.message || '',
         category: 'Cards',
         priority: 'medium' as const,
-        ...transformedPayload,
+        assigned_to: values.assigned_to || undefined,
+        // Store card-specific fields
+        recipient: values.recipient,
+        message: values.message || '',
+        address: values.address || '',
       };
 
-      await createTask(payload);
+      await createTask(newTask);
       await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
@@ -120,12 +178,16 @@ export default function GraduationCardsPage() {
 
     setIsEditSubmitting(true);
     try {
-      const transformedPayload = transformCardPayload(values, contacts);
       const payload = {
         title: `Card for ${values.recipient}`,
+        description: values.message || '',
         category: 'Cards',
         priority: 'medium' as const,
-        ...transformedPayload,
+        assigned_to: values.assigned_to || undefined,
+        // Store card-specific fields
+        recipient: values.recipient,
+        message: values.message || '',
+        address: values.address || '',
       };
 
       await updateTask(cardToEdit.id, payload);
@@ -335,6 +397,7 @@ export default function GraduationCardsPage() {
         title="Delete Card"
         itemName={cardToDelete?.recipient}
         onConfirm={confirmDelete}
+        loading={deleteLoading}
         onCancel={() => {
           setShowDeleteModal(false);
           setCardToDelete(null);

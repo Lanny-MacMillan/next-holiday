@@ -13,6 +13,10 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -48,6 +52,15 @@ export default function GiftListPage() {
 
   // Data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
+
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'mothers-day'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'mothers-day'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Loading states for Enhanced Compatibility
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -323,13 +336,13 @@ export default function GiftListPage() {
   // Enhanced Compatibility Layer form configuration
   const addFormConfig = getFormConfigEnhanced('gifts', 'add', {
     holidayKey: 'mothers-day',
-    shareMembers: [],
+    shareMembers: shareMembers,
     auth0User: auth0User,
   });
 
   const editFormConfig = getFormConfigEnhanced('gifts', 'edit', {
     holidayKey: 'mothers-day',
-    shareMembers: [],
+    shareMembers: shareMembers,
     auth0User: auth0User,
   });
 
@@ -350,6 +363,7 @@ export default function GiftListPage() {
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
       notes: selectedGift.notes || '',
+      assigned_to: selectedGift?.assignedTo || '',
     };
   };
 

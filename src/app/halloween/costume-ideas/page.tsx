@@ -53,11 +53,26 @@ export default function HalloweenCostumeIdeasPage() {
     useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
       ?.members || [];
 
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   const costumeIdeas = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Costume Ideas') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter(
+          (task: any) => task.category === 'Costume Ideas',
+        ) || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -77,18 +92,6 @@ export default function HalloweenCostumeIdeasPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-
-  // Name resolution for assignment display
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
-
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -379,13 +382,15 @@ export default function HalloweenCostumeIdeasPage() {
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assigned_to: editingTask?.assignedTo || '', // API field → Form field
-          dueDate: editingTask?.dueDate || '',
+          assigned_to: editingTask?.assignedTo || '', // Form expects UUID directly
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditCostumeIdeaSubmit}
         onClose={closeEditModal}
         loading={isEditSubmitting}
-        submitText={isEditSubmitting ? 'Processing...' : 'Update Costume Idea'}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Costume'}
         cardClassName="card-tasks"
         contacts={contacts}
         shareMembers={shareMembers}

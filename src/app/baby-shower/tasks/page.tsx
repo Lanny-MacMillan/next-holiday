@@ -68,9 +68,9 @@ export default function BabyShowerTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts(auth0User.id));
     }
-  }, [isHolidayShared, auth0User, dispatch]);
+  }, [isHolidayShared, auth0User]);
 
   // Name resolution helper functions
   const getAssignedUserName = (assignedToUuid: string): string | null => {

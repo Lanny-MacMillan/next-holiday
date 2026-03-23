@@ -5,6 +5,10 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -38,7 +42,14 @@ interface Guest {
 
 export default function FourthOfJulyGuestListPage() {
   const dispatch = useAppDispatch();
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'fourth-of-july'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
   const { refreshHomeData } = useRefreshHomeData();

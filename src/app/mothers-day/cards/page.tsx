@@ -8,6 +8,10 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
@@ -40,6 +44,15 @@ export default function MothersDayCardsPage() {
 
   // Data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
+
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'mothers-day'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'mothers-day'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Loading states for Enhanced Compatibility
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,8 +88,8 @@ export default function MothersDayCardsPage() {
       id: task.id,
       recipient: task.recipient || extractRecipientFromTitle(task.title),
       message: task.message || task.description || '',
-      address: task.address || '',
-      notes: task.notes || '',
+      address: task.notes || '', // Address is stored in notes field
+      notes: '', // Clear notes since we're using it for address
       isCompleted: task.isCompleted || false,
       assignedTo: task.assignedTo,
       assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
@@ -109,10 +122,9 @@ export default function MothersDayCardsPage() {
         description: values.message || '',
         category: 'Cards',
         priority: 'medium' as const,
-        // Store card-specific fields
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || '',
+        ...(isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+        // Store card address in notes field since Task schema doesn't have address field
+        notes: values.address || '',
       };
 
       await createTask(payload);
@@ -174,9 +186,9 @@ export default function MothersDayCardsPage() {
         description: values.message || '',
         category: 'Cards',
         priority: cardToEdit.priority || 'medium',
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || '',
+        ...(isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+        // Store card address in notes field since Task schema doesn't have address field
+        notes: values.address || '',
       };
 
       // Optimistically update the Redux home data
@@ -185,9 +197,10 @@ export default function MothersDayCardsPage() {
           holidayId: holidayId,
           cardId: cardToEdit.id,
           updates: {
-            recipient: values.recipient,
-            message: values.message,
-            address: values.address,
+            title: `Card for ${values.recipient}`,
+            description: values.message,
+            notes: values.address || '', // Store address in notes
+            assignedTo: values.assigned_to || null,
           },
         }),
       );
@@ -279,13 +292,13 @@ export default function MothersDayCardsPage() {
   // Enhanced Compatibility Layer form configuration
   const addFormConfig = getFormConfigEnhanced('cards', 'add', {
     holidayKey: 'mothers-day',
-    shareMembers: [],
+    shareMembers: shareMembers,
     auth0User: auth0User,
   });
 
   const editFormConfig = getFormConfigEnhanced('cards', 'edit', {
     holidayKey: 'mothers-day',
-    shareMembers: [],
+    shareMembers: shareMembers,
     auth0User: auth0User,
   });
 
@@ -394,6 +407,7 @@ export default function MothersDayCardsPage() {
           recipient: cardToEdit?.recipient || '',
           message: cardToEdit?.message || '',
           address: cardToEdit?.address || '',
+          assigned_to: cardToEdit?.assignedTo || '',
         }}
         onSubmit={handleEditSubmit}
         onClose={() => {

@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
@@ -23,7 +27,14 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function FourthOfJulySuppliesListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const shareMembers = useAppSelector((state: any) => state.shares.shareMembers);
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'fourth-of-july'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
   const { refreshHomeData } = useRefreshHomeData();
@@ -38,6 +49,18 @@ export default function FourthOfJulySuppliesListPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
+  // Helper functions for assignment name resolution
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformGiftWithAssignment = (gift: any) => ({
+    ...gift,
+    assignedToName: gift.assignedTo ? getAssignedUserName(gift.assignedTo) : null,
+  });
+
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -48,9 +71,11 @@ export default function FourthOfJulySuppliesListPage() {
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  // Use only Redux data - no fallback to API calls
-  const displayGifts =
-    holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
+  // Use memoized gifts with assignment names
+  const displayGifts = useMemo(() => {
+    if (!holidayData || !homeInitialized || !holidayData.gifts) return [];
+    return holidayData.gifts.map(transformGiftWithAssignment);
+  }, [holidayData?.gifts, homeInitialized, shareMembers]);
 
   useEffect(() => {
     // Fetch contacts for address book functionality
