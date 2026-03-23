@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -155,6 +155,10 @@ export default function FourthOfJulyGuestListPage() {
 
         // Refresh data after successful creation
         await refreshHomeData(auth0User, holidayId);
+
+        // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+        dispatch(resetContacts());
+        dispatch(fetchContacts());
       } catch (error) {
         console.error('Failed to create guest:', error);
       }

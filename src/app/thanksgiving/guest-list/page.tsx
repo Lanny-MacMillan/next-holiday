@@ -5,7 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -198,6 +198,10 @@ export default function ThanksgivingGuestListPage() {
 
         // Refresh home data to ensure UI is in sync (following pattern from other pages)
         await refreshHomeData(auth0User, holidayId);
+
+        // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+        dispatch(resetContacts());
+        dispatch(fetchContacts());
 
         setShowForm(false);
       } catch (error) {

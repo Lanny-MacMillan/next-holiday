@@ -188,6 +188,10 @@ const addressBookSlice = createSlice({
     clearError: state => {
       state.error = null;
     },
+    resetContacts: state => {
+      state.initialized = false;
+      state.contacts = [];
+    },
   },
   extraReducers: builder => {
     builder
@@ -254,5 +258,6 @@ const addressBookSlice = createSlice({
   },
 });
 
-export const { setSelectedContact, clearError } = addressBookSlice.actions;
+export const { setSelectedContact, clearError, resetContacts } =
+  addressBookSlice.actions;
 export default addressBookSlice.reducer;

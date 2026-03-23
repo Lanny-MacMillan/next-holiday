@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -121,6 +121,11 @@ export default function BirthdayGuestListPage() {
       if (result) {
         // Refresh home data to get the new guest with real ID
         await refreshHomeData(auth0User, holidayId);
+
+        // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+        dispatch(resetContacts());
+        dispatch(fetchContacts());
+
         setShowAddModal(false);
       }
     } catch (error) {

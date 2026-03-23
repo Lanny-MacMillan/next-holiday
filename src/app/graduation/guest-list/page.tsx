@@ -10,7 +10,7 @@ import {
   addGuestToHomeData,
   removeGuestFromHomeData,
 } from '@/store/slices/homeSlice';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -146,6 +146,11 @@ export default function GraduationGuestListPage() {
         auth0User,
       });
       await refreshHomeData(auth0User, holidayId);
+
+      // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+      dispatch(resetContacts());
+      dispatch(fetchContacts());
+
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating guest:', error);
