@@ -279,7 +279,7 @@ export default function ValentinesCardsPage() {
           totalCards={cards.length}
           completedCards={completedCards.length}
           incompleteCards={incompleteCards.length}
-          holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+          holidayColor="bg-gradient-to-br from-pink-400 to-pink-600"
         />
 
         <AddButton title="Card" onClick={openForm} color="pink" />
@@ -315,7 +315,7 @@ export default function ValentinesCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+                  holidayColor="bg-gradient-to-br from-pink-400 to-pink-600"
                 />
               )}
             />

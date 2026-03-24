@@ -289,7 +289,7 @@ export default function GraduationCardsPage() {
           totalCards={cards.length}
           completedCards={completedCards.length}
           incompleteCards={incompleteCards.length}
-          holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+          holidayColor="bg-gradient-to-br from-purple-400 to-purple-600"
         />
 
         <AddButton title="Card" onClick={openForm} color="purple" />
@@ -310,7 +310,7 @@ export default function GraduationCardsPage() {
                 onToggleCompletion={handleToggleCompletion}
                 onEditCard={handleEditCard}
                 onDeleteCard={handleDeleteCard}
-                holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+                holidayColor="bg-gradient-to-br from-purple-400 to-purple-600"
               />
             )}
           />
@@ -328,7 +328,7 @@ export default function GraduationCardsPage() {
                 onToggleCompletion={handleToggleCompletion}
                 onEditCard={handleEditCard}
                 onDeleteCard={handleDeleteCard}
-                holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+                holidayColor="bg-gradient-to-br from-purple-400 to-purple-600"
               />
             )}
           />

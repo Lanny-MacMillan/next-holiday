@@ -262,7 +262,7 @@ export default function FathersDayCardsPage() {
           totalCards={cards.length}
           completedCards={completedCards.length}
           incompleteCards={incompleteCards.length}
-          holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+          holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
         />
 
         <AddButton title="Card" onClick={openForm} color="blue" />
@@ -298,7 +298,7 @@ export default function FathersDayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+                  holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
                 />
               )}
             />
@@ -316,7 +316,7 @@ export default function FathersDayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+                  holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
                 />
               )}
             />

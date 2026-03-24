@@ -291,7 +291,7 @@ export default function HalloweenGiftListPage() {
         accentColor: '#f97316', // Orange for Halloween
       }}
       borderColor="rgb(249 115 22)" // Orange border for Halloween
-      gamifiedBackgroundColor="bg-gradient-to-br from-orange-300 to-orange-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
     />
   );
 
@@ -307,7 +307,7 @@ export default function HalloweenGiftListPage() {
         accentColor: '#f97316', // Orange for Halloween
       }}
       borderColor="rgb(249 115 22)" // Orange border for Halloween
-      gamifiedBackgroundColor="bg-gradient-to-br from-orange-300 to-orange-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-orange-400 to-orange-600"
     />
   );
 
@@ -325,7 +325,7 @@ export default function HalloweenGiftListPage() {
       <main className="w-full max-w-4xl flex flex-col gap-6">
         <BudgetDisplay
           holiday="Halloween"
-          holidayColor="bg-gradient-to-br from-orange-300 to-orange-500"
+          holidayColor="bg-gradient-to-br from-orange-400 to-orange-600"
           holidayId={holidayId || undefined}
         />
 

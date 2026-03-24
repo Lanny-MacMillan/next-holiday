@@ -221,7 +221,7 @@ export default function FathersDayGiftListPage() {
         accentColor: '#3b82f6', // Blue for Father's Day
       }}
       borderColor="rgb(var(--color-blue-500))" // Blue border for Father's Day
-      gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
     />
   );
 
@@ -237,7 +237,7 @@ export default function FathersDayGiftListPage() {
         accentColor: '#3b82f6', // Blue for Father's Day
       }}
       borderColor="rgb(var(--color-blue-500))" // Blue border for Father's Day
-      gamifiedBackgroundColor="bg-gradient-to-br from-blue-300 to-blue-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-blue-400 to-blue-600"
     />
   );
 
@@ -287,7 +287,7 @@ export default function FathersDayGiftListPage() {
         {/* Budget Display */}
         <BudgetDisplay
           holiday="Father's Day"
-          holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+          holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
           holidayId={holidayId || undefined}
         />
         <AddButton title="Gift" onClick={openForm} color="blue" />

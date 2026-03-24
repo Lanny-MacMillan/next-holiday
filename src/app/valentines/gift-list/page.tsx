@@ -329,7 +329,7 @@ export default function ValentinesGiftListPage() {
         accentColor: '#ec4899', // Pink for Valentine's Day
       }}
       borderColor="rgb(var(--color-pink-500))" // Pink border for Valentine's Day
-      gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-pink-400 to-pink-600"
     />
   );
 
@@ -346,7 +346,7 @@ export default function ValentinesGiftListPage() {
         accentColor: '#ec4899', // Pink for Valentine's Day
       }}
       borderColor="rgb(var(--color-pink-500))" // Pink border for Valentine's Day
-      gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-pink-400 to-pink-600"
     />
   );
 
@@ -367,7 +367,7 @@ export default function ValentinesGiftListPage() {
         {holidayId && (
           <BudgetDisplay
             holiday="Valentine's Day"
-            holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+            holidayColor="bg-gradient-to-br from-pink-400 to-pink-600"
             holidayId={holidayId}
           />
         )}

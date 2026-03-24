@@ -291,7 +291,7 @@ export default function BirthdayGiftListPage() {
         accentColor: '#f59e0b', // Amber for Birthday
       }}
       borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
-      gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
     />
   );
 
@@ -308,7 +308,7 @@ export default function BirthdayGiftListPage() {
         accentColor: '#f59e0b', // Amber for Birthday
       }}
       borderColor="rgb(var(--color-yellow-500))" // Yellow border for Birthday
-      gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
     />
   );
 
@@ -361,7 +361,7 @@ export default function BirthdayGiftListPage() {
         {/* Budget Display */}
         <BudgetDisplay
           holiday="Birthday"
-          holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+          holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
           holidayId={holidayId || undefined}
         />
 

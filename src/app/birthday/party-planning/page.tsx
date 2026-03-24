@@ -514,7 +514,7 @@ export default function BirthdayPartyPlanningPage() {
                   accentColor: '#f59e0b', // Amber for Birthday
                 }}
                 borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 disableInternalModal={true}
               />
             )}
@@ -540,7 +540,7 @@ export default function BirthdayPartyPlanningPage() {
                   accentColor: '#f59e0b', // Amber for Birthday
                 }}
                 borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 disableInternalModal={true}
               />
             )}

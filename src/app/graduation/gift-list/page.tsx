@@ -291,7 +291,7 @@ export default function GraduationGiftListPage() {
         {/* Budget Display */}
         <BudgetDisplay
           holiday="Graduation"
-          holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+          holidayColor="bg-gradient-to-br from-purple-400 to-purple-600"
           holidayId={holidayId || undefined}
         />
 

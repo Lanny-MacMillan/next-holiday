@@ -311,7 +311,7 @@ export default function AnniversaryDateIdeasPage() {
                 hoverColor: 'hover:bg-pink-50 dark:hover:bg-pink-900/10',
               }}
               borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
-              gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+              gamifiedBackgroundColor="bg-gradient-to-br from-pink-400 to-pink-600"
             />
           )}
         />
@@ -336,7 +336,7 @@ export default function AnniversaryDateIdeasPage() {
                 hoverColor: 'hover:bg-pink-50 dark:hover:bg-pink-900/10',
               }}
               borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
-              gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+              gamifiedBackgroundColor="bg-gradient-to-br from-pink-400 to-pink-600"
             />
           )}
         />

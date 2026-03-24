@@ -233,7 +233,7 @@ export default function GiftListPage() {
         accentColor: '#ec4899', // Pink for Anniversary
       }}
       borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
-      gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-pink-400 to-pink-600"
     />
   );
 
@@ -249,7 +249,7 @@ export default function GiftListPage() {
         accentColor: '#ec4899', // Pink for Anniversary
       }}
       borderColor="rgb(var(--color-pink-500))" // Pink border for Anniversary
-      gamifiedBackgroundColor="bg-gradient-to-br from-pink-300 to-pink-500"
+      gamifiedBackgroundColor="bg-gradient-to-br from-pink-400 to-pink-600"
     />
   );
 
@@ -268,7 +268,7 @@ export default function GiftListPage() {
         {/* Budget Display */}
         <BudgetDisplay
           holiday="Anniversary"
-          holidayColor="bg-gradient-to-br from-pink-300 to-pink-500"
+          holidayColor="bg-gradient-to-br from-pink-400 to-pink-600"
           holidayId={holidayId || undefined}
         />
 

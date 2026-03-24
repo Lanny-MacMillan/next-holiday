@@ -46,8 +46,8 @@ export default function EasterPage() {
         progressColor: '#a855f7', // Purple for progress bar
       }}
       gradientClass="easter-gradient"
-      gamifiedBackgroundColor="bg-gradient-to-br from-purple-400 to-purple-600"
-      holidayColor="bg-gradient-to-br from-purple-400 to-purple-600"
+      gamifiedBackgroundColor="bg-gradient-to-br from-purple-300 to-purple-500"
+      holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
     />
   );
 }
