@@ -15,6 +15,7 @@ import {
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -125,6 +126,8 @@ export default function CandleLightingPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -259,25 +262,43 @@ export default function CandleLightingPage() {
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+    const task = candleLighting.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
       // Use the standardized hook function
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
       // Check if this was the last task and re-show default tasks prompt
-      const remainingTasks = candleLighting.filter((c: any) => c.id !== taskId);
+      const remainingTasks = candleLighting.filter(
+        (c: any) => c.id !== taskToDelete.id,
+      );
       console.log('Candle Lighting after delete:', remainingTasks.length);
       if (remainingTasks.length === 0) {
         console.log('No tasks remaining, showing default tasks prompt');
         setShowDefaultTasks(true);
       }
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
+  }
+
+  function cancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   function openForm() {
@@ -531,6 +552,16 @@ export default function CandleLightingPage() {
         submitText={loading ? 'Updating...' : 'Update Task'}
         cardClassName="card-tasks"
         shareMembers={shareMembers}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Candle Task?"
+        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

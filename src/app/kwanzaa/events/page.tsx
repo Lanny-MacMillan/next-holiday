@@ -26,6 +26,7 @@ import {
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -98,6 +99,8 @@ export default function KwanzaaEventsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -205,24 +208,40 @@ export default function KwanzaaEventsPage() {
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+    const task = events.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDeleteTask() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Remove from Redux state on success
       dispatch(
         removeTaskFromHomeData({
           holidayId: holidayId,
-          taskId: taskId,
+          taskId: taskToDelete.id,
         }),
       );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('Error deleting task:', error);
     }
+  }
+
+  function cancelDeleteTask() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   function openForm() {
@@ -426,6 +445,16 @@ export default function KwanzaaEventsPage() {
         loading={isEditSubmitting}
         submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
         cardClassName="card-tasks"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Event?"
+        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        onConfirm={confirmDeleteTask}
+        onCancel={cancelDeleteTask}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

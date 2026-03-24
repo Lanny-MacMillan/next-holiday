@@ -376,7 +376,6 @@ export default function FathersDayCardsPage() {
         itemName={cardToDelete?.recipient}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
       />
 

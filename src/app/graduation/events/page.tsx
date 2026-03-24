@@ -437,7 +437,6 @@ export default function GraduationEventsPage() {
           itemName={taskToDelete.title}
           confirmText={deleteConfig.confirmText}
           cancelText={deleteConfig.cancelText}
-          cardClassName={deleteConfig.cardClassName}
           confirmButtonColor={deleteConfig.confirmButtonColor}
           loading={deleteLoading}
         />

@@ -409,7 +409,6 @@ export default function FourthOfJulyDecorationsPage() {
           itemName={taskToDelete.title}
           confirmText={deleteConfig.confirmText}
           cancelText={deleteConfig.cancelText}
-          cardClassName={deleteConfig.cardClassName}
           confirmButtonColor={deleteConfig.confirmButtonColor}
         />
       )}

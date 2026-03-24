@@ -365,7 +365,6 @@ export default function FathersDayGiftListPage() {
         itemName={giftToDelete?.name}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
       />
 
