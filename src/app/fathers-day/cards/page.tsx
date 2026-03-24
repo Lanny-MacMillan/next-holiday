@@ -16,6 +16,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   selectIsHolidayShared,
@@ -39,9 +40,9 @@ export default function FathersDayCardsPage() {
     useHolidayPageData();
 
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createCard,
+    updateCard,
+    deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
@@ -63,25 +64,17 @@ export default function FathersDayCardsPage() {
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
-  // Cards are stored as tasks with category 'Cards'
-  const cards = useMemo(() => {
-    const cardTasks =
-      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
 
-    // Map task structure to card structure for MailCard component
-    return cardTasks.map((task: any) => ({
-      id: task.id,
-      recipient: task.recipient || extractRecipientFromTitle(task.title),
-      message: task.message || task.description || '',
-      address: task.address || '',
-      notes: task.notes || '',
-      isCompleted: task.isCompleted || false,
-      assignedTo: task.assignedTo,
-      assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-      // Keep original task data for reference
-      ...task,
-    }));
-  }, [holidayData?.tasks, shareMembers]);
+  // Use direct cards data from holiday data like Christmas
+  const cards = useMemo(
+    () => (holidayData?.cards || []).map(transformCardWithAssignment),
+    [holidayData?.cards, shareMembers],
+  );
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -95,30 +88,40 @@ export default function FathersDayCardsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
+
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
     setIsSubmitting(true);
     try {
-      const transformedPayload = transformCardPayload(values, contacts);
-      const payload = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        ...transformedPayload,
-      };
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await createTask(payload);
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
+
       await refreshHomeData(auth0User, holidayId);
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating card:', error);
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -151,12 +154,15 @@ export default function FathersDayCardsPage() {
   const confirmDelete = async () => {
     if (cardToDelete && holidayId) {
       try {
-        await deleteTask(cardToDelete.id);
+        await deleteCard(cardToDelete.id, cardToDelete);
         await refreshHomeData(auth0User, holidayId);
         setShowDeleteModal(false);
         setCardToDelete(null);
       } catch (error) {
         console.error('Error deleting card:', error);
+        setToastMessage('Error deleting card. Please try again.');
+        setToastType('error');
+        setShowToast(true);
       }
     }
   };
@@ -165,21 +171,18 @@ export default function FathersDayCardsPage() {
     if (!cardToEdit || !holidayId) return;
     setIsEditSubmitting(true);
     try {
-      const transformedPayload = transformCardPayload(values, contacts);
-      const payload = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        ...transformedPayload,
-      };
+      // Use enhanced transformCardPayload for consistent handling
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await updateTask(cardToEdit.id, payload);
+      await updateCard(cardToEdit.id, payload);
       await refreshHomeData(auth0User, holidayId);
       setShowEditModal(false);
       setCardToEdit(null);
     } catch (error) {
       console.error('Error updating card:', error);
+      setToastMessage('Error updating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsEditSubmitting(false);
     }
@@ -190,13 +193,22 @@ export default function FathersDayCardsPage() {
       try {
         const card = cards.find((c: any) => c.id === cardId);
         if (card) {
-          await updateTask(cardId, {
+          // Include all required fields when updating completion status
+          await updateCard(cardId, {
+            recipient: card.recipient,
+            message: card.message,
+            address: card.address || '',
+            contact_id: card.contact_id || null,
+            assigned_to: card.assignedTo || null,
             isCompleted: !card.isCompleted,
           });
           await refreshHomeData(auth0User, holidayId);
         }
       } catch (error) {
         console.error('Error toggling card completion:', error);
+        setToastMessage('Error updating card status. Please try again.');
+        setToastType('error');
+        setShowToast(true);
       }
     }
   };
@@ -381,6 +393,15 @@ export default function FathersDayCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );

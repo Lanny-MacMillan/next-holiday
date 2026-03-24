@@ -99,7 +99,7 @@ export default function ChristmasCardsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
-  // Toast state for error/success messages
+  // Toast state for error messages
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
@@ -125,13 +125,11 @@ export default function ChristmasCardsPage() {
       // Use the standardized hook function
       await createCard(payload);
 
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
+
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
-      // Show success toast
-      setToastMessage('Card added successfully!');
-      setToastType('success');
-      setShowToast(true);
 
       setShowForm(false);
     } catch (error) {
@@ -210,11 +208,6 @@ export default function ChristmasCardsPage() {
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
-
-      // Show success toast
-      setToastMessage('Card updated successfully!');
-      setToastType('success');
-      setShowToast(true);
 
       setShowEditModal(false);
       setCardToEdit(null);
@@ -448,7 +441,7 @@ export default function ChristmasCardsPage() {
         title="Sort Cards"
       />
 
-      {/* Toast for error/success messages */}
+      {/* Toast for error messages */}
       <Toast
         message={toastMessage}
         isVisible={showToast}

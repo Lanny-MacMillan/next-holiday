@@ -8,6 +8,7 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { transformCardPayload } from '@/utils/formTransformers';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -22,6 +23,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 
 export default function ValentinesCardsPage() {
   const dispatch = useAppDispatch();
@@ -32,9 +34,9 @@ export default function ValentinesCardsPage() {
     useHolidayPageData();
 
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createCard,
+    updateCard,
+    deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
@@ -47,7 +49,7 @@ export default function ValentinesCardsPage() {
   );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Get share members for Enhanced Compatibility Layer
+  // Enhanced Compatibility Layer - Get share members with current user inclusion
   const shareData = useAppSelector((state: RootState) =>
     selectShareByHolidayKey(state, 'valentines'),
   );
@@ -59,7 +61,7 @@ export default function ValentinesCardsPage() {
         // Add current user first
         {
           userId: auth0User.sub || '',
-          uuid: auth0User.id || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
           name: auth0User.name || 'Me',
           email: auth0User.email || '',
           role: 'owner' as const,
@@ -69,18 +71,10 @@ export default function ValentinesCardsPage() {
           .filter((member: any) => member.userId !== auth0User.sub)
           .map((member: any) => ({
             ...member,
-            uuid: member.userId || member.uuid, // Ensure uuid field exists
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
           })),
       ]
     : baseMembers;
-  console.log('auth0User', { auth0User });
-  // Helper function to extract recipient from title if needed
-  const extractRecipientFromTitle = (title: string) => {
-    if (title?.startsWith('Card for ')) {
-      return title.substring(9); // Remove 'Card for ' prefix
-    }
-    return title || '';
-  };
 
   // Helper function to resolve assignedTo UUID to user name
   const getAssignedUserName = (assignedToUuid: string): string | null => {
@@ -89,30 +83,17 @@ export default function ValentinesCardsPage() {
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
-  // Cards are stored as tasks with category 'Cards'
-  const cards = useMemo(() => {
-    const cardTasks =
-      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
 
-    // Debug logging to see the actual task structure
-    if (cardTasks.length > 0) {
-      console.log('Card tasks from API:', cardTasks);
-    }
-
-    // Map task structure to card structure for MailCard component
-    return cardTasks.map((task: any) => ({
-      id: task.id,
-      recipient: task.recipient || extractRecipientFromTitle(task.title),
-      message: task.message || task.description || '',
-      address: task.address || '',
-      notes: task.notes || '',
-      isCompleted: task.isCompleted || false,
-      assignedTo: task.assignedTo,
-      assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-      // Keep original task data for reference
-      ...task,
-    }));
-  }, [holidayData?.tasks, shareMembers]);
+  // Use direct cards data from holiday data
+  const cards = useMemo(
+    () => (holidayData?.cards || []).map(transformCardWithAssignment),
+    [holidayData?.cards, shareMembers],
+  );
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -127,36 +108,45 @@ export default function ValentinesCardsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
+
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId || !auth0User) return;
 
     try {
-      const newTask = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        ...(isAuthorizedForSharing &&
-          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
-        // Store card-specific fields
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || '',
-      };
+      setIsAdding(true);
+      // Use enhanced transformCardPayload for flexible contact creation and address population
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      const result = await createTask(newTask);
-      console.log('Created card task:', result);
+      // Use the card API instead of task API
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
 
       await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsAdding(false);
     }
   }
 
@@ -182,7 +172,8 @@ export default function ValentinesCardsPage() {
   const confirmDelete = async () => {
     if (cardToDelete && holidayId) {
       try {
-        await deleteTask(cardToDelete.id);
+        setIsDeleting(true);
+        await deleteCard(cardToDelete.id, cardToDelete);
 
         await refreshHomeData(auth0User, holidayId);
 
@@ -190,6 +181,11 @@ export default function ValentinesCardsPage() {
         setCardToDelete(null);
       } catch (error) {
         console.error('Error deleting card:', error);
+        setToastMessage('Error deleting card. Please try again.');
+        setToastType('error');
+        setShowToast(true);
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -197,47 +193,46 @@ export default function ValentinesCardsPage() {
   const handleEditSubmit = async (values: Record<string, any>) => {
     if (cardToEdit && holidayId && auth0User) {
       try {
-        const updates = {
-          title: `Card for ${values.recipient}`,
-          description: values.message || '',
-          category: 'Cards',
-          priority: cardToEdit.priority || 'medium',
-          ...(isAuthorizedForSharing &&
-            isHolidayShared && { assigned_to: values.assigned_to || undefined }),
-          // Store card-specific fields
-          recipient: values.recipient,
-          message: values.message || '',
-          address: values.address || '',
-        };
+        setIsUpdating(true);
+        // Use enhanced transformCardPayload for consistent handling
+        const payload = transformCardPayload(values, contacts, shareMembers);
 
-        const result = await updateTask(cardToEdit.id, updates);
-        console.log('Updated card task:', result);
-
+        await updateCard(cardToEdit.id, payload);
         await refreshHomeData(auth0User, holidayId);
 
         setShowEditModal(false);
         setCardToEdit(null);
       } catch (error) {
         console.error('Error updating card:', error);
+        setToastMessage('Error updating card. Please try again.');
+        setToastType('error');
+        setShowToast(true);
+      } finally {
+        setIsUpdating(false);
       }
     }
   };
 
   const handleToggleCompletion = async (cardId: string) => {
-    if (holidayId) {
-      try {
-        const card = cards.find((c: any) => c.id === cardId);
-        if (card) {
-          await updateTask(cardId, {
-            ...card,
-            isCompleted: !card.isCompleted,
-          });
+    try {
+      const card = cards.find((c: any) => c.id === cardId);
+      if (card && holidayId && auth0User) {
+        // Use the standardized hook function
+        await updateCard(cardId, {
+          recipient: card.recipient,
+          message: card.message || '',
+          address: card.address || '',
+          isCompleted: !card.isCompleted,
+        });
 
-          await refreshHomeData(auth0User, holidayId);
-        }
-      } catch (error) {
-        console.error('Error toggling card completion:', error);
+        // Refresh home data to ensure UI is in sync
+        await refreshHomeData(auth0User, holidayId);
       }
+    } catch (error) {
+      console.error('Error toggling card completion:', error);
+      setToastMessage('Error updating card status. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -420,6 +415,15 @@ export default function ValentinesCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );

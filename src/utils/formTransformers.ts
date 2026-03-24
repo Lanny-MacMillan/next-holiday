@@ -137,17 +137,41 @@ export function transformThanksgivingShoppingPayload(values: Record<string, any>
 }
 
 /**
- * Transform form values to card API payload
+ * Transform form values to card API payload with flexible contact creation
+ * Enhanced version that supports creating contacts if they don't exist (like gift lists)
  */
 export function transformCardPayload(
   values: Record<string, any>,
   contacts: any[],
   shareMembers?: any[],
 ) {
-  const contact = contacts.find(c => c.name === values.recipient);
+  let contactId = null;
+  let recipientAddress = values.address || '';
+
+  // Enhanced contact handling - support flexible contact creation
+  if (values.recipient?.trim()) {
+    const existingContact = contacts.find(
+      c => c.name.toLowerCase().trim() === values.recipient.toLowerCase().trim(),
+    );
+
+    if (existingContact) {
+      contactId = existingContact.id;
+      // Auto-populate address from contact if not provided
+      if (!recipientAddress && existingContact.streetAddress) {
+        const addressParts = [
+          existingContact.streetAddress,
+          existingContact.city,
+          existingContact.state,
+          existingContact.postalCode || existingContact.zipCode,
+        ].filter(Boolean);
+        recipientAddress = addressParts.join(', ');
+      }
+    }
+    // If contact doesn't exist, the API will create it automatically (like gift lists)
+    // This enables flexible contact creation when typing in new names
+  }
 
   // Handle assigned_to mapping from Auth0 userId to proper UUID
-  // Support both camelCase (assignedTo) and snake_case (assigned_to) from forms
   let assignedTo = values.assigned_to || values.assignedTo || null;
 
   if (assignedTo && shareMembers && shareMembers.length > 0) {
@@ -158,13 +182,14 @@ export function transformCardPayload(
       shareMembers.map(m => ({ userId: m.userId, uuid: m.uuid, name: m.name })),
     );
 
+    // Check if it's already a valid UUID format
+    const isValidUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        assignedTo,
+      );
+
     // If assigned_to contains Auth0 ID format, try to map it to the proper UUID
-    if (
-      assignedTo.includes('|') ||
-      !assignedTo.match(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-      )
-    ) {
+    if (!isValidUUID) {
       // Find the member with matching Auth0 user ID
       const member = shareMembers.find(m => {
         const matches = m.userId === assignedTo;
@@ -194,10 +219,10 @@ export function transformCardPayload(
   }
 
   return {
-    recipient: values.recipient || '',
-    message: values.message || '',
-    address: values.address || '',
-    contact_id: contact?.id || null,
+    recipient: values.recipient?.trim() || '',
+    message: values.message?.trim() || '',
+    address: recipientAddress,
+    contact_id: contactId, // Will be null for new contacts (API handles creation)
     assigned_to: assignedTo, // Use snake_case to match server expectations
   };
 }

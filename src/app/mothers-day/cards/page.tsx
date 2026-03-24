@@ -7,7 +7,6 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { updateCardInHomeData, setHomeData } from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -22,6 +21,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 export default function MothersDayCardsPage() {
@@ -32,11 +32,11 @@ export default function MothersDayCardsPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
-  // CRUD Operations Hook for task-based cards
+  // CRUD Operations Hook for cards
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createCard,
+    updateCard,
+    deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
@@ -58,13 +58,10 @@ export default function MothersDayCardsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
-  // Helper function to extract recipient from title if needed
-  const extractRecipientFromTitle = (title: string) => {
-    if (title?.startsWith('Card for ')) {
-      return title.substring(9); // Remove 'Card for ' prefix
-    }
-    return title || '';
-  };
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   // Helper function to resolve assignedTo UUID to user name
   const getAssignedUserName = (assignedToUuid: string): string | null => {
@@ -73,30 +70,17 @@ export default function MothersDayCardsPage() {
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
-  // Cards are stored as tasks with category 'Cards'
-  const cards = useMemo(() => {
-    const cardTasks =
-      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
 
-    // Debug logging to see the actual task structure
-    if (cardTasks.length > 0) {
-      console.log('Card tasks from API:', cardTasks);
-    }
-
-    // Map task structure to card structure for MailCard component
-    return cardTasks.map((task: any) => ({
-      id: task.id,
-      recipient: task.recipient || extractRecipientFromTitle(task.title),
-      message: task.message || task.description || '',
-      address: task.notes || '', // Address is stored in notes field
-      notes: '', // Clear notes since we're using it for address
-      isCompleted: task.isCompleted || false,
-      assignedTo: task.assignedTo,
-      assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-      // Keep original task data for reference
-      ...task,
-    }));
-  }, [holidayData?.tasks, shareMembers]);
+  // Use direct cards data from holiday data like Christmas
+  const cards = useMemo(
+    () => (holidayData?.cards || []).map(transformCardWithAssignment),
+    [holidayData?.cards, shareMembers],
+  );
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
 
@@ -113,21 +97,23 @@ export default function MothersDayCardsPage() {
     dispatch(fetchContacts());
   }, [dispatch]);
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !holidayId || !auth0User) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
+    if (!holidayId || !auth0User) return;
 
     setIsSubmitting(true);
     try {
-      const payload = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        ...(isHolidayShared && { assigned_to: values.assigned_to || undefined }),
-        // Store card address in notes field since Task schema doesn't have address field
-        notes: values.address || '',
-      };
+      // Use enhanced transformCardPayload for flexible contact creation and address population
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await createTask(payload);
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -135,7 +121,9 @@ export default function MothersDayCardsPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -164,7 +152,7 @@ export default function MothersDayCardsPage() {
     if (!cardToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(cardToDelete.id);
+      await deleteCard(cardToDelete.id, cardToDelete);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -173,6 +161,9 @@ export default function MothersDayCardsPage() {
       setCardToDelete(null);
     } catch (error) {
       console.error('Error deleting card:', error);
+      setToastMessage('Error deleting card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -181,31 +172,10 @@ export default function MothersDayCardsPage() {
 
     setIsEditSubmitting(true);
     try {
-      const payload = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: cardToEdit.priority || 'medium',
-        ...(isHolidayShared && { assigned_to: values.assigned_to || undefined }),
-        // Store card address in notes field since Task schema doesn't have address field
-        notes: values.address || '',
-      };
+      // Use enhanced transformCardPayload for consistent handling
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      // Optimistically update the Redux home data
-      dispatch(
-        updateCardInHomeData({
-          holidayId: holidayId,
-          cardId: cardToEdit.id,
-          updates: {
-            title: `Card for ${values.recipient}`,
-            description: values.message,
-            notes: values.address || '', // Store address in notes
-            assignedTo: values.assigned_to || null,
-          },
-        }),
-      );
-
-      await updateTask(cardToEdit.id, payload);
+      await updateCard(cardToEdit.id, payload);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -214,18 +184,9 @@ export default function MothersDayCardsPage() {
       setCardToEdit(null);
     } catch (error) {
       console.error('Error updating card:', error);
-      // Revert the optimistic update on error
-      dispatch(
-        updateCardInHomeData({
-          holidayId: holidayId,
-          cardId: cardToEdit.id,
-          updates: {
-            recipient: cardToEdit.recipient,
-            message: cardToEdit.message,
-            address: cardToEdit.address,
-          },
-        }),
-      );
+      setToastMessage('Error updating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsEditSubmitting(false);
     }
@@ -237,20 +198,14 @@ export default function MothersDayCardsPage() {
     try {
       const card = cards.find((c: any) => c.id === cardId);
       if (card) {
-        const newIsCompleted = !card.isCompleted;
-
-        // Optimistically update the Redux home data
-        dispatch(
-          updateCardInHomeData({
-            holidayId: holidayId,
-            cardId: cardId,
-            updates: { isCompleted: newIsCompleted },
-          }),
-        );
-
-        await updateTask(cardId, {
-          ...card,
-          isCompleted: newIsCompleted,
+        // Include all required fields when updating completion status
+        await updateCard(cardId, {
+          recipient: card.recipient,
+          message: card.message,
+          address: card.address || '',
+          contact_id: card.contact_id || null,
+          assigned_to: card.assignedTo || null,
+          isCompleted: !card.isCompleted,
         });
 
         // Refresh home data to ensure progress tracking updates
@@ -258,17 +213,9 @@ export default function MothersDayCardsPage() {
       }
     } catch (error) {
       console.error('Error toggling card completion:', error);
-      // Revert the optimistic update on error
-      const card = cards.find((c: any) => c.id === cardId);
-      if (card) {
-        dispatch(
-          updateCardInHomeData({
-            holidayId: holidayId,
-            cardId: cardId,
-            updates: { isCompleted: card.isCompleted },
-          }),
-        );
-      }
+      setToastMessage('Error updating card status. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -396,6 +343,7 @@ export default function MothersDayCardsPage() {
         submitButtonColor="#ec4899"
         showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
@@ -421,6 +369,7 @@ export default function MothersDayCardsPage() {
         submitButtonColor="#ec4899"
         showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -450,6 +399,15 @@ export default function MothersDayCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );

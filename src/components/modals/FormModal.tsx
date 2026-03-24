@@ -58,10 +58,12 @@ export default function FormModal({
             ...field,
             options: [
               { value: '', label: 'Unassigned' },
-              ...shareMembers.map(member => ({
-                value: (member as any).uuid || member.userId, // Use UUID for API compatibility, fallback to userId
-                label: member.name || member.email || 'Unknown',
-              })),
+              ...shareMembers
+                .map(member => ({
+                  value: (member as any).uuid, // Use UUID for API compatibility, no fallback to userId
+                  label: member.name || member.email || 'Unknown',
+                }))
+                .filter(option => option.value), // Filter out members without valid UUIDs,
             ],
           };
         }

@@ -3,13 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import {
-  useCreateCardMutation,
-  useCardOperationMutation,
-  useDeleteCardMutation,
-} from '@/store/api';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { transformCardPayload } from '@/utils/formTransformers';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -24,6 +21,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 export default function BirthdayCardsPage() {
@@ -33,44 +31,43 @@ export default function BirthdayCardsPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
-  // Redux & Sharing - Enhanced Compatibility Layer
-  const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, 'birthday'),
-  );
+  const {
+    createCard,
+    updateCard,
+    deleteCard,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
+  const { refreshHomeData } = useRefreshHomeData();
+
+  // Enhanced Compatibility Layer - Get share members with current user inclusion
   const shareData = useAppSelector((state: RootState) =>
     selectShareByHolidayKey(state, 'birthday'),
   );
   const baseMembers = shareData?.members || [];
 
-  // Only include current user in shareMembers if holiday is actually shared
-  const shareMembers =
-    isHolidayShared && auth0User
-      ? [
-          // Add current user first
-          {
-            userId: auth0User.sub || '',
-            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
-            name: auth0User.name || 'Me',
-            email: auth0User.email || '',
-            role: 'owner' as const,
-          },
-          // Add other members, filtering out current user if already present
-          ...baseMembers
-            .filter((member: any) => member.userId !== auth0User.sub)
-            .map((member: any) => ({
-              ...member,
-              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
-            })),
-        ]
-      : baseMembers;
-
-  // Use card mutations instead of task mutations
-  const [createCard, { isLoading: createLoading }] = useCreateCardMutation();
-  const [cardOperation, { isLoading: updateLoading }] = useCardOperationMutation();
-  const [deleteCard, { isLoading: deleteLoading }] = useDeleteCardMutation();
-
-  const { refreshHomeData } = useRefreshHomeData();
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+          })),
+      ]
+    : baseMembers;
 
   // Helper function to resolve assignedTo UUID to user name
   const getAssignedUserName = (assignedToUuid: string): string | null => {
@@ -104,37 +101,37 @@ export default function BirthdayCardsPage() {
   const [cardToDelete, setCardToDelete] = useState<any>(null);
   const [cardToEdit, setCardToEdit] = useState<any>(null);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Toast state for error messages
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  // Load contacts if holiday is shared for assignment functionality
-  useEffect(() => {
-    if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
-    }
-  }, [isHolidayShared, auth0User, dispatch]);
-
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
 
     try {
-      // Use the cards API with proper payload structure including assignment
-      const payload = {
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || null,
-        assigned_to: values.assigned_to || null,
-      };
+      setIsSubmitting(true);
+      // Use enhanced transformCardPayload for flexible contact creation and address population
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await createCard({
-        holidayId,
-        payload,
-        auth0User,
-      }).unwrap();
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -142,7 +139,11 @@ export default function BirthdayCardsPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -169,11 +170,7 @@ export default function BirthdayCardsPage() {
     if (!cardToDelete || !holidayId) return;
 
     try {
-      await deleteCard({
-        holidayId,
-        cardId: cardToDelete.id,
-        auth0User,
-      }).unwrap();
+      await deleteCard(cardToDelete.id, cardToDelete);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -182,6 +179,9 @@ export default function BirthdayCardsPage() {
       setCardToDelete(null);
     } catch (error) {
       console.error('Error deleting card:', error);
+      setToastMessage('Error deleting card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -189,20 +189,11 @@ export default function BirthdayCardsPage() {
     if (!cardToEdit || !holidayId) return;
 
     try {
-      const payload = {
-        id: cardToEdit.id,
-        action: 'update' as const,
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || null,
-        assigned_to: values.assigned_to || null,
-      };
+      setIsEditSubmitting(true);
+      // Use enhanced transformCardPayload for consistent handling
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await cardOperation({
-        holidayId,
-        payload,
-        auth0User,
-      }).unwrap();
+      await updateCard(cardToEdit.id, payload);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -211,6 +202,11 @@ export default function BirthdayCardsPage() {
       setCardToEdit(null);
     } catch (error) {
       console.error('Error updating card:', error);
+      setToastMessage('Error updating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -220,26 +216,24 @@ export default function BirthdayCardsPage() {
     try {
       const card = cards.find((c: any) => c.id === cardId);
       if (card) {
-        const payload = {
-          id: cardId,
-          action: 'toggle' as const,
+        // Include all required fields when updating completion status
+        await updateCard(cardId, {
           recipient: card.recipient,
           message: card.message,
-          address: card.address,
+          address: card.address || '',
+          contact_id: card.contact_id || null,
+          assigned_to: card.assignedTo || null,
           isCompleted: !card.isCompleted,
-        };
-
-        await cardOperation({
-          holidayId,
-          payload,
-          auth0User,
-        }).unwrap();
+        });
 
         // Refresh home data to ensure UI is in sync
         await refreshHomeData(auth0User, holidayId);
       }
     } catch (error) {
       console.error('Error toggling card completion:', error);
+      setToastMessage('Error updating card status. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -290,7 +284,7 @@ export default function BirthdayCardsPage() {
           totalCards={sortedCards.length}
           completedCards={completedCards.length}
           incompleteCards={incompleteCards.length}
-          holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+          holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
         />
 
         <AddButton title="Card" onClick={openForm} color="amber" />
@@ -326,7 +320,7 @@ export default function BirthdayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                  holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 />
               )}
             />
@@ -344,7 +338,7 @@ export default function BirthdayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                  holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 />
               )}
             />
@@ -359,8 +353,8 @@ export default function BirthdayCardsPage() {
         fields={formConfig.fields}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        loading={createLoading}
-        submitText={createLoading ? 'Processing...' : 'Add Card'}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#f59e0b"
@@ -384,8 +378,8 @@ export default function BirthdayCardsPage() {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        loading={updateLoading}
-        submitText={updateLoading ? 'Processing...' : 'Update Card'}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#f59e0b"
@@ -421,6 +415,15 @@ export default function BirthdayCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );

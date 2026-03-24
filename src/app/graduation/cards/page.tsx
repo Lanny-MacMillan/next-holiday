@@ -21,6 +21,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 
 export default function GraduationCardsPage() {
   const dispatch = useAppDispatch();
@@ -34,9 +35,9 @@ export default function GraduationCardsPage() {
     useHolidayPageData();
 
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createCard,
+    updateCard,
+    deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
@@ -71,14 +72,6 @@ export default function GraduationCardsPage() {
       ]
     : baseMembers;
 
-  // Helper function to extract recipient from title if needed
-  const extractRecipientFromTitle = (title: string) => {
-    if (title?.startsWith('Card for ')) {
-      return title.substring(9); // Remove 'Card for ' prefix
-    }
-    return title || '';
-  };
-
   // Helper function to resolve assignedTo UUID to user name
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;
@@ -86,29 +79,17 @@ export default function GraduationCardsPage() {
     return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
   };
 
-  // Filter cards from holiday data using Cards category and transform for display
-  const cards = useMemo(() => {
-    const cardTasks =
-      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
 
-    // Transform task data to card format for MailCard component
-    return cardTasks.map((task: any) => {
-      // Extract recipient from title "Card for [Recipient Name]"
-      const recipient = task.title?.replace(/^Card for /, '') || 'Unknown';
-
-      return {
-        ...task,
-        recipient,
-        message: task.message || task.description || '',
-        address: task.address || '',
-        notes: task.notes || '',
-        assignedTo: task.assignedTo,
-        assignedToName: task.assignedTo
-          ? getAssignedUserName(task.assignedTo)
-          : null,
-      };
-    });
-  }, [holidayData?.tasks]);
+  // Use direct cards data from holiday data like Christmas
+  const cards = useMemo(
+    () => (holidayData?.cards || []).map(transformCardWithAssignment),
+    [holidayData?.cards, shareMembers],
+  );
 
   const isLoading = !homeInitialized;
 
@@ -123,6 +104,11 @@ export default function GraduationCardsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
+
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
@@ -130,28 +116,31 @@ export default function GraduationCardsPage() {
 
   // CRUD Operations using new hooks
   const handleAddCard = async (values: Record<string, any>) => {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
 
     setIsSubmitting(true);
     try {
-      const newTask = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        assigned_to: values.assigned_to || undefined,
-        // Store card-specific fields
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || '',
-      };
+      // Use enhanced transformCardPayload for flexible contact creation and address population
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await createTask(newTask);
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
+
       await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -161,7 +150,7 @@ export default function GraduationCardsPage() {
     if (!cardToDelete || !holidayId) return;
 
     try {
-      await deleteTask(cardToDelete.id);
+      await deleteCard(cardToDelete.id, cardToDelete);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -170,6 +159,9 @@ export default function GraduationCardsPage() {
       setCardToDelete(null);
     } catch (error) {
       console.error('Error deleting card:', error);
+      setToastMessage('Error deleting card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -178,24 +170,18 @@ export default function GraduationCardsPage() {
 
     setIsEditSubmitting(true);
     try {
-      const payload = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        assigned_to: values.assigned_to || undefined,
-        // Store card-specific fields
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || '',
-      };
+      // Use enhanced transformCardPayload for consistent handling
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await updateTask(cardToEdit.id, payload);
+      await updateCard(cardToEdit.id, payload);
       await refreshHomeData(auth0User, holidayId);
       setShowEditModal(false);
       setCardToEdit(null);
     } catch (error) {
       console.error('Error updating card:', error);
+      setToastMessage('Error updating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsEditSubmitting(false);
     }
@@ -206,7 +192,13 @@ export default function GraduationCardsPage() {
     if (!card || !holidayId) return;
 
     try {
-      await updateTask(cardId, {
+      // Include all required fields when updating completion status
+      await updateCard(cardId, {
+        recipient: card.recipient,
+        message: card.message,
+        address: card.address || '',
+        contact_id: card.contact_id || null,
+        assigned_to: card.assignedTo || null,
         isCompleted: !card.isCompleted,
       });
 
@@ -214,6 +206,9 @@ export default function GraduationCardsPage() {
       await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling card completion:', error);
+      setToastMessage('Error updating card status. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -251,19 +246,6 @@ export default function GraduationCardsPage() {
   const completedCards = cards.filter((card: any) => card.isCompleted);
   const incompleteCards = cards.filter((card: any) => !card.isCompleted);
 
-  // Transform task data to card format for MailCard component
-  const transformTaskToCard = (task: any) => {
-    // Extract recipient from title "Card for [Recipient Name]"
-    const recipient = task.title?.replace(/^Card for /, '') || 'Unknown';
-
-    return {
-      ...task,
-      recipient,
-      message: task.message || task.description || '',
-      address: task.address || '',
-    };
-  };
-
   // Enhanced Compatibility Layer form config
   const formConfig = getFormConfigEnhanced('cards', 'add', {
     holidayKey: 'graduation',
@@ -281,11 +263,9 @@ export default function GraduationCardsPage() {
   const getEditInitialValues = (card: any) => {
     if (!card) return {};
 
-    const recipientFromTitle = card.title?.replace(/^Card for /, '') || '';
-
     return {
-      recipient: card.recipient || recipientFromTitle,
-      message: card.message || card.description || '',
+      recipient: card.recipient || '',
+      message: card.message || '',
       address: card.address || '',
       assigned_to: card.assignedTo || '', // API field → Form field
     };
@@ -326,7 +306,7 @@ export default function GraduationCardsPage() {
             renderItem={card => (
               <MailCard
                 key={card.id}
-                card={transformTaskToCard(card)}
+                card={card}
                 onToggleCompletion={handleToggleCompletion}
                 onEditCard={handleEditCard}
                 onDeleteCard={handleDeleteCard}
@@ -344,7 +324,7 @@ export default function GraduationCardsPage() {
             renderItem={card => (
               <MailCard
                 key={card.id}
-                card={transformTaskToCard(card)}
+                card={card}
                 onToggleCompletion={handleToggleCompletion}
                 onEditCard={handleEditCard}
                 onDeleteCard={handleDeleteCard}
@@ -419,6 +399,15 @@ export default function GraduationCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );
