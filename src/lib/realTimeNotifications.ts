@@ -1,5 +1,6 @@
 // Real-time notification broadcasting utilities
 import { sendNotificationToUser } from '@/app/api/notifications/stream/route';
+import { prisma } from './prisma';
 
 interface NotificationPayload {
   userId: string;
@@ -25,6 +26,58 @@ interface NotificationPayload {
  */
 export async function broadcastNotification(payload: NotificationPayload) {
   try {
+    // Check user preferences first
+    const prefs = await prisma.notificationPreferences.findUnique({
+      where: { userId: payload.userId },
+    });
+
+    // Determine if notification is allowed based on type and user preferences
+    let notificationAllowed = true;
+    if (prefs) {
+      switch (payload.type) {
+        case 'task_assigned':
+        case 'gift_assigned':
+        case 'card_assigned':
+          notificationAllowed = prefs.assignmentNotifications;
+          break;
+        case 'task_completed':
+          notificationAllowed = prefs.completionNotifications;
+          break;
+        case 'invite_received':
+          notificationAllowed = prefs.inviteNotifications;
+          break;
+        default:
+          // Allow unknown types by default for backward compatibility
+          break;
+      }
+    }
+
+    if (!notificationAllowed) {
+      console.log(
+        `User ${payload.userId} has disabled ${payload.type} notifications, skipping broadcast`,
+      );
+      return false;
+    }
+
+    // Check holiday access authorization if this is for a holiday
+    if (payload.holidayId && payload.entityType !== 'invite') {
+      const hasAccess = await prisma.holiday.findFirst({
+        where: {
+          id: payload.holidayId,
+          account: {
+            members: { some: { userId: payload.userId } },
+          },
+        },
+      });
+
+      if (!hasAccess) {
+        console.warn(
+          `User ${payload.userId} does not have access to holiday ${payload.holidayId}, skipping notification`,
+        );
+        return false;
+      }
+    }
+
     // Create a unique ID that incorporates entity information to prevent conflicts
     const entityPrefix = payload.entityId
       ? `${payload.entityType}-${payload.entityId}`

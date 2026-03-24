@@ -10,6 +10,7 @@ import {
   broadcastCompletion,
   broadcastNotification,
 } from '@/lib/realTimeNotifications';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 
 // Base schema without contact_id
 const baseSchema = z.object({
@@ -91,6 +92,14 @@ export async function POST(
     }
 
     const data = parsed.data;
+
+    // Validate assignee access if assigning to someone
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assigneeValidation = await validateAssigneeAccess(data.assigned_to, id);
+      if (!assigneeValidation.valid) {
+        return badRequest(assigneeValidation.error || 'Invalid assignee');
+      }
+    }
 
     // Handle contact creation/lookup for flexible schemas
     let contactId = data.contact_id;
@@ -344,6 +353,21 @@ export async function PUT(
       return badRequest('Invalid request body');
     }
 
+    // Get existing gift before update for completion notification
+    const existingGift = await prisma.gift.findUnique({
+      where: { id: giftId, holidayId: id },
+      select: {
+        isCompleted: true,
+        assignedTo: true,
+        createdBy: true,
+        name: true,
+      },
+    });
+
+    if (!existingGift) {
+      return badRequest('Gift not found');
+    }
+
     const updatedGift = await prisma.gift.update({
       where: {
         id: giftId,
@@ -354,6 +378,45 @@ export async function PUT(
         completedDate: isCompleted ? new Date() : null,
       },
     });
+
+    // Send completion notification if gift was just completed
+    if (isCompleted && !existingGift.isCompleted && existingGift.assignedTo) {
+      // Run completion notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name and user names for notification
+          const [holiday, completerName] = await Promise.all([
+            prisma.holiday.findUnique({
+              where: { id },
+              select: { name: true },
+            }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+          const assignerUserId = existingGift.createdBy; // Original creator/assigner
+
+          // Notify the original assigner if it's someone else
+          if (assignerUserId && assignerUserId !== user.id) {
+            await broadcastCompletion(
+              assignerUserId, // ownerUserId (who assigned it)
+              completerName, // completerName (who finished it)
+              'gift', // entityType
+              existingGift.name, // entityName
+              giftId, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          }
+        } catch (completionError) {
+          // Silently log completion notification failures
+          console.warn(
+            'Completion notification failed (gift completion succeeded):',
+            completionError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
 
     // Transform the response to match UI expectations
     const transformedGift = {
@@ -420,25 +483,107 @@ export async function PATCH(
       return badRequest(parsed.error.issues);
     }
 
+    // Get existing gift for assignment change notifications
+    const existingGift = await prisma.gift.findUnique({
+      where: { id: giftId, holidayId: id },
+      select: {
+        assignedTo: true,
+        name: true,
+      },
+    });
+
+    if (!existingGift) {
+      return badRequest('Gift not found');
+    }
+
+    // Build update data
+    const updateGiftData: any = {
+      name: updateData.name,
+      description: updateData.description ?? null,
+      price: updateData.price ?? 0,
+      store: updateData.store ?? null,
+      productLink:
+        updateData.product_link && updateData.product_link.length > 0
+          ? updateData.product_link
+          : null,
+      notes: updateData.notes ?? null,
+      contactId: updateData.contact_id,
+    };
+
+    // Handle assignment changes if provided
+    if (updateData.assigned_to !== undefined) {
+      updateGiftData.assignedTo =
+        updateData.assigned_to && updateData.assigned_to !== ''
+          ? updateData.assigned_to
+          : null;
+    }
+
     // Update the gift
     const updatedGift = await prisma.gift.update({
       where: {
         id: giftId,
         holidayId: id,
       },
-      data: {
-        name: updateData.name,
-        description: updateData.description ?? null,
-        price: updateData.price ?? 0,
-        store: updateData.store ?? null,
-        productLink:
-          updateData.product_link && updateData.product_link.length > 0
-            ? updateData.product_link
-            : null,
-        notes: updateData.notes ?? null,
-        contactId: updateData.contact_id,
-      },
+      data: updateGiftData,
     });
+
+    // Handle assignment change notifications
+    if (
+      updateData.assigned_to !== undefined &&
+      existingGift.assignedTo !== updateGiftData.assignedTo
+    ) {
+      // Run assignment notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name and assigner name for notifications
+          const [holidayName, assignerName] = await Promise.all([
+            prisma.holiday
+              .findUnique({
+                where: { id },
+                select: { name: true },
+              })
+              .then(h => h?.name || 'Holiday'),
+            getUserName(user.id),
+          ]);
+
+          if (updateGiftData.assignedTo && updateGiftData.assignedTo !== user.id) {
+            // New assignment or reassignment
+            await broadcastAssignment(
+              updateGiftData.assignedTo,
+              assignerName,
+              'gift',
+              existingGift.name,
+              giftId,
+              id,
+              holidayName,
+            );
+          } else if (
+            existingGift.assignedTo &&
+            existingGift.assignedTo !== user.id
+          ) {
+            // Assignment removed - notify the previous assignee
+            await broadcastNotification({
+              userId: existingGift.assignedTo,
+              type: 'gift_assigned', // Using same type but with unassignment message
+              title: 'Gift Unassigned',
+              message: `${assignerName} removed your assignment from "${existingGift.name}"`,
+              entityType: 'gift',
+              entityId: giftId,
+              holidayId: id,
+              fromUserId: user.id,
+              fromUser: { name: assignerName },
+              holiday: { name: holidayName, holidayType: 'unknown' },
+            });
+          }
+        } catch (assignmentError) {
+          // Silently log assignment notification failures
+          console.warn(
+            'Assignment change notification failed (gift update succeeded):',
+            assignmentError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
 
     return ok(updatedGift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',

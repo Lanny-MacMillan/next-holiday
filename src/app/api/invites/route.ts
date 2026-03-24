@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/generated/prisma';
+import { broadcastInvite } from '@/lib/realTimeNotifications';
 
 const prisma = new PrismaClient();
 
@@ -63,13 +64,34 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Email-to-user lookup: Check if email belongs to a registered user
+    let finalToUserId = toUserId;
+    let finalToEmail = toEmail;
+    let userLookupStatus = '';
+
+    if (toEmail && !toUserId) {
+      const existingUser = await prisma.user.findFirst({
+        where: { email: toEmail },
+      });
+
+      if (existingUser) {
+        // Convert email invite to user ID invite (gets real-time notifications)
+        finalToUserId = existingUser.id;
+        finalToEmail = undefined; // Clear email since we found the user
+        userLookupStatus = 'registered_user';
+      } else {
+        // Keep as email invite but notify sender
+        userLookupStatus = 'unregistered_email';
+      }
+    }
+
     // Create invite using the internal user ID
     const invite = await prisma.invite.create({
       data: {
         shareId,
         fromUserId: fromUser.id, // Use internal user ID, not Auth0 sub
-        toUserId,
-        toEmail,
+        toUserId: finalToUserId,
+        toEmail: finalToEmail,
         holidayKey,
         message,
         status: 'pending',
@@ -84,13 +106,47 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send real-time invitation notification if inviting a registered user
+    if (finalToUserId) {
+      // Run invitation notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name from holidayKey (assuming it's a readable name)
+          // For now, use holidayKey as the name, but this could be enhanced
+          // to look up proper holiday names from a mapping or database
+          const holidayName = holidayKey
+            .replace('-', ' ')
+            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+          await broadcastInvite(
+            finalToUserId, // inviteeUserId
+            fromUser.name || fromUser.email || 'Someone', // inviterName
+            holidayName, // holidayName
+            invite.id, // inviteId
+            shareId, // shareId
+          );
+        } catch (inviteError) {
+          // Silently log invitation notification failures
+          console.warn(
+            'Invite notification failed (invite creation succeeded):',
+            inviteError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
+
     // Add status to response for frontend handling
     const response = {
       ...invite,
       inviteStatus: declinedInvite ? 'reinvite_after_decline' : 'new_invite',
+      userLookupStatus, // Add user lookup status for frontend
       message: declinedInvite
         ? 'Reinvite sent successfully'
-        : 'Invite sent successfully',
+        : userLookupStatus === 'registered_user'
+          ? `Invite sent to ${toEmail}! They'll receive real-time notifications.`
+          : userLookupStatus === 'unregistered_email'
+            ? `Invite sent to ${toEmail}! They'll see it when they sign up.`
+            : 'Invite sent successfully',
     };
 
     return NextResponse.json(response);

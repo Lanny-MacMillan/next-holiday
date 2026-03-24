@@ -28,6 +28,13 @@ export default function SettingsPage() {
   const [localSettings, setLocalSettings] = useState(settings);
   const [localHolidayPreferences, setLocalHolidayPreferences] = useState<any[]>([]);
   const [imageError, setImageError] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [currentDisplayName, setCurrentDisplayName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [notificationUpdating, setNotificationUpdating] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Cascade delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -48,10 +55,13 @@ export default function SettingsPage() {
   const isUserPlusMember = useAppSelector(selectIsUserPlusMember);
   const subscriptionData = useAppSelector(selectUserSubscriptionData);
 
-  // Reset image error when user changes
+  // Reset image error when user changes and sync name from homeData
   useEffect(() => {
     setImageError(false);
-  }, [user?.picture]);
+    // Use homeData user name if available (updated from DB), fallback to Auth0 user name
+    const displayName = homeData?.user?.name || user?.name || '';
+    setCurrentDisplayName(displayName);
+  }, [user?.picture, user?.name, homeData?.user?.name]);
 
   // Update local settings when preferences are loaded
   useEffect(() => {
@@ -63,11 +73,10 @@ export default function SettingsPage() {
         notifications: {
           reminders:
             preferences.reminderNotifications ?? settings.notifications.reminders,
-          shippingAlerts:
-            preferences.pushNotifications ?? settings.notifications.shippingAlerts,
-          upcomingEvents:
-            preferences.holidayCountdownAlerts ??
-            settings.notifications.upcomingEvents,
+          assignmentNotifications: preferences.assignmentNotifications ?? true,
+          completionNotifications: preferences.completionNotifications ?? true,
+          inviteNotifications: preferences.inviteNotifications ?? true,
+          emailNotifications: preferences.emailNotifications ?? false,
         },
       });
     }
@@ -122,6 +131,77 @@ export default function SettingsPage() {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
+  const handleEditName = () => {
+    setEditedName(currentDisplayName || user?.name || '');
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!user?.sub || editedName.trim() === (user?.name || '')) {
+      setIsEditingName(false);
+      return;
+    }
+
+    setIsSavingName(true);
+
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          auth0Sub: user.sub,
+          name: editedName.trim(),
+          picture: user.picture,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state immediately for UI feedback
+        setCurrentDisplayName(editedName.trim());
+        setIsEditingName(false);
+
+        // Refresh home data to get updated user information
+        if (homeData?.account?.id) {
+          try {
+            const homeResponse = await fetch('/api/home', {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-test-user': JSON.stringify({
+                  sub: user.sub,
+                  email: user.email,
+                  name: editedName.trim(),
+                  picture: user.picture,
+                }),
+              },
+            });
+
+            if (homeResponse.ok) {
+              const result = await homeResponse.json();
+              dispatch(setHomeData(result.data));
+            }
+          } catch (homeError) {
+            console.error('Failed to refresh home data:', homeError);
+          }
+        }
+      } else {
+        console.error('Failed to update name');
+        setIsEditingName(false);
+      }
+    } catch (error) {
+      console.error('Error updating name:', error);
+      setIsEditingName(false);
+    }
+
+    setIsSavingName(false);
+  };
+
+  const handleCancelEditName = () => {
+    setEditedName('');
+    setIsEditingName(false);
+  };
+
   const handleSettingChange = async (key: string, value: any) => {
     const newSettings = { ...localSettings };
 
@@ -135,7 +215,115 @@ export default function SettingsPage() {
     setLocalSettings(newSettings);
     dispatch(updateSettings(newSettings));
 
-    // Update database preferences
+    // Handle notification preferences separately
+    if (key.startsWith('notifications.')) {
+      if (user?.sub && homeData?.notificationPreferences) {
+        // Prevent multiple updates of the same notification type
+        if (notificationUpdating.has(key)) {
+          return;
+        }
+
+        // Set loading state for this specific notification type
+        setNotificationUpdating(prev => new Set(prev).add(key));
+
+        // Optimistically update the UI immediately
+        const optimisticHomeData = {
+          ...homeData,
+          notificationPreferences: {
+            ...homeData.notificationPreferences,
+          },
+        };
+
+        if (key === 'notifications.assignmentNotifications') {
+          optimisticHomeData.notificationPreferences.assignmentNotifications = value;
+        } else if (key === 'notifications.completionNotifications') {
+          optimisticHomeData.notificationPreferences.completionNotifications = value;
+        } else if (key === 'notifications.inviteNotifications') {
+          optimisticHomeData.notificationPreferences.inviteNotifications = value;
+        } else if (key === 'notifications.emailNotifications') {
+          optimisticHomeData.notificationPreferences.emailNotifications = value;
+        }
+
+        // Update UI immediately (optimistic update)
+        dispatch(setHomeData(optimisticHomeData));
+
+        try {
+          let notificationData: any = {};
+
+          if (key === 'notifications.assignmentNotifications') {
+            notificationData.assignmentNotifications = value;
+          } else if (key === 'notifications.completionNotifications') {
+            notificationData.completionNotifications = value;
+          } else if (key === 'notifications.inviteNotifications') {
+            notificationData.inviteNotifications = value;
+          } else if (key === 'notifications.emailNotifications') {
+            notificationData.emailNotifications = value;
+          }
+
+          if (Object.keys(notificationData).length > 0) {
+            const response = await fetch('/api/users/me/notification-preferences', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-test-user': JSON.stringify({
+                  sub: user.sub,
+                  email: user.email,
+                  name: user.name,
+                  picture: user.picture,
+                }),
+              },
+              body: JSON.stringify(notificationData),
+            });
+
+            if (!response.ok) {
+              // Revert the optimistic update on error
+              dispatch(setHomeData(homeData));
+              const errorText = await response.text();
+              console.error('❌ API Error response:', errorText);
+              throw new Error(
+                `Failed to update notification preferences: ${response.status} ${errorText}`,
+              );
+            }
+
+            // Refresh home data to ensure we have the latest state
+            try {
+              const homeResponse = await fetch('/api/home', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-test-user': JSON.stringify({
+                    sub: user.sub,
+                    email: user.email,
+                    name: user.name,
+                    picture: user.picture,
+                  }),
+                },
+              });
+
+              if (homeResponse.ok) {
+                const result = await homeResponse.json();
+                dispatch(setHomeData(result.data));
+              }
+            } catch (homeError) {
+              console.error('Failed to refresh home data:', homeError);
+            }
+          }
+        } catch (error) {
+          // Revert the optimistic update on error
+          dispatch(setHomeData(homeData));
+          console.error('Failed to update notification preferences:', error);
+        } finally {
+          // Clear loading state for this notification type
+          setNotificationUpdating(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(key);
+            return newSet;
+          });
+        }
+      }
+      return; // Exit early for notification settings
+    }
+
+    // Update other user preferences (theme, displayMode, etc.)
     if (user?.sub && preferences) {
       try {
         let preferencesData: any = {};
@@ -146,10 +334,6 @@ export default function SettingsPage() {
           preferencesData.displayMode = value;
         } else if (key === 'notifications.reminders') {
           preferencesData.reminderNotifications = value;
-        } else if (key === 'notifications.shippingAlerts') {
-          preferencesData.pushNotifications = value;
-        } else if (key === 'notifications.upcomingEvents') {
-          preferencesData.holidayCountdownAlerts = value;
         }
 
         if (Object.keys(preferencesData).length > 0) {
@@ -311,11 +495,18 @@ export default function SettingsPage() {
   const currentDisplayMode = preferences?.displayMode || localSettings.displayMode;
   const currentReminders =
     preferences?.reminderNotifications ?? localSettings.notifications.reminders;
-  const currentShippingAlerts =
-    preferences?.pushNotifications ?? localSettings.notifications.shippingAlerts;
-  const currentUpcomingEvents =
-    preferences?.holidayCountdownAlerts ??
-    localSettings.notifications.upcomingEvents;
+  const currentAssignmentNotifications =
+    homeData?.notificationPreferences?.assignmentNotifications ??
+    localSettings.notifications.assignmentNotifications;
+  const currentCompletionNotifications =
+    homeData?.notificationPreferences?.completionNotifications ??
+    localSettings.notifications.completionNotifications;
+  const currentInviteNotifications =
+    homeData?.notificationPreferences?.inviteNotifications ??
+    localSettings.notifications.inviteNotifications;
+  const currentEmailNotifications =
+    homeData?.notificationPreferences?.emailNotifications ??
+    localSettings.notifications.emailNotifications;
 
   return (
     <div className="min-h-screen christmas-settings-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -349,63 +540,211 @@ export default function SettingsPage() {
       <main className="w-full max-w-2xl flex flex-col gap-8">
         {/* User Information */}
         <div className="card card-settings rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+          {/* <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
             👤 User Information
-          </h2>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              {user?.picture && !imageError ? (
-                <img
-                  src={user.picture}
-                  alt="Profile"
-                  className="w-16 h-16 rounded-full"
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 dark:text-blue-300 font-semibold text-lg">
-                    {getInitials(user?.name || 'User')}
-                  </span>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-gray-800 dark:text-gray-400">
-                  Profile Picture
+          </h2> */}
+          {/* Profile Header */}
+          <div className="flex items-center space-x-6 mb-6">
+            {user?.picture && !imageError ? (
+              <img
+                src={user.picture}
+                alt="Profile"
+                className="w-20 h-20 rounded-full border-4 border-white shadow-lg dark:border-gray-700"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-4 border-white shadow-lg dark:border-gray-700">
+                <span className="text-white font-bold text-xl">
+                  {getInitials(currentDisplayName || user?.name || 'User')}
+                </span>
+              </div>
+            )}
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                {isEditingName ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editedName}
+                      onChange={e => setEditedName(e.target.value)}
+                      disabled={isSavingName}
+                      className={`text-2xl font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-blue-500 focus:border-blue-600 outline-none px-1 ${
+                        isSavingName ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      placeholder="Enter your name"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      disabled={isSavingName}
+                      className={`p-2 rounded-full transition-colors ${
+                        isSavingName
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700'
+                          : 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900 dark:text-green-300'
+                      }`}
+                      title="Save"
+                    >
+                      {isSavingName ? (
+                        <svg
+                          className="w-4 h-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCancelEditName}
+                      className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900 dark:text-red-300"
+                      title="Cancel"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+                      {currentDisplayName || 'Anonymous User'}
+                    </h3>
+                    <button
+                      onClick={handleEditName}
+                      className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors"
+                      title="Edit name"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
+              {homeData?.user?.createdAt && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Member since{' '}
+                  {new Date(homeData.user.createdAt).toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* Account Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <svg
+                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Email Address
+                  </p>
+                  <p className="text-xs font-medium text-gray-800 dark:text-white truncate">
+                    {user?.email || 'Not provided'}
+                  </p>
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-                Name
-              </label>
-              <p className="mt-1 text-sm text-gray-800 dark:text-white">
-                {user?.name || 'Not provided'}
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-                Email
-              </label>
-              <p className="mt-1 text-sm text-gray-800 dark:text-white">
-                {user?.email || 'Not provided'}
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-800 dark:text-gray-300">
-                User ID
-              </label>
-              <p className="mt-1 text-sm text-gray-800 dark:text-gray-400 font-mono">
-                {user?.sub || 'Not available'}
-              </p>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <svg
+                    className="w-5 h-5 text-purple-600 dark:text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    User ID
+                  </p>
+                  <p className="text-xs font-mono text-gray-800 dark:text-gray-400">
+                    {user?.sub ? user.sub.substring(0, 24) + '...' : 'Not available'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Theme Settings */}
         <div className="card card-settings rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
             🎨 Appearance
           </h2>
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -472,8 +811,8 @@ export default function SettingsPage() {
 
         {/* Holiday Settings */}
         <div className="card card-settings rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-            🎄 Holiday Preferences
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
+            🎄 Holidays
           </h2>
           <div className="space-y-4">
             <div>
@@ -570,11 +909,12 @@ export default function SettingsPage() {
 
         {/* Notification Settings */}
         <div className="card card-settings rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-            🔔 Notification Preferences
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
+            🔔 Notifications
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* REMINDERS */}
+            {/* <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
                   Reminders
@@ -597,30 +937,37 @@ export default function SettingsPage() {
                   }`}
                 />
               </button>
-            </div>
+            </div> */}
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Shipping Alerts
+                <label className="text-sm font-medium text-gray-800 dark:text-gray-300 pb-4">
+                  Assignment Notifications
                 </label>
                 <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Get notified about gift shipping status
+                  Get notified when you're assigned tasks or gifts
                 </p>
               </div>
               <button
                 onClick={() =>
                   handleSettingChange(
-                    'notifications.shippingAlerts',
-                    !currentShippingAlerts,
+                    'notifications.assignmentNotifications',
+                    !currentAssignmentNotifications,
                   )
                 }
+                disabled={notificationUpdating.has(
+                  'notifications.assignmentNotifications',
+                )}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  currentShippingAlerts ? 'bg-blue-600' : 'bg-gray-400'
-                }`}
+                  notificationUpdating.has('notifications.assignmentNotifications')
+                    ? 'opacity-50 cursor-not-allowed'
+                    : ''
+                } ${currentAssignmentNotifications ? 'bg-blue-600' : 'bg-gray-400'}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    currentShippingAlerts ? 'translate-x-6' : 'translate-x-1'
+                    currentAssignmentNotifications
+                      ? 'translate-x-6'
+                      : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -628,36 +975,103 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Upcoming Events
+                  Completion Notifications
                 </label>
                 <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Get notified about upcoming holiday events
+                  Get notified when assignments are completed
                 </p>
               </div>
               <button
                 onClick={() =>
                   handleSettingChange(
-                    'notifications.upcomingEvents',
-                    !currentUpcomingEvents,
+                    'notifications.completionNotifications',
+                    !currentCompletionNotifications,
                   )
                 }
+                disabled={notificationUpdating.has(
+                  'notifications.completionNotifications',
+                )}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  currentUpcomingEvents ? 'bg-blue-600' : 'bg-gray-400'
-                }`}
+                  notificationUpdating.has('notifications.completionNotifications')
+                    ? 'opacity-50 cursor-not-allowed'
+                    : ''
+                } ${currentCompletionNotifications ? 'bg-blue-600' : 'bg-gray-400'}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    currentUpcomingEvents ? 'translate-x-6' : 'translate-x-1'
+                    currentCompletionNotifications
+                      ? 'translate-x-6'
+                      : 'translate-x-1'
                   }`}
                 />
               </button>
             </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                  Invite Notifications
+                </label>
+                <p className="text-xs text-gray-800 dark:text-gray-400">
+                  Get notified when you're invited to join holidays
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  handleSettingChange(
+                    'notifications.inviteNotifications',
+                    !currentInviteNotifications,
+                  )
+                }
+                disabled={notificationUpdating.has(
+                  'notifications.inviteNotifications',
+                )}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  notificationUpdating.has('notifications.inviteNotifications')
+                    ? 'opacity-50 cursor-not-allowed'
+                    : ''
+                } ${currentInviteNotifications ? 'bg-blue-600' : 'bg-gray-400'}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    currentInviteNotifications ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            {/* EMAIL NOTIFICATIONS */}
+            {/* <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                  Email Notifications
+                </label>
+                <p className="text-xs text-gray-800 dark:text-gray-400">
+                  Receive notifications via email in addition to web
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  handleSettingChange(
+                    'notifications.emailNotifications',
+                    !currentEmailNotifications,
+                  )
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  currentEmailNotifications ? 'bg-blue-600' : 'bg-gray-400'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    currentEmailNotifications ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div> */}
           </div>
         </div>
 
         {/* Subscription Management */}
         <div className="card card-settings rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
             💎 Subscription
           </h2>
           <div className="space-y-4">

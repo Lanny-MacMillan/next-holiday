@@ -192,16 +192,15 @@ export default function InviteButton({
 
       // Handle invite status messages
       if (inviteResult.inviteStatus) {
-        const statusMessages: Record<string, string> = {
-          new_invite: `Invite sent to ${values.email} successfully!`,
-          reinvite_after_decline: `Reinvite sent to ${values.email} successfully!`,
-        };
-
+        // Use the message from the API response (which includes user lookup info)
         const message =
-          inviteResult.message ||
-          statusMessages[inviteResult.inviteStatus] ||
-          `Invite sent to ${values.email} successfully!`;
-        showToastMessage(message, 'success');
+          inviteResult.message || `Invite sent to ${values.email} successfully!`;
+
+        // Determine toast type based on user lookup status
+        const toastType =
+          inviteResult.userLookupStatus === 'registered_user' ? 'success' : 'info';
+
+        showToastMessage(message, toastType);
       } else {
         showToastMessage(`Invite sent to ${values.email} successfully!`, 'success');
       }

@@ -9,6 +9,7 @@ import {
   broadcastCompletion,
   broadcastNotification,
 } from '@/lib/realTimeNotifications';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -36,6 +37,14 @@ export async function POST(
     }
 
     const data = parsed.data;
+
+    // Validate assignee access if assigning to someone
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assigneeValidation = await validateAssigneeAccess(data.assigned_to, id);
+      if (!assigneeValidation.valid) {
+        return badRequest(assigneeValidation.error || 'Invalid assignee');
+      }
+    }
 
     // Fetch holiday name for better notifications
     const holiday = await prisma.holiday.findUnique({

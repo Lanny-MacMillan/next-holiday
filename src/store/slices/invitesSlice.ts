@@ -20,6 +20,9 @@ export interface Invite {
     name: string;
     email: string;
   };
+  // Response-only fields from invite creation
+  inviteStatus?: 'new_invite' | 'reinvite_after_decline' | 'duplicate_pending';
+  userLookupStatus?: 'registered_user' | 'unregistered_email';
 }
 
 interface InvitesState {

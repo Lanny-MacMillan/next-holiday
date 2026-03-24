@@ -29,12 +29,12 @@ export async function getHomeData(request: Request): Promise<HomeData> {
         user: null,
         account: null,
         holidayPreferences: null,
+        notificationPreferences: null,
         contacts: null,
         needsUserSetup: true,
         needsHolidaySelection: false,
       };
     }
-
     // Find user's account
     let account = await prisma.account.findFirst({
       where: {
@@ -66,9 +66,11 @@ export async function getHomeData(request: Request): Promise<HomeData> {
           subscriptionPlan: user.subscriptionPlan,
           subscriptionStartDate: user.subscriptionStartDate?.toISOString(),
           subscriptionEndDate: user.subscriptionEndDate?.toISOString(),
+          // createdAt: user.createdAt?.toISOString(),
         },
         account: null,
         holidayPreferences: null,
+        notificationPreferences: null,
         contacts: null,
         needsUserSetup: true,
         needsHolidaySelection: false,
@@ -227,6 +229,25 @@ export async function getHomeData(request: Request): Promise<HomeData> {
       },
     });
 
+    // Get notification preferences for this user
+    let notificationPreferences = await prisma.notificationPreferences.findUnique({
+      where: { userId: user.id },
+    });
+
+    // Create default notification preferences if they don't exist
+    if (!notificationPreferences) {
+      notificationPreferences = await prisma.notificationPreferences.create({
+        data: {
+          userId: user.id,
+          assignmentNotifications: true,
+          completionNotifications: true,
+          inviteNotifications: true,
+          emailNotifications: false,
+          digestFrequency: 'immediate',
+        },
+      });
+    }
+
     return {
       user: {
         id: user.id,
@@ -236,9 +257,20 @@ export async function getHomeData(request: Request): Promise<HomeData> {
         subscriptionPlan: user.subscriptionPlan,
         subscriptionStartDate: user.subscriptionStartDate?.toISOString(),
         subscriptionEndDate: user.subscriptionEndDate?.toISOString(),
+        createdAt: user.createdAt?.toISOString(),
       },
       account: toPlain(account),
       holidayPreferences,
+      notificationPreferences: {
+        id: notificationPreferences.id,
+        assignmentNotifications: notificationPreferences.assignmentNotifications,
+        completionNotifications: notificationPreferences.completionNotifications,
+        inviteNotifications: notificationPreferences.inviteNotifications,
+        emailNotifications: notificationPreferences.emailNotifications,
+        digestFrequency: notificationPreferences.digestFrequency,
+        createdAt: notificationPreferences.createdAt.toISOString(),
+        updatedAt: notificationPreferences.updatedAt.toISOString(),
+      },
       contacts: toPlain(contacts),
       needsUserSetup: false,
       needsHolidaySelection: holidayPreferences.length === 0,

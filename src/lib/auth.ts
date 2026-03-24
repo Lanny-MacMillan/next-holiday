@@ -70,6 +70,7 @@ export interface AuthUser {
   subscriptionPlan?: 'free' | 'plus';
   subscriptionStartDate?: Date | null;
   subscriptionEndDate?: Date | null;
+  createdAt?: Date | null;
 }
 
 /**
@@ -99,6 +100,7 @@ export async function getCurrentUser(
         subscriptionPlan: true,
         subscriptionStartDate: true,
         subscriptionEndDate: true,
+        createdAt: true,
       },
     });
 
@@ -138,6 +140,7 @@ export async function getUserByAuth0Sub(auth0Sub: string): Promise<AuthUser | nu
         subscriptionPlan: true,
         subscriptionStartDate: true,
         subscriptionEndDate: true,
+        createdAt: true,
       },
     });
   } catch (error) {
