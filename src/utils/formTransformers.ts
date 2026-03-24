@@ -289,3 +289,52 @@ export function transformGuestPayload(values: Record<string, any>, contacts: any
     notes: values.notes || '',
   };
 }
+
+/**
+ * Transform form values to supplies/shopping API payload
+ * Used for supplies-list and shopping-list pages
+ */
+export function transformSuppliesPayload(
+  values: Record<string, any>,
+  shareMembers?: any[],
+) {
+  // Handle assigned_to mapping from Auth0 userId to proper UUID
+  let assignedTo = values.assigned_to || values.assignedTo || null;
+
+  if (assignedTo && shareMembers && shareMembers.length > 0) {
+    // Check if it's already a valid UUID format
+    const isValidUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        assignedTo,
+      );
+
+    // If assigned_to contains Auth0 ID format, try to map it to the proper UUID
+    if (!isValidUUID) {
+      // Find the member with matching Auth0 user ID
+      const member = shareMembers.find(m => m.userId === assignedTo);
+
+      if (member && member.uuid) {
+        assignedTo = member.uuid;
+      }
+    }
+  }
+
+  // Transform to API format (using gift API since supplies use same structure without recipients)
+  const payload: any = {
+    name: values.name || values.item_name || '', // Support both field names
+    description: values.description || values.notes || '',
+    price: values.price ? parseFloat(values.price) || 0 : 0,
+    store: values.store || '',
+    product_link: values.product_link || values.link || '',
+    notes: values.notes || '',
+    assigned_to: assignedTo,
+    // No contact_id or recipient fields for supplies
+  };
+
+  // Only include actual_price if it has a value
+  if (values.actual_price && values.actual_price !== '') {
+    payload.actual_price = parseFloat(values.actual_price) || 0;
+  }
+
+  return payload;
+}

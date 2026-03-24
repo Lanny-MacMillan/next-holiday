@@ -160,6 +160,19 @@ export const BASE_FORM_CONFIGS = {
     submitText: 'Add Item',
     cardClassName: 'card',
   },
+  supplies: {
+    fields: [
+      { id: 'name', type: 'text', placeholder: 'Item Name*', required: true },
+      { id: 'description', type: 'textarea', placeholder: 'Description', rows: 2 },
+      { id: 'price', type: 'number', placeholder: 'Price', step: '0.01' },
+      { id: 'store', type: 'text', placeholder: 'Store' },
+      { id: 'product_link', type: 'url', placeholder: 'Product Link (optional)' },
+      ASSIGNTO_FIELD, // NEW
+      { id: 'notes', type: 'textarea', placeholder: 'Notes', rows: 2 },
+    ],
+    submitText: 'Add Supply Item',
+    cardClassName: 'card',
+  },
 } as const;
 
 // Holiday-specific customizations
@@ -232,6 +245,10 @@ export const HOLIDAY_CUSTOMIZATIONS = {
         'card bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20',
     },
     shopping: {
+      cardClassName:
+        'card bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20',
+    },
+    supplies: {
       cardClassName:
         'card bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20',
     },
@@ -336,6 +353,10 @@ export const HOLIDAY_CUSTOMIZATIONS = {
         'card card-decorations bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20',
     },
     supply: {
+      cardClassName:
+        'card card-supplies bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20',
+    },
+    supplies: {
       cardClassName:
         'card card-supplies bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20',
     },

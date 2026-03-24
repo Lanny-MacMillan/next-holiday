@@ -6,14 +6,14 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import Toast from '@/components/common/Toast';
 import {
   updateGiftInHomeData,
   addGiftToHomeData,
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { transformGiftPayload } from '@/utils/formTransformers';
+import { transformSuppliesPayload } from '@/utils/formTransformers';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -34,7 +34,6 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 
 export default function ThanksgivingShoppingListPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Use centralized holiday page data hook
   const { holidayId, holidayData, auth0User, homeInitialized } =
@@ -72,13 +71,13 @@ export default function ThanksgivingShoppingListPage() {
       : baseMembers;
 
   // Enhanced Compatibility Layer - Gift form configuration (without holidayKey restriction)
-  const addFormConfig = getFormConfigEnhanced('shopping', 'add', {
+  const addFormConfig = getFormConfigEnhanced('supplies', 'add', {
     holidayKey: 'thanksgiving',
     shareMembers: shareMembers,
     auth0User: auth0User,
   });
 
-  const editFormConfig = getFormConfigEnhanced('shopping', 'edit', {
+  const editFormConfig = getFormConfigEnhanced('supplies', 'edit', {
     holidayKey: 'thanksgiving',
     shareMembers: shareMembers,
     auth0User: auth0User,
@@ -112,25 +111,22 @@ export default function ThanksgivingShoppingListPage() {
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  useEffect(() => {
-    if (homeInitialized) {
-      dispatch(fetchContacts());
-    }
-  }, [homeInitialized]);
-
-  // Load contacts if holiday is shared for assignment functionality
-  useEffect(() => {
-    if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
-    }
-  }, [isHolidayShared, auth0User]);
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   const handleAddGift = async (values: Record<string, any>) => {
-    if (!values.name?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim()) {
+      setToastMessage('Please fill in the Item Name field');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts, shareMembers);
+      const payload = transformSuppliesPayload(values, shareMembers);
       const result = await createGift(payload);
 
       dispatch(addGiftToHomeData({ holidayId, gift: result }));
@@ -139,12 +135,10 @@ export default function ThanksgivingShoppingListPage() {
 
       setShowFormModal(false);
     } catch (error) {
-      console.error('Error creating gift:', error);
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error creating gift. Please try again.');
-      }
+      console.error('Error creating supply item:', error);
+      setToastMessage('Error creating supply item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -184,7 +178,9 @@ export default function ThanksgivingShoppingListPage() {
       );
     } catch (error) {
       console.error('Error toggling gift:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error updating item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -215,6 +211,9 @@ export default function ThanksgivingShoppingListPage() {
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
+      setToastMessage('Error deleting item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -232,7 +231,7 @@ export default function ThanksgivingShoppingListPage() {
     if (!selectedGift || !holidayId) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts, shareMembers);
+      const payload = transformSuppliesPayload(values, shareMembers);
       // Update gift using hook
       const result = await updateGift(selectedGift.id, payload);
 
@@ -251,13 +250,10 @@ export default function ThanksgivingShoppingListPage() {
       setShowFormModal(false);
       setSelectedGift(null);
     } catch (error) {
-      console.error('Error updating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
-      }
+      console.error('Error updating supply item:', error);
+      setToastMessage('Error updating supply item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -333,7 +329,6 @@ export default function ThanksgivingShoppingListPage() {
     if (!selectedGift) return {};
     return {
       name: selectedGift.name || selectedGift.description || '',
-      recipient: selectedGift.recipient || '',
       description: selectedGift.description || '',
       price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
@@ -414,7 +409,6 @@ export default function ThanksgivingShoppingListPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#d97706"
-        contacts={contacts}
         shareMembers={shareMembers}
       />
 
@@ -442,6 +436,14 @@ export default function ThanksgivingShoppingListPage() {
           { value: 'price-low', label: 'Price: Low to High' },
         ]}
         title="Sort Gifts"
+      />
+
+      {/* Toast for error messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
       />
     </div>
   );

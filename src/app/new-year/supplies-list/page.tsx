@@ -7,12 +7,12 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import Toast from '@/components/common/Toast';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
 } from '@/store/slices/sharesSlice';
-import { transformGiftPayload } from '@/utils/formTransformers';
+import { transformSuppliesPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
@@ -79,20 +79,18 @@ export default function NewYearSuppliesListPage() {
 
   // Debug shareMembers to identify UUID issues
   console.log('ShareMembers debug info:', {
-    baseMembers: baseMembers.map(m => ({
+    baseMembers: baseMembers.map((m: any) => ({
       userId: m.userId,
       uuid: m.uuid,
       name: m.name,
     })),
-    finalShareMembers: shareMembers.map(m => ({
+    finalShareMembers: shareMembers.map((m: any) => ({
       userId: m.userId,
       uuid: m.uuid,
       name: m.name,
     })),
     auth0User: { sub: auth0User?.sub, id: auth0User?.id, name: auth0User?.name },
   });
-
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Helper function to update Redux state after gift operations (kept for compatibility)
   const updateGiftInRedux = (
@@ -113,34 +111,30 @@ export default function NewYearSuppliesListPage() {
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  useEffect(() => {
-    // Always fetch contacts for address book functionality
-    if (auth0User) {
-      console.log('Fetching contacts for user:', auth0User.sub);
-      dispatch(fetchContacts());
-    }
-  }, [dispatch, auth0User]);
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   async function handleAddGift(values: Record<string, any>) {
     console.log('handleAddGift called with values:', values);
-    console.log('Available contacts:', contacts);
     console.log('Form validation check:', {
       nameValid: !!values.name?.trim(),
-      recipientValid: !!values.recipient?.trim(),
       name: values.name,
-      recipient: values.recipient,
     });
 
-    // Enhanced Compatibility Layer uses 'name' field, not 'giftName'
-    if (!values.name?.trim() || !values.recipient?.trim()) {
+    // Only name is required
+    if (!values.name?.trim()) {
       console.log('Validation failed - missing required fields');
-      alert('Please fill in both Gift Name and Recipient fields');
+      setToastMessage('Please fill in the Item Name field');
+      setToastType('error');
+      setShowToast(true);
       return;
     }
 
     try {
       console.log('Attempting to transform payload...');
-      const payload = transformGiftPayload(values, contacts, shareMembers);
+      const payload = transformSuppliesPayload(values, shareMembers);
       console.log('Payload created successfully:', payload);
 
       const result = await createGift(payload);
@@ -151,39 +145,15 @@ export default function NewYearSuppliesListPage() {
 
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error creating gift:', error);
-      // Show user-friendly error message with specific guidance
-      if (error instanceof Error) {
-        if (error.message.includes('Address book is empty')) {
-          alert(
-            '❌ Address Book Required\n\nTo add supplies, you need to:\n1. Go to Settings > Address Book\n2. Add at least one contact\n3. Return here and select the recipient from the dropdown\n\nThis helps track who supplies are for!',
-          );
-        } else if (
-          error.message.includes('must be selected from the address book dropdown')
-        ) {
-          alert(
-            '❌ Please Select from Dropdown\n\nDon\'t type the recipient name - click the dropdown arrow next to "Recipient" and select from your address book contacts.\n\nIf you don\'t see the person you want, add them in Settings > Address Book first.',
-          );
-        } else if (error.message.includes('address book')) {
-          alert(
-            "Please select a recipient from the address book dropdown (don't type manually)",
-          );
-        } else {
-          alert('Error creating supply: ' + error.message);
-        }
-      } else {
-        alert('Error creating supply. Please try again.');
-      }
+      console.error('Error creating supply:', error);
+      setToastMessage('Error creating supply. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
   function openForm() {
     console.log('Opening Add Supply modal');
-    console.log(
-      'Contacts available:',
-      contacts?.length || 0,
-      contacts?.map(c => c.name),
-    );
     console.log('ShareMembers available:', shareMembers?.length || 0);
     setShowAddModal(true);
     setSelectedGift(null);
@@ -208,7 +178,9 @@ export default function NewYearSuppliesListPage() {
       await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error updating item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
@@ -234,6 +206,9 @@ export default function NewYearSuppliesListPage() {
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
+      setToastMessage('Error deleting item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
@@ -254,7 +229,7 @@ export default function NewYearSuppliesListPage() {
     console.log('shareMembers available:', shareMembers);
 
     try {
-      const payload = transformGiftPayload(values, contacts, shareMembers);
+      const payload = transformSuppliesPayload(values, shareMembers);
       console.log('Update payload created:', payload);
 
       // Update using the hook
@@ -270,13 +245,10 @@ export default function NewYearSuppliesListPage() {
       setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
-      console.error('Error updating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
-      }
+      console.error('Error updating supply:', error);
+      setToastMessage('Error updating supply. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
@@ -398,7 +370,7 @@ export default function NewYearSuppliesListPage() {
         isOpen={showAddModal}
         title="Add New Supply"
         fields={
-          getFormConfigEnhanced('gifts', 'add', {
+          getFormConfigEnhanced('supplies', 'add', {
             holidayKey: 'new-year' as any,
             shareMembers: shareMembers,
             auth0User: auth0User,
@@ -412,7 +384,6 @@ export default function NewYearSuppliesListPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"
-        contacts={contacts}
         shareMembers={shareMembers}
       />
 
@@ -421,14 +392,13 @@ export default function NewYearSuppliesListPage() {
         isOpen={showEditModal}
         title="Edit Supply"
         fields={
-          getFormConfigEnhanced('gifts', 'edit', {
+          getFormConfigEnhanced('supplies', 'edit', {
             holidayKey: 'new-year' as any,
             shareMembers: shareMembers,
             auth0User: auth0User,
           }).fields
         }
         initialValues={{
-          recipient: selectedGift?.recipient || '',
           name: selectedGift?.name || '',
           description: selectedGift?.description || '',
           price: selectedGift?.price ? selectedGift.price.toString() : '',
@@ -447,7 +417,6 @@ export default function NewYearSuppliesListPage() {
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"
-        contacts={contacts}
         shareMembers={shareMembers}
       />
 
@@ -475,6 +444,14 @@ export default function NewYearSuppliesListPage() {
           { value: 'price-low', label: 'Price: Low to High' },
         ]}
         title="Sort Supplies"
+      />
+
+      {/* Toast for error messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
       />
     </div>
   );

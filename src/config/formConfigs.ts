@@ -175,26 +175,31 @@ export const giftsFormConfig: FormConfig = {
   showAddressBook: true,
 };
 
-// Shopping list form configuration (based on gifts but with Item Name)
+// Shopping list form configuration (for shopping-list pages like Thanksgiving)
 export const shoppingListFormConfig: FormConfig = {
-  title: 'Add New Item',
+  title: 'Add New Shopping Item',
   fields: [
     {
-      id: 'recipient',
-      type: 'text',
-      placeholder: 'Recipient*',
-      required: true,
-    },
-    {
-      id: 'description',
+      id: 'name',
       type: 'text',
       placeholder: 'Item Name*',
       required: true,
     },
     {
+      id: 'description',
+      type: 'text',
+      placeholder: 'Description (optional)',
+    },
+    {
       id: 'price',
       type: 'number',
-      placeholder: 'Price',
+      placeholder: 'Estimated Price',
+      step: '0.01',
+    },
+    {
+      id: 'actual_price',
+      type: 'number',
+      placeholder: 'Actual Price (optional)',
       step: '0.01',
     },
     {
@@ -203,7 +208,7 @@ export const shoppingListFormConfig: FormConfig = {
       placeholder: 'Store',
     },
     {
-      id: 'productLink',
+      id: 'product_link',
       type: 'url',
       placeholder: 'Product Link (optional)',
     },
@@ -217,24 +222,19 @@ export const shoppingListFormConfig: FormConfig = {
   submitText: 'Add Item',
   cancelText: 'Cancel',
   cardClassName: 'card',
-  submitButtonColor: '#eab308', // Yellow
-  showAddressBook: true,
+  submitButtonColor: '#eab308', // Yellow for Thanksgiving
+  showAddressBook: false, // No address book for shopping
 };
 
-// Supplies form configuration (for New Year supplies-list)
+// Supplies form configuration (for supplies-list and shopping-list pages)
 export const suppliesFormConfig: FormConfig = {
   title: 'Add New Supply Item',
   fields: [
     {
-      id: 'recipient',
+      id: 'name',
       type: 'text',
-      placeholder: 'Recipient*',
+      placeholder: 'Item Name*',
       required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text',
-      placeholder: 'Supply Item',
     },
     {
       id: 'description',
@@ -244,7 +244,13 @@ export const suppliesFormConfig: FormConfig = {
     {
       id: 'price',
       type: 'number',
-      placeholder: 'Price',
+      placeholder: 'Estimated Price',
+      step: '0.01',
+    },
+    {
+      id: 'actual_price',
+      type: 'number',
+      placeholder: 'Actual Price (optional)',
       step: '0.01',
     },
     {
@@ -267,8 +273,8 @@ export const suppliesFormConfig: FormConfig = {
   submitText: 'Add Supply Item',
   cancelText: 'Cancel',
   cardClassName: 'card',
-  submitButtonColor: '#f59e0b', // Amber for New Year
-  showAddressBook: true,
+  submitButtonColor: '#f59e0b', // Amber for supplies
+  showAddressBook: false, // No address book for supplies
 };
 
 // Edit configurations (for editing existing items)
@@ -624,7 +630,7 @@ export function getFormConfigEnhanced(
       guests: 'guest-list', // Map guests to guest-list configuration
       'shopping-list': 'shopping', // Map shopping-list to shopping configuration
       shopping: 'shopping', // Map shopping to shopping configuration
-      supplies: 'shopping', // Map supplies to shopping configuration for address book functionality
+      supplies: 'supplies', // Map supplies to supplies configuration without address book
     };
 
     const contentType = contentTypeMapping[type];
