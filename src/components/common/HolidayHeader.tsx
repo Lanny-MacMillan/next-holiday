@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAppSelector } from '@/store/hooks';
+import { HolidayShapes } from '@/data/holidayShapes';
 
 interface HolidayHeaderProps {
   holidayName: string;
@@ -82,6 +83,41 @@ export default function HolidayHeader({
     return emojiMap[holidayName.toLowerCase()] || '🎉';
   };
 
+  // Get holiday SVG component
+  const getHolidaySvg = () => {
+    const svgMap: { [key: string]: React.ComponentType<any> } = {
+      christmas: HolidayShapes.christmas,
+      hanukkah: HolidayShapes.hanukkah,
+      kwanzaa: HolidayShapes.kwanzaa,
+      'new-year': HolidayShapes['new-year'],
+      'new year': HolidayShapes['new-year'],
+      valentines: HolidayShapes.valentines,
+      "valentine's day": HolidayShapes.valentines,
+      easter: HolidayShapes.easter,
+      halloween: HolidayShapes.halloween,
+      thanksgiving: HolidayShapes.thanksgiving,
+      'mothers-day': HolidayShapes['mothers-day'] || HolidayShapes.mothersday,
+      "mother's day": HolidayShapes['mothers-day'] || HolidayShapes.mothersday,
+      'fathers-day': HolidayShapes['fathers-day'] || HolidayShapes.fathersday,
+      "father's day": HolidayShapes['fathers-day'] || HolidayShapes.fathersday,
+      'fourth-of-july':
+        HolidayShapes['fourth-of-july'] || HolidayShapes.fourthoffuly,
+      'fourth of july':
+        HolidayShapes['fourth-of-july'] || HolidayShapes.fourthoffuly,
+      birthday: HolidayShapes.birthday,
+      anniversary: HolidayShapes.anniversary,
+      graduation: HolidayShapes.graduation,
+      'baby-shower': HolidayShapes['baby-shower'] || HolidayShapes.babyshower,
+      'baby shower': HolidayShapes['baby-shower'] || HolidayShapes.babyshower,
+    };
+
+    const SvgComponent =
+      svgMap[holidayName.toLowerCase()] || HolidayShapes.christmas;
+    return (
+      <SvgComponent className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 mr-2 sm:mr-3 md:mr-4" />
+    );
+  };
+
   // Clean holiday name (remove existing emojis and extra spaces)
   const getCleanHolidayName = () => {
     return holidayName
@@ -123,7 +159,7 @@ export default function HolidayHeader({
                 isGamified ? 'font-display' : 'font-sans'
               } text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-2 text-black dark:text-white break-words ${
                 isGamified ? 'tracking-wide relative z-10' : ''
-              }`}
+              } flex items-baseline justify-center`}
               style={
                 isGamified
                   ? {
@@ -135,7 +171,9 @@ export default function HolidayHeader({
                     }
               }
             >
-              {getHolidayEmoji()} {getCleanHolidayName()}
+              <span className="flex items-center">
+                {getHolidaySvg()} {getCleanHolidayName()}
+              </span>
             </h1>
           </div>
           <p

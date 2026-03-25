@@ -30,11 +30,15 @@ class PerformanceMonitor {
   private sessionId: string;
   private startTime: number;
   private cumulativeCLS: number = 0; // Track cumulative CLS
+  private cachedLocation: any = null; // Cache location to avoid repeated requests
+  private locationFetchAttempted: boolean = false; // Track if we've already tried
 
   constructor() {
     this.sessionId = this.generateSessionId();
     this.startTime = performance.now();
     this.setupEventListeners();
+    // Fetch location once at startup
+    this.getLocationInfo();
   }
 
   private generateSessionId(): string {
@@ -42,6 +46,18 @@ class PerformanceMonitor {
   }
 
   private async getLocationInfo() {
+    // Return cached location if we have it
+    if (this.cachedLocation) {
+      return this.cachedLocation;
+    }
+
+    // Don't try again if we've already failed
+    if (this.locationFetchAttempted) {
+      return this.getBasicLocationInfo();
+    }
+
+    this.locationFetchAttempted = true;
+
     try {
       // Try to get location from timezone first (most reliable)
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -60,37 +76,36 @@ class PerformanceMonitor {
 
         if (response.ok) {
           const locationData = await response.json();
-          return {
+          this.cachedLocation = {
             timezone,
             country: locationData?.country_name,
             region: locationData?.region,
             city: locationData?.city,
           };
+          return this.cachedLocation;
         }
       } catch (ipApiError) {
-        // Silently handle CORS and other IP API errors
-        console.warn(
-          'IP geolocation service unavailable (CORS or network error):',
-          ipApiError instanceof Error ? ipApiError.message : String(ipApiError),
-        );
+        // Silently handle CORS and other IP API errors - only log once
+        console.warn('IP geolocation service unavailable, using timezone only');
       }
 
-      // Fallback to timezone-only location info
-      return {
-        timezone,
-        country: 'Unknown',
-        region: 'Unknown',
-        city: 'Unknown',
-      };
+      // Cache the basic location info as fallback
+      this.cachedLocation = this.getBasicLocationInfo();
+      return this.cachedLocation;
     } catch (error) {
       // Ultimate fallback
-      return {
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        country: 'Unknown',
-        region: 'Unknown',
-        city: 'Unknown',
-      };
+      this.cachedLocation = this.getBasicLocationInfo();
+      return this.cachedLocation;
     }
+  }
+
+  private getBasicLocationInfo() {
+    return {
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      country: 'Unknown',
+      region: 'Unknown',
+      city: 'Unknown',
+    };
   }
 
   private getConnectionInfo() {
@@ -325,6 +340,7 @@ class PerformanceMonitor {
 
     // Try to get location info asynchronously after adding the metric
     if (!location) {
+      // Use cached location instead of fetching again
       this.getLocationInfo()
         .then(locationData => {
           metric.location = locationData;

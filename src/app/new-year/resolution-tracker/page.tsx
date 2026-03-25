@@ -286,7 +286,7 @@ export default function NewYearResolutionTrackerPage() {
         backHref="/new-year"
         onSortClick={() => setShowSortModal(true)}
         description="Track your New Year resolutions and goals!"
-        holidayColor="orange-600"
+        holidayColor="amber-600"
         sortTitle="Sort Resolutions"
         error={error ? 'API Error' : undefined}
       />
@@ -295,7 +295,7 @@ export default function NewYearResolutionTrackerPage() {
         <AddButton
           title="Resolution"
           onClick={openAddForm}
-          color="orange"
+          color="amber"
           disabled={isLoading || createLoading}
         />
 

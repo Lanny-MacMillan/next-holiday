@@ -250,7 +250,7 @@ export default function NewYearTasksPage() {
         onSortClick={() => setShowSortModal(true)}
         sortTitle="Sort tasks"
         description="Stay on top of your holiday to-dos"
-        holidayColor={themeColor}
+        holidayColor="amber-600"
       />
 
       <main className="w-full max-w-4xl flex flex-col gap-6">

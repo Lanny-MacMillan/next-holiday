@@ -32,6 +32,8 @@ import {
   HolidayIcons,
 } from '../../../public/holiday-icons';
 
+import { HolidayShapes } from '@/data/holidayShapes';
+
 interface HolidayCardProps {
   id: string;
   name: string;
@@ -102,6 +104,29 @@ const getHolidaySvgIcon = (holidayId: string) => {
   };
 
   return iconMap[holidayId] || IconChristmas; // Fallback to Christmas icon
+};
+
+// Function to get your custom holiday shapes for professional mode
+const getHolidayShapeIcon = (holidayId: string) => {
+  const shapeMap: { [key: string]: React.ComponentType<any> } = {
+    christmas: HolidayShapes.christmas,
+    hanukkah: HolidayShapes.hanukkah,
+    kwanzaa: HolidayShapes.kwanzaa,
+    'new-year': HolidayShapes['new-year'] || HolidayShapes.christmas,
+    valentines: HolidayShapes.valentines,
+    easter: HolidayShapes.easter,
+    thanksgiving: HolidayShapes.thanksgiving,
+    halloween: HolidayShapes.halloween,
+    'mothers-day': HolidayShapes['mothers-day'] || HolidayShapes.christmas,
+    'fathers-day': HolidayShapes['fathers-day'] || HolidayShapes.christmas,
+    'fourth-of-july': HolidayShapes['fourth-of-july'] || HolidayShapes.christmas,
+    birthday: HolidayShapes.birthday,
+    anniversary: HolidayShapes.anniversary || HolidayShapes.valentines,
+    graduation: HolidayShapes.graduation,
+    'baby-shower': HolidayShapes['baby-shower'] || HolidayShapes.christmas,
+  };
+
+  return shapeMap[holidayId] || HolidayShapes.christmas; // Fallback to Christmas shape
 };
 
 export default function HolidayCard({
@@ -218,9 +243,14 @@ export default function HolidayCard({
             {/* Holiday icon and progress */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 sm:gap-4">
-                {/* Holiday icon */}
                 <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <HolidayIcon holidayId={id} />
+                  {/* <HolidayIcon holidayId={id} /> */}
+                  {(() => {
+                    const HolidayShapeComponent = getHolidayShapeIcon(id);
+                    return (
+                      <HolidayShapeComponent className="w-6 h-6 sm:w-10 sm:h-10  text-gray-700 dark:text-gray-300" />
+                    );
+                  })()}
                 </div>
 
                 {/* Progress info */}
@@ -303,18 +333,14 @@ export default function HolidayCard({
           } as React.CSSProperties
         }
       >
-        <div className="relative w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex-shrink-0">
+        <div className="relative w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex-shrink-0 ">
           <>
             {/* Holiday SVG Icon */}
             <div className="absolute inset-0 flex items-center justify-center">
               {(() => {
-                const HolidayIconComponent = getHolidaySvgIcon(id);
+                const HolidayShapeComponent = getHolidayShapeIcon(id);
                 return (
-                  <HolidayIconComponent
-                    size={48}
-                    color={color.light}
-                    className="dark:text-gray-300 w-8 h-8 sm:w-12 sm:h-12 lg:w-[60px] lg:h-[60px]"
-                  />
+                  <HolidayShapeComponent className="w-6 h-6 sm:w-10 sm:h-10  text-gray-700 dark:text-gray-300" />
                 );
               })()}
             </div>
