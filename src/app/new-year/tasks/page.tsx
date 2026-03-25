@@ -11,7 +11,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -19,7 +22,7 @@ import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
@@ -67,11 +70,29 @@ export default function NewYearTasksPage() {
   const tasks =
     holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Name resolution helpers for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Sort function following working pattern
   function getSortedTasks() {
-    if (sortBy === 'none') return tasks;
+    if (sortBy === 'none') return tasks.map(transformTaskWithAssignment);
 
-    return [...tasks].sort((a, b) => {
+    return [...tasks].map(transformTaskWithAssignment).sort((a, b) => {
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -87,7 +108,7 @@ export default function NewYearTasksPage() {
           if (!b.dueDate) return -1;
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         case 'assignedTo':
-          return (a.assignedTo || '').localeCompare(b.assignedTo || '');
+          return (a.assignedToName || '').localeCompare(b.assignedToName || '');
         default:
           return 0;
       }
@@ -143,9 +164,13 @@ export default function NewYearTasksPage() {
     if (!holidayId) return;
 
     const taskData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description || undefined,
+      priority: formData.priority || 'medium',
+      assigned_to: formData.assigned_to || undefined,
       category: 'Tasks',
       isCompleted: false,
+      due_date: formData.dueDate || undefined,
     };
 
     const result = await createTask(taskData);
@@ -159,13 +184,25 @@ export default function NewYearTasksPage() {
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
+    const updateData = {
+      title: formData.title,
+      description: formData.description || undefined,
+      priority: formData.priority || 'medium',
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.dueDate || null,
+      isCompleted:
+        formData.isCompleted !== undefined
+          ? formData.isCompleted
+          : editingTask.isCompleted,
+    };
+
+    const result = await updateTask(editingTask.id, updateData);
     if (result) {
       dispatch(
         updateTaskInHomeData({
           holidayId,
           taskId: editingTask.id,
-          updates: formData,
+          updates: updateData,
         }),
       );
       await refreshHomeData(auth0User, holidayId);
@@ -190,46 +227,18 @@ export default function NewYearTasksPage() {
     setShowSortModal(false);
   }
 
-  // Dynamic form fields
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'new-year',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'new-year',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   const deleteConfig = getDeleteConfig('tasks');
 
@@ -241,7 +250,7 @@ export default function NewYearTasksPage() {
         onSortClick={() => setShowSortModal(true)}
         sortTitle="Sort tasks"
         description="Stay on top of your holiday to-dos"
-        holidayColor={themeColor}
+        holidayColor="amber-600"
       />
 
       <main className="w-full max-w-4xl flex flex-col gap-6">
@@ -269,7 +278,8 @@ export default function NewYearTasksPage() {
               task={task}
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
-              onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              onDelete={() => handleDeleteModalOpen(task)}
+              disableInternalModal={true}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
             />
@@ -290,7 +300,8 @@ export default function NewYearTasksPage() {
                 task={task}
                 onToggleComplete={handleTaskToggle}
                 onEdit={() => handleEditModalOpen(task)}
-                onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                onDelete={() => handleDeleteModalOpen(task)}
+                disableInternalModal={true}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
               />
@@ -321,7 +332,7 @@ export default function NewYearTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={formFields}
+        fields={addFormConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={createLoading}
@@ -329,20 +340,20 @@ export default function NewYearTasksPage() {
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTask}
@@ -352,8 +363,8 @@ export default function NewYearTasksPage() {
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -367,7 +378,6 @@ export default function NewYearTasksPage() {
         itemName={taskToDelete?.title}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
       />
     </div>

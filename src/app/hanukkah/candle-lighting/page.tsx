@@ -1,20 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -76,6 +77,7 @@ const defaultCandleTasks = [
 export default function CandleLightingPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Use centralized holiday page data hook
   const { holidayId, holidayData, auth0User, homeInitialized } =
@@ -96,13 +98,27 @@ export default function CandleLightingPage() {
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, holidayId!),
+    selectIsHolidayShared(state, 'hanukkah'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'hanukkah'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Let Enhanced Compatibility Layer handle shareMembers enhancement automatically
+  const shareMembers = baseMembers;
 
   // Redux data access - candle lighting are stored as tasks with category "Candle Lighting"
-  const candleLighting =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Candle Lighting') ||
-    [];
+  const candleLighting = useMemo(
+    () =>
+      holidayData?.tasks?.filter(
+        (task: any) => task.category === 'Candle Lighting',
+      ) || [],
+    [holidayData?.tasks],
+  );
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -110,6 +126,8 @@ export default function CandleLightingPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -132,17 +150,20 @@ export default function CandleLightingPage() {
     if (!holidayId || !auth0User) return;
 
     try {
-      const result = await createTask({
+      const newTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Candle Lighting',
-        dueDate: values.dueDate || undefined,
-      });
+        due_date: values.dueDate || undefined,
+        isCompleted: false,
+        holidayId: holidayId,
+      };
 
-      // Update Redux state immediately
-      dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+      // Use the standardized hook function
+      await createTask(newTask);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -161,22 +182,15 @@ export default function CandleLightingPage() {
       for (let i = 0; i < defaultCandleTasks.length; i++) {
         const task = defaultCandleTasks[i];
 
-        console.log(
-          `Adding candle task ${i + 1}/${defaultCandleTasks.length}: ${task.title}`,
-        );
-
         try {
-          const result = await createTask({
+          await createTask({
             title: task.title,
             description: task.description,
             priority: task.priority,
             category: task.category,
           });
 
-          console.log(`✅ Added task ${i + 1}: ${result.title}`);
-
-          // Add to Redux
-          dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
+          console.log(`✅ Added task ${i + 1}: ${task.title}`);
 
           // Refresh home data after each task to ensure consistency
           await refreshHomeData(auth0User, holidayId);
@@ -185,7 +199,6 @@ export default function CandleLightingPage() {
         }
       }
 
-      console.log('✅ All candle tasks added successfully');
       setShowDefaultTasks(false);
     } catch (error) {
       console.error('Failed to add default tasks:', error);
@@ -206,16 +219,8 @@ export default function CandleLightingPage() {
       // Toggle the completion status
       const newCompletionStatus = !currentTask.isCompleted;
 
-      const result = await updateTask(taskId, { isCompleted: newCompletionStatus });
-
-      // Update Redux state
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: taskId,
-          updates: { isCompleted: newCompletionStatus },
-        }),
-      );
+      // Use the standardized hook function
+      await updateTask(taskId, { isCompleted: newCompletionStatus });
 
       // Refresh home data to update progress on main holiday page
       await refreshHomeData(auth0User, holidayId);
@@ -233,22 +238,18 @@ export default function CandleLightingPage() {
     if (!editingTask || !holidayId || !auth0User) return;
 
     try {
-      const result = await updateTask(editingTask.id, {
+      const updatedTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
-        dueDate: values.dueDate || undefined,
-      });
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+        category: 'Candle Lighting',
+        due_date: values.dueDate || undefined,
+      };
 
-      // Update Redux state
-      dispatch(
-        updateTaskInHomeData({
-          holidayId: holidayId,
-          taskId: editingTask.id,
-          updates: result,
-        }),
-      );
+      // Use the standardized hook function
+      await updateTask(editingTask.id, updatedTask);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -261,27 +262,43 @@ export default function CandleLightingPage() {
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+    const task = candleLighting.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
-
-      // Remove from Redux state on success
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
+      // Use the standardized hook function
+      await deleteTask(taskToDelete.id);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
       // Check if this was the last task and re-show default tasks prompt
-      const remainingTasks = candleLighting.filter((c: any) => c.id !== taskId);
+      const remainingTasks = candleLighting.filter(
+        (c: any) => c.id !== taskToDelete.id,
+      );
       console.log('Candle Lighting after delete:', remainingTasks.length);
       if (remainingTasks.length === 0) {
         console.log('No tasks remaining, showing default tasks prompt');
         setShowDefaultTasks(true);
       }
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
+  }
+
+  function cancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   function openForm() {
@@ -344,7 +361,21 @@ export default function CandleLightingPage() {
     );
   }
 
-  const sortedTasks = sortTasks(candleLighting);
+  // Helper function to resolve assignedTo name for display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  const sortedTasks = sortTasks(candleLighting.map(transformTaskWithAssignment));
   const incompleteCandleLighting = sortedTasks.filter(
     (task: any) => !task.isCompleted,
   );
@@ -352,45 +383,12 @@ export default function CandleLightingPage() {
     (task: any) => task.isCompleted,
   );
 
-  // FormModal fields configuration - matching Kwanzaa exactly
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Candle Lighting Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'hanukkah',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   return (
     <div className="min-h-screen hanukkah-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -521,14 +519,15 @@ export default function CandleLightingPage() {
           title: '',
           description: '',
           priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          assignedTo: '',
           dueDate: '',
         }}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={false}
-        submitText="Add Task"
+        loading={loading}
+        submitText={loading ? 'Adding...' : 'Add Task'}
         cardClassName="card-tasks"
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
@@ -536,18 +535,33 @@ export default function CandleLightingPage() {
         isOpen={showEditModal}
         title="Edit Candle Lighting Task"
         fields={formFields}
-        initialValues={{
-          title: editingTask?.title || '',
-          description: editingTask?.description || '',
-          priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
-          dueDate: editingTask?.dueDate || '',
-        }}
+        initialValues={
+          editingTask
+            ? {
+                title: editingTask?.title || '',
+                description: editingTask?.description || '',
+                priority: editingTask?.priority || 'medium',
+                assigned_to: editingTask?.assignedTo || '',
+                dueDate: editingTask?.dueDate || '',
+              }
+            : undefined
+        }
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}
-        loading={false}
-        submitText="Update Task"
+        loading={loading}
+        submitText={loading ? 'Updating...' : 'Update Task'}
         cardClassName="card-tasks"
+        shareMembers={shareMembers}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Candle Task?"
+        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

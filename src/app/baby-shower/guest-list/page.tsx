@@ -6,7 +6,11 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
@@ -18,6 +22,7 @@ import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 interface Guest {
   id: string;
@@ -76,7 +81,13 @@ export default function BabyShowerGuestListPage() {
     [guestLists],
   );
 
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'baby-shower'),
+  );
+  const shareMembers = shareData?.members || [];
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     show: boolean;
@@ -91,7 +102,7 @@ export default function BabyShowerGuestListPage() {
   const [showSortModal, setShowSortModal] = useState(false);
 
   useEffect(() => {
-    // Always fetch contacts for address book functionality
+    // Fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
 
@@ -106,54 +117,43 @@ export default function BabyShowerGuestListPage() {
 
     if (editingGuest) {
       // Update existing guest
-      try {
-        await editGuest({
-          holidayId,
-          guestId: editingGuest.id,
-          payload: {
-            name: formValues.name,
-            email: formValues.email || undefined,
-            phone: formValues.phone || undefined,
-            address: formValues.address || undefined,
-            rsvpStatus: formValues.rsvpStatus as
-              | 'pending'
-              | 'confirmed'
-              | 'declined',
-            notes: formValues.notes || undefined,
-          },
-          auth0User,
-        }).unwrap();
+      await editGuest({
+        holidayId,
+        guestId: editingGuest.id,
+        payload: {
+          name: formValues.name,
+          email: formValues.email || undefined,
+          phone: formValues.phone || undefined,
+          address: formValues.address || undefined,
+          rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
+          notes: formValues.notes || undefined,
+        },
+        auth0User,
+      }).unwrap();
 
-        await refreshHomeData(auth0User, holidayId);
-      } catch (error) {
-        console.error('Failed to update guest:', error);
-      }
-
+      await refreshHomeData(auth0User, holidayId);
       setEditingGuest(null);
       setShowForm(false);
     } else {
       // Add new guest
-      try {
-        await createGuest({
-          holidayId,
-          payload: {
-            name: formValues.name,
-            email: formValues.email || undefined,
-            phone: formValues.phone || undefined,
-            address: formValues.address || undefined,
-            rsvpStatus: formValues.rsvpStatus as
-              | 'pending'
-              | 'confirmed'
-              | 'declined',
-            notes: formValues.notes || undefined,
-          },
-          auth0User,
-        }).unwrap();
+      await createGuest({
+        holidayId,
+        payload: {
+          name: formValues.name,
+          email: formValues.email || undefined,
+          phone: formValues.phone || undefined,
+          address: formValues.address || undefined,
+          rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
+          notes: formValues.notes || undefined,
+        },
+        auth0User,
+      }).unwrap();
 
-        await refreshHomeData(auth0User, holidayId);
-      } catch (error) {
-        console.error('Failed to create guest:', error);
-      }
+      await refreshHomeData(auth0User, holidayId);
+
+      // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+      dispatch(resetContacts());
+      dispatch(fetchContacts());
 
       setShowForm(false);
     }
@@ -258,6 +258,19 @@ export default function BabyShowerGuestListPage() {
   const declinedGuests = sortedGuests.filter(
     (guest: Guest) => guest.rsvpStatus === 'declined',
   );
+
+  // Enhanced Compatibility Layer form configurations
+  const addFormConfig = getFormConfigEnhanced('guests', 'add', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('guests', 'edit', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   return (
     <div className="min-h-screen baby-shower-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -369,7 +382,7 @@ export default function BabyShowerGuestListPage() {
       <FormModal
         isOpen={showForm}
         title={editingGuest ? 'Edit Guest' : 'Add New Guest'}
-        fields={getFormConfig('guests', editingGuest ? 'edit' : 'add').fields}
+        fields={editingGuest ? editFormConfig.fields : addFormConfig.fields}
         initialValues={
           editingGuest
             ? {
@@ -387,15 +400,20 @@ export default function BabyShowerGuestListPage() {
         loading={
           editingGuest ? editGuestState.isLoading : createGuestState.isLoading
         }
-        submitText={editingGuest ? 'Update Guest' : 'Add Guest'}
+        submitText={
+          editingGuest
+            ? editGuestState.isLoading
+              ? 'Processing...'
+              : 'Update Guest'
+            : createGuestState.isLoading
+              ? 'Processing...'
+              : 'Add Guest'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#06b6d4"
-        showAddressBook={true}
         contacts={contacts}
-        onAddressBookSelect={contact => {
-          // The FormModal will handle the form values internally
-        }}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

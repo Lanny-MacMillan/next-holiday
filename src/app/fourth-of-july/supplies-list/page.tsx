@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
@@ -22,6 +27,14 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function FourthOfJulySuppliesListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'fourth-of-july'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
   const { refreshHomeData } = useRefreshHomeData();
@@ -36,16 +49,33 @@ export default function FourthOfJulySuppliesListPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
+  // Helper functions for assignment name resolution
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformGiftWithAssignment = (gift: any) => ({
+    ...gift,
+    assignedToName: gift.assignedTo ? getAssignedUserName(gift.assignedTo) : null,
+  });
+
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  // Use only Redux data - no fallback to API calls
-  const displayGifts =
-    holidayData && homeInitialized && holidayData.gifts ? holidayData.gifts : [];
+  // Use memoized gifts with assignment names
+  const displayGifts = useMemo(() => {
+    if (!holidayData || !homeInitialized || !holidayData.gifts) return [];
+    return holidayData.gifts.map(transformGiftWithAssignment);
+  }, [holidayData?.gifts, homeInitialized, shareMembers]);
 
   useEffect(() => {
     // Fetch contacts for address book functionality
@@ -56,14 +86,14 @@ export default function FourthOfJulySuppliesListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
-
+    setIsSubmitting(true);
     try {
-      const giftData = transformGiftPayload(values, contacts);
+      const giftData = transformGiftPayload(values, contacts, shareMembers);
       await createGift(giftData);
       await refreshHomeData(auth0User, holidayId);
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Failed to add gift:', error);
       // Show user-friendly error message
@@ -72,16 +102,18 @@ export default function FourthOfJulySuppliesListPage() {
       } else {
         alert('Error creating gift. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   function openForm() {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
   function closeForm() {
-    setShowFormModal(false);
+    setShowAddModal(false);
     setSelectedGift(null);
   }
 
@@ -127,17 +159,17 @@ export default function FourthOfJulySuppliesListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
-
+    setIsEditSubmitting(true);
     try {
-      const giftData = transformGiftPayload(values, contacts);
+      const giftData = transformGiftPayload(values, contacts, shareMembers);
       await updateGift(selectedGift.id, giftData);
       await refreshHomeData(auth0User, holidayId);
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Failed to update gift:', error);
@@ -147,6 +179,8 @@ export default function FourthOfJulySuppliesListPage() {
       } else {
         alert('Error updating gift. Please try again.');
       }
+    } finally {
+      setIsEditSubmitting(false);
     }
   }
 
@@ -217,68 +251,18 @@ export default function FourthOfJulySuppliesListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Supply Item Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('supplies', 'add', {
+    holidayKey: 'fourth-of-july',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
-  // Initial values for editing
-  const getInitialValues = () => {
-    if (!selectedGift) return {};
-
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
-    return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price ? selectedGift.price.toString() : '',
-      store: selectedGift.store || '',
-      product_link: selectedGift.productLink || '',
-      notes: selectedGift.notes || '',
-    };
-  };
+  const editFormConfig = getFormConfigEnhanced('supplies', 'edit', {
+    holidayKey: 'fourth-of-july',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   return (
     <div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -330,21 +314,46 @@ export default function FourthOfJulySuppliesListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Supply' : 'Add New Supply'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-        onClose={closeForm}
-        loading={selectedGift ? updateLoading : createLoading}
-        submitText={selectedGift ? 'Update Supply' : 'Add Supply'}
+        isOpen={showAddModal}
+        title="Add New Supply"
+        fields={addFormConfig.fields}
+        onSubmit={handleAddGift}
+        onClose={() => setShowAddModal(false)}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Supply'}
         cancelText="Cancel"
-        cardClassName="card"
+        cardClassName={addFormConfig.cardClassName}
         submitButtonColor="#dc2626"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Supply"
+        fields={editFormConfig.fields}
+        initialValues={{
+          name: selectedGift?.name || selectedGift?.description || '',
+          recipient: selectedGift?.recipient || '',
+          description: selectedGift?.description || '',
+          price: selectedGift?.price ? selectedGift.price.toString() : '',
+          store: selectedGift?.store || '',
+          product_link: selectedGift?.productLink || '',
+          assigned_to: selectedGift?.assignedTo || '',
+          notes: selectedGift?.notes || '',
+        }}
+        onSubmit={handleUpdateGift}
+        onClose={() => setShowEditModal(false)}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Supply'}
+        cancelText="Cancel"
+        cardClassName={editFormConfig.cardClassName}
+        submitButtonColor="#dc2626"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

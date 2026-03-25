@@ -1,17 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -42,10 +46,16 @@ export default function FourthOfJulyTasksPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fourth-of-july'),
   );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
   const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
   // State management
   const [showForm, setShowForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
@@ -58,13 +68,28 @@ export default function FourthOfJulyTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts());
     }
-  }, [isHolidayShared, auth0User, dispatch]);
+  }, [isHolidayShared, auth0User]);
 
-  // Task data processing
-  const tasks =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+  // Helper functions for name resolution
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Use memoized tasks filtering from holiday data with assignment names
+  const tasks = useMemo(() => {
+    const filteredTasks =
+      holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+    return filteredTasks.map(transformTaskWithAssignment);
+  }, [holidayData?.tasks, shareMembers]);
 
   // Sort function following working pattern
   function getSortedTasks() {
@@ -93,7 +118,7 @@ export default function FourthOfJulyTasksPage() {
     });
   }
 
-  const sortedTasks = getSortedTasks();
+  const sortedTasks = getSortedTasks().map(transformTaskWithAssignment);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
   const pendingTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 
@@ -140,35 +165,59 @@ export default function FourthOfJulyTasksPage() {
   // CRUD operations
   const handleAddTask = async (formData: any) => {
     if (!holidayId) return;
+    setIsSubmitting(true);
+    try {
+      const taskData = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        assigned_to: formData.assigned_to || null,
+        due_date: formData.dueDate || null,
+        category: 'Tasks',
+        isCompleted: false,
+      };
 
-    const taskData = {
-      ...formData,
-      category: 'Tasks',
-      isCompleted: false,
-    };
-
-    const result = await createTask(taskData);
-    if (result) {
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
-      await refreshHomeData(auth0User, holidayId);
-      closeForm();
+      const result = await createTask(taskData);
+      if (result) {
+        dispatch(addTaskToHomeData({ holidayId, task: result }));
+        await refreshHomeData(auth0User, holidayId);
+        closeForm();
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
+    setIsEditSubmitting(true);
+    try {
+      const updateData = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        assigned_to: formData.assigned_to || null,
+        due_date: formData.dueDate || null,
+      };
 
-    const result = await updateTask(editingTask.id, formData);
-    if (result) {
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates: formData,
-        }),
-      );
-      await refreshHomeData(auth0User, holidayId);
-      handleEditModalClose();
+      const result = await updateTask(editingTask.id, updateData);
+      if (result) {
+        dispatch(
+          updateTaskInHomeData({
+            holidayId,
+            taskId: editingTask.id,
+            updates: updateData,
+          }),
+        );
+        await refreshHomeData(auth0User, holidayId);
+        handleEditModalClose();
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -189,46 +238,18 @@ export default function FourthOfJulyTasksPage() {
     setShowSortModal(false);
   }
 
-  // Dynamic form fields
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'fourth-of-july',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'fourth-of-july',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   const deleteConfig = getDeleteConfig('tasks');
 
@@ -271,6 +292,7 @@ export default function FourthOfJulyTasksPage() {
               onDelete={(taskId: string) => handleDeleteModalOpen(task)}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
+              disableInternalModal={true}
             />
           )}
         />
@@ -292,6 +314,7 @@ export default function FourthOfJulyTasksPage() {
                 onDelete={(taskId: string) => handleDeleteModalOpen(task)}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
+                disableInternalModal={true}
               />
             )}
           />
@@ -320,39 +343,41 @@ export default function FourthOfJulyTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={formFields}
+        fields={addFormConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={createLoading}
-        submitText={createLoading ? 'Adding...' : 'Add Task'}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Task'}
         cancelText="Cancel"
-        cardClassName="card card-tasks"
+        cardClassName={addFormConfig.cardClassName}
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
-          dueDate: editingTask?.dueDate || '',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}
-        loading={updateLoading}
-        submitText={updateLoading ? 'Updating...' : 'Update Task'}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
         cancelText="Cancel"
-        cardClassName="card card-tasks"
+        cardClassName={editFormConfig.cardClassName}
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -366,7 +391,6 @@ export default function FourthOfJulyTasksPage() {
         itemName={taskToDelete?.title}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
       />
     </div>

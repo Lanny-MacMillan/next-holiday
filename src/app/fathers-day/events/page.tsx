@@ -6,13 +6,20 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
@@ -38,20 +45,45 @@ export default function FathersDayEventsPage() {
     selectIsHolidayShared(state, 'fathers-day'),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'fathers-day'),
+  );
+  const baseMembers = shareData?.members || [];
+  const shareMembers = baseMembers;
+
+  // Name resolution helpers for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   const events = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Events') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
 
   // State management
-  const [showForm, setShowForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -62,23 +94,25 @@ export default function FathersDayEventsPage() {
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim()) return;
     if (!holidayId) return;
-
+    setIsSubmitting(true);
     try {
       const payload = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
+        due_date: values.dueDate || undefined,
         category: 'Events',
-        dueDate: values.dueDate || undefined,
         isCompleted: false,
       };
 
       await createTask(payload);
       await refreshHomeData(auth0User, holidayId);
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Failed to add task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -102,45 +136,68 @@ export default function FathersDayEventsPage() {
     setShowEditModal(true);
   };
 
-  async function handleEditSubmit(values: Record<string, any>) {
-    if (!editingTask || !holidayId) return;
+  const handleDeleteEvent = (task: any) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
 
+  const handleEditTask = async (values: Record<string, any>) => {
+    if (!editingTask || !holidayId) return;
+    setIsEditSubmitting(true);
     try {
-      const updatedTask = {
+      const payload = {
         title: values.title,
-        description: values.description || undefined,
+        description: values.description || null,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || null,
+        due_date: values.dueDate || null,
         category: 'Events',
-        dueDate: values.dueDate || undefined,
       };
 
-      await updateTask(editingTask.id, updatedTask);
+      await updateTask(editingTask.id, payload);
       await refreshHomeData(auth0User, holidayId);
-      setEditingTask(null);
       setShowEditModal(false);
+      setEditingTask(null);
     } catch (error) {
       console.error('Failed to update task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
-  }
+  };
 
-  async function handleDelete(taskId: string, taskTitle: string) {
-    if (!holidayId) return;
-
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete || !holidayId) return;
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
       await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
-  }
+  };
+
+  // Enhanced Compatibility Layer for form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'fathers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'fathers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('tasks');
 
   function openForm() {
-    setShowForm(true);
+    setShowAddModal(true);
   }
 
   function closeForm() {
-    setShowForm(false);
+    setShowAddModal(false);
   }
 
   function closeEditModal() {
@@ -197,60 +254,6 @@ export default function FathersDayEventsPage() {
   const incompleteEvents = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedEvents = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // FormModal fields configuration - matching Kwanzaa events exactly
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
-
-  // Sort options configuration
-  const sortOptions = [
-    { value: 'none', label: 'Default Order' },
-    { value: 'priority', label: 'Priority' },
-    { value: 'dateDue', label: 'Due Date' },
-    ...(isHolidayShared ? [{ value: 'assignedTo', label: 'Assigned To' }] : []),
-    { value: 'category', label: 'Category' },
-  ];
-
-  const handleSortChange = (newSortBy: string) => {
-    setSortBy(newSortBy as SortOption);
-    setShowSortModal(false);
-  };
-
   return (
     <div className="min-h-screen fathers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
@@ -277,8 +280,8 @@ export default function FathersDayEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
-              onEdit={handleEditEvent}
+              onDelete={() => handleDeleteEvent(task)}
+              onEdit={() => handleEditEvent(task)}
               theme={{
                 accentColor: '#3b82f6', // Blue for Father's Day
               }}
@@ -299,8 +302,8 @@ export default function FathersDayEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
-              onEdit={handleEditEvent}
+              onDelete={() => handleDeleteEvent(task)}
+              onEdit={() => handleEditEvent(task)}
               theme={{
                 accentColor: '#3b82f6', // Blue for Father's Day
               }}
@@ -316,49 +319,79 @@ export default function FathersDayEventsPage() {
         isOpen={showSortModal}
         onClose={() => setShowSortModal(false)}
         sortBy={sortBy}
-        onSortChange={handleSortChange}
-        sortOptions={sortOptions}
+        onSortChange={(option: string) => {
+          setSortBy(option as SortOption);
+          setShowSortModal(false);
+        }}
+        sortOptions={[
+          { value: 'none', label: 'Default Order' },
+          { value: 'priority', label: 'Priority' },
+          { value: 'dateDue', label: 'Due Date' },
+          ...(isHolidayShared
+            ? [{ value: 'assignedTo', label: 'Assigned To' }]
+            : []),
+          { value: 'category', label: 'Category' },
+        ]}
         title="Sort Events"
       />
 
-      {/* Form Modal */}
+      {/* Add Modal */}
       <FormModal
-        isOpen={showForm}
+        isOpen={showAddModal}
         title="Add New Event"
-        fields={formFields}
+        fields={addFormConfig.fields}
         initialValues={{ priority: 'medium' }}
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={loading}
-        submitText="Add Event"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Event'}
+        cancelText="Cancel"
         cardClassName="card-events-fathers-day"
+        submitButtonColor="#3b82f6"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Event"
-        fields={formFields}
-        initialValues={
-          editingTask
-            ? {
-                title: editingTask.title || '',
-                description: editingTask.description || '',
-                priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
-                dueDate: editingTask.dueDate
-                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
-                  : '',
-              }
-            : {}
-        }
-        onSubmit={handleEditSubmit}
+        fields={editFormConfig.fields}
+        initialValues={{
+          title: editingTask?.title || '',
+          description: editingTask?.description || '',
+          priority: editingTask?.priority || 'medium',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
+        }}
+        onSubmit={handleEditTask}
         onClose={closeEditModal}
-        loading={loading}
-        submitText="Update Event"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Event'}
+        cancelText="Cancel"
         cardClassName="card-events-fathers-day"
+        submitButtonColor="#3b82f6"
+        contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setTaskToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        loading={deleteLoading}
+        title={deleteConfig.title}
+        message={deleteConfig.message}
+        itemName={taskToDelete?.title}
+        confirmText={deleteConfig.confirmText}
+        cancelText={deleteConfig.cancelText}
+        confirmButtonColor={deleteConfig.confirmButtonColor}
       />
     </div>
   );

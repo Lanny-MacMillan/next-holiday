@@ -13,9 +13,15 @@ import {
   removeTaskFromHomeData,
   updateTaskInHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -75,13 +81,31 @@ export default function HalloweenTrickOrTreatPrepPage() {
   );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
-  // Data filtering using holidayData from the hook
+  const shareMembers =
+    useAppSelector((state: any) => selectShareByHolidayKey(state, 'halloween'))
+      ?.members || [];
+
+  // Name resolution for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Data filtering using holidayData from the hook with assignment name resolution
   const trickOrTreatPrep = useMemo(
     () =>
-      holidayData?.tasks?.filter(
-        (task: any) => task.category === 'Trick or Treat Prep',
-      ) || [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter(
+          (task: any) => task.category === 'Trick or Treat Prep',
+        ) || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -100,6 +124,8 @@ export default function HalloweenTrickOrTreatPrepPage() {
     show: false,
     taskId: null,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Check if default trick-or-treat prep tasks exist
   useEffect(() => {
@@ -117,14 +143,15 @@ export default function HalloweenTrickOrTreatPrepPage() {
   const handleAddTrickOrTreatPrep = async (values: any) => {
     if (!values.title?.trim() || !holidayId) return;
 
+    setIsSubmitting(true);
     try {
       const result = await createTask({
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || undefined, // Use snake_case for API
+        due_date: values.dueDate || undefined, // Use snake_case for API
         category: 'Trick or Treat Prep',
-        dueDate: values.dueDate,
       });
 
       // Update Redux state immediately
@@ -136,6 +163,8 @@ export default function HalloweenTrickOrTreatPrepPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -187,13 +216,14 @@ export default function HalloweenTrickOrTreatPrepPage() {
   const handleEditTrickOrTreatPrepSubmit = async (values: any) => {
     if (!editingTask || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
       const updates = {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to || null, // Use snake_case for API
+        due_date: values.dueDate || null, // Use snake_case for API
       };
 
       await updateTask(editingTask.id, updates);
@@ -214,6 +244,8 @@ export default function HalloweenTrickOrTreatPrepPage() {
       setShowEditModal(false);
     } catch (error) {
       console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -311,8 +343,12 @@ export default function HalloweenTrickOrTreatPrepPage() {
   }
 
   const sortedTasks = sortTasks(trickOrTreatPrep);
-  const incompleteTrickOrTreatPrep = sortedTasks.filter((task: any) => !task.isCompleted);
-  const completedTrickOrTreatPrep = sortedTasks.filter((task: any) => task.isCompleted);
+  const incompleteTrickOrTreatPrep = sortedTasks.filter(
+    (task: any) => !task.isCompleted,
+  );
+  const completedTrickOrTreatPrep = sortedTasks.filter(
+    (task: any) => task.isCompleted,
+  );
 
   const renderTaskItem = (task: any) => (
     <ToDoCard
@@ -402,113 +438,67 @@ export default function HalloweenTrickOrTreatPrepPage() {
       {/* Form Modal */}
       <FormModal
         isOpen={showForm}
-        title="Add New Trick-or-Treat Prep Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Trick-or-Treat Task*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared && isAuthorizedForSharing
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          assignedTo: '',
-          dueDate: '',
-        }}
+        {...getFormConfigEnhanced('tasks', 'add', {
+          holidayKey: 'halloween',
+          shareMembers: shareMembers,
+          auth0User: auth0User,
+        })}
         onSubmit={handleAddTrickOrTreatPrep}
         onClose={closeForm}
-        loading={createLoading}
-        submitText="Add Task"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Task'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
-        title="Edit Trick-or-Treat Prep Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Trick-or-Treat Task*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared && isAuthorizedForSharing
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          {
-            id: 'dueDate',
-            type: 'date' as const,
-            placeholder: 'Due Date',
-          },
-        ]}
+        {...getFormConfigEnhanced('tasks', 'edit', {
+          holidayKey: 'halloween',
+          shareMembers: shareMembers,
+          auth0User: auth0User,
+        })}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          assignedTo: editingTask?.assignedTo || '',
-          dueDate: editingTask?.dueDate || '',
+          assigned_to: (() => {
+            // The form expects UUID as the value since buildAssignToField uses member.uuid
+            console.log('=== EDIT MODAL DEBUG ===');
+            console.log('editingTask?.assignedTo:', editingTask?.assignedTo);
+            console.log('shareMembers:', shareMembers);
+
+            // For Enhanced Compatibility Layer, the assigned_to field expects UUID values
+            // directly, not userId. The options are built with member.uuid as values.
+            return editingTask?.assignedTo || '';
+          })(),
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
         }}
         onSubmit={handleEditTrickOrTreatPrepSubmit}
         onClose={closeEditModal}
-        loading={updateLoading}
-        submitText="Update Task"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
         cardClassName="card-tasks"
+        contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={deleteConfirm.show}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+        loading={deleteLoading}
+        title="Delete Task?"
+        message="Are you sure you want to delete this task? This action cannot be undone."
+        cardClassName="bg-white rounded-lg shadow-lg"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonColor="#ef4444"
       />
 
       {/* Sort Modal */}

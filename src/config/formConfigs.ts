@@ -1,5 +1,6 @@
-import { FormField } from '@/components/modals/FormModal';
+import { FormField } from '@/types/form';
 
+// Re-export legacy interface for backward compatibility
 export interface FormConfig {
   title: string;
   fields: FormField[];
@@ -174,20 +175,15 @@ export const giftsFormConfig: FormConfig = {
   showAddressBook: true,
 };
 
-// Supplies form configuration (for New Year supplies-list)
-export const suppliesFormConfig: FormConfig = {
-  title: 'Add New Supply Item',
+// Shopping list form configuration (for shopping-list pages like Thanksgiving)
+export const shoppingListFormConfig: FormConfig = {
+  title: 'Add New Shopping Item',
   fields: [
     {
-      id: 'recipient',
+      id: 'name',
       type: 'text',
-      placeholder: 'Recipient*',
+      placeholder: 'Item Name*',
       required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text',
-      placeholder: 'Supply Item',
     },
     {
       id: 'description',
@@ -197,7 +193,64 @@ export const suppliesFormConfig: FormConfig = {
     {
       id: 'price',
       type: 'number',
-      placeholder: 'Price',
+      placeholder: 'Estimated Price',
+      step: '0.01',
+    },
+    {
+      id: 'actual_price',
+      type: 'number',
+      placeholder: 'Actual Price (optional)',
+      step: '0.01',
+    },
+    {
+      id: 'store',
+      type: 'text',
+      placeholder: 'Store',
+    },
+    {
+      id: 'product_link',
+      type: 'url',
+      placeholder: 'Product Link (optional)',
+    },
+    {
+      id: 'notes',
+      type: 'textarea',
+      placeholder: 'Notes',
+      rows: 2,
+    },
+  ],
+  submitText: 'Add Item',
+  cancelText: 'Cancel',
+  cardClassName: 'card',
+  submitButtonColor: '#eab308', // Yellow for Thanksgiving
+  showAddressBook: false, // No address book for shopping
+};
+
+// Supplies form configuration (for supplies-list and shopping-list pages)
+export const suppliesFormConfig: FormConfig = {
+  title: 'Add New Supply Item',
+  fields: [
+    {
+      id: 'name',
+      type: 'text',
+      placeholder: 'Item Name*',
+      required: true,
+    },
+    {
+      id: 'description',
+      type: 'text',
+      placeholder: 'Description (optional)',
+    },
+    {
+      id: 'price',
+      type: 'number',
+      placeholder: 'Estimated Price',
+      step: '0.01',
+    },
+    {
+      id: 'actual_price',
+      type: 'number',
+      placeholder: 'Actual Price (optional)',
       step: '0.01',
     },
     {
@@ -220,8 +273,8 @@ export const suppliesFormConfig: FormConfig = {
   submitText: 'Add Supply Item',
   cancelText: 'Cancel',
   cardClassName: 'card',
-  submitButtonColor: '#f59e0b', // Amber for New Year
-  showAddressBook: true,
+  submitButtonColor: '#f59e0b', // Amber for supplies
+  showAddressBook: false, // No address book for supplies
 };
 
 // Edit configurations (for editing existing items)
@@ -253,6 +306,12 @@ export const editSuppliesFormConfig: FormConfig = {
   ...suppliesFormConfig,
   title: 'Edit Supply Item',
   submitText: 'Update Supply Item',
+};
+
+export const editShoppingListFormConfig: FormConfig = {
+  ...shoppingListFormConfig,
+  title: 'Edit Item',
+  submitText: 'Update Item',
 };
 
 // Guest list form configuration (simplified for current database schema)
@@ -463,7 +522,9 @@ export function getFormConfig(
     | 'gifts'
     | 'guests'
     | 'addressBook'
-    | 'supplies',
+    | 'supplies'
+    | 'shopping-list'
+    | 'shopping',
   mode: 'add' | 'edit' = 'add',
   customTitle?: string,
   customFieldLabel?: string,
@@ -477,6 +538,9 @@ export function getFormConfig(
     supplies: mode === 'add' ? suppliesFormConfig : editSuppliesFormConfig,
     guests: mode === 'add' ? guestsFormConfig : editGuestsFormConfig,
     addressBook: mode === 'add' ? addressBookFormConfig : editAddressBookFormConfig,
+    'shopping-list':
+      mode === 'add' ? shoppingListFormConfig : editShoppingListFormConfig,
+    shopping: mode === 'add' ? giftsFormConfig : editGiftsFormConfig, // Use gifts config as base for shopping
   };
 
   const baseConfig = configs[type];
@@ -510,4 +574,100 @@ export function getFormConfig(
   }
 
   return baseConfig;
+}
+
+// ============================================================================
+// NEW FORM BUILDER COMPATIBILITY LAYER
+// ============================================================================
+// This section provides compatibility between old formConfigs and new form builder
+
+import {
+  buildFormConfig as newBuildFormConfig,
+  ShareMember,
+  shouldShowAssignTo,
+  enhanceShareMembersWithCurrentUser,
+} from '@/lib/formBuilder';
+import { HolidayKey, ContentType } from '@/config/baseFormConfigs';
+
+/**
+ * Enhanced getFormConfig that can work with the new form builder system
+ * Maintains backward compatibility while adding assignTo support
+ */
+export function getFormConfigEnhanced(
+  type:
+    | 'cards'
+    | 'tasks'
+    | 'events'
+    | 'gifts'
+    | 'guests'
+    | 'addressBook'
+    | 'supplies'
+    | 'shopping-list'
+    | 'shopping',
+  mode: 'add' | 'edit' = 'add',
+  options?: {
+    customTitle?: string;
+    customFieldLabel?: string;
+    customSubmitText?: string;
+    holidayKey?: HolidayKey;
+    shareMembers?: ShareMember[];
+    auth0User?: { sub?: string; name?: string; email?: string } | null;
+  },
+): FormConfig {
+  // Enhance shareMembers with current user for self-assignment functionality
+  const enhancedShareMembers = options?.shareMembers
+    ? enhanceShareMembersWithCurrentUser(options.shareMembers, options.auth0User)
+    : options?.shareMembers || [];
+
+  // If we have a holidayKey, use the new form builder for supported types
+  // This ensures consistent field behavior (like address book) even for non-shared holidays
+  if (options?.holidayKey) {
+    const contentTypeMapping: Partial<Record<typeof type, ContentType>> = {
+      tasks: 'task',
+      events: 'task', // Events are stored as tasks with category="Events"
+      gifts: 'gift',
+      cards: 'card',
+      guests: 'guest-list', // Map guests to guest-list configuration
+      'shopping-list': 'shopping', // Map shopping-list to shopping configuration
+      shopping: 'shopping', // Map shopping to shopping configuration
+      supplies: 'supplies', // Map supplies to supplies configuration without address book
+    };
+
+    const contentType = contentTypeMapping[type];
+    if (contentType) {
+      const newConfig = newBuildFormConfig(
+        contentType,
+        options.holidayKey,
+        enhancedShareMembers,
+        {
+          submitText: options.customSubmitText,
+        },
+      );
+
+      // Convert new FormConfig to legacy FormConfig format
+      return {
+        title:
+          options.customTitle ||
+          `${mode === 'add' ? 'Add' : 'Edit'} ${type.slice(0, -1)}`,
+        fields: newConfig.fields,
+        submitText: newConfig.submitText,
+        cancelText: 'Cancel',
+        cardClassName: newConfig.cardClassName || 'card',
+        submitButtonColor: '#3b82f6',
+        showAddressBook: newConfig.showAddressBook,
+        customTitle: options.customTitle,
+        customFieldLabel: options.customFieldLabel,
+        customSubmitText: options.customSubmitText,
+      };
+    }
+  }
+
+  // Fallback to original getFormConfig for unsupported types or when no shareMembers
+  return getFormConfig(
+    type,
+    mode,
+    options?.customTitle,
+    options?.customFieldLabel,
+    options?.customSubmitText,
+  );
 }

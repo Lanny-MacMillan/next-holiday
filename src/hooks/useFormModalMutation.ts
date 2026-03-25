@@ -1,6 +1,7 @@
 import { usePathname } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useState, useEffect } from 'react';
 import {
   useCreateTaskMutation,
   useCreateGiftMutation,
@@ -17,10 +18,46 @@ import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 export function useFormModalMutation() {
   const pathname = usePathname();
   const { user: auth0User } = useAuth0();
+  const [enhancedAuth0User, setEnhancedAuth0User] = useState(auth0User);
+
   const holidayPreferences = useAppSelector(
     (state: any) => state.home.data?.holidayPreferences || [],
   );
   const homeInitialized = useAppSelector((state: any) => state.home.initialized);
+
+  // Enhance auth0User with database UUID for proper assignment functionality
+  useEffect(() => {
+    async function enhanceUserWithDatabaseId() {
+      if (!auth0User?.sub) {
+        setEnhancedAuth0User(auth0User);
+        return;
+      }
+
+      try {
+        // Fetch database user to get the UUID
+        const response = await fetch(
+          `/api/users/by-auth0-sub?sub=${encodeURIComponent(auth0User.sub)}`,
+        );
+
+        if (response.ok) {
+          const dbUser = await response.json();
+          // Merge Auth0 user with database UUID
+          setEnhancedAuth0User({
+            ...auth0User,
+            id: dbUser.id, // Use database UUID for assignments
+          });
+        } else {
+          // Fallback to original auth0User if API fails
+          setEnhancedAuth0User(auth0User);
+        }
+      } catch (error) {
+        console.warn('Failed to enhance auth0User with database UUID:', error);
+        setEnhancedAuth0User(auth0User);
+      }
+    }
+
+    enhanceUserWithDatabaseId();
+  }, [auth0User?.sub]);
 
   // Only resolve holidayId if home data is initialized
   const holidayId = homeInitialized
@@ -105,7 +142,7 @@ export function useFormModalMutation() {
     type: mutationInfo?.type,
     isLoading: mutationInfo?.state.isLoading || false,
     error: mutationInfo?.state.error,
-    auth0User,
+    auth0User: enhancedAuth0User, // Use enhanced user with database UUID
     // Card-specific mutations
     updateCard,
     editCard,

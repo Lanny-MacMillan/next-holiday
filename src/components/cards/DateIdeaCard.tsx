@@ -10,6 +10,8 @@ interface Task {
   dueDate?: string;
   notes?: string;
   isCompleted: boolean;
+  assignedTo?: string;
+  assignedToName?: string;
 }
 
 interface DateIdeaCardProps {
@@ -123,39 +125,43 @@ export default function DateIdeaCard({
                   </p>
                 )}
                 <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
-                  {task.dueDate && (
-                    <div>
-                      <span
-                        className="text-white opacity-80"
-                        style={{ fontFamily: 'var(--font-family-fredoka)' }}
-                      >
-                        Due:
-                      </span>
-                      <span
-                        className="ml-1 font-medium text-white"
-                        style={{ fontFamily: 'var(--font-family-fredoka)' }}
-                      >
-                        {task.dueDate?.split('T')[0]
-                          ? new Date(
-                              task.dueDate.split('T')[0] + 'T12:00:00',
-                            ).toLocaleDateString()
-                          : 'No date set'}
-                      </span>
-                    </div>
-                  )}
                   <div>
-                    <span
-                      className="text-white opacity-80"
-                      style={{ fontFamily: 'var(--font-family-fredoka)' }}
-                    >
-                      Category:
-                    </span>
-                    <span
-                      className="ml-1 font-medium text-white"
-                      style={{ fontFamily: 'var(--font-family-fredoka)' }}
-                    >
-                      {task.category}
-                    </span>
+                    {task.dueDate && (
+                      <div className="mb-2">
+                        <span
+                          className="text-white opacity-80"
+                          style={{ fontFamily: 'var(--font-family-fredoka)' }}
+                        >
+                          Due:
+                        </span>
+                        <span
+                          className="ml-1 font-medium text-white"
+                          style={{ fontFamily: 'var(--font-family-fredoka)' }}
+                        >
+                          {task.dueDate?.split('T')[0]
+                            ? new Date(
+                                task.dueDate.split('T')[0] + 'T12:00:00',
+                              ).toLocaleDateString()
+                            : 'No date set'}
+                        </span>
+                      </div>
+                    )}
+                    {task.assignedToName && (
+                      <div>
+                        <div
+                          className="text-white opacity-80"
+                          style={{ fontFamily: 'var(--font-family-fredoka)' }}
+                        >
+                          Assigned to:
+                        </div>
+                        <div
+                          className="font-medium text-white"
+                          style={{ fontFamily: 'var(--font-family-fredoka)' }}
+                        >
+                          {task.assignedToName}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {task.notes && (
@@ -240,23 +246,29 @@ export default function DateIdeaCard({
               </p>
             )}
             <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
-              {task.dueDate && (
-                <div>
-                  <span className="text-gray-500 dark:text-gray-500">Due:</span>
-                  <span className="ml-1 font-medium text-gray-800 dark:text-white">
-                    {task.dueDate?.split('T')[0]
-                      ? new Date(
-                          task.dueDate.split('T')[0] + 'T12:00:00',
-                        ).toLocaleDateString()
-                      : 'No date set'}
-                  </span>
-                </div>
-              )}
               <div>
-                <span className="text-gray-500 dark:text-gray-500">Category:</span>
-                <span className="ml-1 font-medium text-gray-800 dark:text-white">
-                  {task.category}
-                </span>
+                {task.dueDate && (
+                  <div className="mb-2">
+                    <span className="text-gray-500 dark:text-gray-500">Due:</span>
+                    <span className="ml-1 font-medium text-gray-800 dark:text-white">
+                      {task.dueDate?.split('T')[0]
+                        ? new Date(
+                            task.dueDate.split('T')[0] + 'T12:00:00',
+                          ).toLocaleDateString()
+                        : 'No date set'}
+                    </span>
+                  </div>
+                )}
+                {task.assignedToName && (
+                  <div className="mb-2">
+                    <div className="text-gray-500 dark:text-gray-500">
+                      Assigned to:
+                    </div>
+                    <div className="font-medium text-gray-800 dark:text-white">
+                      {task.assignedToName}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             {task.notes && (

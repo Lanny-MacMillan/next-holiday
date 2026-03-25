@@ -1,17 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
   setHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -92,11 +96,36 @@ export default function DailyPrinciplesPage() {
     selectIsHolidayShared(state, 'kwanzaa'),
   );
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
-  const displayTasks =
-    holidayData?.tasks?.filter(
-      (task: any) => task.category === 'Daily Principles',
-    ) || [];
+  const displayTasks = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter(
+          (task: any) => task.category === 'Daily Principles',
+        ) || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   // State management
@@ -172,9 +201,9 @@ export default function DailyPrinciplesPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Daily Principles',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -193,9 +222,17 @@ export default function DailyPrinciplesPage() {
     if (!holidayId || !auth0User) return;
 
     try {
+      // Calculate Kwanzaa dates (Dec 26, 2026 - Jan 1, 2027)
+      const kwanzaaStartDate = new Date('2026-12-26');
+
       // Add default principles one at a time
       for (let i = 0; i < defaultKwanzaaPrinciples.length; i++) {
         const principle = defaultKwanzaaPrinciples[i];
+
+        // Calculate due date based on day number
+        const dueDate = new Date(kwanzaaStartDate);
+        dueDate.setDate(kwanzaaStartDate.getDate() + (principle.dayNumber - 1));
+        const dueDateString = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
         console.log(
           `Adding principle ${i + 1}/${defaultKwanzaaPrinciples.length}: ${principle.name}`,
@@ -205,6 +242,8 @@ export default function DailyPrinciplesPage() {
           title: principle.name,
           description: principle.description,
           priority: principle.priority,
+          assigned_to: undefined,
+          due_date: dueDateString,
           category: 'Daily Principles',
         });
 
@@ -230,8 +269,8 @@ export default function DailyPrinciplesPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
-        dueDate: values.dueDate || undefined,
+        assigned_to: values.assigned_to || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state
@@ -312,46 +351,6 @@ export default function DailyPrinciplesPage() {
   const sortedTasks = sortTasks(displayTasks || []);
   const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
-
-  // Form fields with conditional shared holiday support
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Daily Principle*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
 
   return (
     <div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -455,14 +454,21 @@ export default function DailyPrinciplesPage() {
       <FormModal
         isOpen={showFormModal}
         title={selectedTask ? 'Edit Principle' : 'Add Principle'}
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', selectedTask ? 'edit' : 'add', {
+            customTitle: selectedTask ? 'Edit Principle' : 'Add Principle',
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           selectedTask
             ? {
                 title: selectedTask.title || '',
                 description: selectedTask.description || '',
                 priority: selectedTask.priority || 'medium',
-                assignedTo: selectedTask.assignedTo || '',
+                assigned_to: selectedTask.assignedTo || '',
                 dueDate: selectedTask.dueDate
                   ? toDateOnlyString(new Date(selectedTask.dueDate))
                   : '',
@@ -471,8 +477,16 @@ export default function DailyPrinciplesPage() {
         }
         onSubmit={selectedTask ? handleEditTask : handleAddTask}
         onClose={closeForm}
-        loading={updateLoading}
-        submitText={selectedTask ? 'Update Principle' : 'Add Principle'}
+        loading={selectedTask ? updateLoading : createLoading}
+        submitText={
+          selectedTask
+            ? updateLoading
+              ? 'Updating...'
+              : 'Update Principle'
+            : createLoading
+              ? 'Adding...'
+              : 'Add Principle'
+        }
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626"

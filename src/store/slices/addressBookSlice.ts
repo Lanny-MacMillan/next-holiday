@@ -34,19 +34,16 @@ const initialState: AddressBookState = {
 // Async thunks
 export const fetchContacts = createAsyncThunk(
   'addressBook/fetchContacts',
-  async (_, { getState }) => {
-    // Get current state to check if we already have data
+  async (_, { getState, dispatch }) => {
+    // Always reset first to ensure fresh data
+    dispatch(addressBookSlice.actions.resetContacts());
+
+    // Get current state
     const state = getState() as any;
-    const currentContacts = state.addressBook.contacts;
-    const isInitialized = state.addressBook.initialized;
 
     // Get contacts from home data if available
     const homeContacts = state.home?.data?.contacts;
 
-    // Check if we already have contacts and home data is available
-    if (isInitialized && currentContacts.length > 0) {
-      return currentContacts;
-    }
     if (homeContacts && homeContacts.length > 0) {
       // Convert Date objects to strings for consistency with API responses
       const convertedContacts = homeContacts.map((contact: any) => ({
@@ -188,6 +185,10 @@ const addressBookSlice = createSlice({
     clearError: state => {
       state.error = null;
     },
+    resetContacts: state => {
+      state.initialized = false;
+      state.contacts = [];
+    },
   },
   extraReducers: builder => {
     builder
@@ -254,5 +255,6 @@ const addressBookSlice = createSlice({
   },
 });
 
-export const { setSelectedContact, clearError } = addressBookSlice.actions;
+export const { setSelectedContact, clearError, resetContacts } =
+  addressBookSlice.actions;
 export default addressBookSlice.reducer;

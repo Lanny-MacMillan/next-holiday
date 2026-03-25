@@ -1,13 +1,17 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAppSelector } from '@/store/hooks';
+import { HolidayShapes } from '@/data/holidayShapes';
 
 interface HolidayHeaderProps {
   holidayName: string;
   description?: string;
   showBackButton?: boolean;
   backHref?: string;
+  cycleIcons?: boolean;
+  availableHolidays?: string[];
 }
 
 export default function HolidayHeader({
@@ -15,10 +19,55 @@ export default function HolidayHeader({
   description = 'Plan your holiday with ease!',
   showBackButton = true,
   backHref = '/',
+  cycleIcons = false,
+  availableHolidays = [],
 }: HolidayHeaderProps) {
   const { displayMode } = useAppSelector((state: any) => state.theme.settings);
+  const [currentHolidayIndex, setCurrentHolidayIndex] = useState(0);
+  const [isIconCyclingEnabled, setIsIconCyclingEnabled] = useState(cycleIcons);
 
   const isGamified = displayMode === 'gamified';
+
+  // Default holiday list if none provided
+  const defaultHolidays = [
+    'christmas',
+    'hanukkah',
+    'kwanzaa',
+    'new-year',
+    'valentines',
+    'easter',
+    'halloween',
+    'thanksgiving',
+    'mothers-day',
+    'fathers-day',
+    'fourth-of-july',
+    'birthday',
+    'anniversary',
+    'graduation',
+    'baby-shower',
+  ];
+
+  const holidaysToUse =
+    availableHolidays.length > 0 ? availableHolidays : defaultHolidays;
+
+  // Cycling logic
+  useEffect(() => {
+    if (!cycleIcons || !isIconCyclingEnabled || holidaysToUse.length <= 1) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentHolidayIndex(prev => (prev + 1) % holidaysToUse.length);
+    }, 2000); // 2 seconds
+
+    return () => clearInterval(interval);
+  }, [cycleIcons, isIconCyclingEnabled, holidaysToUse.length]);
+
+  // Get the current holiday for icon display
+  const currentHolidayForIcon =
+    cycleIcons && isIconCyclingEnabled && holidaysToUse.length > 0
+      ? holidaysToUse[currentHolidayIndex]
+      : holidayName.toLowerCase();
 
   // Get outline color based on holiday
   const getOutlineColor = () => {
@@ -82,6 +131,43 @@ export default function HolidayHeader({
     return emojiMap[holidayName.toLowerCase()] || '🎉';
   };
 
+  // Get holiday SVG component
+  const getHolidaySvg = () => {
+    const holidayToUse = currentHolidayForIcon;
+
+    const svgMap: { [key: string]: React.ComponentType<any> } = {
+      christmas: HolidayShapes.christmas,
+      hanukkah: HolidayShapes.hanukkah,
+      kwanzaa: HolidayShapes.kwanzaa,
+      'new-year': HolidayShapes['new-year'],
+      'new year': HolidayShapes['new-year'],
+      valentines: HolidayShapes.valentines,
+      "valentine's day": HolidayShapes.valentines,
+      easter: HolidayShapes.easter,
+      halloween: HolidayShapes.halloween,
+      thanksgiving: HolidayShapes.thanksgiving,
+      'mothers-day': HolidayShapes['mothers-day'] || HolidayShapes.mothersday,
+      "mother's day": HolidayShapes['mothers-day'] || HolidayShapes.mothersday,
+      'fathers-day': HolidayShapes['fathers-day'] || HolidayShapes.fathersday,
+      "father's day": HolidayShapes['fathers-day'] || HolidayShapes.fathersday,
+      'fourth-of-july':
+        HolidayShapes['fourth-of-july'] || HolidayShapes.fourthoffuly,
+      'fourth of july':
+        HolidayShapes['fourth-of-july'] || HolidayShapes.fourthoffuly,
+      birthday: HolidayShapes.birthday,
+      anniversary: HolidayShapes.anniversary,
+      graduation: HolidayShapes.graduation,
+      'baby-shower': HolidayShapes['baby-shower'] || HolidayShapes.babyshower,
+      'baby shower': HolidayShapes['baby-shower'] || HolidayShapes.babyshower,
+    };
+
+    const SvgComponent =
+      svgMap[holidayToUse.toLowerCase()] || HolidayShapes.christmas;
+    return (
+      <SvgComponent className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 mr-2 sm:mr-3 md:mr-4" />
+    );
+  };
+
   // Clean holiday name (remove existing emojis and extra spaces)
   const getCleanHolidayName = () => {
     return holidayName
@@ -123,7 +209,7 @@ export default function HolidayHeader({
                 isGamified ? 'font-display' : 'font-sans'
               } text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-2 text-black dark:text-white break-words ${
                 isGamified ? 'tracking-wide relative z-10' : ''
-              }`}
+              } flex items-baseline justify-center`}
               style={
                 isGamified
                   ? {
@@ -135,16 +221,49 @@ export default function HolidayHeader({
                     }
               }
             >
-              {getHolidayEmoji()} {getCleanHolidayName()}
+              <span className="flex items-center">
+                {getHolidaySvg()} {getCleanHolidayName()}
+              </span>
             </h1>
           </div>
           <p
-            className="text-center text-gray-600 dark:text-white text-sm sm:text-base break-words px-2"
+            className="text-center text-gray-600 dark:text-white text-sm sm:text-base break-words px-2 flex items-center justify-center gap-2"
             style={{
               fontFamily: 'var(--font-family-fredoka)',
             }}
           >
             {description}
+            {/* Toggle button for cycling (only show if cycleIcons is true) */}
+            {/* {cycleIcons && (
+              <button
+                onClick={() => setIsIconCyclingEnabled(!isIconCyclingEnabled)}
+                className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                title={`${isIconCyclingEnabled ? 'Stop' : 'Start'} icon cycling`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  {isIconCyclingEnabled ? (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 9v6m4-6v6"
+                    />
+                  ) : (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                  )}
+                </svg>
+              </button>
+            )} */}
           </p>
         </div>
       </div>

@@ -6,20 +6,25 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import Toast from '@/components/common/Toast';
 import {
   updateGiftInHomeData,
   addGiftToHomeData,
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { transformGiftPayload } from '@/utils/formTransformers';
+import { transformSuppliesPayload } from '@/utils/formTransformers';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -29,11 +34,54 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 
 export default function ThanksgivingShoppingListPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Use centralized holiday page data hook
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
+
+  // Redux & Sharing - Enhanced Compatibility Layer
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'thanksgiving'),
+  );
+
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'thanksgiving'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
+  const shareMembers =
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '',
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId,
+            })),
+        ]
+      : baseMembers;
+
+  // Enhanced Compatibility Layer - Gift form configuration (without holidayKey restriction)
+  const addFormConfig = getFormConfigEnhanced('supplies', 'add', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('supplies', 'edit', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   // Use standardized mutation hooks for gifts
   const {
@@ -63,37 +111,34 @@ export default function ThanksgivingShoppingListPage() {
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  useEffect(() => {
-    // Fetch contacts for address book functionality
-    // Only fetch if home data is initialized (which contains contacts)
-    if (homeInitialized) {
-      dispatch(fetchContacts());
-    }
-  }, [dispatch, homeInitialized]);
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   const handleAddGift = async (values: Record<string, any>) => {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim()) {
+      setToastMessage('Please fill in the Item Name field');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformSuppliesPayload(values, shareMembers);
       const result = await createGift(payload);
 
-      // Update Redux state immediately
       dispatch(addGiftToHomeData({ holidayId, gift: result }));
 
-      // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
     } catch (error) {
-      console.error('Error creating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error creating gift. Please try again.');
-      }
+      console.error('Error creating supply item:', error);
+      setToastMessage('Error creating supply item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -133,7 +178,9 @@ export default function ThanksgivingShoppingListPage() {
       );
     } catch (error) {
       console.error('Error toggling gift:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error updating item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -164,6 +211,9 @@ export default function ThanksgivingShoppingListPage() {
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
+      setToastMessage('Error deleting item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -181,7 +231,7 @@ export default function ThanksgivingShoppingListPage() {
     if (!selectedGift || !holidayId) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformSuppliesPayload(values, shareMembers);
       // Update gift using hook
       const result = await updateGift(selectedGift.id, payload);
 
@@ -200,13 +250,10 @@ export default function ThanksgivingShoppingListPage() {
       setShowFormModal(false);
       setSelectedGift(null);
     } catch (error) {
-      console.error('Error updating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
-      }
+      console.error('Error updating supply item:', error);
+      setToastMessage('Error updating supply item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -277,65 +324,16 @@ export default function ThanksgivingShoppingListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
-  // Initial values for editing
+  // Get initial values for edit modal (Enhanced Compatibility pattern)
   const getInitialValues = () => {
     if (!selectedGift) return {};
-
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
     return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
+      name: selectedGift.name || selectedGift.description || '',
       description: selectedGift.description || '',
       price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
+      assigned_to: selectedGift.assignedTo || '',
       notes: selectedGift.notes || '',
     };
   };
@@ -359,7 +357,7 @@ export default function ThanksgivingShoppingListPage() {
           holidayId={holidayId || undefined}
         />
 
-        <AddButton title="Gift" onClick={openForm} color="amber" />
+        <AddButton title="Item" onClick={openForm} color="amber" />
         <div className="flex items-center justify-center">
           {sortBy !== 'none' && (
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -393,24 +391,31 @@ export default function ThanksgivingShoppingListPage() {
       {/* Form Modal */}
       <FormModal
         isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
+        title={selectedGift ? 'Edit Item' : 'Add New Item'}
+        fields={selectedGift ? editFormConfig.fields : addFormConfig.fields}
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
         loading={selectedGift ? updateLoading : createLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        submitText={
+          selectedGift
+            ? updateLoading
+              ? 'Processing...'
+              : 'Update Item'
+            : createLoading
+              ? 'Processing...'
+              : 'Add Item'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#d97706"
-        showAddressBook={true}
-        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
       <DeleteModal
         isOpen={showDeleteModal}
-        title="Delete Gift"
+        title="Delete Item"
         message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
@@ -431,6 +436,14 @@ export default function ThanksgivingShoppingListPage() {
           { value: 'price-low', label: 'Price: Low to High' },
         ]}
         title="Sort Gifts"
+      />
+
+      {/* Toast for error messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
       />
     </div>
   );

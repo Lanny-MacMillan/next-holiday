@@ -2,19 +2,26 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-  setHomeData,
+  updateTaskInHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
-  updateTaskInHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -57,11 +64,12 @@ const defaultDecorationTasks = [
 
 export default function NewYearDecorationsPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
+  // Use standardized mutation hooks for task operations
   const {
     createTask,
     updateTask,
@@ -77,23 +85,77 @@ export default function NewYearDecorationsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'new-year'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Prefer existing uuid field, fallback to userId only if uuid missing
+          })),
+      ]
+    : baseMembers;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    // Preserve original assignedTo field for form editing (UUID)
+    assignedTo: task.assignedTo,
+    // Add display name for UI
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Redux data access - decorations are stored as tasks with category "Decorations"
   const decorations = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
 
   // State management
-  const [showForm, setShowForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDefaultTasks, setShowDefaultTasks] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const [editingTask, setEditingTask] = useState<any>(null);
+
+  useEffect(() => {
+    // Always fetch contacts for address book functionality
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
   // Check if default decoration tasks exist
   useEffect(() => {
@@ -102,31 +164,34 @@ export default function NewYearDecorationsPage() {
     }
   }, [decorations, homeInitialized]);
 
-  // CRUD Operations - Add Decoration with optimistic updates + refreshHomeData + API field mapping
-  const handleAddDecoration = async (values: any) => {
-    if (!values.title?.trim() || !holidayId) return;
+  // CRUD Operations
+  async function handleAddDecoration(values: Record<string, any>) {
+    if (!values.title?.trim()) return;
+    if (!holidayId || !auth0User) return;
 
     try {
-      const result = await createTask({
+      const newTask = {
         title: values.title,
-        description: values.description,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        assigned_to: values.assigned_to || undefined,
         category: 'Decorations',
-        dueDate: values.dueDate,
-      });
+        due_date: values.dueDate || undefined,
+        isCompleted: false,
+        holidayId: holidayId,
+      };
 
-      // Update Redux state immediately
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
+      // Use the standardized hook function
+      await createTask(newTask);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Error creating decoration task:', error);
     }
-  };
+  }
 
   const addDefaultDecorationTasks = async () => {
     for (const task of defaultDecorationTasks) {
@@ -134,6 +199,8 @@ export default function NewYearDecorationsPage() {
         title: task.title,
         description: task.description,
         priority: task.priority,
+        assigned_to: undefined, // Use proper snake_case field mapping
+        due_date: undefined, // Use proper snake_case field mapping
         category: 'Decorations',
       });
     }
@@ -181,20 +248,11 @@ export default function NewYearDecorationsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to,
+        due_date: values.dueDate,
       };
 
       await updateTask(editingTask.id, updates);
-
-      // Update Redux state immediately
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates,
-        }),
-      );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -206,25 +264,43 @@ export default function NewYearDecorationsPage() {
     }
   };
 
-  const handleDelete = async (taskId: string) => {
-    if (!holidayId) return;
+  const handleDelete = (taskId: string) => {
+    const task = decorations.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete || !holidayId) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Update Redux state immediately
       dispatch(
         removeTaskFromHomeData({
           holidayId,
-          taskId,
+          taskId: taskToDelete.id,
         }),
       );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   };
 
   function openForm() {
@@ -277,45 +353,7 @@ export default function NewYearDecorationsPage() {
   const incompleteDecorations = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedDecorations = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // FormModal fields configuration
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Decoration Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Form fields configuration removed - now using Enhanced Compatibility Layer
 
   return (
     <div className="min-h-screen new-year-tasks-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -341,9 +379,10 @@ export default function NewYearDecorationsPage() {
             <div className="flex gap-2">
               <button
                 onClick={addDefaultDecorationTasks}
-                className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors text-sm"
+                disabled={createLoading}
+                className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition-colors text-sm disabled:opacity-50"
               >
-                Add Default Decorations
+                {createLoading ? 'Adding...' : 'Add Default Decorations'}
               </button>
               <button
                 onClick={() => setShowDefaultTasks(false)}
@@ -355,7 +394,11 @@ export default function NewYearDecorationsPage() {
           </div>
         )}
 
-        <AddButton title="Decoration Task" onClick={openForm} color="amber" />
+        <AddButton
+          title="Decoration Task"
+          onClick={() => setShowForm(true)}
+          color="amber"
+        />
 
         {/* Decoration Status Summary */}
         {decorations.length > 0 && (
@@ -438,22 +481,22 @@ export default function NewYearDecorationsPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Form Modal */}
       <FormModal
         isOpen={showForm}
         title="Add New Decoration Task"
-        fields={formFields}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
-          dueDate: '',
-        }}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'new-year' as any,
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
         onSubmit={handleAddDecoration}
-        onClose={closeForm}
+        onClose={() => setShowForm(false)}
         loading={createLoading}
-        submitText="Add Decoration"
+        submitText={createLoading ? 'Adding...' : 'Add Decoration'}
         cardClassName="card-tasks"
       />
 
@@ -461,26 +504,29 @@ export default function NewYearDecorationsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={formFields}
-        initialValues={
-          editingTask
-            ? {
-                title: editingTask.title || '',
-                description: editingTask.description || '',
-                priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
-                dueDate: editingTask.dueDate
-                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
-                  : '',
-              }
-            : {}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'new-year' as any,
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
         }
+        initialValues={{
+          title: editingTask?.title || '',
+          description: editingTask?.description || '',
+          priority: editingTask?.priority || 'medium',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
+        }}
         onSubmit={handleEditDecorationSubmit}
-        onClose={closeEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingTask(null);
+        }}
         loading={updateLoading}
-        submitText="Update Decoration"
+        submitText={updateLoading ? 'Updating...' : 'Update Decoration'}
         cardClassName="card-tasks"
       />
 
@@ -498,6 +544,21 @@ export default function NewYearDecorationsPage() {
           { value: 'category', label: 'Category' },
         ]}
         title="Sort Decorations"
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        loading={deleteLoading}
+        title={getDeleteConfig('tasks').title}
+        message={getDeleteConfig('tasks').message}
+        itemName={taskToDelete?.title}
+        confirmText={getDeleteConfig('tasks').confirmText}
+        cancelText={getDeleteConfig('tasks').cancelText}
+        cardClassName={getDeleteConfig('tasks').cardClassName}
+        confirmButtonColor={getDeleteConfig('tasks').confirmButtonColor}
       />
     </div>
   );

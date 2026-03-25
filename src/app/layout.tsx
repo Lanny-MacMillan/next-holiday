@@ -5,6 +5,7 @@ import { ReduxProvider } from '@/store/provider';
 import Auth0ProviderWrapper from '@/components/auth/Auth0Provider';
 import AppContent from '@/components/AppContent';
 import { installFetchTracer } from '@/lib/traceFetch';
+import { initPerformanceMonitor } from '@/lib/performance';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,9 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     console.log('🔧 Layout render - DB configured:', !!process.env.DATABASE_URL);
   }
 
-  // Install fetch tracer on client side
+  // Install fetch tracer and performance monitoring on client side
   if (typeof window !== 'undefined') {
     installFetchTracer();
+    initPerformanceMonitor();
   }
 
   return (

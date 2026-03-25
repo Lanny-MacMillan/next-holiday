@@ -1,29 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { isEmptyString, isEmptyNumber, isValidEmail } from '@/utils/formValidation';
-
-export interface FormField {
-  id: string;
-  type:
-    | 'text'
-    | 'textarea'
-    | 'select'
-    | 'number'
-    | 'date'
-    | 'url'
-    | 'checkbox'
-    | 'email'
-    | 'tel';
-  label?: string;
-  placeholder?: string;
-  required?: boolean;
-  options?: { value: string; label: string }[];
-  rows?: number;
-  step?: string;
-  min?: string;
-  className?: string;
-  style?: React.CSSProperties;
-}
+import { FormField } from '@/types/form';
+import { ShareMember } from '@/lib/formBuilder';
 
 export interface FormModalProps {
   isOpen: boolean;
@@ -40,6 +19,9 @@ export interface FormModalProps {
   showAddressBook?: boolean;
   contacts?: any[];
   onAddressBookSelect?: (contact: any) => void;
+  // New props for enhanced functionality
+  holidayId?: string;
+  shareMembers?: ShareMember[];
 }
 
 export default function FormModal({
@@ -57,10 +39,38 @@ export default function FormModal({
   showAddressBook = false,
   contacts = [],
   onAddressBookSelect,
+  holidayId,
+  shareMembers = [],
 }: FormModalProps) {
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [showAddressBookInternal, setShowAddressBookInternal] = useState(false);
   const [showAddressBookMessage, setShowAddressBookMessage] = useState(false);
+
+  // Check if any field has address book enabled
+  const hasAddressBookFields = fields.some(field => field.showAddressBook === true);
+
+  // Populate assignTo field options with share members
+  const fieldsWithOptions = useMemo(
+    () =>
+      fields.map(field => {
+        if (field.id === 'assigned_to' && shareMembers.length > 0) {
+          return {
+            ...field,
+            options: [
+              { value: '', label: 'Unassigned' },
+              ...shareMembers
+                .map(member => ({
+                  value: (member as any).uuid, // Use UUID for API compatibility, no fallback to userId
+                  label: member.name || member.email || 'Unknown',
+                }))
+                .filter(option => option.value), // Filter out members without valid UUIDs,
+            ],
+          };
+        }
+        return field;
+      }),
+    [fields, shareMembers],
+  );
 
   const handleAddressBookSelect = (contact: any) => {
     // Build full address from contact details
@@ -73,21 +83,45 @@ export default function FormModal({
 
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '';
 
-    setFormValues(prev => ({
-      ...prev,
-      // Support both "recipient" (for cards) and "name" (for guests)
-      recipient: contact.name,
-      name: contact.name,
-      address: fullAddress,
-      email: contact.email || '',
-      phone: contact.phone || '',
-    }));
+    setFormValues(prev => {
+      // Check which fields exist in the form to determine what to set
+      const hasRecipientField = fields.some(f => f.id === 'recipient');
+      const hasNameField = fields.some(f => f.id === 'name');
+      const hasGiftNameField = fields.some(
+        f => f.id === 'name' && fields.some(gf => gf.id === 'recipient'),
+      ); // Gift form has both recipient and name
+
+      const updates: any = {
+        ...prev,
+        address: fullAddress,
+        email: contact.email || '',
+        phone: contact.phone || '',
+      };
+
+      // For gift forms (has both recipient and name), only set recipient
+      if (hasRecipientField && hasGiftNameField) {
+        updates.recipient = contact.name;
+      }
+      // For guest forms (has name but no recipient), set name
+      else if (hasNameField && !hasRecipientField) {
+        updates.name = contact.name;
+      }
+      // For other forms with recipient field, set recipient
+      else if (hasRecipientField) {
+        updates.recipient = contact.name;
+      }
+
+      return updates;
+    });
     setShowAddressBookInternal(false);
     setShowAddressBookMessage(false); // Hide message when selecting from address book
   };
 
   useEffect(() => {
     if (isOpen) {
+      // Reset address book states BEFORE setting form values to prevent flash
+      setShowAddressBookInternal(false);
+      setShowAddressBookMessage(false);
       setFormValues(initialValues);
     }
   }, [isOpen]);
@@ -96,7 +130,7 @@ export default function FormModal({
     e.preventDefault();
 
     // Check if all required fields are filled
-    const requiredFields = fields.filter(field => field.required);
+    const requiredFields = fieldsWithOptions.filter(field => field.required);
     const missingFields = requiredFields.filter(field => {
       const value = formValues[field.id];
       // Handle different field types for validation
@@ -117,7 +151,7 @@ export default function FormModal({
     }
 
     // Validate email fields if they have values
-    const emailFields = fields.filter(field => field.type === 'email');
+    const emailFields = fieldsWithOptions.filter(field => field.type === 'email');
     const invalidEmails = emailFields.filter(field => {
       const value = formValues[field.id];
       // Only validate if email field has a value (since it's optional)
@@ -145,7 +179,7 @@ export default function FormModal({
 
   const handleInputChange = (fieldId: string, value: any) => {
     // Find the field to determine its type
-    const field = fields.find(f => f.id === fieldId);
+    const field = fieldsWithOptions.find(f => f.id === fieldId);
 
     // Convert value based on field type
     let processedValue = value;
@@ -158,18 +192,13 @@ export default function FormModal({
       [fieldId]: processedValue,
     }));
 
-    // Show address book message when user types in name field and address book is enabled
-    if (
-      (fieldId === 'name' || fieldId === 'recipient') &&
-      showAddressBook &&
-      value.trim()
-    ) {
+    // Show address book message when user types in field with address book enabled
+    const currentField = fields.find(f => f.id === fieldId);
+    const fieldHasAddressBook = currentField?.showAddressBook === true;
+
+    if (fieldHasAddressBook && value.trim()) {
       setShowAddressBookMessage(true);
-    } else if (
-      (fieldId === 'name' || fieldId === 'recipient') &&
-      showAddressBook &&
-      !value.trim()
-    ) {
+    } else if (fieldHasAddressBook && !value.trim()) {
       setShowAddressBookMessage(false);
     }
   };
@@ -206,7 +235,12 @@ export default function FormModal({
       case 'number':
         return <input {...commonProps} type="number" step={field.step || '1'} />;
       case 'date':
-        return <input {...commonProps} type="date" />;
+        // Format date value for HTML date input (expects YYYY-MM-DD)
+        const dateValue = formValues[field.id];
+        const formattedDate = dateValue
+          ? new Date(dateValue).toISOString().split('T')[0]
+          : '';
+        return <input {...{ ...commonProps, value: formattedDate }} type="date" />;
       case 'url':
         return <input {...commonProps} type="url" />;
       case 'checkbox':
@@ -257,11 +291,14 @@ export default function FormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-          {fields.map(field => (
-            <div key={field.id}>
-              {/* Special handling for address book integration */}
-              {(field.id === 'recipient' || field.id === 'name') &&
-                showAddressBook && (
+          {fieldsWithOptions.map(field => {
+            // Check if this specific field should show address book
+            const fieldShowsAddressBook = field.showAddressBook === true;
+
+            return (
+              <div key={field.id}>
+                {/* Special handling for address book integration */}
+                {fieldShowsAddressBook && (
                   <div className="flex gap-2">
                     <div className="flex-1">{renderField(field)}</div>
                     <button
@@ -275,16 +312,11 @@ export default function FormModal({
                     </button>
                   </div>
                 )}
-              {/* Regular field rendering */}
-              {!(
-                (field.id === 'recipient' || field.id === 'name') &&
-                showAddressBook
-              ) && renderField(field)}
+                {/* Regular field rendering */}
+                {!fieldShowsAddressBook && renderField(field)}
 
-              {/* Address Book Message - shows when user types in name field */}
-              {(field.id === 'recipient' || field.id === 'name') &&
-                showAddressBookMessage &&
-                showAddressBook && (
+                {/* Address Book Message - shows when user types in field with address book enabled */}
+                {fieldShowsAddressBook && showAddressBookMessage && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-2 mt-2">
                     <div className="text-xs text-blue-700 dark:text-blue-300 flex items-start">
                       <span className="mr-1">ℹ️</span>
@@ -295,10 +327,8 @@ export default function FormModal({
                   </div>
                 )}
 
-              {/* Address Book Dropdown - positioned right after recipient/name field */}
-              {(field.id === 'recipient' || field.id === 'name') &&
-                showAddressBookInternal &&
-                showAddressBook && (
+                {/* Address Book Dropdown - positioned right after the specific field that has address book enabled */}
+                {fieldShowsAddressBook && showAddressBookInternal && (
                   <div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto mt-2">
                     <h4 className="text-xs sm:text-sm font-medium mb-1 text-gray-900 dark:text-white">
                       From Address Book ({contacts.length} contacts):
@@ -330,8 +360,9 @@ export default function FormModal({
                     )}
                   </div>
                 )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
 
           <div className="flex gap-3 pt-2">
             <button

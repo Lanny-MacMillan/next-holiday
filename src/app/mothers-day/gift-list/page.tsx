@@ -13,6 +13,10 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -20,6 +24,7 @@ import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -47,6 +52,19 @@ export default function GiftListPage() {
 
   // Data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
+
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'mothers-day'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'mothers-day'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Loading states for Enhanced Compatibility
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Helper function to update Redux state after gift operations
   const updateGiftInRedux = (
@@ -114,11 +132,12 @@ export default function GiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, []);
       const result = await createGift(payload);
 
       // Update Redux state directly
@@ -126,6 +145,9 @@ export default function GiftListPage() {
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      // Refresh address book contacts
+      dispatch(fetchContacts());
 
       setShowFormModal(false);
     } catch (error) {
@@ -136,6 +158,8 @@ export default function GiftListPage() {
       } else {
         alert('Error creating gift. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -211,10 +235,11 @@ export default function GiftListPage() {
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
 
-    setEditLoading(true);
+    setIsEditSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, []);
 
       // Update using the hook
       const result = await updateGift(selectedGift.id, payload);
@@ -236,7 +261,7 @@ export default function GiftListPage() {
         alert('Error updating gift. Please try again.');
       }
     } finally {
-      setEditLoading(false);
+      setIsEditSubmitting(false);
     }
   }
 
@@ -311,50 +336,20 @@ export default function GiftListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('gifts', 'add', {
+    holidayKey: 'mothers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
-  // Initial values for editing
+  const editFormConfig = getFormConfigEnhanced('gifts', 'edit', {
+    holidayKey: 'mothers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  // Initial values for editing with proper field mapping
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
@@ -365,12 +360,13 @@ export default function GiftListPage() {
 
     return {
       recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
+      name: selectedGift.name || selectedGift.description || '',
       description: selectedGift.description || '',
       price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
       notes: selectedGift.notes || '',
+      assigned_to: selectedGift?.assignedTo || '',
     };
   };
 
@@ -428,12 +424,20 @@ export default function GiftListPage() {
       <FormModal
         isOpen={showFormModal}
         title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
+        fields={selectedGift ? editFormConfig.fields : addFormConfig.fields}
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
-        loading={createLoading || editLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        loading={selectedGift ? isEditSubmitting : isSubmitting}
+        submitText={
+          selectedGift
+            ? isEditSubmitting
+              ? 'Processing...'
+              : 'Update Gift'
+            : isSubmitting
+              ? 'Processing...'
+              : 'Add Gift'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#ec4899"

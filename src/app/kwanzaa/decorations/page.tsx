@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -12,9 +12,14 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -99,14 +104,43 @@ export default function KwanzaaDecorationsPage() {
     selectIsHolidayShared(state, 'kwanzaa'),
   );
 
-  const decorations =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') || [];
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Redux data access - decorations are stored as tasks with category "Decorations"
+  const decorations = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Decorations') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   // State management
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -133,9 +167,9 @@ export default function KwanzaaDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Decorations',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -159,6 +193,8 @@ export default function KwanzaaDecorationsPage() {
           title: task.title,
           description: task.description,
           priority: task.priority,
+          assigned_to: undefined, // Use proper snake_case field mapping
+          due_date: undefined, // Use proper snake_case field mapping
           category: 'Decorations',
         });
 
@@ -210,8 +246,8 @@ export default function KwanzaaDecorationsPage() {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
-        dueDate: values.dueDate || undefined,
+        assigned_to: values.assigned_to || undefined, // snake_case for API
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state
@@ -222,7 +258,6 @@ export default function KwanzaaDecorationsPage() {
           updates: result,
         }),
       );
-
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
@@ -234,19 +269,37 @@ export default function KwanzaaDecorationsPage() {
   }
 
   async function handleDelete(taskId: string) {
-    if (!holidayId || !auth0User) return;
+    const task = decorations.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Remove from Redux state on success
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
+      dispatch(
+        removeTaskFromHomeData({ holidayId: holidayId, taskId: taskToDelete.id }),
+      );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting decoration:', error);
     }
+  }
+
+  function cancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   // Sorting function
@@ -281,46 +334,6 @@ export default function KwanzaaDecorationsPage() {
         return tasksToSort;
     }
   }
-
-  // Form fields with date formatting fix
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Decoration Task*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
 
   // Loading state
   if (isLoading) {
@@ -454,12 +467,19 @@ export default function KwanzaaDecorationsPage() {
       <FormModal
         isOpen={showForm}
         title="Add Decoration Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            customTitle: 'Add Decoration Task',
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{}}
         onSubmit={handleAddDecoration}
         onClose={() => setShowForm(false)}
         loading={createLoading}
-        submitText="Add Decoration"
+        submitText={createLoading ? 'Adding...' : 'Add Decoration'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626" // Kwanzaa red
@@ -469,14 +489,21 @@ export default function KwanzaaDecorationsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Decoration Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            customTitle: 'Edit Decoration Task',
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                assignedTo: editingTask.assignedTo || '',
+                assigned_to: editingTask.assignedTo || '',
                 // CRITICAL: Format date for input field
                 dueDate: editingTask.dueDate
                   ? editingTask.dueDate.includes('T')
@@ -492,10 +519,20 @@ export default function KwanzaaDecorationsPage() {
           setEditingTask(null);
         }}
         loading={updateLoading}
-        submitText="Update Decoration"
+        submitText={updateLoading ? 'Updating...' : 'Update Decoration'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor="#dc2626" // Kwanzaa red
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Decoration Task?"
+        message={`Are you sure you want to delete "${taskToDelete?.title || 'this decoration task'}"? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

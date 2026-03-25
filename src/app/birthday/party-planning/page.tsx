@@ -7,9 +7,16 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -63,10 +70,41 @@ const defaultPartyPlanningTasks = [
 export default function BirthdayPartyPlanningPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
+  // Redux & Sharing - Enhanced Compatibility Layer
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'birthday'),
+  );
+
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'birthday'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Only include current user in shareMembers if holiday is actually shared
+  const shareMembers =
+    isHolidayShared && auth0User
+      ? [
+          // Add current user first
+          {
+            userId: auth0User.sub || '',
+            uuid: auth0User.id || '', // Use database UUID for Enhanced Compatibility Layer
+            name: auth0User.name || 'Me',
+            email: auth0User.email || '',
+            role: 'owner' as const,
+          },
+          // Add other members, filtering out current user if already present
+          ...baseMembers
+            .filter((member: any) => member.userId !== auth0User.sub)
+            .map((member: any) => ({
+              ...member,
+              uuid: member.uuid || member.userId, // Prefer existing uuid, fallback to userId only if uuid missing
+            })),
+        ]
+      : baseMembers;
+
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const {
     createTask,
@@ -90,23 +128,41 @@ export default function BirthdayPartyPlanningPage() {
 
   const isLoading = !homeInitialized;
 
-  const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, 'birthday'),
-  );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // State management
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+
+  // Name resolution helpers
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
   }, [dispatch]);
+
+  // Load contacts if holiday is shared for assignment functionality
+  useEffect(() => {
+    if (isHolidayShared && auth0User) {
+      dispatch(fetchContacts(auth0User.sub));
+    }
+  }, [isHolidayShared, auth0User]);
 
   // Check if default party planning tasks exist
   useEffect(() => {
@@ -147,7 +203,7 @@ export default function BirthdayPartyPlanningPage() {
     }
   }
 
-  const sortedTasks = sortTasks(partyPlanning);
+  const sortedTasks = sortTasks(partyPlanning.map(transformTaskWithAssignment));
   const incompletePartyPlanningTasks = sortedTasks.filter(
     (task: any) => !task.isCompleted,
   );
@@ -182,9 +238,9 @@ export default function BirthdayPartyPlanningPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to || undefined,
+        due_date: values.dueDate || undefined,
         category: 'Party Planning',
-        dueDate: values.dueDate,
       });
 
       // Refresh home data to ensure UI is in sync
@@ -204,7 +260,11 @@ export default function BirthdayPartyPlanningPage() {
       // Make all API calls using the hook
       for (const task of defaultPartyPlanningTasks) {
         await createTask({
-          ...task,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          assigned_to: undefined,
+          due_date: undefined,
           category: 'Party Planning',
         });
       }
@@ -252,8 +312,8 @@ export default function BirthdayPartyPlanningPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        assigned_to: values.assigned_to || null,
+        due_date: values.dueDate || null,
       };
 
       await updateTask(editingTask.id, updatedTask);
@@ -268,31 +328,45 @@ export default function BirthdayPartyPlanningPage() {
     }
   }
 
-  async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+  function handleDeleteTask(taskId: string) {
+    const task = partyPlanning.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
       // Check if this was the last task and re-show default tasks prompt
-      const remainingTasks = partyPlanning.filter((t: any) => t.id !== taskId);
+      const remainingTasks = partyPlanning.filter(
+        (t: any) => t.id !== taskToDelete.id,
+      );
       if (remainingTasks.length === 1) {
         // Will be 0 after deletion
         setShowDefaultTasks(true);
       }
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting task:', error);
     }
   }
 
+  function handleCancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
+  }
+
   function openForm() {
-    // Add guard to prevent opening form when conditions are not met
-    if (!homeInitialized || !holidayId || !auth0User) {
-      return;
-    }
     setShowForm(true);
   }
 
@@ -301,49 +375,24 @@ export default function BirthdayPartyPlanningPage() {
   }
 
   function closeEditModal() {
-    setShowEditModal(false);
     setEditingTask(null);
+    setShowEditModal(false);
   }
 
-  // FormModal fields configuration - matching Kwanzaa exactly
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isAuthorizedForSharing && isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form config
+  const formConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'birthday',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'birthday',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('tasks');
 
   return (
     <div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -465,7 +514,7 @@ export default function BirthdayPartyPlanningPage() {
                   accentColor: '#f59e0b', // Amber for Birthday
                 }}
                 borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 disableInternalModal={true}
               />
             )}
@@ -491,7 +540,7 @@ export default function BirthdayPartyPlanningPage() {
                   accentColor: '#f59e0b', // Amber for Birthday
                 }}
                 borderColor="rgb(var(--color-amber-500))" // Amber border for Birthday
-                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                gamifiedBackgroundColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 disableInternalModal={true}
               />
             )}
@@ -503,115 +552,57 @@ export default function BirthdayPartyPlanningPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Party Planning Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Task Title*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isAuthorizedForSharing && isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          { id: 'dueDate', type: 'date' as const, placeholder: 'Due Date' },
-        ]}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          ...(isAuthorizedForSharing && isHolidayShared ? { assignedTo: '' } : {}),
-          dueDate: '',
-        }}
+        fields={formConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={createLoading}
-        submitText="Add Task"
+        submitText={createLoading ? 'Processing...' : 'Add Task'}
         cardClassName="card-tasks"
         submitButtonColor="#f59e0b"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Party Planning Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Task Title*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isAuthorizedForSharing && isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          { id: 'dueDate', type: 'date' as const, placeholder: 'Due Date' },
-        ]}
-        initialValues={
-          editingTask
-            ? {
-                title: editingTask.title || '',
-                description: editingTask.description || '',
-                priority: editingTask.priority || 'medium',
-                ...(isAuthorizedForSharing && isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
-                dueDate: editingTask.dueDate
-                  ? new Date(editingTask.dueDate).toISOString().split('T')[0]
-                  : '',
-              }
-            : {}
-        }
+        fields={editFormConfig.fields}
+        initialValues={{
+          title: editingTask?.title || '',
+          description: editingTask?.description || '',
+          priority: editingTask?.priority || 'medium',
+          assigned_to: editingTask?.assignedTo || '',
+          dueDate: editingTask?.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
+        }}
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}
         loading={updateLoading}
-        submitText="Update Task"
+        submitText={updateLoading ? 'Processing...' : 'Update Task'}
         cardClassName="card-tasks"
         submitButtonColor="#f59e0b"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          loading={deleteLoading}
+          title={deleteConfig.title}
+          message={deleteConfig.message}
+          itemName={taskToDelete.title}
+          confirmText={deleteConfig.confirmText}
+          cancelText={deleteConfig.cancelText}
+          cardClassName={deleteConfig.cardClassName}
+          confirmButtonColor={deleteConfig.confirmButtonColor}
+        />
+      )}
 
       {/* Sort Modal */}
       <SortModal

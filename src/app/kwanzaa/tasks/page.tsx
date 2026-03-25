@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -11,7 +11,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -19,11 +22,14 @@ import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
 export default function KwanzaaTasksPage() {
+  const dispatch = useAppDispatch();
+
   // Hook implementations
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -38,7 +44,6 @@ export default function KwanzaaTasksPage() {
   const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
-  const dispatch = useAppDispatch();
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'kwanzaa'),
   );
@@ -58,13 +63,38 @@ export default function KwanzaaTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts(auth0User.id));
     }
   }, [isHolidayShared, auth0User, dispatch]);
 
-  // Task data processing
-  const tasks =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  // Task data processing with assignment name resolution
+  const tasks = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
 
   // Sort function following working pattern
   function getSortedTasks() {
@@ -93,7 +123,20 @@ export default function KwanzaaTasksPage() {
     });
   }
 
+  // Show loading only if home data is not initialized
+  if (!homeInitialized) {
+    return (
+      <div className="min-h-screen kwanzaa-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
   const sortedTasks = getSortedTasks();
+  const incompleteTasks = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
   const pendingTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 
@@ -142,7 +185,11 @@ export default function KwanzaaTasksPage() {
     if (!holidayId) return;
 
     const taskData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      assigned_to: formData.assigned_to || undefined,
+      due_date: formData.dueDate || undefined,
       category: 'Tasks',
       isCompleted: false,
     };
@@ -158,13 +205,22 @@ export default function KwanzaaTasksPage() {
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
+    const updates = {
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority || 'medium',
+      isCompleted: formData.isCompleted || editingTask.isCompleted,
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.dueDate || null,
+    };
+
+    const result = await updateTask(editingTask.id, updates);
     if (result) {
       dispatch(
         updateTaskInHomeData({
           holidayId,
           taskId: editingTask.id,
-          updates: formData,
+          updates: result,
         }),
       );
       await refreshHomeData(auth0User, holidayId);
@@ -230,6 +286,12 @@ export default function KwanzaaTasksPage() {
     },
   ];
 
+  // Get form configuration
+  const formConfig = getFormConfigEnhanced('tasks', editingTask ? 'edit' : 'add', {
+    holidayKey: 'kwanzaa',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
   const deleteConfig = getDeleteConfig('tasks');
 
   return (
@@ -269,6 +331,7 @@ export default function KwanzaaTasksPage() {
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
               onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              disableInternalModal={true}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
             />
@@ -290,6 +353,7 @@ export default function KwanzaaTasksPage() {
                 onToggleComplete={handleTaskToggle}
                 onEdit={() => handleEditModalOpen(task)}
                 onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                disableInternalModal={true}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
               />
@@ -303,7 +367,7 @@ export default function KwanzaaTasksPage() {
         isOpen={showSortModal}
         onClose={() => setShowSortModal(false)}
         sortBy={sortBy}
-        onSortChange={(option: string) => handleSort(option as SortOption)}
+        onSortChange={(option: string) => setSortBy(option as SortOption)}
         sortOptions={[
           { value: 'none', label: 'None' },
           { value: 'title', label: 'Title' },
@@ -320,28 +384,40 @@ export default function KwanzaaTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={createLoading}
         submitText={createLoading ? 'Adding...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
-        submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
+        submitButtonColor="#dc2626"
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTask}
@@ -350,9 +426,9 @@ export default function KwanzaaTasksPage() {
         submitText={updateLoading ? 'Updating...' : 'Update Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
-        submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
+        submitButtonColor="#dc2626"
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -366,7 +442,6 @@ export default function KwanzaaTasksPage() {
         itemName={taskToDelete?.title}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
       />
     </div>

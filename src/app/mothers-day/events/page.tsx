@@ -12,9 +12,15 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -47,10 +53,27 @@ export default function MothersDayEventsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'mothers-day'),
   );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'mothers-day'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper functions for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Redux data access - events are stored as tasks with category "Events"
-  const events =
+  const rawEvents =
     holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+  const events = rawEvents.map(transformTaskWithAssignment);
   const isLoading = !homeInitialized;
   const error = null;
 
@@ -60,10 +83,12 @@ export default function MothersDayEventsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  // Enhanced Compatibility loading states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -75,14 +100,14 @@ export default function MothersDayEventsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    setIsAdding(true);
+    setIsSubmitting(true);
 
     const newTask = {
       id: `temp-${Date.now()}`, // Temporary ID for optimistic update
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assignedTo: values.assigned_to || undefined,
       category: 'Events',
       dueDate: values.dueDate || undefined,
       isCompleted: false,
@@ -93,12 +118,12 @@ export default function MothersDayEventsPage() {
       // Optimistically update Redux state first (like Kwanzaa)
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
-      // Call API - use the hook
+      // Call API - use the hook with proper snake_case mapping
       const result = await createTask({
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined,
         category: 'Events',
         due_date: values.dueDate || undefined,
         isCompleted: false,
@@ -122,7 +147,7 @@ export default function MothersDayEventsPage() {
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId: newTask.id }));
       console.error('Failed to add task:', error);
     } finally {
-      setIsAdding(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -181,13 +206,13 @@ export default function MothersDayEventsPage() {
   async function handleEditSubmit(values: Record<string, any>) {
     if (!editingTask || !holidayId || !auth0User) return;
 
-    setIsUpdating(true);
+    setIsEditSubmitting(true);
     try {
       const updatedTask = {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assignedTo: values.assigned_to || undefined,
         dueDate: values.dueDate || undefined,
       };
 
@@ -200,13 +225,13 @@ export default function MothersDayEventsPage() {
         }),
       );
 
-      // Use the hook for API call
+      // Use the hook for API call with proper snake_case mapping
       await updateTask(editingTask.id, {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assigned_to: values.assignedTo || undefined,
-        due_date: values.dueDate || undefined,
+        assigned_to: values.assigned_to || null,
+        due_date: values.dueDate || null,
       });
 
       // Refresh home data to ensure progress tracking updates
@@ -231,33 +256,47 @@ export default function MothersDayEventsPage() {
       );
       console.error('Failed to update task:', error);
     } finally {
-      setIsUpdating(false);
+      setIsEditSubmitting(false);
     }
   }
 
-  async function handleDelete(taskId: string) {
-    if (!holidayId || !auth0User) return;
+  function handleDeleteEvent(taskId: string) {
+    const task = events.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
 
-    setIsDeleting(true);
+  async function handleConfirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
+
     try {
       // Optimistically remove the task from Redux
-      dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
+      dispatch(
+        removeTaskFromHomeData({ holidayId: holidayId, taskId: taskToDelete.id }),
+      );
 
       // Use the hook for API call
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Refresh home data to ensure progress tracking updates
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       // Revert the optimistic removal on error
-      const taskToRestore = events.find((task: any) => task.id === taskId);
-      if (taskToRestore) {
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToRestore }));
+      if (taskToDelete) {
+        dispatch(addTaskToHomeData({ holidayId: holidayId, task: taskToDelete }));
       }
       console.error('Failed to delete task:', error);
-    } finally {
-      setIsDeleting(false);
     }
+  }
+
+  function handleCancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   // Sorting functionality
@@ -297,45 +336,20 @@ export default function MothersDayEventsPage() {
   const incompleteEvents = sortedEvents.filter(event => !event.isCompleted);
   const completeEvents = sortedEvents.filter(event => event.isCompleted);
 
-  // Form configuration
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'mothers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'mothers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('tasks');
 
   return (
     <div className="min-h-screen mothers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -362,7 +376,7 @@ export default function MothersDayEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={handleDelete}
+              onDelete={handleDeleteEvent}
               onEdit={handleEditEvent}
               theme={{
                 accentColor: '#ec4899', // Pink for Mother's Day
@@ -384,7 +398,7 @@ export default function MothersDayEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleCompletion}
-              onDelete={handleDelete}
+              onDelete={handleDeleteEvent}
               onEdit={handleEditEvent}
               theme={{
                 accentColor: '#ec4899', // Pink for Mother's Day
@@ -410,29 +424,29 @@ export default function MothersDayEventsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Event"
-        fields={formFields}
+        fields={addFormConfig.fields}
         initialValues={{ priority: 'medium' }}
         onSubmit={handleAddTask}
         onClose={() => setShowForm(false)}
-        loading={isAdding}
-        submitText="Add Event"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Event'}
         cardClassName="card-events-mothers-day"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Form Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Event"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
+                assigned_to: editingTask.assignedTo || '',
                 dueDate: editingTask.dueDate
                   ? new Date(editingTask.dueDate).toISOString().split('T')[0]
                   : '',
@@ -444,10 +458,28 @@ export default function MothersDayEventsPage() {
           setShowEditModal(false);
           setEditingTask(null);
         }}
-        loading={isUpdating}
-        submitText="Update Event"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Event'}
         cardClassName="card-events-mothers-day"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          loading={deleteLoading}
+          title={deleteConfig.title}
+          message={deleteConfig.message}
+          itemName={taskToDelete.title}
+          confirmText={deleteConfig.confirmText}
+          cancelText={deleteConfig.cancelText}
+          confirmButtonColor={deleteConfig.confirmButtonColor}
+        />
+      )}
     </div>
   );
 }

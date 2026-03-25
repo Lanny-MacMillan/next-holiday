@@ -11,7 +11,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -20,6 +23,7 @@ import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
@@ -42,35 +46,69 @@ export default function AnniversaryTasksPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'anniversary'),
   );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'anniversary'),
+  );
+  const shareMembers = shareData?.members || [];
   const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
-  // State management
-  const [showForm, setShowForm] = useState(false);
+  // State management - separate add/edit modals
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   const themeColor = '#ec4899'; // Pink for Anniversary
 
-  // Load contacts if holiday is shared
+  // Load contacts for address book functionality
   useEffect(() => {
-    if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
-    }
-  }, [isHolidayShared, auth0User, dispatch]);
+    dispatch(fetchContacts());
+  }, [dispatch]);
+
+  // Enhanced Compatibility Layer form configs
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'anniversary',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'anniversary',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('tasks');
+
+  // Name resolution helpers for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Task data processing
   const tasks =
     holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
 
+  // Apply name resolution transformation
+  const transformedTasks = tasks.map(transformTaskWithAssignment);
+
   // Sort function following working pattern
   function getSortedTasks() {
-    if (sortBy === 'none') return tasks;
+    if (sortBy === 'none') return transformedTasks;
 
-    return [...tasks].sort((a, b) => {
+    return [...transformedTasks].sort((a, b) => {
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -114,8 +152,8 @@ export default function AnniversaryTasksPage() {
   }
 
   // Modal handlers
-  const openForm = () => setShowForm(true);
-  const closeForm = () => setShowForm(false);
+  const openAddForm = () => setShowAddModal(true);
+  const closeAddForm = () => setShowAddModal(false);
 
   const handleEditModalOpen = (task: any) => {
     setEditingTask(task);
@@ -127,110 +165,102 @@ export default function AnniversaryTasksPage() {
     setShowEditModal(false);
   };
 
-  const handleDeleteModalOpen = (task: any) => {
-    setTaskToDelete(task);
-    setShowDeleteModal(true);
-  };
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = sortedTasks.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete({ ...task, title: taskTitle });
+      setShowDeleteModal(true);
+    }
+  }
 
-  const handleDeleteModalClose = () => {
-    setTaskToDelete(null);
+  function handleCancelDelete() {
     setShowDeleteModal(false);
-  };
+    setTaskToDelete(null);
+  }
 
-  // CRUD operations
+  // CRUD operations with proper field mapping
   const handleAddTask = async (formData: any) => {
     if (!holidayId) return;
 
-    const taskData = {
-      ...formData,
-      category: 'Tasks',
-      isCompleted: false,
-    };
+    setIsSubmitting(true);
+    try {
+      const taskData = {
+        ...formData,
+        assigned_to: formData.assigned_to || undefined,
+        due_date: formData.dueDate || undefined,
+        category: 'Tasks',
+        isCompleted: false,
+      };
 
-    const result = await createTask(taskData);
-    if (result) {
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
-      await refreshHomeData(auth0User, holidayId);
-      closeForm();
+      const result = await createTask(taskData);
+      if (result) {
+        dispatch(addTaskToHomeData({ holidayId, task: result }));
+        await refreshHomeData(auth0User, holidayId);
+        closeAddForm();
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
-    if (result) {
+    setIsEditSubmitting(true);
+    try {
+      const taskData = {
+        ...formData,
+        assigned_to: formData.assigned_to || null,
+        due_date: formData.dueDate || null,
+      };
+
+      const result = await updateTask(editingTask.id, taskData);
+      if (result) {
+        dispatch(
+          updateTaskInHomeData({
+            holidayId,
+            taskId: editingTask.id,
+            updates: taskData,
+          }),
+        );
+        await refreshHomeData(auth0User, holidayId);
+        handleEditModalClose();
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete?.id || !holidayId || !auth0User) return;
+
+    try {
+      await deleteTask(taskToDelete.id);
       dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates: formData,
+        removeTaskFromHomeData({
+          holidayId: holidayId,
+          taskId: taskToDelete.id,
         }),
       );
       await refreshHomeData(auth0User, holidayId);
-      handleEditModalClose();
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
-  };
-
-  const handleDeleteTask = async () => {
-    if (!taskToDelete || !holidayId) return;
-
-    const result = await deleteTask(taskToDelete.id);
-    if (result) {
-      dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
-      await refreshHomeData(auth0User, holidayId);
-      handleDeleteModalClose();
-    }
-  };
+  }
 
   // Sort handler
   function handleSort(option: SortOption) {
     setSortBy(option);
     setShowSortModal(false);
   }
-
-  // Dynamic form fields
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
-
-  const deleteConfig = getDeleteConfig('tasks');
 
   return (
     <div className="min-h-screen anniversary-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -244,7 +274,7 @@ export default function AnniversaryTasksPage() {
       />
 
       <main className="w-full max-w-4xl flex flex-col gap-6">
-        <AddButton title="Task" onClick={openForm} color="pink" />
+        <AddButton title="Task" onClick={openAddForm} color="pink" />
 
         {/* Sort indicator */}
         <div className="flex items-center justify-center">
@@ -268,7 +298,8 @@ export default function AnniversaryTasksPage() {
               task={task}
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
-              onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              disableInternalModal={true}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
             />
@@ -289,7 +320,8 @@ export default function AnniversaryTasksPage() {
                 task={task}
                 onToggleComplete={handleTaskToggle}
                 onEdit={() => handleEditModalOpen(task)}
-                onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+                disableInternalModal={true}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
               />
@@ -318,57 +350,57 @@ export default function AnniversaryTasksPage() {
 
       {/* Add Modal */}
       <FormModal
-        isOpen={showForm}
+        isOpen={showAddModal}
         title="Add New Task"
-        fields={formFields}
+        fields={addFormConfig.fields}
         onSubmit={handleAddTask}
-        onClose={closeForm}
-        loading={createLoading}
-        submitText={createLoading ? 'Adding...' : 'Add Task'}
+        onClose={closeAddForm}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}
-        loading={updateLoading}
-        submitText={updateLoading ? 'Updating...' : 'Update Task'}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
-      <DeleteModal
-        isOpen={showDeleteModal}
-        onCancel={handleDeleteModalClose}
-        onConfirm={handleDeleteTask}
-        loading={deleteLoading}
-        title={deleteConfig.title}
-        message={deleteConfig.message}
-        itemName={taskToDelete?.title}
-        confirmText={deleteConfig.confirmText}
-        cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
-        confirmButtonColor={deleteConfig.confirmButtonColor}
-      />
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title={deleteConfig.title}
+          message={deleteConfig.message}
+          itemName={taskToDelete.title}
+          confirmText={deleteConfig.confirmText}
+          cancelText={deleteConfig.cancelText}
+          confirmButtonColor={deleteConfig.confirmButtonColor}
+        />
+      )}
     </div>
   );
 }

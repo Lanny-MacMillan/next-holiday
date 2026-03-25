@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -13,9 +13,20 @@ import {
   removeTaskFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectHolidayPreferences,
+  selectHomeInitialized,
+  selectHomeData,
+  selectHolidayPrefById,
+} from '@/store/selectors/home';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -51,20 +62,49 @@ export default function KwanzaaEventsPage() {
   );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - events are stored as tasks with category "Events" like in Hanukkah
-  const events =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [];
+  const events = useMemo(
+    () =>
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Events') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   // Removed refreshHomeData helper to prevent infinite loops
   // Direct dispatch calls are used instead
 
   // State management
-  const [showForm, setShowForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -76,14 +116,16 @@ export default function KwanzaaEventsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
+
     try {
       const result = await createTask({
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
+        assigned_to: values.assigned_to || undefined, // snake_case for API
         category: 'Events',
-        dueDate: values.dueDate || undefined,
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -92,9 +134,11 @@ export default function KwanzaaEventsPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating event:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -131,13 +175,15 @@ export default function KwanzaaEventsPage() {
   async function handleEditTaskSubmit(values: Record<string, any>) {
     if (!editingTask || !holidayId || !auth0User) return;
 
+    setIsEditSubmitting(true);
     try {
       const result = await updateTask(editingTask.id, {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
-        assignedTo: values.assignedTo || undefined,
-        dueDate: values.dueDate || undefined,
+        assigned_to: values.assigned_to || undefined,
+        category: 'Events',
+        due_date: values.dueDate || undefined,
       });
 
       // Update Redux state
@@ -156,36 +202,54 @@ export default function KwanzaaEventsPage() {
       setEditingTask(null);
     } catch (error) {
       console.error('Error updating event:', error);
+    } finally {
+      setIsEditSubmitting(false);
     }
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!holidayId || !auth0User) return;
+    const task = events.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function confirmDeleteTask() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Remove from Redux state on success
       dispatch(
         removeTaskFromHomeData({
           holidayId: holidayId,
-          taskId: taskId,
+          taskId: taskToDelete.id,
         }),
       );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('Error deleting task:', error);
     }
   }
 
+  function cancelDeleteTask() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
+  }
+
   function openForm() {
-    setShowForm(true);
+    setShowAddModal(true);
   }
 
   function closeForm() {
-    setShowForm(false);
+    setShowAddModal(false);
   }
 
   function closeEditModal() {
@@ -236,49 +300,9 @@ export default function KwanzaaEventsPage() {
     );
   }
 
-  const sortedTasks = sortTasks(events);
+  const sortedTasks = sortTasks(events.map(transformTaskWithAssignment));
   const incompleteEvents = sortedTasks.filter((task: any) => !task.isCompleted);
   const completedEvents = sortedTasks.filter((task: any) => task.isCompleted);
-
-  // FormModal fields configuration - matching Hanukkah events exactly
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isAuthorizedForSharing && isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
 
   return (
     <div className="min-h-screen kwanzaa-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -376,53 +400,19 @@ export default function KwanzaaEventsPage() {
 
       {/* Form Modal */}
       <FormModal
-        isOpen={showForm}
+        isOpen={showAddModal}
         title="Add New Event Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Task Title*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isAuthorizedForSharing && isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo' as const,
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          { id: 'dueDate' as const, type: 'date' as const, placeholder: 'Due Date' },
-        ]}
-        initialValues={{
-          title: '',
-          description: '',
-          priority: 'medium',
-          ...(isAuthorizedForSharing && isHolidayShared ? { assignedTo: '' } : {}),
-          dueDate: '',
-        }}
+        fields={
+          getFormConfigEnhanced('tasks', 'add', {
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         onSubmit={handleAddTask}
         onClose={closeForm}
-        loading={createLoading}
-        submitText="Add Task"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Task'}
         cardClassName="card-tasks"
       />
 
@@ -430,49 +420,20 @@ export default function KwanzaaEventsPage() {
       <FormModal
         isOpen={showEditModal}
         title="Edit Event Task"
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Task Title*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 2,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isAuthorizedForSharing && isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo' as const,
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          { id: 'dueDate' as const, type: 'date' as const, placeholder: 'Due Date' },
-        ]}
+        fields={
+          getFormConfigEnhanced('tasks', 'edit', {
+            holidayKey: 'kwanzaa',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isAuthorizedForSharing && isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
+                assigned_to: editingTask.assignedTo || '',
                 dueDate: editingTask.dueDate
                   ? new Date(editingTask.dueDate).toISOString().split('T')[0]
                   : '',
@@ -481,9 +442,19 @@ export default function KwanzaaEventsPage() {
         }
         onSubmit={handleEditTaskSubmit}
         onClose={closeEditModal}
-        loading={updateLoading}
-        submitText="Update Task"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Task'}
         cardClassName="card-tasks"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        title="Delete Event?"
+        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        onConfirm={confirmDeleteTask}
+        onCancel={cancelDeleteTask}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

@@ -58,12 +58,32 @@ export const getCardFilter = (options: ShadowOptions = {}): { filter: string } =
  * Get complete card styling including shadows and borders for dark mode
  */
 export const getCardStyling = (options: ShadowOptions = {}): React.CSSProperties => {
-  const { isDarkMode = false, intensity = 'medium' } = options;
+  const { isDarkMode = false, isGamified = false, intensity = 'medium' } = options;
 
   const baseStyles: React.CSSProperties = {
     filter: getCardDropShadow(options),
   };
 
+  // Apply white borders for gamified mode (both light and dark mode)
+  if (isGamified) {
+    return {
+      ...baseStyles,
+      borderTopWidth: '2px',
+      borderRightWidth: '2px',
+      borderBottomWidth: '2px',
+      borderLeftWidth: '2px',
+      borderTopStyle: 'solid',
+      borderRightStyle: 'solid',
+      borderBottomStyle: 'solid',
+      borderLeftStyle: 'solid',
+      borderTopColor: 'white',
+      borderRightColor: 'white',
+      borderBottomColor: 'white',
+      borderLeftColor: 'white',
+    };
+  }
+
+  // Dark mode borders for non-gamified cards
   if (isDarkMode) {
     // Add white outline for dark mode to make shadows pop
     const borderIntensityMap = {

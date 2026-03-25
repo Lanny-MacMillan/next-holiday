@@ -31,8 +31,10 @@ model User {
   createdBudgetTxns     BudgetTransaction[] @relation("BudgetTransactionCreator")
   createdBudgets        Budget[]            @relation("BudgetCreator")
   createdCards          Card[]              @relation("CardCreator")
+  assignedCards         Card[]              @relation("CardAssignee")
   createdContacts       Contact[]           @relation("ContactCreator")
   createdGifts          Gift[]              @relation("GiftCreator")
+  assignedGifts         Gift[]              @relation("GiftAssignee")
   createdGuestLists     GuestList[]         @relation("GuestListCreator")
   createdHolidays       Holiday[]           @relation("HolidayCreator")
   sentInvites           Invite[]            @relation("InviteSender")
@@ -44,6 +46,9 @@ model User {
   taskAssignments       TaskAssignee[]      @relation("TaskAssignmentUser")
   assignedTasks         Task[]              @relation("TaskAssignee")
   createdTasks          Task[]              @relation("TaskCreator")
+  notifications         Notification[]      @relation("UserNotifications")
+  sentNotifications     Notification[]      @relation("NotificationSender")
+  notificationPrefs     NotificationPreferences?
   preferences           UserPreferences?
 
   @@index([email])
@@ -131,6 +136,7 @@ model Holiday {
   account           Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
   creator           User               @relation("HolidayCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   kwanzaaPrinciples KwanzaaPrinciple[]
+  notifications     Notification[]
   shares            Share?
   tasks             Task[]
 
@@ -228,11 +234,13 @@ model Gift {
   notes         String?
   isCompleted   Boolean   @default(false) @map("is_completed")
   completedDate DateTime? @map("completed_date")
+  assignedTo    String?   @map("assigned_to") @db.Char(36)
   createdBy     String    @map("created_by") @db.Char(36)
   shareId       String?   @map("share_id") @db.Char(36)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   contact       Contact?  @relation(fields: [contactId], references: [id])
+  assignedUser  User?     @relation("GiftAssignee", fields: [assignedTo], references: [id])
   creator       User      @relation("GiftCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   holiday       Holiday   @relation(fields: [holidayId], references: [id], onDelete: Cascade)
   share         Share?    @relation(fields: [shareId], references: [id])
@@ -240,6 +248,7 @@ model Gift {
   @@index([holidayId])
   @@index([contactId])
   @@index([isCompleted])
+  @@index([assignedTo])
   @@index([price])
   @@index([createdBy], map: "gifts_created_by_fkey")
   @@index([shareId], map: "gifts_share_id_fkey")
@@ -255,18 +264,21 @@ model Card {
   message     String
   isCompleted Boolean   @default(false) @map("is_completed")
   sentDate    DateTime? @map("sent_date")
+  assignedTo  String?   @map("assigned_to") @db.Char(36)
   createdBy   String    @map("created_by") @db.Char(36)
   shareId     String?   @map("share_id") @db.Char(36)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  contact     Contact?  @relation(fields: [contactId], references: [id])
-  creator     User      @relation("CardCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  holiday     Holiday   @relation(fields: [holidayId], references: [id], onDelete: Cascade)
-  share       Share?    @relation(fields: [shareId], references: [id])
+  contact      Contact?  @relation(fields: [contactId], references: [id])
+  assignedUser User?     @relation("CardAssignee", fields: [assignedTo], references: [id])
+  creator      User      @relation("CardCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  holiday      Holiday   @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  share        Share?    @relation(fields: [shareId], references: [id])
 
   @@index([holidayId])
   @@index([contactId])
   @@index([isCompleted])
+  @@index([assignedTo])
   @@index([createdBy], map: "cards_created_by_fkey")
   @@index([shareId], map: "cards_share_id_fkey")
   @@map("cards")
@@ -366,6 +378,7 @@ model Invite {
   fromUser          User         @relation("InviteSender", fields: [fromUserId], references: [id], onDelete: Cascade)
   share             Share        @relation(fields: [shareId], references: [id], onDelete: Cascade)
   toUser            User?        @relation("InviteReceiver", fields: [toUserId], references: [id])
+  notifications     Notification[]
 
   @@index([toEmail])
   @@index([status])
@@ -433,6 +446,49 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+model Notification {
+  id           String    @id @default(uuid()) @db.Char(36)
+  userId       String    @map("user_id") @db.Char(36)
+  type         String    @db.VarChar(50)
+  title        String    @db.VarChar(255)
+  message      String?   @db.Text
+  entityType   String?   @map("entity_type") @db.VarChar(50)
+  entityId     String?   @map("entity_id") @db.Char(36)
+  holidayId    String?   @map("holiday_id") @db.Char(36)
+  fromUserId   String?   @map("from_user_id") @db.Char(36)
+  inviteId     String?   @map("invite_id") @db.Char(36)
+  isRead       Boolean   @default(false) @map("is_read")
+  isDismissed  Boolean   @default(false) @map("is_dismissed")
+  readAt       DateTime? @map("read_at")
+  dismissedAt  DateTime? @map("dismissed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  user         User      @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  fromUser     User?     @relation("NotificationSender", fields: [fromUserId], references: [id], onDelete: SetNull)
+  holiday      Holiday?  @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  invite       Invite?   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, type])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreferences {
+  id                      String   @id @default(uuid()) @db.Char(36)
+  userId                  String   @unique @map("user_id") @db.Char(36)
+  assignmentNotifications Boolean  @default(true) @map("assignment_notifications")
+  completionNotifications Boolean  @default(true) @map("completion_notifications")
+  inviteNotifications     Boolean  @default(true) @map("invite_notifications")
+  emailNotifications      Boolean  @default(false) @map("email_notifications")
+  digestFrequency         String   @default("immediate") @map("digest_frequency") @db.VarChar(20)
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification_preferences")
 }
 
 enum TaskPriority {

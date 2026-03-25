@@ -1,8 +1,16 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import {
+  broadcastAssignment,
+  broadcastCompletion,
+  broadcastNotification,
+} from '@/lib/realTimeNotifications';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 
 // Base schema without contact_id
 const baseSchema = z.object({
@@ -15,11 +23,19 @@ const baseSchema = z.object({
     .union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
     .optional(),
   notes: z.string().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional().or(z.literal('')), // Allow empty string
 });
 
-// Schema for holidays that require contact_id (like Christmas)
-const giftWithContactSchema = baseSchema.extend({
-  contact_id: z.string().uuid(),
+// Schema for flexible contact creation (like guest lists)
+const giftWithFlexibleContactSchema = baseSchema.extend({
+  contact_id: z.string().uuid().nullable().optional(),
+  // Fields for creating new contacts when contact_id not provided
+  recipient_name: z.string().nullable().optional(),
+  recipient_email: z
+    .union([z.string().email(), z.string().length(0), z.null(), z.undefined()])
+    .optional(),
+  recipient_phone: z.string().nullable().optional(),
+  recipient_address: z.string().nullable().optional(),
 });
 
 // Schema for holidays that don't require contact_id (like Thanksgiving)
@@ -35,6 +51,7 @@ const giftWithoutContactSchema = baseSchema.extend({
     .union([z.string().url(), z.string().length(0), z.null(), z.undefined()])
     .optional(),
   notes: z.string().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 export async function POST(
@@ -57,6 +74,8 @@ export async function POST(
       return badRequest('Holiday not found');
     }
 
+    const holidayName = holiday.name || 'Holiday';
+
     const json = await request.json();
 
     // Use different schema based on holiday
@@ -64,7 +83,8 @@ export async function POST(
     if (holiday.name === 'Thanksgiving') {
       parsed = giftWithoutContactSchema.safeParse(json);
     } else {
-      parsed = giftWithContactSchema.safeParse(json);
+      // Use flexible contact schema for other holidays (supports creating new contacts)
+      parsed = giftWithFlexibleContactSchema.safeParse(json);
     }
 
     if (!parsed.success) {
@@ -72,6 +92,116 @@ export async function POST(
     }
 
     const data = parsed.data;
+
+    // Validate assignee access if assigning to someone
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assigneeValidation = await validateAssigneeAccess(data.assigned_to, id);
+      if (!assigneeValidation.valid) {
+        return badRequest(assigneeValidation.error || 'Invalid assignee');
+      }
+    }
+
+    // Handle contact creation/lookup for flexible schemas
+    let contactId = data.contact_id;
+    if (holiday.name !== 'Thanksgiving' && !contactId) {
+      // Type assertion for flexible contact data
+      const flexibleData = data as any;
+
+      if (flexibleData.recipient_name && flexibleData.recipient_name.trim()) {
+        // Get user's account
+        const account = await prisma.account.findFirst({
+          where: {
+            members: {
+              some: {
+                userId: user.id,
+              },
+            },
+          },
+          select: { id: true },
+        });
+
+        if (!account) {
+          return serverError('User account not found');
+        }
+
+        // Find or create contact like guest API does
+        let contact = null;
+        if (
+          flexibleData.recipient_email &&
+          typeof flexibleData.recipient_email === 'string' &&
+          flexibleData.recipient_email.trim()
+        ) {
+          // Try to find existing contact with same email
+          contact = await prisma.contact.findFirst({
+            where: {
+              accountId: account.id,
+              email: flexibleData.recipient_email.trim(),
+            },
+          });
+        }
+
+        if (!contact) {
+          // Create new contact
+          contact = await prisma.contact.create({
+            data: {
+              id: uuidv4(),
+              accountId: account.id,
+              name: flexibleData.recipient_name.trim(),
+              email:
+                flexibleData.recipient_email &&
+                typeof flexibleData.recipient_email === 'string' &&
+                flexibleData.recipient_email.trim()
+                  ? flexibleData.recipient_email.trim()
+                  : null,
+              phone:
+                flexibleData.recipient_phone &&
+                typeof flexibleData.recipient_phone === 'string' &&
+                flexibleData.recipient_phone.trim()
+                  ? flexibleData.recipient_phone.trim()
+                  : null,
+              streetAddress:
+                flexibleData.recipient_address &&
+                typeof flexibleData.recipient_address === 'string' &&
+                flexibleData.recipient_address.trim()
+                  ? flexibleData.recipient_address.trim()
+                  : null,
+              createdBy: user.id,
+            },
+          });
+        } else {
+          // Update existing contact if needed
+          contact = await prisma.contact.update({
+            where: { id: contact.id },
+            data: {
+              name: flexibleData.recipient_name.trim(),
+              phone:
+                flexibleData.recipient_phone &&
+                typeof flexibleData.recipient_phone === 'string' &&
+                flexibleData.recipient_phone.trim()
+                  ? flexibleData.recipient_phone.trim()
+                  : contact.phone,
+              streetAddress:
+                flexibleData.recipient_address &&
+                typeof flexibleData.recipient_address === 'string' &&
+                flexibleData.recipient_address.trim()
+                  ? flexibleData.recipient_address.trim()
+                  : contact.streetAddress,
+              updatedAt: new Date(),
+            },
+          });
+        }
+
+        contactId = contact.id;
+      }
+    }
+
+    // Debug logging for assignment field
+    console.log('🔍 Gift creation debug:');
+    console.log('  Raw assigned_to from request:', data.assigned_to);
+    console.log('  Parsed data keys:', Object.keys(data));
+    console.log('  assigned_to type:', typeof data.assigned_to);
+    console.log('  Final contactId:', contactId);
+
     const gift = await prisma.gift.create({
       data: {
         holidayId: id,
@@ -85,10 +215,66 @@ export async function POST(
             ? data.product_link
             : null,
         notes: data.notes ?? null,
-        contactId: data.contact_id,
+        contactId: contactId, // Use resolved contactId
+        assignedTo:
+          data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null, // Handle empty string
         createdBy: user.id,
       },
     });
+
+    // Debug logging for created gift
+    console.log('🎁 Gift created:');
+    console.log('  Gift ID:', gift.id);
+    console.log('  assignedTo field in DB:', gift.assignedTo);
+    console.log('  Original assigned_to:', data.assigned_to);
+
+    // Create assignment notification if assigned to someone other than creator
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      try {
+        const assignerName = await getUserName(user.id);
+
+        // Database notification (existing system) - this is the primary system
+        await createAssignmentNotification({
+          userId: data.assigned_to,
+          fromUserId: user.id,
+          entityType: 'gift',
+          entityId: gift.id,
+          holidayId: id,
+          title: 'Gift Assignment',
+          message: `${assignerName} assigned you a gift: ${gift.name}`,
+        });
+
+        // Real-time notification (enhancement layer) - completely isolated
+        // This will NEVER affect the main API operation
+        setTimeout(async () => {
+          try {
+            await broadcastAssignment(
+              data.assigned_to!, // assigneeUserId - we know it's not null from the if condition
+              assignerName, // assignerName
+              'gift', // entityType
+              gift.name, // entityName
+              gift.id, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          } catch (broadcastError) {
+            // Silently log broadcast failures - they never affect the API
+            console.warn(
+              'Real-time notification broadcast failed (gift assignment succeeded):',
+              broadcastError,
+            );
+          }
+        }, 0); // Run in next tick to completely isolate from main operation
+      } catch (notificationError) {
+        // CRITICAL: Even if database notification fails, gift creation still succeeds
+        // This maintains backward compatibility with existing behavior
+        console.error(
+          'Notification system failed (gift assignment succeeded):',
+          notificationError,
+        );
+        // Note: The gift was still created successfully
+      }
+    }
 
     return created(gift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
@@ -115,6 +301,7 @@ export async function GET(
       },
       include: {
         contact: true,
+        assignedUser: true, // Include assigned user data
       },
       orderBy: {
         createdAt: 'desc',
@@ -133,6 +320,8 @@ export async function GET(
       store: gift.store,
       productLink: gift.productLink,
       notes: gift.notes,
+      assignedTo: gift.assignedTo, // Include UUID
+      assignedToName: gift.assignedUser?.name || null, // Include name for display
       shareId: gift.shareId,
       createdAt: gift.createdAt.toISOString(),
       updatedAt: gift.updatedAt.toISOString(),
@@ -164,6 +353,21 @@ export async function PUT(
       return badRequest('Invalid request body');
     }
 
+    // Get existing gift before update for completion notification
+    const existingGift = await prisma.gift.findUnique({
+      where: { id: giftId, holidayId: id },
+      select: {
+        isCompleted: true,
+        assignedTo: true,
+        createdBy: true,
+        name: true,
+      },
+    });
+
+    if (!existingGift) {
+      return badRequest('Gift not found');
+    }
+
     const updatedGift = await prisma.gift.update({
       where: {
         id: giftId,
@@ -174,6 +378,45 @@ export async function PUT(
         completedDate: isCompleted ? new Date() : null,
       },
     });
+
+    // Send completion notification if gift was just completed
+    if (isCompleted && !existingGift.isCompleted && existingGift.assignedTo) {
+      // Run completion notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name and user names for notification
+          const [holiday, completerName] = await Promise.all([
+            prisma.holiday.findUnique({
+              where: { id },
+              select: { name: true },
+            }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+          const assignerUserId = existingGift.createdBy; // Original creator/assigner
+
+          // Notify the original assigner if it's someone else
+          if (assignerUserId && assignerUserId !== user.id) {
+            await broadcastCompletion(
+              assignerUserId, // ownerUserId (who assigned it)
+              completerName, // completerName (who finished it)
+              'gift', // entityType
+              existingGift.name, // entityName
+              giftId, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          }
+        } catch (completionError) {
+          // Silently log completion notification failures
+          console.warn(
+            'Completion notification failed (gift completion succeeded):',
+            completionError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
 
     // Transform the response to match UI expectations
     const transformedGift = {
@@ -233,11 +476,46 @@ export async function PATCH(
     if (holiday.name === 'Thanksgiving') {
       parsed = giftWithoutContactSchema.safeParse(updateData);
     } else {
-      parsed = giftWithContactSchema.safeParse(updateData);
+      parsed = giftWithFlexibleContactSchema.safeParse(updateData);
     }
 
     if (!parsed.success) {
       return badRequest(parsed.error.issues);
+    }
+
+    // Get existing gift for assignment change notifications
+    const existingGift = await prisma.gift.findUnique({
+      where: { id: giftId, holidayId: id },
+      select: {
+        assignedTo: true,
+        name: true,
+      },
+    });
+
+    if (!existingGift) {
+      return badRequest('Gift not found');
+    }
+
+    // Build update data
+    const updateGiftData: any = {
+      name: updateData.name,
+      description: updateData.description ?? null,
+      price: updateData.price ?? 0,
+      store: updateData.store ?? null,
+      productLink:
+        updateData.product_link && updateData.product_link.length > 0
+          ? updateData.product_link
+          : null,
+      notes: updateData.notes ?? null,
+      contactId: updateData.contact_id,
+    };
+
+    // Handle assignment changes if provided
+    if (updateData.assigned_to !== undefined) {
+      updateGiftData.assignedTo =
+        updateData.assigned_to && updateData.assigned_to !== ''
+          ? updateData.assigned_to
+          : null;
     }
 
     // Update the gift
@@ -246,19 +524,66 @@ export async function PATCH(
         id: giftId,
         holidayId: id,
       },
-      data: {
-        name: updateData.name,
-        description: updateData.description ?? null,
-        price: updateData.price ?? 0,
-        store: updateData.store ?? null,
-        productLink:
-          updateData.product_link && updateData.product_link.length > 0
-            ? updateData.product_link
-            : null,
-        notes: updateData.notes ?? null,
-        contactId: updateData.contact_id,
-      },
+      data: updateGiftData,
     });
+
+    // Handle assignment change notifications
+    if (
+      updateData.assigned_to !== undefined &&
+      existingGift.assignedTo !== updateGiftData.assignedTo
+    ) {
+      // Run assignment notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name and assigner name for notifications
+          const [holidayName, assignerName] = await Promise.all([
+            prisma.holiday
+              .findUnique({
+                where: { id },
+                select: { name: true },
+              })
+              .then(h => h?.name || 'Holiday'),
+            getUserName(user.id),
+          ]);
+
+          if (updateGiftData.assignedTo && updateGiftData.assignedTo !== user.id) {
+            // New assignment or reassignment
+            await broadcastAssignment(
+              updateGiftData.assignedTo,
+              assignerName,
+              'gift',
+              existingGift.name,
+              giftId,
+              id,
+              holidayName,
+            );
+          } else if (
+            existingGift.assignedTo &&
+            existingGift.assignedTo !== user.id
+          ) {
+            // Assignment removed - notify the previous assignee
+            await broadcastNotification({
+              userId: existingGift.assignedTo,
+              type: 'gift_assigned', // Using same type but with unassignment message
+              title: 'Gift Unassigned',
+              message: `${assignerName} removed your assignment from "${existingGift.name}"`,
+              entityType: 'gift',
+              entityId: giftId,
+              holidayId: id,
+              fromUserId: user.id,
+              fromUser: { name: assignerName },
+              holiday: { name: holidayName, holidayType: 'unknown' },
+            });
+          }
+        } catch (assignmentError) {
+          // Silently log assignment notification failures
+          console.warn(
+            'Assignment change notification failed (gift update succeeded):',
+            assignmentError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
 
     return ok(updatedGift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',

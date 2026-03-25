@@ -3,12 +3,20 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import {
+  broadcastAssignment,
+  broadcastCompletion,
+  broadcastNotification,
+} from '@/lib/realTimeNotifications';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 
 const createBodySchema = z.object({
   recipient: z.string().min(1),
   message: z.string().min(1),
   address: z.string().nullable().optional(),
   contact_id: z.string().uuid().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 const updateBodySchema = z.object({
@@ -18,6 +26,7 @@ const updateBodySchema = z.object({
   message: z.string().min(1),
   address: z.string().nullable().optional(),
   isCompleted: z.boolean().optional(),
+  assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
 export async function POST(
@@ -37,6 +46,21 @@ export async function POST(
     }
 
     const data = parsed.data;
+
+    // Validate assignee access if assigning to someone
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assigneeValidation = await validateAssigneeAccess(data.assigned_to, id);
+      if (!assigneeValidation.valid) {
+        return badRequest(assigneeValidation.error || 'Invalid assignee');
+      }
+    }
+
+    // Fetch holiday name for better notifications
+    const holiday = await prisma.holiday.findUnique({
+      where: { id },
+      select: { name: true },
+    });
+    const holidayName = holiday?.name || 'Holiday';
     const card = await prisma.card.create({
       data: {
         holidayId: id,
@@ -44,9 +68,58 @@ export async function POST(
         message: data.message,
         address: data.address ?? null,
         contactId: data.contact_id ?? null,
+        assignedTo: data.assigned_to, // NEW
         createdBy: user.id,
       },
     });
+
+    // Create assignment notification if assigned to someone other than creator
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      try {
+        const assignerName = await getUserName(user.id);
+
+        // Database notification (existing system) - this is the primary system
+        await createAssignmentNotification({
+          userId: data.assigned_to,
+          fromUserId: user.id,
+          entityType: 'card',
+          entityId: card.id,
+          holidayId: id,
+          title: 'Card Assignment',
+          message: `${assignerName} assigned you a card for ${card.recipient}`,
+        });
+
+        // Real-time notification (enhancement layer) - completely isolated
+        // This will NEVER affect the main API operation
+        setTimeout(async () => {
+          try {
+            await broadcastAssignment(
+              data.assigned_to!, // assigneeUserId - we know it's not null from the if condition
+              assignerName, // assignerName
+              'card', // entityType
+              `Card for ${card.recipient}`, // entityName
+              card.id, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          } catch (broadcastError) {
+            // Silently log broadcast failures - they never affect the API
+            console.warn(
+              'Real-time notification broadcast failed (card assignment succeeded):',
+              broadcastError,
+            );
+          }
+        }, 0); // Run in next tick to completely isolate from main operation
+      } catch (notificationError) {
+        // CRITICAL: Even if database notification fails, card creation still succeeds
+        // This maintains backward compatibility with existing behavior
+        console.error(
+          'Notification system failed (card assignment succeeded):',
+          notificationError,
+        );
+        // Note: The card was still created successfully
+      }
+    }
 
     return created(card, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
@@ -86,6 +159,21 @@ export async function PUT(
       });
       return ok({ success: true });
     } else if (data.action === 'update' || data.action === 'toggle') {
+      // First check if the card exists and get current state for completion notifications
+      const existingCard = await prisma.card.findUnique({
+        where: { id: data.id },
+        select: {
+          isCompleted: true,
+          assignedTo: true,
+          createdBy: true,
+          recipient: true,
+        },
+      });
+
+      if (!existingCard) {
+        return badRequest('Card not found');
+      }
+
       // Update the card
       const updateData: any = {
         recipient: data.recipient,
@@ -98,13 +186,10 @@ export async function PUT(
         updateData.isCompleted = data.isCompleted;
       }
 
-      // First check if the card exists
-      const existingCard = await prisma.card.findUnique({
-        where: { id: data.id },
-      });
-
-      if (!existingCard) {
-        return badRequest('Card not found');
+      // Handle assigned_to field
+      if (data.assigned_to !== undefined) {
+        updateData.assignedTo =
+          data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null;
       }
 
       const card = await prisma.card.update({
@@ -113,6 +198,108 @@ export async function PUT(
         },
         data: updateData,
       });
+
+      // Handle assignment change notifications
+      if (
+        data.assigned_to !== undefined &&
+        existingCard.assignedTo !== updateData.assignedTo
+      ) {
+        // Run assignment notifications asynchronously to never block the API response
+        setTimeout(async () => {
+          try {
+            // Get holiday name and assigner name for notifications
+            const [holiday, assignerName] = await Promise.all([
+              prisma.holiday.findUnique({
+                where: { id },
+                select: { name: true },
+              }),
+              getUserName(user.id),
+            ]);
+
+            const holidayName = holiday?.name || 'Holiday';
+
+            if (updateData.assignedTo && updateData.assignedTo !== user.id) {
+              // New assignment or reassignment
+              await broadcastAssignment(
+                updateData.assignedTo,
+                assignerName,
+                'card',
+                `Card for ${existingCard.recipient}`,
+                data.id,
+                id,
+                holidayName,
+              );
+            } else if (
+              existingCard.assignedTo &&
+              existingCard.assignedTo !== user.id
+            ) {
+              // Assignment removed - notify the previous assignee
+              await broadcastNotification({
+                userId: existingCard.assignedTo,
+                type: 'card_assigned', // Using same type but with unassignment message
+                title: 'Card Unassigned',
+                message: `${assignerName} removed your assignment from "Card for ${existingCard.recipient}"`,
+                entityType: 'card',
+                entityId: data.id,
+                holidayId: id,
+                fromUserId: user.id,
+                fromUser: { name: assignerName },
+                holiday: { name: holidayName, holidayType: 'unknown' },
+              });
+            }
+          } catch (assignmentError) {
+            // Silently log assignment notification failures
+            console.warn(
+              'Assignment change notification failed (card update succeeded):',
+              assignmentError,
+            );
+          }
+        }, 0); // Run in next tick
+      }
+
+      // Send completion notification if card was just completed
+      if (
+        data.isCompleted !== undefined &&
+        data.isCompleted &&
+        !existingCard.isCompleted &&
+        existingCard.assignedTo
+      ) {
+        // Run completion notifications asynchronously to never block the API response
+        setTimeout(async () => {
+          try {
+            // Get holiday name and user names for notification
+            const [holiday, completerName] = await Promise.all([
+              prisma.holiday.findUnique({
+                where: { id },
+                select: { name: true },
+              }),
+              getUserName(user.id),
+            ]);
+
+            const holidayName = holiday?.name || 'Holiday';
+            const assignerUserId = existingCard.createdBy; // Original creator/assigner
+
+            // Notify the original assigner if it's someone else
+            if (assignerUserId && assignerUserId !== user.id) {
+              await broadcastCompletion(
+                assignerUserId, // ownerUserId (who assigned it)
+                completerName, // completerName (who finished it)
+                'card', // entityType
+                `Card for ${existingCard.recipient}`, // entityName
+                data.id, // entityId
+                id, // holidayId
+                holidayName, // holidayName
+              );
+            }
+          } catch (completionError) {
+            // Silently log completion notification failures
+            console.warn(
+              'Completion notification failed (card completion succeeded):',
+              completionError,
+            );
+          }
+        }, 0); // Run in next tick
+      }
 
       return ok(card, {
         'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',

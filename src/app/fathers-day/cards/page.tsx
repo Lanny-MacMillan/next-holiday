@@ -16,6 +16,14 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 // Helper function to extract recipient from task title
 function extractRecipientFromTitle(title: string): string {
@@ -32,9 +40,9 @@ export default function FathersDayCardsPage() {
     useHolidayPageData();
 
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createCard,
+    updateCard,
+    deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
@@ -42,33 +50,48 @@ export default function FathersDayCardsPage() {
 
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Cards are stored as tasks with category 'Cards'
-  const cards = useMemo(() => {
-    const cardTasks =
-      holidayData?.tasks?.filter((task: any) => task.category === 'Cards') || [];
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'fathers-day'),
+  );
+  const baseMembers = shareData?.members || [];
+  const shareMembers = baseMembers;
 
-    // Map task structure to card structure for MailCard component
-    return cardTasks.map((task: any) => ({
-      id: task.id,
-      recipient: task.recipient || extractRecipientFromTitle(task.title),
-      message: task.message || task.description || '',
-      address: task.address || '',
-      notes: task.notes || '',
-      isCompleted: task.isCompleted || false,
-      // Keep original task data for reference
-      ...task,
-    }));
-  }, [holidayData?.tasks]);
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
+
+  // Use direct cards data from holiday data like Christmas
+  const cards = useMemo(
+    () => (holidayData?.cards || []).map(transformCardWithAssignment),
+    [holidayData?.cards, shareMembers],
+  );
   const isLoading = !homeInitialized;
   const error = null;
 
-  const [showForm, setShowForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cardToDelete, setCardToDelete] = useState<any>(null);
   const [cardToEdit, setCardToEdit] = useState<any>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -76,33 +99,45 @@ export default function FathersDayCardsPage() {
   }, [dispatch]);
 
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
-
+    setIsSubmitting(true);
     try {
-      const transformedPayload = transformCardPayload(values, contacts);
-      const payload = {
-        title: `Card for ${values.recipient}`,
-        description: values.message || '',
-        category: 'Cards',
-        priority: 'medium' as const,
-        ...transformedPayload,
-      };
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await createTask(payload);
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
+
       await refreshHomeData(auth0User, holidayId);
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating card:', error);
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   function openForm() {
-    setShowForm(true);
+    setShowAddModal(true);
   }
 
   function closeForm() {
-    setShowForm(false);
+    setShowAddModal(false);
+  }
+
+  function closeEditModal() {
+    setShowEditModal(false);
+    setCardToEdit(null);
   }
 
   const handleDeleteCard = async (cardId: string) => {
@@ -119,35 +154,37 @@ export default function FathersDayCardsPage() {
   const confirmDelete = async () => {
     if (cardToDelete && holidayId) {
       try {
-        await deleteTask(cardToDelete.id);
+        await deleteCard(cardToDelete.id, cardToDelete);
         await refreshHomeData(auth0User, holidayId);
         setShowDeleteModal(false);
         setCardToDelete(null);
       } catch (error) {
         console.error('Error deleting card:', error);
+        setToastMessage('Error deleting card. Please try again.');
+        setToastType('error');
+        setShowToast(true);
       }
     }
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && holidayId) {
-      try {
-        const transformedPayload = transformCardPayload(values, contacts);
-        const payload = {
-          title: `Card for ${values.recipient}`,
-          description: values.message || '',
-          category: 'Cards',
-          priority: 'medium' as const,
-          ...transformedPayload,
-        };
+    if (!cardToEdit || !holidayId) return;
+    setIsEditSubmitting(true);
+    try {
+      // Use enhanced transformCardPayload for consistent handling
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-        await updateTask(cardToEdit.id, payload);
-        await refreshHomeData(auth0User, holidayId);
-        setShowEditModal(false);
-        setCardToEdit(null);
-      } catch (error) {
-        console.error('Error updating card:', error);
-      }
+      await updateCard(cardToEdit.id, payload);
+      await refreshHomeData(auth0User, holidayId);
+      setShowEditModal(false);
+      setCardToEdit(null);
+    } catch (error) {
+      console.error('Error updating card:', error);
+      setToastMessage('Error updating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -156,13 +193,22 @@ export default function FathersDayCardsPage() {
       try {
         const card = cards.find((c: any) => c.id === cardId);
         if (card) {
-          await updateTask(cardId, {
+          // Include all required fields when updating completion status
+          await updateCard(cardId, {
+            recipient: card.recipient,
+            message: card.message,
+            address: card.address || '',
+            contact_id: card.contact_id || null,
+            assigned_to: card.assignedTo || null,
             isCompleted: !card.isCompleted,
           });
           await refreshHomeData(auth0User, holidayId);
         }
       } catch (error) {
         console.error('Error toggling card completion:', error);
+        setToastMessage('Error updating card status. Please try again.');
+        setToastType('error');
+        setShowToast(true);
       }
     }
   };
@@ -183,30 +229,20 @@ export default function FathersDayCardsPage() {
   const completedCards = cards.filter((card: any) => card.isCompleted);
   const incompleteCards = cards.filter((card: any) => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer for form configuration
+  const addFormConfig = getFormConfigEnhanced('cards', 'add', {
+    holidayKey: 'fathers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('cards', 'edit', {
+    holidayKey: 'fathers-day',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const deleteConfig = getDeleteConfig('cards');
 
   return (
     <div className="min-h-screen fathers-day-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -226,7 +262,7 @@ export default function FathersDayCardsPage() {
           totalCards={cards.length}
           completedCards={completedCards.length}
           incompleteCards={incompleteCards.length}
-          holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+          holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
         />
 
         <AddButton title="Card" onClick={openForm} color="blue" />
@@ -241,7 +277,7 @@ export default function FathersDayCardsPage() {
           <div className="text-center py-8">
             <p className="text-gray-600 dark:text-gray-400">No cards added yet.</p>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => setShowAddModal(true)}
               className="mt-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
               Add your first card
@@ -262,7 +298,7 @@ export default function FathersDayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+                  holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
                 />
               )}
             />
@@ -280,7 +316,7 @@ export default function FathersDayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-blue-300 to-blue-500"
+                  holidayColor="bg-gradient-to-br from-blue-400 to-blue-600"
                 />
               )}
             />
@@ -288,50 +324,59 @@ export default function FathersDayCardsPage() {
         )}
       </main>
 
-      {/* Form Modal */}
+      {/* Add Modal */}
       <FormModal
-        isOpen={showForm}
+        isOpen={showAddModal}
         title="Add New Card"
-        fields={formFields}
+        fields={addFormConfig.fields}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#3b82f6"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
-        initialValues={cardToEdit}
-        onSubmit={handleEditSubmit}
-        onClose={() => {
-          setShowEditModal(false);
-          setCardToEdit(null);
+        fields={editFormConfig.fields}
+        initialValues={{
+          recipient: cardToEdit?.recipient || '',
+          message: cardToEdit?.message || cardToEdit?.description || '',
+          address: cardToEdit?.address || '',
+          assigned_to: cardToEdit?.assignedTo || '',
         }}
-        submitText="Update Card"
+        onSubmit={handleEditSubmit}
+        onClose={closeEditModal}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#3b82f6"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
       <DeleteModal
         isOpen={showDeleteModal}
-        title="Delete Card"
-        itemName={cardToDelete?.recipient}
-        onConfirm={confirmDelete}
         onCancel={() => {
           setShowDeleteModal(false);
           setCardToDelete(null);
         }}
-        cardClassName="card card-valentines"
-        confirmButtonColor="#3b82f6"
+        onConfirm={confirmDelete}
+        loading={deleteLoading}
+        title={deleteConfig.title}
+        message={deleteConfig.message}
+        itemName={cardToDelete?.recipient}
+        confirmText={deleteConfig.confirmText}
+        cancelText={deleteConfig.cancelText}
+        confirmButtonColor={deleteConfig.confirmButtonColor}
       />
 
       {/* Sort Modal */}
@@ -347,6 +392,15 @@ export default function FathersDayCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );

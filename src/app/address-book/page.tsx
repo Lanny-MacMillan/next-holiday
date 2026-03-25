@@ -358,7 +358,6 @@ export default function AddressBookPage() {
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
         loading={loading}
-        cardClassName={deleteConfig.cardClassName}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
         confirmButtonColor={deleteConfig.confirmButtonColor}

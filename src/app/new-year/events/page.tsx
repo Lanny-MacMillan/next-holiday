@@ -2,30 +2,31 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
 export default function NewYearEventsPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -42,32 +43,75 @@ export default function NewYearEventsPage() {
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
-  // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'new-year'),
   );
   const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Prefer existing uuid field, fallback to userId only if uuid missing
+          })),
+      ]
+    : baseMembers;
+
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    // Preserve original assignedTo field for form editing (UUID)
+    assignedTo: task.assignedTo,
+    // Add display name for UI
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
   // Redux data access - events are stored as tasks with category "Events"
   const events = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Events') || [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Events') || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
 
-  // Safety check for contacts
-  const safeContacts = contacts || [];
-
   // State management
-  const [showForm, setShowForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -78,22 +122,25 @@ export default function NewYearEventsPage() {
     if (!values.title?.trim() || !holidayId) return;
 
     try {
-      const result = await createTask({
+      const newTask = {
         title: values.title,
-        description: values.description,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Events',
-        dueDate: values.dueDate,
-      });
+        due_date: values.dueDate || undefined,
+        isCompleted: false,
+        holidayId: holidayId,
+      };
 
-      // Update Redux state immediately
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
+      // Use the standardized hook function
+      await createTask(newTask);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
-      setShowForm(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating task:', error);
     }
@@ -112,21 +159,12 @@ export default function NewYearEventsPage() {
         title: values.title,
         description: values.description,
         priority: values.priority,
-        assignedTo: values.assignedTo,
+        assigned_to: values.assigned_to === '' ? null : values.assigned_to,
         category: 'Events',
-        dueDate: values.dueDate,
+        due_date: values.dueDate || null,
       };
 
       await updateTask(editingTask.id, updates);
-
-      // Update Redux state immediately
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates,
-        }),
-      );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -138,26 +176,33 @@ export default function NewYearEventsPage() {
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!holidayId) return;
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = events.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete({ ...task, title: taskTitle });
+      setShowDeleteModal(true);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!taskToDelete?.id || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskId);
-
-      // Update Redux state immediately
-      dispatch(
-        removeTaskFromHomeData({
-          holidayId,
-          taskId,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
+      await deleteTask(taskToDelete.id);
       await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting task:', error);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     }
-  };
+  }
+
+  function handleCancelDelete() {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
+  }
 
   const handleToggleTask = async (taskId: string) => {
     const task = events.find((t: any) => t.id === taskId);
@@ -166,20 +211,11 @@ export default function NewYearEventsPage() {
     const newCompletionStatus = !task.isCompleted;
 
     try {
-      // Update API
+      // Use the standardized hook function
       await updateTask(taskId, { isCompleted: newCompletionStatus });
 
-      // Update Redux state immediately - no refreshHomeData
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId,
-          updates: {
-            ...task,
-            isCompleted: newCompletionStatus,
-          },
-        }),
-      );
+      // Refresh home data to update progress on main holiday page
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling task:', error);
     }
@@ -235,9 +271,9 @@ export default function NewYearEventsPage() {
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Add New Event Button */}
         <AddButton
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowAddModal(true)}
           title="Event"
-          color="yellow"
+          color="amber"
           disabled={createLoading}
         />
 
@@ -281,7 +317,7 @@ export default function NewYearEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditTask}
               theme={{
                 accentColor: '#fbbf24', // New Year gold
@@ -304,7 +340,7 @@ export default function NewYearEventsPage() {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleTask}
-              onDelete={handleDeleteTask}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
               onEdit={handleEditTask}
               theme={{
                 accentColor: '#fbbf24', // New Year gold
@@ -318,60 +354,25 @@ export default function NewYearEventsPage() {
       </main>
 
       {/* Form Modal for Adding */}
-      {showForm && (
+      {showAddModal && (
         <FormModal
-          isOpen={showForm}
-          onClose={() => setShowForm(false)}
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
           onSubmit={handleAddTask}
           title="Add New Event Task"
-          fields={[
-            {
-              id: 'title',
-              type: 'text' as const,
-              placeholder: 'Task Title*',
-              required: true,
-            },
-            {
-              id: 'description',
-              type: 'textarea' as const,
-              placeholder: 'Description',
-              rows: 2,
-            },
-            {
-              id: 'priority',
-              type: 'select' as const,
-              placeholder: 'Priority',
-              options: [
-                { value: 'low', label: 'Low Priority' },
-                { value: 'medium', label: 'Medium Priority' },
-                { value: 'high', label: 'High Priority' },
-              ],
-            },
-            ...(isHolidayShared
-              ? [
-                  {
-                    id: 'assignedTo' as const,
-                    type: 'text' as const,
-                    placeholder: 'Assigned To',
-                  },
-                ]
-              : []),
-            {
-              id: 'dueDate' as const,
-              type: 'date' as const,
-              placeholder: 'Due Date',
-            },
-          ]}
-          initialValues={{
-            title: '',
-            description: '',
-            priority: 'medium',
-            ...(isHolidayShared ? { assignedTo: '' } : {}),
-            dueDate: '',
-          }}
+          fields={
+            getFormConfigEnhanced('tasks', 'add', {
+              holidayKey: 'new-year' as any,
+              shareMembers: shareMembers,
+              auth0User: auth0User,
+            }).fields
+          }
+          initialValues={{}}
           loading={createLoading}
-          submitText="Add Task"
+          submitText={createLoading ? 'Adding...' : 'Add Task'}
           cardClassName="card-tasks"
+          contacts={contacts}
+          shareMembers={shareMembers}
         />
       )}
 
@@ -385,56 +386,39 @@ export default function NewYearEventsPage() {
           }}
           onSubmit={handleEditTaskSubmit}
           title="Edit Event Task"
-          fields={[
-            {
-              id: 'title',
-              type: 'text' as const,
-              placeholder: 'Task Title*',
-              required: true,
-            },
-            {
-              id: 'description',
-              type: 'textarea' as const,
-              placeholder: 'Description',
-              rows: 2,
-            },
-            {
-              id: 'priority',
-              type: 'select' as const,
-              placeholder: 'Priority',
-              options: [
-                { value: 'low', label: 'Low Priority' },
-                { value: 'medium', label: 'Medium Priority' },
-                { value: 'high', label: 'High Priority' },
-              ],
-            },
-            ...(isHolidayShared
-              ? [
-                  {
-                    id: 'assignedTo' as const,
-                    type: 'text' as const,
-                    placeholder: 'Assigned To',
-                  },
-                ]
-              : []),
-            {
-              id: 'dueDate' as const,
-              type: 'date' as const,
-              placeholder: 'Due Date',
-            },
-          ]}
+          fields={
+            getFormConfigEnhanced('tasks', 'edit', {
+              holidayKey: 'new-year' as any,
+              shareMembers: shareMembers,
+              auth0User: auth0User,
+            }).fields
+          }
           initialValues={{
             title: editingTask.title || '',
             description: editingTask.description || '',
             priority: editingTask.priority || 'medium',
-            ...(isHolidayShared ? { assignedTo: editingTask.assignedTo || '' } : {}),
+            assigned_to: editingTask.assignedTo || '',
             dueDate: editingTask.dueDate
               ? new Date(editingTask.dueDate).toISOString().split('T')[0]
               : '',
           }}
           loading={updateLoading}
-          submitText="Update Task"
+          submitText={updateLoading ? 'Updating...' : 'Update Task'}
           cardClassName="card-tasks"
+          contacts={contacts}
+          shareMembers={shareMembers}
+        />
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && taskToDelete && (
+        <DeleteModal
+          isOpen={showDeleteModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          title="Delete Event"
+          message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+          loading={deleteLoading}
         />
       )}
 

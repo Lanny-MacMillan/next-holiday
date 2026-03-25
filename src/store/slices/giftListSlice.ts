@@ -11,6 +11,8 @@ export interface Gift {
   store?: string;
   productLink?: string;
   notes?: string;
+  assignedTo?: string; // UUID of assigned user
+  assignedToName?: string; // Name of assigned user for display
   shareId?: string;
   createdAt: string;
   updatedAt: string;

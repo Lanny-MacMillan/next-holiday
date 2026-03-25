@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/generated/prisma';
+import { broadcastInvite } from '@/lib/realTimeNotifications';
 
 const prisma = new PrismaClient();
 
@@ -35,13 +36,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
 
+    // Check for existing pending invite to prevent duplicates
+    const existingInvite = await prisma.invite.findFirst({
+      where: {
+        shareId,
+        OR: [{ toUserId }, { toEmail }],
+        status: 'pending',
+      },
+    });
+
+    if (existingInvite) {
+      return NextResponse.json(
+        {
+          error: 'A pending invite already exists for this user',
+          inviteStatus: 'duplicate_pending',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Check if trying to invite someone who already declined (allow re-invite)
+    const declinedInvite = await prisma.invite.findFirst({
+      where: {
+        shareId,
+        OR: [{ toUserId }, { toEmail }],
+        status: 'declined',
+      },
+    });
+
+    // Email-to-user lookup: Check if email belongs to a registered user
+    let finalToUserId = toUserId;
+    let finalToEmail = toEmail;
+    let userLookupStatus = '';
+
+    if (toEmail && !toUserId) {
+      const existingUser = await prisma.user.findFirst({
+        where: { email: toEmail },
+      });
+
+      if (existingUser) {
+        // Convert email invite to user ID invite (gets real-time notifications)
+        finalToUserId = existingUser.id;
+        finalToEmail = undefined; // Clear email since we found the user
+        userLookupStatus = 'registered_user';
+      } else {
+        // Keep as email invite but notify sender
+        userLookupStatus = 'unregistered_email';
+      }
+    }
+
     // Create invite using the internal user ID
     const invite = await prisma.invite.create({
       data: {
         shareId,
         fromUserId: fromUser.id, // Use internal user ID, not Auth0 sub
-        toUserId,
-        toEmail,
+        toUserId: finalToUserId,
+        toEmail: finalToEmail,
         holidayKey,
         message,
         status: 'pending',
@@ -56,7 +106,50 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(invite);
+    // Send real-time invitation notification if inviting a registered user
+    if (finalToUserId) {
+      // Run invitation notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name from holidayKey (assuming it's a readable name)
+          // For now, use holidayKey as the name, but this could be enhanced
+          // to look up proper holiday names from a mapping or database
+          const holidayName = holidayKey
+            .replace('-', ' ')
+            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+          await broadcastInvite(
+            finalToUserId, // inviteeUserId
+            fromUser.name || fromUser.email || 'Someone', // inviterName
+            holidayName, // holidayName
+            invite.id, // inviteId
+            shareId, // shareId
+          );
+        } catch (inviteError) {
+          // Silently log invitation notification failures
+          console.warn(
+            'Invite notification failed (invite creation succeeded):',
+            inviteError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
+
+    // Add status to response for frontend handling
+    const response = {
+      ...invite,
+      inviteStatus: declinedInvite ? 'reinvite_after_decline' : 'new_invite',
+      userLookupStatus, // Add user lookup status for frontend
+      message: declinedInvite
+        ? 'Reinvite sent successfully'
+        : userLookupStatus === 'registered_user'
+          ? `Invite sent to ${toEmail}! They'll receive real-time notifications.`
+          : userLookupStatus === 'unregistered_email'
+            ? `Invite sent to ${toEmail}! They'll see it when they sign up.`
+            : 'Invite sent successfully',
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error creating invite:', error);
     return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 });

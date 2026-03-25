@@ -11,7 +11,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -20,6 +23,7 @@ import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
 
@@ -44,6 +48,12 @@ export default function BabyShowerTasksPage() {
   );
   const contacts = useAppSelector((state: any) => state.addressBook.contacts);
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'baby-shower'),
+  );
+  const shareMembers = shareData?.members || [];
+
   // State management
   const [showForm, setShowForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -58,9 +68,21 @@ export default function BabyShowerTasksPage() {
   // Load contacts if holiday is shared
   useEffect(() => {
     if (isHolidayShared && auth0User) {
-      dispatch(fetchContacts(auth0User.sub));
+      dispatch(fetchContacts(auth0User.id));
     }
-  }, [isHolidayShared, auth0User, dispatch]);
+  }, [isHolidayShared, auth0User]);
+
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Task data processing
   const tasks =
@@ -93,7 +115,7 @@ export default function BabyShowerTasksPage() {
     });
   }
 
-  const sortedTasks = getSortedTasks();
+  const sortedTasks = getSortedTasks().map(transformTaskWithAssignment);
   const completedTasks = sortedTasks.filter((task: any) => task.isCompleted);
   const pendingTasks = sortedTasks.filter((task: any) => !task.isCompleted);
 
@@ -143,6 +165,8 @@ export default function BabyShowerTasksPage() {
 
     const taskData = {
       ...formData,
+      assigned_to: formData.assigned_to || undefined,
+      due_date: formData.dueDate || undefined,
       category: 'Tasks',
       isCompleted: false,
     };
@@ -158,13 +182,19 @@ export default function BabyShowerTasksPage() {
   const handleEditTask = async (formData: any) => {
     if (!editingTask || !holidayId) return;
 
-    const result = await updateTask(editingTask.id, formData);
+    const updateData = {
+      ...formData,
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.dueDate || null,
+    };
+
+    const result = await updateTask(editingTask.id, updateData);
     if (result) {
       dispatch(
         updateTaskInHomeData({
           holidayId,
           taskId: editingTask.id,
-          updates: formData,
+          updates: updateData,
         }),
       );
       await refreshHomeData(auth0User, holidayId);
@@ -189,46 +219,18 @@ export default function BabyShowerTasksPage() {
     setShowSortModal(false);
   }
 
-  // Dynamic form fields
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Enhanced Compatibility Layer form configuration
+  const formConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   const deleteConfig = getDeleteConfig('tasks');
 
@@ -269,6 +271,7 @@ export default function BabyShowerTasksPage() {
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
               onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              disableInternalModal={true}
               theme={{ accentColor: themeColor }}
               borderColor={themeColor}
             />
@@ -290,6 +293,7 @@ export default function BabyShowerTasksPage() {
                 onToggleComplete={handleTaskToggle}
                 onEdit={() => handleEditModalOpen(task)}
                 onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+                disableInternalModal={true}
                 theme={{ accentColor: themeColor }}
                 borderColor={themeColor}
               />
@@ -320,39 +324,39 @@ export default function BabyShowerTasksPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Task"
-        fields={formFields}
+        fields={formConfig.fields}
         onSubmit={handleAddTask}
         onClose={closeForm}
         loading={createLoading}
-        submitText={createLoading ? 'Adding...' : 'Add Task'}
+        submitText={createLoading ? 'Processing...' : 'Add Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Task"
-        fields={formFields}
+        fields={editFormConfig.fields}
         initialValues={{
           title: editingTask?.title || '',
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
-          ...(isHolidayShared ? { assignedTo: editingTask?.assignedTo || '' } : {}),
+          assigned_to: editingTask?.assignedTo || '',
           dueDate: editingTask?.dueDate || '',
         }}
         onSubmit={handleEditTask}
         onClose={handleEditModalClose}
         loading={updateLoading}
-        submitText={updateLoading ? 'Updating...' : 'Update Task'}
+        submitText={updateLoading ? 'Processing...' : 'Update Task'}
         cancelText="Cancel"
         cardClassName="card card-tasks"
         submitButtonColor={themeColor}
-        showAddressBook={isHolidayShared}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -366,7 +370,6 @@ export default function BabyShowerTasksPage() {
         itemName={taskToDelete?.title}
         confirmText={deleteConfig.confirmText}
         cancelText={deleteConfig.cancelText}
-        cardClassName={deleteConfig.cardClassName}
         confirmButtonColor={deleteConfig.confirmButtonColor}
       />
     </div>

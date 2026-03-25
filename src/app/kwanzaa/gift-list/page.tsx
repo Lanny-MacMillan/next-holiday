@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -12,14 +12,17 @@ import {
   removeGiftFromHomeData,
   setHomeData,
 } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '@/hooks/useFormModalMutation';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -48,8 +51,36 @@ export default function KwanzaaGiftListPage() {
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Redux data access - gifts from holiday data
-  const gifts = holidayData?.gifts || [];
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'kwanzaa'),
+  );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'kwanzaa'),
+  );
+  const shareMembers = shareData?.members || [];
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform gifts to include assignedToName for display
+  const transformGiftWithAssignment = (gift: any) => ({
+    ...gift,
+    assignedToName: gift.assignedTo ? getAssignedUserName(gift.assignedTo) : null,
+  });
+
+  // Redux data access - gifts from holiday data with assignment name resolution
+  const gifts = useMemo(
+    () => (holidayData?.gifts || []).map(transformGiftWithAssignment),
+    [holidayData?.gifts, shareMembers],
+  );
   const isLoading = !homeInitialized;
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
@@ -68,11 +99,11 @@ export default function KwanzaaGiftListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.description?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await createGift(payload);
 
       // Update Redux state immediately
@@ -80,6 +111,9 @@ export default function KwanzaaGiftListPage() {
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      // Refresh address book contacts
+      dispatch(fetchContacts());
 
       setShowFormModal(false);
     } catch (error) {
@@ -172,7 +206,7 @@ export default function KwanzaaGiftListPage() {
     if (!selectedGift || !holidayId || !auth0User) return;
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformGiftPayload(values, contacts, shareMembers);
       const result = await updateGift(selectedGift.id, payload);
 
       // Update Redux state
@@ -267,62 +301,75 @@ export default function KwanzaaGiftListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer configuration
+  const formConfig = getFormConfigEnhanced('gifts', selectedGift ? 'edit' : 'add', {
+    holidayKey: 'kwanzaa',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  // Debug: Log form config to see what fields are generated
+  console.log('Gift form config fields:', formConfig.fields);
+  console.log('ShareMembers for form:', shareMembers);
 
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
-    return {
+    // For assigned_to, try multiple approaches since Enhanced Compatibility Layer might expect different formats
+    let assignedToValue = '';
+    if (selectedGift.assignedTo) {
+      console.log('Processing assignment for gift:', selectedGift);
+      console.log('Gift assignedTo UUID:', selectedGift.assignedTo);
+      console.log('Available shareMembers:', shareMembers);
+
+      // First try: Use UUID directly (Enhanced system might expect this)
+      assignedToValue = selectedGift.assignedTo;
+      console.log('Trying UUID directly:', assignedToValue);
+
+      // Second try: Find the member and use userId (Auth0 ID)
+      const assignedMember = shareMembers.find(
+        (m: any) => m.uuid === selectedGift.assignedTo,
+      );
+      if (assignedMember) {
+        const userIdValue = assignedMember.userId;
+        console.log(
+          `Found member: ${assignedMember.name} (UUID: ${assignedMember.uuid}, userId: ${userIdValue})`,
+        );
+
+        // Try userId approach as backup
+        // assignedToValue = userIdValue;
+        console.log('Using UUID for assignment field:', assignedToValue);
+      } else {
+        console.warn(
+          `Could not find member for UUID ${selectedGift.assignedTo} in shareMembers`,
+        );
+        console.warn(
+          'ShareMembers available:',
+          shareMembers.map((m: any) => ({
+            uuid: m.uuid,
+            userId: m.userId,
+            name: m.name,
+          })),
+        );
+      }
+    }
+
+    const initialValues = {
       recipient: selectedGift.recipient || '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price.toString(),
+      name: selectedGift.name || '',
+      description: selectedGift.name || selectedGift.description || '',
+      price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
+      productLink: selectedGift.productLink || '',
       product_link: selectedGift.productLink || '',
+      assigned_to: assignedToValue,
       notes: selectedGift.notes || '',
     };
+
+    console.log('Final initial values for edit form:', initialValues);
+
+    return initialValues;
   };
 
   return (
@@ -379,17 +426,25 @@ export default function KwanzaaGiftListPage() {
       <FormModal
         isOpen={showFormModal}
         title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
+        fields={formConfig.fields}
         initialValues={getInitialValues()}
         onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
         onClose={closeForm}
         loading={createLoading || updateLoading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        submitText={
+          createLoading || updateLoading
+            ? selectedGift
+              ? 'Updating...'
+              : 'Adding...'
+            : selectedGift
+              ? 'Update Gift'
+              : 'Add Gift'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#dc2626"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

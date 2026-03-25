@@ -17,13 +17,16 @@ export default function Toast({
 }: ToastProps) {
   useEffect(() => {
     if (isVisible) {
+      // Different durations based on message type
+      const duration = type === 'error' ? 6000 : type === 'info' ? 4000 : 3000;
+
       const timer = setTimeout(() => {
         onClose();
-      }, 3000); // Auto-hide after 3 seconds
+      }, duration);
 
       return () => clearTimeout(timer);
     }
-  }, [isVisible, onClose]);
+  }, [isVisible, onClose, type]);
 
   if (!isVisible) return null;
 

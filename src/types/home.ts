@@ -7,6 +7,7 @@ export interface HomeData {
     subscriptionPlan?: 'free' | 'plus';
     subscriptionStartDate?: string;
     subscriptionEndDate?: string;
+    createdAt?: string;
   } | null;
   account: {
     id: string;
@@ -32,6 +33,16 @@ export interface HomeData {
     // Guest lists for events and parties
     guestLists?: any[];
   }> | null;
+  notificationPreferences: {
+    id: string;
+    assignmentNotifications: boolean;
+    completionNotifications: boolean;
+    inviteNotifications: boolean;
+    emailNotifications: boolean;
+    digestFrequency: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
   contacts: Array<{
     id: string;
     name: string;

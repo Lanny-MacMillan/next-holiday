@@ -74,6 +74,8 @@ export default function HomeContent({ homeData }: HomeContentProps) {
         holidayName="Next Holiday"
         description="Plan your holidays, stay organized, and have fun!"
         showBackButton={false}
+        cycleIcons={true}
+        availableHolidays={filteredHolidays.map(h => h.id)}
       />
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {filteredHolidays.length === 0 ? (

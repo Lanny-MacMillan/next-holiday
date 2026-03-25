@@ -6,7 +6,10 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import AddButton from '@/components/common/AddButton';
@@ -14,10 +17,17 @@ import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import SortModal from '@/components/modals/SortModal';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 export default function BabyShowerGamesPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'baby-shower'),
+  );
+  const shareMembers = shareData?.members || [];
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -103,7 +113,34 @@ export default function BabyShowerGamesPage() {
     }
   };
 
-  const sortedGameTasks = sortTasks(gameTasks, sortBy);
+  // Name resolution helper functions
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
+
+  const sortedGameTasks = sortTasks(gameTasks, sortBy).map(
+    transformTaskWithAssignment,
+  );
+
+  // Enhanced Compatibility Layer form configurations
+  const formConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'baby-shower',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
@@ -114,18 +151,14 @@ export default function BabyShowerGamesPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assigned_to: values.assigned_to || undefined,
+      due_date: values.dueDate || undefined,
       category: 'Games',
-      dueDate: values.dueDate || undefined,
     };
 
-    try {
-      await createTask(newTask);
-      await refreshHomeData(auth0User, holidayId);
-      setShowAddForm(false);
-    } catch (error) {
-      console.error('Failed to add task:', error);
-    }
+    await createTask(newTask);
+    await refreshHomeData(auth0User, holidayId);
+    setShowAddForm(false);
   }
 
   const handleEdit = (task: any) => {
@@ -140,19 +173,15 @@ export default function BabyShowerGamesPage() {
       title: values.title,
       description: values.description || undefined,
       priority: values.priority as 'low' | 'medium' | 'high',
-      assignedTo: values.assignedTo || undefined,
+      assigned_to: values.assigned_to || null,
+      due_date: values.dueDate || null,
       category: 'Games',
-      dueDate: values.dueDate || undefined,
     };
 
-    try {
-      await updateTask(editingTask.id, updatedTask);
-      await refreshHomeData(auth0User, holidayId);
-      setEditingTask(null);
-      setShowAddForm(false);
-    } catch (error) {
-      console.error('Failed to update task:', error);
-    }
+    await updateTask(editingTask.id, updatedTask);
+    await refreshHomeData(auth0User, holidayId);
+    setEditingTask(null);
+    setShowAddForm(false);
   }
 
   const handleDelete = (taskOrId: any) => {
@@ -255,6 +284,7 @@ export default function BabyShowerGamesPage() {
               onEdit={handleEdit}
               className="opacity-60"
               gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
+              disableInternalModal={true}
             />
           )}
         />
@@ -274,57 +304,20 @@ export default function BabyShowerGamesPage() {
       <FormModal
         isOpen={showAddForm}
         title={editingTask ? 'Edit Game' : 'Add New Game'}
-        fields={[
-          {
-            id: 'title',
-            type: 'text' as const,
-            placeholder: 'Game Title*',
-            required: true,
-          },
-          {
-            id: 'description',
-            type: 'textarea' as const,
-            placeholder: 'Description',
-            rows: 3,
-          },
-          {
-            id: 'priority',
-            type: 'select' as const,
-            placeholder: 'Priority',
-            options: [
-              { value: 'low', label: 'Low Priority' },
-              { value: 'medium', label: 'Medium Priority' },
-              { value: 'high', label: 'High Priority' },
-            ],
-          },
-          ...(isHolidayShared
-            ? [
-                {
-                  id: 'assignedTo',
-                  type: 'text' as const,
-                  placeholder: 'Assigned To',
-                },
-              ]
-            : []),
-          { id: 'dueDate', type: 'date' as const, placeholder: 'Due Date' },
-        ]}
+        fields={editingTask ? editFormConfig.fields : formConfig.fields}
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
-                  : {}),
+                assigned_to: editingTask.assignedTo || '',
                 dueDate: editingTask.dueDate
                   ? new Date(editingTask.dueDate).toISOString().split('T')[0]
                   : '',
               }
             : {
                 priority: 'medium',
-                category: 'Games',
-                ...(isHolidayShared ? { assignedTo: '' } : {}),
               }
         }
         onSubmit={editingTask ? handleEditTaskSubmit : handleAddTask}
@@ -333,9 +326,19 @@ export default function BabyShowerGamesPage() {
           setEditingTask(null);
         }}
         loading={editingTask ? updateLoading : createLoading}
-        submitText={editingTask ? 'Update Game' : 'Add Game'}
+        submitText={
+          editingTask
+            ? updateLoading
+              ? 'Processing...'
+              : 'Update Game'
+            : createLoading
+              ? 'Processing...'
+              : 'Add Game'
+        }
         cardClassName="card"
         submitButtonColor="#06b6d4"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}

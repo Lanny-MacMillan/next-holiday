@@ -205,9 +205,9 @@ const BouncingShape: React.FC<BouncingShapeProps> = ({
       }
     >
       <div
-        className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8 transition-opacity duration-200 drop-shadow-lg ${debug ? 'opacity-100 border-2 border-blue-500' : 'opacity-100'}`}
+        className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8 transition-opacity duration-200 ${debug ? 'opacity-100 border-2 border-blue-500' : 'opacity-100'}`}
       >
-        <ShapeComponent className="w-full h-full filter drop-shadow-xl" />
+        <ShapeComponent className="w-full h-full" />
       </div>
       {debug && (
         <div className="absolute -bottom-6 left-0 text-xs text-red-600 font-bold whitespace-nowrap bg-white px-1">

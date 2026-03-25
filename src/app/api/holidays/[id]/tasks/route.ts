@@ -3,6 +3,13 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import {
+  broadcastAssignment,
+  broadcastCompletion,
+  broadcastNotification,
+} from '@/lib/realTimeNotifications';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -30,6 +37,22 @@ export async function POST(
     }
 
     const data = parsed.data;
+
+    // Validate assignee access if assigning to someone
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assigneeValidation = await validateAssigneeAccess(data.assigned_to, id);
+      if (!assigneeValidation.valid) {
+        return badRequest(assigneeValidation.error || 'Invalid assignee');
+      }
+    }
+
+    // Fetch holiday name for better notifications
+    const holiday = await prisma.holiday.findUnique({
+      where: { id },
+      select: { name: true },
+    });
+    const holidayName = holiday?.name || 'Holiday';
+
     const task = await prisma.task.create({
       data: {
         holidayId: id,
@@ -42,6 +65,54 @@ export async function POST(
         createdBy: user.id,
       },
     });
+
+    // Create assignment notification if assigned to someone other than creator
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      try {
+        const assignerName = await getUserName(user.id);
+
+        // Database notification (existing system) - this is the primary system
+        await createAssignmentNotification({
+          userId: data.assigned_to,
+          fromUserId: user.id,
+          entityType: 'task',
+          entityId: task.id,
+          holidayId: id,
+          title: 'Task Assignment',
+          message: `${assignerName} assigned you a task: ${task.title}`,
+        });
+
+        // Real-time notification (enhancement layer) - completely isolated
+        // This will NEVER affect the main API operation
+        setTimeout(async () => {
+          try {
+            await broadcastAssignment(
+              data.assigned_to!, // assigneeUserId - we know it's not null from the if condition
+              assignerName, // assignerName
+              'task', // entityType
+              task.title, // entityName
+              task.id, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          } catch (broadcastError) {
+            // Silently log broadcast failures - they never affect the API
+            console.warn(
+              'Real-time notification broadcast failed (task assignment succeeded):',
+              broadcastError,
+            );
+          }
+        }, 0); // Run in next tick to completely isolate from main operation
+      } catch (notificationError) {
+        // CRITICAL: Even if database notification fails, task creation still succeeds
+        // This maintains backward compatibility with existing behavior
+        console.error(
+          'Notification system failed (task assignment succeeded):',
+          notificationError,
+        );
+        // Note: The task was still created successfully
+      }
+    }
 
     return created(task, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
@@ -97,6 +168,22 @@ export async function PUT(
       return badRequest('taskId and isCompleted are required');
     }
 
+    // Get existing task before update for completion notification
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId, holidayId: id },
+      select: {
+        isCompleted: true,
+        assignedTo: true,
+        createdBy: true,
+        title: true,
+      },
+    });
+
+    if (!existingTask) {
+      return badRequest('Task not found');
+    }
+
+    // Update the task
     const task = await prisma.task.update({
       where: {
         id: taskId,
@@ -107,6 +194,45 @@ export async function PUT(
         completedDate: isCompleted ? new Date() : null,
       },
     });
+
+    // Send completion notification if task was just completed
+    if (isCompleted && !existingTask.isCompleted && existingTask.assignedTo) {
+      // Run completion notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name and user names for notification
+          const [holiday, completerName] = await Promise.all([
+            prisma.holiday.findUnique({
+              where: { id },
+              select: { name: true },
+            }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+          const assignerUserId = existingTask.createdBy; // Original creator/assigner
+
+          // Notify the original assigner if it's someone else
+          if (assignerUserId && assignerUserId !== user.id) {
+            await broadcastCompletion(
+              assignerUserId, // ownerUserId (who assigned it)
+              completerName, // completerName (who finished it)
+              'task', // entityType
+              existingTask.title, // entityName
+              taskId, // entityId
+              id, // holidayId
+              holidayName, // holidayName
+            );
+          }
+        } catch (completionError) {
+          // Silently log completion notification failures
+          console.warn(
+            'Completion notification failed (task completion succeeded):',
+            completionError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
 
     return ok(task);
   } catch (error) {
@@ -132,6 +258,21 @@ export async function PATCH(
       return badRequest('taskId is required');
     }
 
+    // Get existing task before update to detect assignment changes
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId, holidayId: id },
+      select: {
+        assignedTo: true,
+        title: true,
+        createdBy: true,
+        isCompleted: true,
+      },
+    });
+
+    if (!existingTask) {
+      return badRequest('Task not found');
+    }
+
     // Only allow updating specific fields
     const allowedFields = [
       'title',
@@ -140,6 +281,7 @@ export async function PATCH(
       'category',
       'dueDate',
       'assignedTo',
+      'isCompleted',
     ];
     const filteredData: any = {};
 
@@ -154,6 +296,14 @@ export async function PATCH(
       filteredData.dueDate = new Date(filteredData.dueDate);
     }
 
+    // Add completion date if task is being completed
+    if (filteredData.isCompleted && !existingTask.isCompleted) {
+      filteredData.completedDate = new Date();
+    } else if (filteredData.isCompleted === false && existingTask.isCompleted) {
+      filteredData.completedDate = null;
+    }
+
+    // Update the task
     const task = await prisma.task.update({
       where: {
         id: taskId,
@@ -161,6 +311,105 @@ export async function PATCH(
       },
       data: filteredData,
     });
+
+    // Handle assignment change notifications
+    if (
+      filteredData.assignedTo !== undefined &&
+      existingTask.assignedTo !== filteredData.assignedTo
+    ) {
+      // Run assignment notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          // Get holiday name and assigner name for notifications
+          const [holiday, assignerName] = await Promise.all([
+            prisma.holiday.findUnique({
+              where: { id },
+              select: { name: true },
+            }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+
+          if (filteredData.assignedTo && filteredData.assignedTo !== user.id) {
+            // New assignment or reassignment
+            await broadcastAssignment(
+              filteredData.assignedTo,
+              assignerName,
+              'task',
+              existingTask.title,
+              taskId,
+              id,
+              holidayName,
+            );
+          } else if (
+            existingTask.assignedTo &&
+            existingTask.assignedTo !== user.id
+          ) {
+            // Assignment removed - notify the previous assignee
+            await broadcastNotification({
+              userId: existingTask.assignedTo,
+              type: 'task_assigned', // Using same type but with unassignment message
+              title: 'Task Unassigned',
+              message: `${assignerName} removed your assignment from "${existingTask.title}"`,
+              entityType: 'task',
+              entityId: taskId,
+              holidayId: id,
+              fromUserId: user.id,
+              fromUser: { name: assignerName },
+              holiday: { name: holidayName, holidayType: 'unknown' },
+            });
+          }
+        } catch (assignmentError) {
+          // Silently log assignment notification failures
+          console.warn(
+            'Assignment change notification failed (task update succeeded):',
+            assignmentError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
+
+    // Handle completion notifications (for PATCH completion changes)
+    if (
+      filteredData.isCompleted !== undefined &&
+      filteredData.isCompleted &&
+      !existingTask.isCompleted &&
+      task.assignedTo
+    ) {
+      // Run completion notifications asynchronously to never block the API response
+      setTimeout(async () => {
+        try {
+          const [holiday, completerName] = await Promise.all([
+            prisma.holiday.findUnique({
+              where: { id },
+              select: { name: true },
+            }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+          const assignerUserId = existingTask.createdBy;
+
+          if (assignerUserId && assignerUserId !== user.id) {
+            await broadcastCompletion(
+              assignerUserId,
+              completerName,
+              'task',
+              existingTask.title,
+              taskId,
+              id,
+              holidayName,
+            );
+          }
+        } catch (completionError) {
+          console.warn(
+            'Completion notification failed (task completion succeeded):',
+            completionError,
+          );
+        }
+      }, 0); // Run in next tick
+    }
 
     return ok(task);
   } catch (error) {

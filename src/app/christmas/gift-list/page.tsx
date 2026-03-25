@@ -12,6 +12,10 @@ import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
+
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -38,15 +42,49 @@ export default function ChristmasGiftListPage() {
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'christmas'),
+  );
+  const baseMembers = shareData?.members || [];
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+          })),
+      ]
+    : baseMembers;
+
   // Use memoized gifts filtering from holiday data
   const displayGifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Toast state for error/success messages
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -54,11 +92,33 @@ export default function ChristmasGiftListPage() {
   }, [dispatch]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      // Pre-validate the assigned_to field before sending to transformer
+      if (values.assignedTo || values.assigned_to) {
+        const assignedValue = values.assignedTo || values.assigned_to;
+
+        // Check if it's already a valid UUID
+        const isValidUUID =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            assignedValue,
+          );
+
+        if (!isValidUUID) {
+          // Try to find matching member
+          const matchingMember = shareMembers.find(
+            (m: any) => m.userId === assignedValue,
+          );
+        }
+      } else {
+        console.log('No assignment field in form values');
+        console.log('Available form fields:', Object.keys(values));
+      }
+
+      const payload = transformGiftPayload(values, contacts, shareMembers);
 
       // Use the standardized hook function
       await createGift(payload);
@@ -66,25 +126,50 @@ export default function ChristmasGiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
-      setShowFormModal(false);
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
+      // Show success toast
+      setToastMessage('Gift added successfully!');
+      setToastType('success');
+      setShowToast(true);
+
+      setShowAddModal(false);
     } catch (error) {
-      console.error('Error creating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error creating gift. Please try again.');
+      // Show user-friendly error message with Toast
+      let errorMessage = 'Error creating gift. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('address book')) {
+          errorMessage = 'Please select a recipient from the address book';
+        } else if (
+          error.message.includes('uuid') ||
+          error.message.includes('Invalid uuid')
+        ) {
+          errorMessage = 'Assignment error: Please try selecting the assignee again';
+        }
       }
+
+      setToastMessage(errorMessage);
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   function openForm() {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
-  function closeForm() {
-    setShowFormModal(false);
+  function closeAddModal() {
+    setShowAddModal(false);
+    setSelectedGift(null);
+  }
+
+  function closeEditModal() {
+    setShowEditModal(false);
     setSelectedGift(null);
   }
 
@@ -141,14 +226,36 @@ export default function ChristmasGiftListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift || !holidayId || !auth0User) return;
 
+    setIsEditSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
+      // Pre-validate the assigned_to field before sending to transformer
+      if (values.assignedTo || values.assigned_to) {
+        const assignedValue = values.assignedTo || values.assigned_to;
+
+        // Check if it's already a valid UUID
+        const isValidUUID =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            assignedValue,
+          );
+
+        if (!isValidUUID) {
+          // Try to find matching member
+          const matchingMember = shareMembers.find(
+            (m: any) => m.userId === assignedValue,
+          );
+        }
+      } else {
+        console.log('No assignment field in form values for update');
+        console.log('Available form fields:', Object.keys(values));
+      }
+
+      const payload = transformGiftPayload(values, contacts, shareMembers);
 
       // Use the standardized hook function
       await updateGift(selectedGift.id, payload);
@@ -156,16 +263,35 @@ export default function ChristmasGiftListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
-      setShowFormModal(false);
+      // Show success toast
+      setToastMessage('Gift updated successfully!');
+      setToastType('success');
+      setShowToast(true);
+
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
+
+      // Show user-friendly error message with Toast
+      let errorMessage = 'Error updating gift. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('address book')) {
+          errorMessage = 'Please select a recipient from the address book';
+        } else if (
+          error.message.includes('uuid') ||
+          error.message.includes('Invalid uuid')
+        ) {
+          errorMessage = 'Assignment error: Please try selecting the assignee again';
+        }
       }
+
+      setToastMessage(errorMessage);
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsEditSubmitting(false);
     }
   }
 
@@ -236,70 +362,40 @@ export default function ChristmasGiftListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
+    // For assigned_to, we need to reverse-map UUID back to Auth0 user ID for form display
+    let assignedToValue = '';
+    if (selectedGift.assignedTo) {
+      // Find the member whose UUID matches the selectedGift.assignedTo
+      const assignedMember = shareMembers.find(
+        (m: any) => m.uuid === selectedGift.assignedTo,
+      );
+      if (assignedMember) {
+        assignedToValue = assignedMember.userId; // Use the Auth0 user ID for form
+        console.log(
+          `Reverse-mapping UUID ${selectedGift.assignedTo} to userId ${assignedMember.userId} for form display`,
+        );
+      } else {
+        console.warn(
+          `Could not find member for UUID ${selectedGift.assignedTo}, clearing assignment in form`,
+        );
+      }
+    }
 
     return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
+      recipient: selectedGift.recipient || '',
+      name: selectedGift.name || '',
       description: selectedGift.description || '',
       price: selectedGift.price ? selectedGift.price.toString() : '',
       store: selectedGift.store || '',
       product_link: selectedGift.productLink || '',
+      assigned_to: assignedToValue,
       notes: selectedGift.notes || '',
     };
   };
-
-  const loading = createLoading || updateLoading || deleteLoading;
 
   return (
     <div className="min-h-screen christmas-gifts-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -351,21 +447,50 @@ export default function ChristmasGiftListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Gift Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-        onClose={closeForm}
-        loading={loading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        isOpen={showAddModal}
+        onClose={closeAddModal}
+        title="Add New Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'add', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
+        onSubmit={handleAddGift}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Gift'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#22c55e"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Gift Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        onClose={closeEditModal}
+        title="Edit Gift"
+        fields={
+          getFormConfigEnhanced('gifts', 'edit', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={getInitialValues()}
+        onSubmit={handleUpdateGift}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Gift'}
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#22c55e"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
@@ -375,7 +500,7 @@ export default function ChristmasGiftListPage() {
         message={`Are you sure you want to delete "${giftToDelete?.name}"? This action cannot be undone.`}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
-        loading={loading}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}
@@ -392,6 +517,14 @@ export default function ChristmasGiftListPage() {
           { value: 'price-low', label: 'Price: Low to High' },
         ]}
         title="Sort Gifts"
+      />
+
+      {/* Toast for error/success messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
       />
     </div>
   );

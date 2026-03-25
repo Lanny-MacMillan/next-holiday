@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth0 } from '@auth0/auth0-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { initializeTheme, clearCachedData } from '@/store/slices/themeSlice';
 import {
@@ -13,6 +13,8 @@ import Header from './common/Header';
 import Login from './auth/Login';
 import DataInitializer from './DataInitializer';
 import UserSync from './auth/UserSync';
+import PerformanceDashboard from './common/PerformanceDashboard';
+import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { ReactNode } from 'react';
 
 interface AppContentProps {
@@ -26,6 +28,17 @@ export default function AppContent({ children }: AppContentProps) {
   const { preferences, initialized: preferencesInitialized } = useAppSelector(
     (state: any) => state.userPreferences,
   );
+
+  // Performance dashboard state
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
+
+  // Initialize performance tracking
+  usePerformanceTracking();
+
+  // Check if we're in development or testing mode
+  const isDevelopment =
+    process.env.NODE_ENV === 'development' ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost');
 
   // Initialize theme on mount
   useEffect(() => {
@@ -103,6 +116,24 @@ export default function AppContent({ children }: AppContentProps) {
       <DataInitializer />
       <Header />
       <AuthWrapper>{children}</AuthWrapper>
+
+      {/* Performance Dashboard - only show in development/testing */}
+      {isDevelopment && (
+        <>
+          <button
+            onClick={() => setShowPerformanceDashboard(true)}
+            className="fixed bottom-4 right-4 z-[9998] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
+            title="Open Performance Dashboard"
+          >
+            📊
+          </button>
+
+          <PerformanceDashboard
+            isVisible={showPerformanceDashboard}
+            onClose={() => setShowPerformanceDashboard(false)}
+          />
+        </>
+      )}
     </>
   );
 }

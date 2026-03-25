@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
@@ -10,11 +11,14 @@ export default function DisplayModeToggle() {
   const { user: auth0User } = useAuth0();
   const { settings } = useAppSelector((state: any) => state.theme);
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Use preferences from database if available, otherwise fall back to theme slice
   const currentDisplayMode = preferences?.displayMode || settings.displayMode;
 
   const handleToggle = async () => {
+    if (isLoading) return; // Prevent multiple clicks
+
     const newDisplayMode =
       currentDisplayMode === 'professional' ? 'gamified' : 'professional';
 
@@ -23,6 +27,7 @@ export default function DisplayModeToggle() {
 
     // Update database preferences if user is authenticated
     if (preferences && auth0User?.sub) {
+      setIsLoading(true);
       try {
         await dispatch(
           updateUserPreferences({
@@ -34,6 +39,8 @@ export default function DisplayModeToggle() {
         console.error('Failed to update display mode in database:', error);
         // Revert local state if database update fails
         dispatch(updateSettings({ displayMode: currentDisplayMode }));
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -41,7 +48,10 @@ export default function DisplayModeToggle() {
   return (
     <button
       onClick={handleToggle}
-      className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
+      disabled={isLoading}
+      className={`p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors ${
+        isLoading ? 'opacity-50 cursor-not-allowed' : ''
+      }`}
       aria-label={`Switch to ${
         currentDisplayMode === 'professional' ? 'gamified' : 'professional'
       } mode`}
@@ -49,7 +59,24 @@ export default function DisplayModeToggle() {
         currentDisplayMode === 'professional' ? 'gamified' : 'professional'
       } mode`}
     >
-      {currentDisplayMode === 'professional' ? (
+      {isLoading ? (
+        // Loading spinner
+        <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+            className="opacity-25"
+          />
+          <path
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            className="opacity-75"
+          />
+        </svg>
+      ) : currentDisplayMode === 'professional' ? (
         // Game controller icon for professional mode (click to switch to gamified)
         <svg
           className="h-5 w-5"

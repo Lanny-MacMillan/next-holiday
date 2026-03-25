@@ -5,7 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -14,7 +14,7 @@ import RSVPSection from '@/components/common/RSVPSection';
 import ReservationsTracker from '@/components/cards/reservation/ReservationsTracker';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
 import {
@@ -45,8 +45,9 @@ export default function ThanksgivingGuestListPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
-  // Use standardized guest mutations hook
+  // Use standardized guest mutations hook and its data
   const {
+    guests,
     createGuest,
     updateGuest,
     editGuest,
@@ -55,34 +56,51 @@ export default function ThanksgivingGuestListPage() {
     updateGuestState,
     editGuestState,
     deleteGuestState,
+    loading: guestsLoading,
+    error: guestsError,
   } = useGuestMutations();
 
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Get guest lists from home data
-  const guestLists = useAppSelector(
-    holidayId ? selectGuestListsByHoliday(holidayId) : () => [],
-  ) as any[];
+  // Get share members for Enhanced Compatibility Layer
+  const shareMembers =
+    useAppSelector((state: any) => state.shares.shareMembers) || [];
 
-  // Transform guest list data to match expected format
-  const guests = useMemo(
-    () =>
-      guestLists.map((guestList: any) => ({
-        id: guestList.id,
-        name: guestList.contact?.name || 'Unknown',
-        email: guestList.contact?.email || undefined,
-        phone: guestList.contact?.phone || undefined,
-        address: guestList.contact?.streetAddress || undefined,
-        rsvpStatus: guestList.rsvpStatus || 'pending',
-        numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
-        notes: guestList.notes || undefined,
-        isCompleted: guestList.rsvpStatus === 'confirmed',
-        createdAt: guestList.createdAt,
-        updatedAt: guestList.updatedAt,
-      })),
-    [guestLists],
-  );
+  // Enhanced Compatibility Layer - Guest form configuration
+  const addFormConfig = getFormConfigEnhanced('guests', 'add', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('guests', 'edit', {
+    holidayKey: 'thanksgiving',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  // Get guest lists from Redux home data (consistent with other pages)
+  // This ensures immediate UI updates when Redux state changes
+  const guestLists = holidayData?.guestLists || [];
+
+  // Transform guest list data to match expected format with proper defaults
+  const transformedGuests = useMemo(() => {
+    return guestLists.map((guestList: any) => ({
+      id: guestList.id,
+      name: guestList.contact?.name || 'Unknown Guest', // Get name from nested contact object
+      email: guestList.contact?.email || undefined,
+      phone: guestList.contact?.phone || undefined,
+      address: guestList.contact?.streetAddress || undefined,
+      rsvpStatus: guestList.rsvpStatus || 'pending',
+      numberOfGuests: guestList.numberOfGuests || 1, // Ensure numberOfGuests is never NaN or undefined
+      notes: guestList.notes || undefined,
+      isCompleted:
+        guestList.rsvpStatus === 'confirmed' || guestList.isCompleted || false,
+      createdAt: guestList.createdAt,
+      updatedAt: guestList.updatedAt,
+    }));
+  }, [guestLists]);
 
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
@@ -115,7 +133,7 @@ export default function ThanksgivingGuestListPage() {
     if (editingGuest) {
       // Update existing guest
       try {
-        await editGuest({
+        const result = await editGuest({
           holidayId,
           guestId: editingGuest.id,
           payload: {
@@ -127,12 +145,22 @@ export default function ThanksgivingGuestListPage() {
               | 'pending'
               | 'confirmed'
               | 'declined',
+            numberOfGuests: formValues.numberOfGuests || 1, // Ensure numberOfGuests defaults to 1
             notes: formValues.notes || undefined,
           },
           auth0User,
         }).unwrap();
 
-        // Refresh home data to ensure UI is in sync
+        // Update Redux state immediately (following pattern from other pages)
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: result,
+          }),
+        );
+
+        // Refresh home data to ensure UI is in sync (following pattern from other pages)
         await refreshHomeData(auth0User, holidayId);
 
         setEditingGuest(null);
@@ -154,12 +182,13 @@ export default function ThanksgivingGuestListPage() {
               | 'pending'
               | 'confirmed'
               | 'declined',
+            numberOfGuests: formValues.numberOfGuests || 1, // Ensure numberOfGuests defaults to 1
             notes: formValues.notes || undefined,
           },
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately
+        // Update Redux state immediately (following pattern from other pages)
         dispatch(
           addGuestToHomeData({
             holidayId,
@@ -167,8 +196,12 @@ export default function ThanksgivingGuestListPage() {
           }),
         );
 
-        // Refresh home data to ensure UI is in sync
+        // Refresh home data to ensure UI is in sync (following pattern from other pages)
         await refreshHomeData(auth0User, holidayId);
+
+        // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+        dispatch(resetContacts());
+        dispatch(fetchContacts());
 
         setShowForm(false);
       } catch (error) {
@@ -189,6 +222,7 @@ export default function ThanksgivingGuestListPage() {
   const handleToggleGuest = async (guestId: string) => {
     if (!holidayId || !auth0User) return;
 
+    // Find the original guestList data (not transformed) for the toggle operation
     const guestList = guestLists.find((gl: any) => gl.id === guestId);
     if (guestList) {
       // Toggle RSVP status: if confirmed, set to pending; if pending, set to confirmed
@@ -203,7 +237,7 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately
+        // Update Redux state immediately with the original structure (not transformed)
         const updatedGuestList = {
           ...guestList,
           rsvpStatus: newRsvpStatus,
@@ -241,7 +275,7 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately
+        // Update Redux state immediately (following pattern from other pages)
         dispatch(
           removeGuestFromHomeData({
             holidayId,
@@ -249,7 +283,7 @@ export default function ThanksgivingGuestListPage() {
           }),
         );
 
-        // Refresh home data to ensure UI is in sync
+        // Refresh home data to ensure UI is in sync (following pattern from other pages)
         await refreshHomeData(auth0User, holidayId);
 
         setDeleteConfirm({ show: false, guestId: null });
@@ -293,7 +327,7 @@ export default function ThanksgivingGuestListPage() {
     );
   }
 
-  const sortedGuests = sortGuests(guests);
+  const sortedGuests = sortGuests(transformedGuests);
   const pendingGuests = sortedGuests.filter(
     (guest: Guest) => guest.rsvpStatus === 'pending',
   );
@@ -317,7 +351,7 @@ export default function ThanksgivingGuestListPage() {
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
         <ReservationsTracker
-          guests={guests}
+          guests={transformedGuests}
           title="Thanksgiving Guest Tracker"
           accentColor="#f97316"
         />
@@ -412,7 +446,7 @@ export default function ThanksgivingGuestListPage() {
       <FormModal
         isOpen={showForm}
         title={editingGuest ? 'Edit Guest' : 'Add New Guest'}
-        fields={getFormConfig('guests', editingGuest ? 'edit' : 'add').fields}
+        fields={editingGuest ? editFormConfig.fields : addFormConfig.fields}
         initialValues={
           editingGuest
             ? {
@@ -430,15 +464,20 @@ export default function ThanksgivingGuestListPage() {
         loading={
           editingGuest ? editGuestState.isLoading : createGuestState.isLoading
         }
-        submitText={editingGuest ? 'Update Guest' : 'Add Guest'}
+        submitText={
+          editingGuest
+            ? editGuestState.isLoading
+              ? 'Processing...'
+              : 'Update Guest'
+            : createGuestState.isLoading
+              ? 'Processing...'
+              : 'Add Guest'
+        }
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f97316"
-        showAddressBook={true}
         contacts={contacts}
-        onAddressBookSelect={contact => {
-          // The FormModal will handle the form values internally
-        }}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

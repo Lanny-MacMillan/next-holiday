@@ -3,13 +3,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import {
-  useCreateCardMutation,
-  useCardOperationMutation,
-  useDeleteCardMutation,
-} from '@/store/api';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { transformCardPayload } from '@/utils/formTransformers';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { RootState } from '@/store';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -19,6 +21,8 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 export default function BirthdayCardsPage() {
   const dispatch = useAppDispatch();
@@ -27,15 +31,65 @@ export default function BirthdayCardsPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
-  // Use card mutations instead of task mutations
-  const [createCard, { isLoading: createLoading }] = useCreateCardMutation();
-  const [cardOperation, { isLoading: updateLoading }] = useCardOperationMutation();
-  const [deleteCard, { isLoading: deleteLoading }] = useDeleteCardMutation();
+  const {
+    createCard,
+    updateCard,
+    deleteCard,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  } = useHolidayMutations({ holidayId, auth0User });
 
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Get cards from holiday data (using actual cards, not tasks)
-  const cards = useMemo(() => holidayData?.cards || [], [holidayData?.cards]);
+  // Enhanced Compatibility Layer - Get share members with current user inclusion
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'birthday'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+          })),
+      ]
+    : baseMembers;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
+
+  // Get cards from holiday data with assignment names
+  const cards = useMemo(() => {
+    const transformedCards = (holidayData?.cards || []).map(
+      transformCardWithAssignment,
+    );
+
+    return transformedCards;
+  }, [holidayData?.cards, shareMembers]);
 
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
@@ -43,10 +97,17 @@ export default function BirthdayCardsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [cardToDelete, setCardToDelete] = useState<any>(null);
   const [cardToEdit, setCardToEdit] = useState<any>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Toast state for error messages
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -54,22 +115,23 @@ export default function BirthdayCardsPage() {
   }, [dispatch]);
 
   async function handleAddCard(values: Record<string, any>) {
-    if (!values.recipient?.trim() || !values.message?.trim()) return;
+    if (!values.recipient?.trim() || !values.message?.trim()) {
+      setToastMessage('Please fill in both Recipient and Message fields');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
     if (!holidayId) return;
 
     try {
-      // Use the cards API with proper payload structure
-      const payload = {
-        recipient: values.recipient,
-        message: values.message || '',
-        address: values.address || null,
-      };
+      setIsSubmitting(true);
+      // Use enhanced transformCardPayload for flexible contact creation and address population
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await createCard({
-        holidayId,
-        payload,
-        auth0User,
-      }).unwrap();
+      await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -77,7 +139,11 @@ export default function BirthdayCardsPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error creating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -101,50 +167,46 @@ export default function BirthdayCardsPage() {
   };
 
   const confirmDelete = async () => {
-    if (cardToDelete && holidayId) {
-      try {
-        await deleteCard({
-          holidayId,
-          cardId: cardToDelete.id,
-          auth0User,
-        }).unwrap();
+    if (!cardToDelete || !holidayId) return;
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+    try {
+      await deleteCard(cardToDelete.id, cardToDelete);
 
-        setShowDeleteModal(false);
-        setCardToDelete(null);
-      } catch (error) {
-        console.error('Error deleting card:', error);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setCardToDelete(null);
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      setToastMessage('Error deleting card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && holidayId) {
-      try {
-        const payload = {
-          id: cardToEdit.id,
-          action: 'update' as const,
-          recipient: values.recipient,
-          message: values.message || '',
-          address: values.address || null,
-        };
+    if (!cardToEdit || !holidayId) return;
 
-        await cardOperation({
-          holidayId,
-          payload,
-          auth0User,
-        }).unwrap();
+    try {
+      setIsEditSubmitting(true);
+      // Use enhanced transformCardPayload for consistent handling
+      const payload = transformCardPayload(values, contacts, shareMembers);
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+      await updateCard(cardToEdit.id, payload);
 
-        setShowEditModal(false);
-        setCardToEdit(null);
-      } catch (error) {
-        console.error('Error updating card:', error);
-      }
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowEditModal(false);
+      setCardToEdit(null);
+    } catch (error) {
+      console.error('Error updating card:', error);
+      setToastMessage('Error updating card. Please try again.');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -154,43 +216,28 @@ export default function BirthdayCardsPage() {
     try {
       const card = cards.find((c: any) => c.id === cardId);
       if (card) {
-        const payload = {
-          id: cardId,
-          action: 'toggle' as const,
+        // Include all required fields when updating completion status
+        await updateCard(cardId, {
           recipient: card.recipient,
           message: card.message,
-          address: card.address,
+          address: card.address || '',
+          contact_id: card.contact_id || null,
+          assigned_to: card.assignedTo || null,
           isCompleted: !card.isCompleted,
-        };
-
-        await cardOperation({
-          holidayId,
-          payload,
-          auth0User,
-        }).unwrap();
+        });
 
         // Refresh home data to ensure UI is in sync
         await refreshHomeData(auth0User, holidayId);
       }
     } catch (error) {
       console.error('Error toggling card completion:', error);
+      setToastMessage('Error updating card status. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
-  // Use only Redux data - cards are already in the correct format
-  const displayCards = useMemo(() => {
-    // Cards from the API are already in the correct format
-    return cards.map((card: any) => ({
-      id: card.id,
-      recipient: card.recipient || '',
-      message: card.message || '',
-      address: card.address || '',
-      notes: card.notes || '',
-      isCompleted: card.isCompleted || false,
-    }));
-  }, [cards]);
-
-  const sortedCards = [...displayCards].sort((a, b) => {
+  const sortedCards = [...cards].sort((a, b) => {
     switch (sortBy) {
       case 'recipient':
         return a.recipient.localeCompare(b.recipient);
@@ -203,33 +250,21 @@ export default function BirthdayCardsPage() {
     }
   });
 
-  const completedCards = displayCards.filter((card: any) => card.isCompleted);
-  const incompleteCards = displayCards.filter((card: any) => !card.isCompleted);
+  const completedCards = sortedCards.filter((card: any) => card.isCompleted);
+  const incompleteCards = sortedCards.filter((card: any) => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer form config
+  const formConfig = getFormConfigEnhanced('cards', 'add', {
+    holidayKey: 'birthday',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('cards', 'edit', {
+    holidayKey: 'birthday',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
 
   return (
     <div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -246,10 +281,10 @@ export default function BirthdayCardsPage() {
       <main className="w-full max-w-4xl flex flex-col gap-6">
         {/* Summary Stats */}
         <MailCardStatus
-          totalCards={displayCards.length}
+          totalCards={sortedCards.length}
           completedCards={completedCards.length}
           incompleteCards={incompleteCards.length}
-          holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+          holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
         />
 
         <AddButton title="Card" onClick={openForm} color="amber" />
@@ -285,7 +320,7 @@ export default function BirthdayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                  holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 />
               )}
             />
@@ -303,7 +338,7 @@ export default function BirthdayCardsPage() {
                   onToggleCompletion={handleToggleCompletion}
                   onEditCard={handleEditCard}
                   onDeleteCard={handleDeleteCard}
-                  holidayColor="bg-gradient-to-br from-yellow-300 to-yellow-500"
+                  holidayColor="bg-gradient-to-br from-yellow-400 to-yellow-600"
                 />
               )}
             />
@@ -315,32 +350,41 @@ export default function BirthdayCardsPage() {
       <FormModal
         isOpen={showForm}
         title="Add New Card"
-        fields={formFields}
+        fields={formConfig.fields}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#f59e0b"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
-        initialValues={cardToEdit}
+        fields={editFormConfig.fields}
+        initialValues={{
+          recipient: cardToEdit?.recipient || '',
+          message: cardToEdit?.message || '',
+          address: cardToEdit?.address || '',
+          assigned_to: cardToEdit?.assignedTo || '', // Note: form expects snake_case
+        }}
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        submitText="Update Card"
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#f59e0b"
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -353,6 +397,7 @@ export default function BirthdayCardsPage() {
           setShowDeleteModal(false);
           setCardToDelete(null);
         }}
+        loading={deleteLoading}
         cardClassName="card card-valentines"
         confirmButtonColor="#f59e0b"
       />
@@ -370,6 +415,15 @@ export default function BirthdayCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast Notifications */}
+      <Toast
+        isVisible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
+
       <Footer />
     </div>
   );

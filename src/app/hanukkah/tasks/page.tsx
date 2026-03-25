@@ -11,7 +11,10 @@ import {
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import EditTaskModal from '@/components/modals/EditTaskModal';
@@ -20,7 +23,7 @@ import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
@@ -77,10 +80,10 @@ export default function HanukkahTasksPage() {
       const result = await createTask({
         title: formValues.title,
         description: formValues.description || undefined,
-        priority: formValues.priority as 'low' | 'medium' | 'high',
-        assignedTo: formValues.assignedTo || undefined,
+        priority: formValues.priority || 'medium',
+        assigned_to: formValues.assigned_to || undefined,
         category: 'Tasks',
-        dueDate: formValues.dueDate || undefined,
+        due_date: formValues.dueDate || undefined,
       });
 
       // Update Redux state immediately
@@ -103,24 +106,24 @@ export default function HanukkahTasksPage() {
     setShowForm(false);
   }
 
-  async function handleEditTask(task: any) {
-    if (!holidayId || !auth0User) return;
+  async function handleEditTask(formValues: Record<string, any>) {
+    if (!editingTask?.id || !holidayId || !auth0User) return;
 
     try {
-      const updatedTask = await updateTask(task.id, {
-        title: task.title,
-        description: task.description,
-        priority: task.priority,
-        isCompleted: task.isCompleted,
-        assignedTo: task.assignedTo,
-        dueDate: task.dueDate,
+      const updatedTask = await updateTask(editingTask.id, {
+        title: formValues.title,
+        description: formValues.description,
+        priority: formValues.priority || 'medium',
+        isCompleted: formValues.isCompleted || editingTask.isCompleted,
+        assigned_to: formValues.assigned_to || null,
+        due_date: formValues.dueDate || null,
       });
 
       // Update Redux state immediately
       dispatch(
         updateTaskInHomeData({
           holidayId: holidayId,
-          taskId: task.id,
+          taskId: editingTask.id,
           updates: updatedTask,
         }),
       );
@@ -135,30 +138,6 @@ export default function HanukkahTasksPage() {
     }
   }
 
-  async function handleDeleteTask() {
-    if (!taskToDelete || !holidayId || !auth0User) return;
-
-    try {
-      await deleteTask(taskToDelete.id);
-
-      // Update Redux state immediately
-      dispatch(
-        removeTaskFromHomeData({
-          holidayId: holidayId,
-          taskId: taskToDelete.id,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
-      setShowDeleteModal(false);
-      setTaskToDelete(null);
-    } catch (error) {
-      console.error('Error deleting task:', error);
-    }
-  }
-
   function handleEditModalOpen(task: any) {
     setEditingTask(task);
     setShowEditModal(true);
@@ -169,12 +148,28 @@ export default function HanukkahTasksPage() {
     setEditingTask(null);
   }
 
-  function handleDeleteModalOpen(task: any) {
-    setTaskToDelete(task);
-    setShowDeleteModal(true);
+  function handleDelete(taskId: string, taskTitle: string) {
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
   }
 
-  function handleDeleteModalClose() {
+  async function confirmDelete() {
+    if (!taskToDelete || !holidayId || !auth0User) return;
+
+    try {
+      await deleteTask(taskToDelete.id);
+      await refreshHomeData(auth0User, holidayId);
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  }
+
+  function handleDeleteCancel() {
     setShowDeleteModal(false);
     setTaskToDelete(null);
   }
@@ -210,9 +205,9 @@ export default function HanukkahTasksPage() {
   }
 
   function getSortedTasks() {
-    if (sortBy === 'none') return tasks;
+    if (sortBy === 'none') return tasks.map(transformTaskWithAssignment);
 
-    return [...tasks].sort((a, b) => {
+    return [...tasks].map(transformTaskWithAssignment).sort((a, b) => {
       switch (sortBy) {
         case 'priority':
           const priorityOrder = { high: 3, medium: 2, low: 1 };
@@ -226,7 +221,7 @@ export default function HanukkahTasksPage() {
           if (!b.dueDate) return -1;
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         case 'assignedTo':
-          return (a.assignedTo || '').localeCompare(b.assignedTo || '');
+          return (a.assignedToName || '').localeCompare(b.assignedToName || '');
         case 'category':
           return (a.category || '').localeCompare(b.category || '');
         default:
@@ -235,50 +230,38 @@ export default function HanukkahTasksPage() {
     });
   }
 
-  // Create conditional form fields based on sharing status
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Task Title*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    // Conditionally include assignedTo field only for shared holidays
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Due Date',
-    },
-  ];
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'hanukkah'),
+  );
+  const shareMembers = shareData?.members || [];
 
-  // Form configuration for tasks
-  const formConfig = getFormConfig('tasks', editingTask ? 'edit' : 'add');
+  // Enhanced Compatibility Layer form configuration
+  const addFormConfig = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'hanukkah',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('tasks', 'edit', {
+    holidayKey: 'hanukkah',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
   const deleteConfig = getDeleteConfig('tasks');
+
+  // Name resolution helpers for assignment display
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Holiday-specific theme colors (Hanukkah blue)
   const themeColor = '#3b82f6';
@@ -335,7 +318,8 @@ export default function HanukkahTasksPage() {
                 handleTaskToggle(taskId);
               }}
               onEdit={() => handleEditModalOpen(task)}
-              onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              disableInternalModal={true}
               theme={{
                 accentColor: themeColor,
               }}
@@ -357,7 +341,8 @@ export default function HanukkahTasksPage() {
               task={task}
               onToggleComplete={handleTaskToggle}
               onEdit={() => handleEditModalOpen(task)}
-              onDelete={(taskId: string) => handleDeleteModalOpen(task)}
+              onDelete={(taskId: string) => handleDelete(taskId, task.title)}
+              disableInternalModal={true}
               className="opacity-60"
               theme={{
                 accentColor: themeColor,
@@ -373,7 +358,7 @@ export default function HanukkahTasksPage() {
         <FormModal
           isOpen={showForm}
           title="Add New Task"
-          fields={formFields}
+          fields={addFormConfig.fields}
           onSubmit={handleAddTask}
           onClose={closeForm}
           loading={createLoading}
@@ -381,8 +366,8 @@ export default function HanukkahTasksPage() {
           cancelText="Cancel"
           cardClassName="card card-tasks"
           submitButtonColor={themeColor}
-          showAddressBook={isHolidayShared}
           contacts={contacts}
+          shareMembers={shareMembers}
         />
       )}
 
@@ -391,14 +376,12 @@ export default function HanukkahTasksPage() {
         <FormModal
           isOpen={showEditModal}
           title="Edit Task"
-          fields={formFields}
+          fields={editFormConfig.fields}
           initialValues={{
             title: editingTask?.title || '',
             description: editingTask?.description || '',
             priority: editingTask?.priority || 'medium',
-            ...(isHolidayShared
-              ? { assignedTo: editingTask?.assignedTo || '' }
-              : {}),
+            assigned_to: editingTask?.assignedTo || '',
             dueDate: editingTask?.dueDate || '',
           }}
           onSubmit={handleEditTask}
@@ -408,8 +391,8 @@ export default function HanukkahTasksPage() {
           cancelText="Cancel"
           cardClassName="card card-tasks"
           submitButtonColor={themeColor}
-          showAddressBook={isHolidayShared}
           contacts={contacts}
+          shareMembers={shareMembers}
         />
       )}
 
@@ -417,12 +400,10 @@ export default function HanukkahTasksPage() {
       {showDeleteModal && taskToDelete && (
         <DeleteModal
           isOpen={showDeleteModal}
-          title={deleteConfig.title}
-          message={deleteConfig.message}
-          confirmText={deleteConfig.confirmText}
-          cancelText={deleteConfig.cancelText}
-          onConfirm={handleDeleteTask}
-          onCancel={handleDeleteModalClose}
+          onCancel={handleDeleteCancel}
+          onConfirm={confirmDelete}
+          title="Delete Task"
+          message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
           loading={deleteLoading}
         />
       )}

@@ -6,6 +6,12 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -21,6 +27,15 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 export default function GraduationGiftListPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'graduation'),
+  );
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'graduation'),
+  );
+  const shareMembers = shareData?.members || [];
 
   // Use new standardized hooks
   const { holidayId, holidayData, auth0User, homeInitialized } =
@@ -48,10 +63,19 @@ export default function GraduationGiftListPage() {
   // State management
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
-  const [giftToDelete, setGiftToDelete] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean;
+    giftId: string | null;
+  }>({
+    show: false,
+    giftId: null,
+  });
 
   useEffect(() => {
     // Fetch contacts for address book functionality
@@ -62,25 +86,31 @@ export default function GraduationGiftListPage() {
 
   // CRUD Operations using new hooks
   const handleAddGift = async (values: Record<string, any>) => {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    if (!values.name?.trim() || !values.recipient?.trim()) return; // Enhanced Compatibility Layer uses 'name'
     if (!holidayId) return;
 
+    setIsSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
-      await createGift(payload);
-
-      // Refresh home data to ensure UI is in sync
+      const payload = transformGiftPayload(values, contacts, shareMembers);
+      await createGift({
+        ...payload,
+        assigned_to: values.assigned_to || undefined, // Snake case for API
+      });
       await refreshHomeData(auth0User, holidayId);
 
-      setShowFormModal(false);
+      // Refresh address book contacts
+      dispatch(fetchContacts());
+
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating gift:', error);
-      // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
       } else {
         alert('Error creating gift. Please try again.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -105,64 +135,71 @@ export default function GraduationGiftListPage() {
   const handleEditGift = async (values: Record<string, any>) => {
     if (!selectedGift || !holidayId) return;
 
+    setIsEditSubmitting(true);
     try {
-      const payload = transformGiftPayload(values, contacts);
-      await updateGift(selectedGift.id, payload);
-
-      // Refresh home data to ensure UI is in sync
+      const payload = transformGiftPayload(values, contacts, shareMembers);
+      await updateGift(selectedGift.id, {
+        ...payload,
+        assigned_to: values.assigned_to || null, // Snake case for API
+      });
       await refreshHomeData(auth0User, holidayId);
-
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
       console.error('Error updating gift:', error);
-      // Show user-friendly error message
       if (error instanceof Error && error.message.includes('address book')) {
         alert('Please select a recipient from the address book');
       } else {
         alert('Error updating gift. Please try again.');
       }
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
   const confirmDelete = async () => {
-    if (!giftToDelete || !holidayId) return;
+    if (deleteConfirm.giftId && holidayId && auth0User) {
+      try {
+        await deleteGift(deleteConfirm.giftId);
 
-    try {
-      await deleteGift(giftToDelete.id);
+        // Refresh data after successful deletion
+        await refreshHomeData(auth0User, holidayId);
+      } catch (error) {
+        console.error('Failed to delete gift:', error);
+      }
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
-      setShowDeleteModal(false);
-      setGiftToDelete(null);
-    } catch (error) {
-      console.error('Error deleting gift:', error);
+      setDeleteConfirm({ show: false, giftId: null });
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, giftId: null });
   };
 
   // Helper functions
   const openForm = () => {
-    setShowFormModal(true);
+    setShowAddModal(true);
     setSelectedGift(null);
   };
 
-  const closeForm = () => {
-    setShowFormModal(false);
+  const closeAddForm = () => {
+    setShowAddModal(false);
     setSelectedGift(null);
   };
 
-  const handleDeleteGift = (gift: any) => {
-    setGiftToDelete(gift);
-    setShowDeleteModal(true);
+  const closeEditForm = () => {
+    setShowEditModal(false);
+    setSelectedGift(null);
+  };
+
+  const handleDeleteGift = (giftId: string) => {
+    setDeleteConfirm({ show: true, giftId });
   };
 
   const handleEditGiftOpen = (gift: any) => {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   };
-
-  const handleFormSubmit = selectedGift ? handleEditGift : handleAddGift;
 
   // Loading state from hooks
   const loading = createLoading || updateLoading || deleteLoading;
@@ -209,47 +246,34 @@ export default function GraduationGiftListPage() {
     />
   );
 
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Gift Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
+  // Enhanced Compatibility Layer form config
+  const formConfig = getFormConfigEnhanced('gifts', 'add', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  const editFormConfig = getFormConfigEnhanced('gifts', 'edit', {
+    holidayKey: 'graduation',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  });
+
+  // Helper function for edit initial values
+  const getEditInitialValues = (gift: any) => {
+    if (!gift) return {};
+
+    return {
+      name: gift.name || gift.description || '',
+      recipient: gift.recipient || '',
+      description: gift.description || '',
+      price: gift.price ? gift.price.toString() : '',
+      store: gift.store || '',
+      product_link: gift.productLink || '',
+      assigned_to: gift.assignedTo || '', // API field → Form field
+      notes: gift.notes || '',
+    };
+  };
 
   return (
     <div className="min-h-screen graduation-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -267,7 +291,7 @@ export default function GraduationGiftListPage() {
         {/* Budget Display */}
         <BudgetDisplay
           holiday="Graduation"
-          holidayColor="bg-gradient-to-br from-purple-300 to-purple-500"
+          holidayColor="bg-gradient-to-br from-purple-400 to-purple-600"
           holidayId={holidayId || undefined}
         />
 
@@ -295,44 +319,42 @@ export default function GraduationGiftListPage() {
         </div>
       </main>
 
-      {/* Form Modal */}
+      {/* Add Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Gift' : 'Add New Gift'}
-        fields={formFields}
-        initialValues={
-          selectedGift
-            ? {
-                giftName: selectedGift.name || '',
-                recipient: selectedGift.recipient || '',
-                price: selectedGift.price || '',
-                store: selectedGift.store || '',
-                notes: selectedGift.notes || '',
-              }
-            : {}
-        }
-        onSubmit={handleFormSubmit}
-        onClose={closeForm}
-        loading={loading}
-        submitText={selectedGift ? 'Update Gift' : 'Add Gift'}
+        isOpen={showAddModal}
+        title="Add New Gift"
+        fields={formConfig.fields}
+        onSubmit={handleAddGift}
+        onClose={closeAddForm}
+        loading={isSubmitting}
+        submitText={isSubmitting ? 'Processing...' : 'Add Gift'}
         cardClassName="card-gifts-graduation"
-        showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
-      {/* Delete Modal */}
-      <DeleteModal
-        isOpen={showDeleteModal}
-        title="Delete Gift"
-        itemName={giftToDelete?.name}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setShowDeleteModal(false);
-          setGiftToDelete(null);
-        }}
-        loading={loading}
+      {/* Edit Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Gift"
+        fields={editFormConfig.fields}
+        initialValues={getEditInitialValues(selectedGift)}
+        onSubmit={handleEditGift}
+        onClose={closeEditForm}
+        loading={isEditSubmitting}
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Gift'}
         cardClassName="card-gifts-graduation"
-        confirmButtonColor="#8b5cf6"
+        contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={deleteConfirm.show}
+        {...getDeleteConfig('gifts')}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        loading={deleteLoading}
       />
 
       {/* Sort Modal */}

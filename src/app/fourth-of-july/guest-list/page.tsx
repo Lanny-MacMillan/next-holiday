@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -13,7 +17,7 @@ import RSVPSection from '@/components/common/RSVPSection';
 import ReservationsTracker from '@/components/cards/reservation/ReservationsTracker';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import {
   useCreateGuestMutation,
@@ -38,6 +42,14 @@ interface Guest {
 
 export default function FourthOfJulyGuestListPage() {
   const dispatch = useAppDispatch();
+  // Check if the holiday is shared to conditionally show assign to field
+  const isHolidayShared = useAppSelector((state: any) =>
+    selectIsHolidayShared(state, 'fourth-of-july'),
+  );
+  const shareData = useAppSelector((state: any) =>
+    selectShareByHolidayKey(state, 'fourth-of-july'),
+  );
+  const shareMembers = shareData?.members || [];
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
   const { refreshHomeData } = useRefreshHomeData();
@@ -143,6 +155,10 @@ export default function FourthOfJulyGuestListPage() {
 
         // Refresh data after successful creation
         await refreshHomeData(auth0User, holidayId);
+
+        // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+        dispatch(resetContacts());
+        dispatch(fetchContacts());
       } catch (error) {
         console.error('Failed to create guest:', error);
       }
@@ -359,7 +375,13 @@ export default function FourthOfJulyGuestListPage() {
       <FormModal
         isOpen={showForm}
         title={editingGuest ? 'Edit Guest' : 'Add New Guest'}
-        fields={getFormConfig('guests', editingGuest ? 'edit' : 'add').fields}
+        fields={
+          getFormConfigEnhanced('guests', editingGuest ? 'edit' : 'add', {
+            holidayKey: 'fourth-of-july',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
         initialValues={
           editingGuest
             ? {

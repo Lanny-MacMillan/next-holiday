@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   setHomeData,
@@ -12,9 +14,14 @@ import {
   removeTaskFromHomeData,
   updateTaskInHomeData,
 } from '@/store/slices/homeSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import SortModal from '@/components/modals/SortModal';
 import FormModal from '@/components/modals/FormModal';
+import DeleteModal from '@/components/modals/DeleteModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
@@ -78,6 +85,7 @@ const defaultReservationTasks = [
 export default function ValentinesReservationsPage() {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -96,12 +104,56 @@ export default function ValentinesReservationsPage() {
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'valentines'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'valentines'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Ensure uuid field exists - prefer existing uuid over userId
+          })),
+      ]
+    : baseMembers;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   const reservations = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Reservations') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter(
+          (task: any) => task.category === 'Reservations',
+        ) || []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -113,6 +165,8 @@ export default function ValentinesReservationsPage() {
   const [showDefaultTasks, setShowDefaultTasks] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -126,19 +180,22 @@ export default function ValentinesReservationsPage() {
     }
   }, [reservations, homeInitialized]);
 
-  // CRUD Operations - Add Reservation with optimistic updates + refreshHomeData + API field mapping
+  // CRUD Operations - Add Reservation with Enhanced Compatibility Layer
   const handleAddReservation = async (values: any) => {
-    if (!values.title?.trim() || !holidayId) return;
+    if (!values.title?.trim() || !holidayId || !auth0User) return;
 
     try {
-      const result = await createTask({
+      const newTask = {
         title: values.title,
-        description: values.description,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Reservations',
-        dueDate: values.dueDate,
-      });
+        due_date: values.dueDate || undefined,
+      };
+
+      const result = await createTask(newTask);
 
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId, task: result }));
@@ -198,15 +255,17 @@ export default function ValentinesReservationsPage() {
   };
 
   const handleEditReservationSubmit = async (values: any) => {
-    if (!editingTask || !holidayId) return;
+    if (!editingTask || !holidayId || !auth0User) return;
 
     try {
       const updates = {
         title: values.title,
-        description: values.description,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+        category: 'Reservations',
+        due_date: values.dueDate || undefined,
       };
 
       await updateTask(editingTask.id, updates);
@@ -230,25 +289,41 @@ export default function ValentinesReservationsPage() {
     }
   };
 
-  const handleDeleteReservation = async (taskId: string) => {
-    if (!holidayId) return;
+  const handleDeleteReservation = (taskId: string) => {
+    const task = reservations.find((t: any) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteModal(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete || !holidayId) return;
 
     try {
-      await deleteTask(taskId);
+      await deleteTask(taskToDelete.id);
 
       // Update Redux state immediately
       dispatch(
         removeTaskFromHomeData({
           holidayId,
-          taskId,
+          taskId: taskToDelete.id,
         }),
       );
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
+
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error('Error deleting task:', error);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   };
 
   function openForm() {
@@ -315,45 +390,12 @@ export default function ValentinesReservationsPage() {
   );
   const completedReservations = sortedTasks.filter((task: any) => task.isCompleted);
 
-  // FormModal fields configuration - matching Kwanzaa pattern exactly
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Reservation Goal*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Target Date',
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'valentines',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   return (
     <div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -483,17 +525,18 @@ export default function ValentinesReservationsPage() {
         isOpen={showForm}
         title="Add New Reservation"
         fields={formFields}
+        shareMembers={shareMembers}
         initialValues={{
           title: '',
           description: '',
           priority: 'medium',
-          ...(isHolidayShared ? { assignedTo: '' } : {}),
+          ...(shareMembers.length > 0 ? { assigned_to: '' } : {}),
           dueDate: '',
         }}
         onSubmit={handleAddReservation}
         onClose={closeForm}
         loading={createLoading}
-        submitText="Add Reservation"
+        submitText={createLoading ? 'Adding...' : 'Add Reservation'}
         cardClassName="card-events-valentines"
       />
 
@@ -502,14 +545,15 @@ export default function ValentinesReservationsPage() {
         isOpen={showEditModal}
         title="Edit Reservation"
         fields={formFields}
+        shareMembers={shareMembers}
         initialValues={
           editingTask
             ? {
                 title: editingTask.title || '',
                 description: editingTask.description || '',
                 priority: editingTask.priority || 'medium',
-                ...(isHolidayShared
-                  ? { assignedTo: editingTask.assignedTo || '' }
+                ...(shareMembers.length > 0
+                  ? { assigned_to: editingTask.assignedTo || '' }
                   : {}),
                 dueDate: editingTask.dueDate
                   ? new Date(editingTask.dueDate).toISOString().split('T')[0]
@@ -520,7 +564,7 @@ export default function ValentinesReservationsPage() {
         onSubmit={handleEditReservationSubmit}
         onClose={closeEditModal}
         loading={updateLoading}
-        submitText="Update Reservation"
+        submitText={updateLoading ? 'Updating...' : 'Update Reservation'}
         cardClassName="card-events-valentines"
       />
 
@@ -538,6 +582,16 @@ export default function ValentinesReservationsPage() {
           { value: 'category', label: 'Category' },
         ]}
         title="Sort Reservations"
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Reservation"
+        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        loading={deleteLoading}
       />
     </div>
   );

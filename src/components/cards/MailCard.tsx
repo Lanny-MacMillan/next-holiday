@@ -8,6 +8,8 @@ interface Card {
   address?: string;
   notes?: string;
   isCompleted: boolean;
+  assignedTo?: string;
+  assignedToName?: string;
 }
 
 interface MailCardProps {
@@ -94,6 +96,13 @@ export default function MailCard({
                   </span>
                 )}
               </div>
+              {card.assignedToName && (
+                <div className="mt-1">
+                  <span className="bg-white bg-opacity-30 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+                    👤 Assigned to: {card.assignedToName}
+                  </span>
+                </div>
+              )}
               {card.message && (
                 <div className="mt-2 p-3 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm">
                   <p
@@ -194,6 +203,13 @@ export default function MailCard({
                 </span>
               )}
             </div>
+            {card.assignedToName && (
+              <div className="mt-1">
+                <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full">
+                  👤 Assigned to: {card.assignedToName}
+                </span>
+              </div>
+            )}
             {card.message && (
               <div className={`mt-2 p-3 ${getMessageBackgroundColor()} rounded-lg`}>
                 <p className="text-xs sm:text-sm text-white dark:text-gray-300 italic">

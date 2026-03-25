@@ -4,9 +4,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import { selectIsHolidayShared } from '@/store/slices/sharesSlice';
+import {
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
   setHomeData,
@@ -25,6 +31,9 @@ import TaskSection from '@/components/common/TaskSection';
 
 export default function ValentinesDateIdeasPage() {
   const dispatch = useAppDispatch();
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
+
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
@@ -39,18 +48,59 @@ export default function ValentinesDateIdeasPage() {
 
   const { refreshHomeData } = useRefreshHomeData();
 
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
-
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'valentines'),
   );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'valentines'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Ensure uuid field exists - prefer existing uuid over userId
+          })),
+      ]
+    : baseMembers;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform tasks to include assignedToName for display
+  const transformTaskWithAssignment = (task: any) => ({
+    ...task,
+    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+  });
 
   // Redux Data Access (Date Ideas are stored as tasks with category "Date Ideas")
   const dateIdeas = useMemo(
     () =>
-      holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
-      [],
-    [holidayData?.tasks],
+      (
+        holidayData?.tasks?.filter((task: any) => task.category === 'Date Ideas') ||
+        []
+      ).map(transformTaskWithAssignment),
+    [holidayData?.tasks, shareMembers],
   );
   const isLoading = !homeInitialized;
   const error = null;
@@ -72,17 +122,20 @@ export default function ValentinesDateIdeasPage() {
 
   // CRUD Operations using useHolidayMutations hook
   const handleAddDateIdea = async (values: Record<string, any>) => {
-    if (!values.title?.trim() || !holidayId) return;
+    if (!values.title?.trim() || !holidayId || !auth0User) return;
 
     try {
-      const result = await createTask({
+      const newTask = {
         title: values.title,
-        description: values.description,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
         category: 'Date Ideas',
-        dueDate: values.dueDate,
-      });
+        due_date: values.dueDate,
+      };
+
+      const result = await createTask(newTask);
 
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId, task: result }));
@@ -110,10 +163,12 @@ export default function ValentinesDateIdeasPage() {
     try {
       const updates = {
         title: values.title,
-        description: values.description,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate,
+        description: values.description || undefined,
+        priority: values.priority as 'low' | 'medium' | 'high',
+        ...(isAuthorizedForSharing &&
+          isHolidayShared && { assigned_to: values.assigned_to || undefined }),
+        category: 'Date Ideas',
+        due_date: values.dueDate ? values.dueDate.split('T')[0] : undefined, // Format date for API
       };
 
       await updateTask(editingTask.id, updates);
@@ -258,45 +313,12 @@ export default function ValentinesDateIdeasPage() {
 
   const loading = createLoading || updateLoading || deleteLoading;
 
-  // Form Configuration with Date Formatting Fix
-  const formFields = [
-    {
-      id: 'title',
-      type: 'text' as const,
-      placeholder: 'Date Idea*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'textarea' as const,
-      placeholder: 'Description',
-      rows: 2,
-    },
-    {
-      id: 'priority',
-      type: 'select' as const,
-      placeholder: 'Priority',
-      options: [
-        { value: 'low', label: 'Low Priority' },
-        { value: 'medium', label: 'Medium Priority' },
-        { value: 'high', label: 'High Priority' },
-      ],
-    },
-    ...(isHolidayShared
-      ? [
-          {
-            id: 'assignedTo',
-            type: 'text' as const,
-            placeholder: 'Assigned To',
-          },
-        ]
-      : []),
-    {
-      id: 'dueDate',
-      type: 'date' as const,
-      placeholder: 'Target Date',
-    },
-  ];
+  // Form fields configuration using Enhanced Compatibility Layer
+  const formFields = getFormConfigEnhanced('tasks', 'add', {
+    holidayKey: 'valentines',
+    shareMembers: shareMembers,
+    auth0User: auth0User,
+  }).fields;
 
   return (
     <div className="min-h-screen valentines-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -410,13 +432,14 @@ export default function ValentinesDateIdeasPage() {
         isOpen={showForm}
         title={editingTask ? 'Edit Date Idea' : 'Add New Date Idea'}
         fields={formFields}
+        shareMembers={shareMembers}
         initialValues={
           editingTask
             ? {
                 title: editingTask.title,
                 description: editingTask.description || '',
                 priority: editingTask.priority,
-                assignedTo: editingTask.assignedTo || '',
+                assigned_to: editingTask.assignedTo || '',
                 dueDate: editingTask.dueDate || '',
               }
             : {}
@@ -424,7 +447,15 @@ export default function ValentinesDateIdeasPage() {
         onSubmit={editingTask ? handleUpdateDateIdea : handleAddDateIdea}
         onClose={closeForm}
         loading={loading}
-        submitText={editingTask ? 'Update Date Idea' : 'Add Date Idea'}
+        submitText={
+          editingTask
+            ? updateLoading
+              ? 'Updating...'
+              : 'Update Date Idea'
+            : createLoading
+              ? 'Adding...'
+              : 'Add Date Idea'
+        }
         cancelText="Cancel"
         cardClassName="card-events-valentines"
       />

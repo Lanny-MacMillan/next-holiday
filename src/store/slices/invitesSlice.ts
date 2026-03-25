@@ -20,6 +20,9 @@ export interface Invite {
     name: string;
     email: string;
   };
+  // Response-only fields from invite creation
+  inviteStatus?: 'new_invite' | 'reinvite_after_decline' | 'duplicate_pending';
+  userLookupStatus?: 'registered_user' | 'unregistered_email';
 }
 
 interface InvitesState {
@@ -98,7 +101,21 @@ export const createInvite = createAsyncThunk(
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create invite');
+      // Extract error message from API response
+      let errorMessage = `Failed to create invite (${response.status})`;
+
+      try {
+        const errorData = await response.json();
+        console.log('API Error Response:', errorData); // Debug log
+        errorMessage = errorData.error || errorData.message || errorMessage;
+        console.log('Throwing error:', errorMessage); // Debug log
+      } catch (jsonError) {
+        // If response.json() fails, try to use response.statusText
+        console.log('JSON parsing failed, using statusText:', response.statusText); // Debug log
+        errorMessage = response.statusText || errorMessage;
+      }
+
+      throw new Error(errorMessage);
     }
 
     return await response.json();

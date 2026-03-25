@@ -1,25 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { useSubscription } from '@/hooks/useSubscription';
+import Toast from '@/components/common/Toast';
 import {
-  updateGiftInHomeData,
-  addGiftToHomeData,
-  removeGiftFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
-import { transformGiftPayload } from '@/utils/formTransformers';
+  selectIsHolidayShared,
+  selectShareByHolidayKey,
+} from '@/store/slices/sharesSlice';
+import { transformSuppliesPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
 import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
@@ -29,7 +28,7 @@ type SortOption = 'recipient' | 'store' | 'price-high' | 'price-low' | 'none';
 
 export default function NewYearSuppliesListPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
@@ -46,100 +45,117 @@ export default function NewYearSuppliesListPage() {
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Helper function to update Redux state after gift operations
+  const isHolidayShared = useAppSelector((state: any) =>
+    state.shares ? state.shares.shareMembers?.length > 0 : false,
+  );
+  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
+
+  // Get share members for Enhanced Compatibility Layer
+  const shareData = useAppSelector((state: RootState) =>
+    selectShareByHolidayKey(state, 'new-year'),
+  );
+  const baseMembers = shareData?.members || [];
+
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Prefer existing uuid field, fallback to userId only if uuid missing
+          })),
+      ]
+    : baseMembers;
+
+  // Debug shareMembers to identify UUID issues
+  console.log('ShareMembers debug info:', {
+    baseMembers: baseMembers.map((m: any) => ({
+      userId: m.userId,
+      uuid: m.uuid,
+      name: m.name,
+    })),
+    finalShareMembers: shareMembers.map((m: any) => ({
+      userId: m.userId,
+      uuid: m.uuid,
+      name: m.name,
+    })),
+    auth0User: { sub: auth0User?.sub, id: auth0User?.id, name: auth0User?.name },
+  });
+
+  // Helper function to update Redux state after gift operations (kept for compatibility)
   const updateGiftInRedux = (
     giftData: any,
     operation: 'add' | 'update' | 'delete',
   ) => {
-    if (!holidayId) return;
-
-    // For add and update operations, ensure the recipient field is populated
-    let processedGiftData = giftData;
-    if (
-      (operation === 'add' || operation === 'update') &&
-      giftData.contactId &&
-      contacts
-    ) {
-      const contact = contacts.find((c: any) => c.id === giftData.contactId);
-      processedGiftData = {
-        ...giftData,
-        recipient: contact?.name || 'Unknown',
-      };
-    }
-
-    switch (operation) {
-      case 'add':
-        dispatch(addGiftToHomeData({ holidayId, gift: processedGiftData }));
-        break;
-      case 'update':
-        dispatch(
-          updateGiftInHomeData({
-            holidayId,
-            giftId: processedGiftData.id,
-            updates: processedGiftData,
-          }),
-        );
-        break;
-      case 'delete':
-        dispatch(
-          removeGiftFromHomeData({
-            holidayId,
-            giftId: giftData.id,
-          }),
-        );
-        break;
-    }
+    // Since we're using standardized hooks, this function is simplified
+    // The hooks handle Redux updates automatically
+    console.log(`Gift operation: ${operation}`, giftData);
   };
 
-  // Use only Redux data - no GET API calls on holiday pages
-
+  // State management
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGift, setSelectedGift] = useState<any>(null);
   const [giftToDelete, setGiftToDelete] = useState<any>(null);
 
-  // Home data already declared above
-
-  useEffect(() => {
-    // Fetch contacts for address book functionality
-    // Only fetch if home data is initialized (which contains contacts)
-    if (homeInitialized) {
-      dispatch(fetchContacts());
-    }
-  }, [dispatch, homeInitialized]);
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.giftName?.trim() || !values.recipient?.trim()) return;
+    console.log('handleAddGift called with values:', values);
+    console.log('Form validation check:', {
+      nameValid: !!values.name?.trim(),
+      name: values.name,
+    });
+
+    // Only name is required
+    if (!values.name?.trim()) {
+      console.log('Validation failed - missing required fields');
+      setToastMessage('Please fill in the Item Name field');
+      setToastType('error');
+      setShowToast(true);
+      return;
+    }
 
     try {
-      const payload = transformGiftPayload(values, contacts);
+      console.log('Attempting to transform payload...');
+      const payload = transformSuppliesPayload(values, shareMembers);
+      console.log('Payload created successfully:', payload);
+
       const result = await createGift(payload);
       updateGiftInRedux(result, 'add');
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
-      setShowFormModal(false);
+      setShowAddModal(false);
     } catch (error) {
-      console.error('Error creating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error creating gift. Please try again.');
-      }
+      console.error('Error creating supply:', error);
+      setToastMessage('Error creating supply. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
   function openForm() {
-    setShowFormModal(true);
-    setSelectedGift(null);
-  }
-
-  function closeForm() {
-    setShowFormModal(false);
+    console.log('Opening Add Supply modal');
+    console.log('ShareMembers available:', shareMembers?.length || 0);
+    setShowAddModal(true);
     setSelectedGift(null);
   }
 
@@ -157,9 +173,14 @@ export default function NewYearSuppliesListPage() {
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
+
+      // Refresh home data to ensure UI is in sync and progress updates
+      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
-      // Handle error (could show a toast notification)
+      setToastMessage('Error updating item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
@@ -185,6 +206,9 @@ export default function NewYearSuppliesListPage() {
       setGiftToDelete(null);
     } catch (error) {
       console.error('Error deleting gift:', error);
+      setToastMessage('Error deleting item. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
@@ -195,16 +219,22 @@ export default function NewYearSuppliesListPage() {
 
   async function handleEditGift(gift: any) {
     setSelectedGift(gift);
-    setShowFormModal(true);
+    setShowEditModal(true);
   }
 
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift) return;
 
+    console.log('handleUpdateGift called with values:', values);
+    console.log('shareMembers available:', shareMembers);
+
     try {
-      const payload = transformGiftPayload(values, contacts);
+      const payload = transformSuppliesPayload(values, shareMembers);
+      console.log('Update payload created:', payload);
+
       // Update using the hook
       const result = await updateGift(selectedGift.id, payload);
+      console.log('Update result:', result);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
@@ -212,16 +242,13 @@ export default function NewYearSuppliesListPage() {
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
 
-      setShowFormModal(false);
+      setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
-      console.error('Error updating gift:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('address book')) {
-        alert('Please select a recipient from the address book');
-      } else {
-        alert('Error updating gift. Please try again.');
-      }
+      console.error('Error updating supply:', error);
+      setToastMessage('Error updating supply. Please try again.');
+      setToastType('error');
+      setShowToast(true);
     }
   }
 
@@ -284,69 +311,6 @@ export default function NewYearSuppliesListPage() {
     />
   );
 
-  // Form fields configuration
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      placeholder: 'Recipient (select from address book)*',
-      required: true,
-    },
-    {
-      id: 'giftName',
-      type: 'text' as const,
-      placeholder: 'Supply Name*',
-      required: true,
-    },
-    {
-      id: 'description',
-      type: 'text' as const,
-      placeholder: 'Description',
-    },
-    {
-      id: 'price',
-      type: 'number' as const,
-      placeholder: 'Price',
-      step: '0.01',
-    },
-    {
-      id: 'store',
-      type: 'text' as const,
-      placeholder: 'Store',
-    },
-    {
-      id: 'product_link',
-      type: 'url' as const,
-      placeholder: 'Product Link (optional)',
-    },
-    {
-      id: 'notes',
-      type: 'textarea' as const,
-      placeholder: 'Notes',
-      rows: 2,
-    },
-  ];
-
-  // Initial values for editing
-  const getInitialValues = () => {
-    if (!selectedGift) return {};
-
-    // Find the contact that matches this gift's recipient
-    const matchingContact = contacts.find(
-      (contact: any) => contact.name === selectedGift.recipient,
-    );
-
-    return {
-      recipient: matchingContact ? selectedGift.recipient : '',
-      giftName: selectedGift.name,
-      description: selectedGift.description || '',
-      price: selectedGift.price ? selectedGift.price.toString() : '',
-      store: selectedGift.store || '',
-      product_link: selectedGift.productLink || '',
-      notes: selectedGift.notes || '',
-    };
-  };
-
   return (
     <div className="min-h-screen new-year-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
@@ -366,7 +330,11 @@ export default function NewYearSuppliesListPage() {
           holidayId={holidayId || undefined}
         />
 
-        <AddButton title="Supply" onClick={openForm} color="amber" />
+        <AddButton
+          title="Supply"
+          onClick={() => setShowAddModal(true)}
+          color="amber"
+        />
         <div className="flex items-center justify-center">
           {sortBy !== 'none' && (
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
@@ -397,21 +365,59 @@ export default function NewYearSuppliesListPage() {
         />
       </main>
 
-      {/* Form Modal */}
+      {/* Add Supply Modal */}
       <FormModal
-        isOpen={showFormModal}
-        title={selectedGift ? 'Edit Supply' : 'Add New Supply'}
-        fields={formFields}
-        initialValues={getInitialValues()}
-        onSubmit={selectedGift ? handleUpdateGift : handleAddGift}
-        onClose={closeForm}
-        loading={createLoading || updateLoading}
-        submitText={selectedGift ? 'Update Supply' : 'Add Supply'}
+        isOpen={showAddModal}
+        title="Add New Supply"
+        fields={
+          getFormConfigEnhanced('supplies', 'add', {
+            holidayKey: 'new-year' as any,
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
+        onSubmit={handleAddGift}
+        onClose={() => setShowAddModal(false)}
+        loading={createLoading}
+        submitText={createLoading ? 'Adding...' : 'Add Supply'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"
-        showAddressBook={true}
-        contacts={contacts}
+        shareMembers={shareMembers}
+      />
+
+      {/* Edit Supply Modal */}
+      <FormModal
+        isOpen={showEditModal}
+        title="Edit Supply"
+        fields={
+          getFormConfigEnhanced('supplies', 'edit', {
+            holidayKey: 'new-year' as any,
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{
+          name: selectedGift?.name || '',
+          description: selectedGift?.description || '',
+          price: selectedGift?.price ? selectedGift.price.toString() : '',
+          store: selectedGift?.store || '',
+          product_link: selectedGift?.productLink || '',
+          assigned_to: selectedGift?.assignedTo || '',
+          notes: selectedGift?.notes || '',
+        }}
+        onSubmit={handleUpdateGift}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedGift(null);
+        }}
+        loading={updateLoading}
+        submitText={updateLoading ? 'Updating...' : 'Update Supply'}
+        cancelText="Cancel"
+        cardClassName="card"
+        submitButtonColor="#f59e0b"
+        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}
@@ -438,6 +444,14 @@ export default function NewYearSuppliesListPage() {
           { value: 'price-low', label: 'Price: Low to High' },
         ]}
         title="Sort Supplies"
+      />
+
+      {/* Toast for error messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
       />
     </div>
   );

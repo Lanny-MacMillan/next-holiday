@@ -47,8 +47,8 @@ export default function BabyShowerPage() {
         progressColor: '#0891b2', // Cyan for progress bar
       }}
       gradientClass="baby-shower-gradient"
-      gamifiedBackgroundColor="bg-gradient-to-br from-cyan-400 to-cyan-600"
-      holidayColor="bg-gradient-to-br from-cyan-400 to-cyan-600"
+      gamifiedBackgroundColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
+      holidayColor="bg-gradient-to-br from-cyan-300 to-cyan-500"
     />
   );
 }

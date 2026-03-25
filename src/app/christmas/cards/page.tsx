@@ -7,7 +7,10 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
+import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import FormModal from '@/components/modals/FormModal';
+import { getFormConfigEnhanced, getFormConfig } from '@/config/formConfigs';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import Footer from '@/components/common/Footer';
@@ -16,6 +19,7 @@ import MailCard from '@/components/cards/MailCard';
 import TaskSection from '@/components/common/TaskSection';
 import SortModal from '@/components/modals/SortModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 
 export default function ChristmasCardsPage() {
   const dispatch = useAppDispatch();
@@ -37,9 +41,51 @@ export default function ChristmasCardsPage() {
   // Use standardized data refresh hook
   const { refreshHomeData } = useRefreshHomeData();
 
-  // Use memoized cards filtering from holiday data
-  const cards = useMemo(() => holidayData?.cards || [], [holidayData?.cards]);
+  // Enhanced Compatibility Layer - Get share members with current user inclusion
+  const shareData = useAppSelector(state =>
+    selectShareByHolidayKey(state, 'christmas'),
+  );
+  const baseMembers = shareData?.members || [];
 
+  // Always include current user in shareMembers for assignTo functionality
+  const shareMembers = auth0User
+    ? [
+        // Add current user first
+        {
+          userId: auth0User.sub || '',
+          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
+          name: auth0User.name || 'Me',
+          email: auth0User.email || '',
+          role: 'owner' as const,
+        },
+        // Add other members, filtering out current user if already present
+        ...baseMembers
+          .filter((member: any) => member.userId !== auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+          })),
+      ]
+    : baseMembers;
+
+  // Helper function to resolve assignedTo UUID to user name
+  const getAssignedUserName = (assignedToUuid: string): string | null => {
+    if (!assignedToUuid || !shareMembers.length) return null;
+    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+  };
+
+  // Transform cards to include assignedToName for display
+  const transformCardWithAssignment = (card: any) => ({
+    ...card,
+    assignedToName: card.assignedTo ? getAssignedUserName(card.assignedTo) : null,
+  });
+
+  // Use memoized cards filtering from holiday data with assignment names
+  const cards = useMemo(
+    () => (holidayData?.cards || []).map(transformCardWithAssignment),
+    [holidayData?.cards, shareMembers],
+  );
   const isLoading = !homeInitialized;
   const error = null; // Error handling through home data loading
 
@@ -50,6 +96,13 @@ export default function ChristmasCardsPage() {
   const [cardToEdit, setCardToEdit] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortBy, setSortBy] = useState('recipient');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Toast state for error messages
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -60,11 +113,20 @@ export default function ChristmasCardsPage() {
     if (!values.recipient?.trim() || !values.message?.trim()) return;
     if (!holidayId || !auth0User) return;
 
+    setIsSubmitting(true);
     try {
-      const payload = transformCardPayload(values, contacts);
+      console.log('=== ADD CARD DEBUG ===');
+      console.log('Form values:', values);
+      console.log('ShareMembers for transform:', shareMembers);
+
+      const payload = transformCardPayload(values, contacts, shareMembers);
+      console.log('Transformed payload:', payload);
 
       // Use the standardized hook function
       await createCard(payload);
+
+      // Refresh contacts to include any newly created ones
+      dispatch(fetchContacts());
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -72,7 +134,24 @@ export default function ChristmasCardsPage() {
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
-      // Handle error (could show a toast notification)
+
+      // Show user-friendly error message with Toast
+      let errorMessage = 'Error creating card. Please try again.';
+
+      if (error instanceof Error) {
+        if (
+          error.message.includes('uuid') ||
+          error.message.includes('Invalid uuid')
+        ) {
+          errorMessage = 'Assignment error: Please try selecting the assignee again';
+        }
+      }
+
+      setToastMessage(errorMessage);
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -113,21 +192,45 @@ export default function ChristmasCardsPage() {
   };
 
   const handleEditSubmit = async (values: Record<string, any>) => {
-    if (cardToEdit && holidayId && auth0User) {
-      try {
-        const payload = transformCardPayload(values, contacts);
+    if (!cardToEdit || !holidayId || !auth0User) return;
 
-        // Use the standardized hook function
-        await updateCard(cardToEdit.id, payload);
+    setIsEditSubmitting(true);
+    try {
+      console.log('=== EDIT CARD DEBUG ===');
+      console.log('Form values:', values);
+      console.log('ShareMembers for transform:', shareMembers);
 
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+      const payload = transformCardPayload(values, contacts, shareMembers);
+      console.log('Transformed payload:', payload);
 
-        setShowEditModal(false);
-        setCardToEdit(null);
-      } catch (error) {
-        console.error('Error updating card:', error);
+      // Use the standardized hook function
+      await updateCard(cardToEdit.id, payload);
+
+      // Refresh home data to ensure UI is in sync
+      await refreshHomeData(auth0User, holidayId);
+
+      setShowEditModal(false);
+      setCardToEdit(null);
+    } catch (error) {
+      console.error('Error updating card:', error);
+
+      // Show user-friendly error message with Toast
+      let errorMessage = 'Error updating card. Please try again.';
+
+      if (error instanceof Error) {
+        if (
+          error.message.includes('uuid') ||
+          error.message.includes('Invalid uuid')
+        ) {
+          errorMessage = 'Assignment error: Please try selecting the assignee again';
+        }
       }
+
+      setToastMessage(errorMessage);
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -167,32 +270,7 @@ export default function ChristmasCardsPage() {
   const completedCards = cards.filter((card: any) => card.isCompleted);
   const incompleteCards = cards.filter((card: any) => !card.isCompleted);
 
-  // Form fields configuration for cards
-  const formFields = [
-    {
-      id: 'recipient',
-      type: 'text' as const,
-      label: 'Recipient',
-      placeholder: "Recipient's name",
-      required: true,
-    },
-    {
-      id: 'message',
-      type: 'textarea' as const,
-      label: 'Message',
-      placeholder: 'Write your holiday message here...',
-      rows: 3,
-    },
-    {
-      id: 'address',
-      type: 'textarea' as const,
-      label: 'Address',
-      placeholder: "Recipient's address...",
-      rows: 2,
-    },
-  ];
-
-  const loading = createLoading || updateLoading || deleteLoading;
+  // Enhanced Compatibility Layer provides dynamic form configuration
 
   return (
     <div className="min-h-screen christmas-cards-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -274,36 +352,65 @@ export default function ChristmasCardsPage() {
         )}
       </main>
 
-      {/* Form Modal */}
+      {/* Add Card Modal */}
       <FormModal
         isOpen={showForm}
         title="Add New Card"
-        fields={formFields}
+        fields={
+          getFormConfigEnhanced('cards', 'add', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={{}}
         onSubmit={handleAddCard}
         onClose={closeForm}
-        submitText="Add Card"
+        submitText={isSubmitting ? 'Processing...' : 'Add Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ef4444"
+        loading={isSubmitting}
         showAddressBook={true}
         contacts={contacts}
+        shareMembers={shareMembers}
       />
 
-      {/* Edit Modal */}
+      {/* Edit Card Modal */}
       <FormModal
         isOpen={showEditModal}
         title="Edit Card"
-        fields={formFields}
-        initialValues={cardToEdit}
+        fields={
+          getFormConfigEnhanced('cards', 'edit', {
+            holidayKey: 'christmas',
+            shareMembers: shareMembers,
+            auth0User: auth0User,
+          }).fields
+        }
+        initialValues={
+          cardToEdit
+            ? {
+                recipient: cardToEdit.recipient || '',
+                message: cardToEdit.message || '',
+                address: cardToEdit.address || '',
+                notes: cardToEdit.notes || '',
+                assigned_to: cardToEdit.assignedTo || '',
+              }
+            : {}
+        }
         onSubmit={handleEditSubmit}
         onClose={() => {
           setShowEditModal(false);
           setCardToEdit(null);
         }}
-        submitText="Update Card"
+        submitText={isEditSubmitting ? 'Processing...' : 'Update Card'}
         cancelText="Cancel"
         cardClassName="card card-valentines"
         submitButtonColor="#ef4444"
+        loading={isEditSubmitting}
+        showAddressBook={true}
+        contacts={contacts}
+        shareMembers={shareMembers}
       />
 
       {/* Delete Modal */}
@@ -333,6 +440,15 @@ export default function ChristmasCardsPage() {
         ]}
         title="Sort Cards"
       />
+
+      {/* Toast for error messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
+      />
+
       <Footer />
     </div>
   );
