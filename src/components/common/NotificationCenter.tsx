@@ -5,7 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 
 // Simple SVG icons to avoid external dependencies
 const BellIcon = ({
-  size = 24,
+  size = 22,
   className = '',
 }: {
   size?: number;
@@ -452,7 +452,7 @@ export default function NotificationCenter({
         className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
         aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
       >
-        <BellIcon size={24} />
+        <BellIcon size={20} />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-medium">
             {unreadCount > 99 ? '99+' : unreadCount}

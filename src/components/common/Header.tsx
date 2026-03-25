@@ -72,7 +72,7 @@ export default function Header() {
             </div>
 
             {/* Right side - Notifications, Display mode toggle, Theme toggle and burger menu */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               <NotificationCenter />
               {isAuthorizedPlusMember && <DisplayModeToggle />}
               <ThemeToggle />
