@@ -31,6 +31,13 @@ export const api = createApi({
     'Resolutions',
     'Reservations',
   ],
+
+  // Performance optimizations
+  keepUnusedDataFor: 60, // Keep cache for 60 seconds
+  refetchOnMountOrArgChange: 30, // Refetch if data is older than 30 seconds
+  refetchOnFocus: true, // Refetch when window regains focus
+  refetchOnReconnect: true, // Refetch when network reconnects
+
   endpoints: builder => ({
     // Query endpoints
     getGifts: builder.query<any[], { holidayId: string; auth0User?: any }>({
