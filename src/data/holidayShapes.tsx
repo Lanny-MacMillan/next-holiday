@@ -974,9 +974,9 @@ export const HolidayShapes = {
           gradientTransform="matrix(.8012 -.5985 .5116 .6849 -5.267 21.888)"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset=".206" stop-color="#5ea4ce"></stop>
-          <stop offset=".506" stop-color="#988aa4"></stop>
-          <stop offset="1" stop-color="#fe5d5a"></stop>
+          <stop offset=".206" stopColor="#5ea4ce"></stop>
+          <stop offset=".506" stopColor="#988aa4"></stop>
+          <stop offset="1" stopColor="#fe5d5a"></stop>
         </radialGradient>
         <path
           d="M29.92 40.48s5.07-4.5 6.62-6.62c1.55-2.11 5.13-7.47 3.94-16.47c-.98-7.46-8.15-11.58-13.7-10.32c-3.1.7-6.99 7.79-7.56 10.04s2.96 11.4 2.96 11.4l7.74 11.97z"
