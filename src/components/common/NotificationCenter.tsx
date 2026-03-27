@@ -166,19 +166,11 @@ export default function NotificationCenter({
 
     const connectSSE = () => {
       try {
-        // Create URL with current user authentication for SSE
-        const testUser = {
-          sub: auth0User.sub || 'auth0|test-user-123',
-          email: auth0User.email || 'test@example.com',
-          name: auth0User.name || 'Test User',
-          picture: auth0User.picture || null,
-        };
-
+        // Create URL with auth0Sub parameter to match other API routes
         const sseUrl = new URL('/api/notifications/stream', window.location.origin);
-        sseUrl.searchParams.set(
-          'testUser',
-          encodeURIComponent(JSON.stringify(testUser)),
-        );
+        sseUrl.searchParams.set('auth0Sub', auth0User.sub || 'auth0|test-user-123');
+
+        console.log('🔌 Connecting to SSE with URL:', sseUrl.toString());
 
         eventSource = new EventSource(sseUrl.toString());
 
