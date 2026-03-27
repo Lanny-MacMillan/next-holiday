@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { connections } from '@/lib/notifications/stream';
 
 // Log immediately when this file is loaded
 console.log('🔥 SSE ROUTE FILE LOADED - Module import successful');
@@ -64,6 +65,13 @@ export async function GET(request: NextRequest) {
         console.log('🎬 Stream started for user:', user.id);
 
         try {
+          // Register this connection in the global connections map
+          if (!connections.has(user.id)) {
+            connections.set(user.id, new Set());
+          }
+          connections.get(user.id)!.add(controller);
+          console.log('✅ Connection registered for user:', user.id);
+
           // Send welcome message immediately
           const welcomeMessage = {
             type: 'connection',
@@ -106,22 +114,46 @@ export async function GET(request: NextRequest) {
 
           console.log('⏰ Heartbeat interval started - connection will stay open');
 
-          // Cleanup when connection closes
-          const cleanup = () => {
+          // Shared cleanup function that can be called from multiple places
+          const performCleanup = () => {
             console.log('🧹 Cleaning up for user:', user.id);
             clearInterval(heartbeatInterval);
+
+            // Remove this connection from the global connections map
+            const userConnections = connections.get(user.id);
+            if (userConnections) {
+              userConnections.delete(controller);
+              if (userConnections.size === 0) {
+                connections.delete(user.id);
+                console.log('🗑️ Removed empty connection set for user:', user.id);
+              } else {
+                console.log(
+                  '🔌 Remaining connections for user:',
+                  user.id,
+                  userConnections.size,
+                );
+              }
+            }
           };
 
+          // Store cleanup function on the controller for use in cancel method
+          (controller as any).__cleanup = performCleanup;
+
           // Listen for connection close
-          request.signal?.addEventListener('abort', cleanup);
+          request.signal?.addEventListener('abort', performCleanup);
         } catch (error) {
           console.error('💥 Stream start error:', error);
           controller.error(error);
         }
       },
 
-      cancel() {
+      cancel(controller) {
         console.log('❌ Stream cancelled for user:', user.id);
+
+        // Call the shared cleanup function
+        if ((controller as any).__cleanup) {
+          (controller as any).__cleanup();
+        }
       },
     });
 

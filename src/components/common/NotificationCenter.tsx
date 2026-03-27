@@ -277,12 +277,32 @@ export default function NotificationCenter({
         };
 
         eventSource.onerror = event => {
-          console.log('SSE connection error, will attempt reconnect...');
+          const readyState = eventSource?.readyState;
+          const isConnecting = readyState === EventSource.CONNECTING;
+          const isClosed = readyState === EventSource.CLOSED;
+
+          // Use console.warn instead of console.error for expected connection issues
+          if (isConnecting) {
+            console.warn(
+              '🔌 SSE connection issue - server may be offline or restarting',
+            );
+          } else if (isClosed) {
+            console.warn('📡 SSE connection closed by server');
+          } else {
+            console.group('🔥 SSE Connection Error Details');
+            console.warn('SSE Event:', event);
+            console.warn('EventSource readyState:', readyState);
+            console.warn('EventSource url:', eventSource?.url);
+            console.groupEnd();
+          }
+
           setIsConnected(false);
+          setError('Connection lost, attempting to reconnect...');
           eventSource?.close();
 
           // Auto-reconnect after 3 seconds
           reconnectTimeout = setTimeout(() => {
+            console.log('🔄 Attempting to reconnect SSE...');
             connectSSE();
           }, 3000);
         };
