@@ -134,7 +134,7 @@ export default function HanukkahDecorationsPage() {
     }
   }
 
-  function handleDelete(taskId: string, taskTitle: string) {
+  function handleDelete(taskId: string) {
     const task = decorations.find((t: any) => t.id === taskId);
     if (task) {
       setTaskToDelete(task);

@@ -1,5 +1,5 @@
 // Real-time notification broadcasting utilities
-import { sendNotificationToUser } from '@/app/api/notifications/stream/route';
+import { sendNotificationToUser } from '@/lib/notifications/stream';
 import { prisma } from './prisma';
 
 interface NotificationPayload {
