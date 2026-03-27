@@ -54,19 +54,80 @@ export async function GET(request: NextRequest) {
       email: user.email,
     });
 
-    // SIMPLEST POSSIBLE SSE RESPONSE - no streaming, just static content
-    const welcomeMessage = {
-      type: 'connection',
-      message: 'Connected to notifications',
-      timestamp: new Date().toISOString(),
-      userId: user.id,
-    };
+    console.log('📡 Creating persistent SSE stream...');
 
-    const sseResponse = `data: ${JSON.stringify(welcomeMessage)} \n data: {"type":"heartbeat","timestamp":"${new Date().toISOString()}"}\n`;
+    const encoder = new TextEncoder();
 
-    console.log('📤 Returning simple SSE response');
+    // Create a stream that stays open (not a static response)
+    const stream = new ReadableStream({
+      start(controller) {
+        console.log('🎬 Stream started for user:', user.id);
 
-    return new Response(sseResponse, {
+        try {
+          // Send welcome message immediately
+          const welcomeMessage = {
+            type: 'connection',
+            message: 'Connected to notifications',
+            timestamp: new Date().toISOString(),
+            userId: user.id,
+          };
+
+          const welcomeData = `data: ${JSON.stringify(welcomeMessage)}\n\n`;
+          controller.enqueue(encoder.encode(welcomeData));
+          console.log('✅ Welcome message sent');
+
+          // Send initial heartbeat
+          const heartbeatMessage = {
+            type: 'heartbeat',
+            timestamp: new Date().toISOString(),
+          };
+
+          const heartbeatData = `data: ${JSON.stringify(heartbeatMessage)}\n\n`;
+          controller.enqueue(encoder.encode(heartbeatData));
+          console.log('✅ Initial heartbeat sent');
+
+          // Keep connection alive with periodic heartbeats
+          const heartbeatInterval = setInterval(() => {
+            try {
+              const heartbeat = {
+                type: 'heartbeat',
+                timestamp: new Date().toISOString(),
+                userId: user.id,
+              };
+
+              const data = `data: ${JSON.stringify(heartbeat)}\n\n`;
+              controller.enqueue(encoder.encode(data));
+              console.log('💓 Heartbeat sent to user:', user.id);
+            } catch (error) {
+              console.error('💥 Heartbeat error:', error);
+              clearInterval(heartbeatInterval);
+            }
+          }, 15000); // Every 15 seconds
+
+          console.log('⏰ Heartbeat interval started - connection will stay open');
+
+          // Cleanup when connection closes
+          const cleanup = () => {
+            console.log('🧹 Cleaning up for user:', user.id);
+            clearInterval(heartbeatInterval);
+          };
+
+          // Listen for connection close
+          request.signal?.addEventListener('abort', cleanup);
+        } catch (error) {
+          console.error('💥 Stream start error:', error);
+          controller.error(error);
+        }
+      },
+
+      cancel() {
+        console.log('❌ Stream cancelled for user:', user.id);
+      },
+    });
+
+    console.log('📤 Returning persistent SSE stream');
+
+    return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
