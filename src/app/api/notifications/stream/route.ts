@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { connections } from '@/lib/notifications/stream';
 
 // Log immediately when this file is loaded
 console.log('🔥 SSE ROUTE FILE LOADED - Module import successful');
@@ -55,113 +54,24 @@ export async function GET(request: NextRequest) {
       email: user.email,
     });
 
-    const userId = user.id;
+    // SIMPLEST POSSIBLE SSE RESPONSE - no streaming, just static content
+    const welcomeMessage = {
+      type: 'connection',
+      message: 'Connected to notifications',
+      timestamp: new Date().toISOString(),
+      userId: user.id,
+    };
 
-    console.log('📡 Creating proper streaming SSE response...');
+    const sseResponse = `data: ${JSON.stringify(welcomeMessage)} \n data: {"type":"heartbeat","timestamp":"${new Date().toISOString()}"}\n`;
 
-    // Create readable stream that stays open
-    const stream = new ReadableStream({
-      start(controller) {
-        console.log('🎬 ReadableStream start() - keeping connection open');
+    console.log('📤 Returning simple SSE response');
 
-        try {
-          console.log('🔔 SSE connection established for user:', userId);
-
-          // Store this connection for the user
-          if (!connections.has(userId)) {
-            connections.set(userId, new Set());
-            console.log('🆕 Created new connection set for user:', userId);
-          }
-
-          const userConnections = connections.get(userId)!;
-          userConnections.add(controller);
-          console.log(
-            '🔗 Added controller to user connections. Total:',
-            userConnections.size,
-          );
-
-          // Send initial connection confirmation
-          const welcomeMessage = {
-            type: 'connection',
-            message: 'Connected to notification stream',
-            timestamp: new Date().toISOString(),
-            userId: userId,
-            debug: {
-              environment: process.env.NODE_ENV || 'unknown',
-              connectionId: Math.random().toString(36).substring(7),
-            },
-          };
-
-          console.log('📨 Sending welcome message');
-          const encoder = new TextEncoder();
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(welcomeMessage)}\n\n`),
-          );
-          console.log('✅ Welcome message sent - connection staying open');
-
-          // Send heartbeat every 30 seconds to keep connection alive
-          const heartbeat = setInterval(() => {
-            try {
-              const heartbeatMsg = {
-                type: 'heartbeat',
-                timestamp: new Date().toISOString(),
-                userId: userId,
-              };
-              console.log('💓 Sending heartbeat for user:', userId);
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify(heartbeatMsg)}\n\n`),
-              );
-            } catch (err) {
-              console.error(`❌ Heartbeat error for user ${userId}:`, err);
-              clearInterval(heartbeat);
-            }
-          }, 30000);
-
-          console.log('⏰ Heartbeat interval started - connection will stay alive');
-
-          // Cleanup on connection close
-          const cleanup = () => {
-            console.log(`🧹 Cleaning up connection for user: ${userId}`);
-            clearInterval(heartbeat);
-            const userConnections = connections.get(userId);
-            if (userConnections) {
-              userConnections.delete(controller);
-              console.log(
-                `🗑️ Removed controller. Remaining connections: ${userConnections.size}`,
-              );
-              if (userConnections.size === 0) {
-                connections.delete(userId);
-                console.log(`🗑️ Deleted empty connection set for user: ${userId}`);
-              }
-            }
-          };
-
-          // Handle connection close
-          request.signal?.addEventListener('abort', cleanup);
-        } catch (streamError) {
-          console.error(`💥 Stream start error:`, streamError);
-          controller.error(streamError);
-        }
-      },
-
-      cancel() {
-        console.log(`❌ Stream cancelled for user: ${userId}`);
-        const userConnections = connections.get(userId);
-        if (userConnections) {
-          userConnections.clear();
-          connections.delete(userId);
-        }
-      },
-    });
-
-    console.log(`📤 Returning streaming response for user: ${userId}`);
-    return new Response(stream, {
+    return new Response(sseResponse, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control',
       },
     });
   } catch (error) {
