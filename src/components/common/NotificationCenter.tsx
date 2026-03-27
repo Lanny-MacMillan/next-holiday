@@ -192,9 +192,28 @@ export default function NotificationCenter({
           try {
             const data = JSON.parse(event.data);
 
+            // Handle debug logs - display them in browser console for easy debugging
+            if (data.type === 'debug_logs') {
+              console.group('🔍 SSE Debug Logs from Server');
+              data.logs?.forEach((log: any) => {
+                console.log(`[${log.timestamp}] ${log.message}`, log.data || '');
+              });
+              console.groupEnd();
+              return;
+            }
+
             // Handle system messages (heartbeat, connection status, etc.)
             if (data.type === 'heartbeat' || data.type === 'connection') {
               // These are system messages, not user notifications - ignore silently
+              return;
+            }
+
+            // Handle error messages from server
+            if (data.type === 'error') {
+              console.error('🚨 SSE Server Error:', data);
+              if (data.error) {
+                console.error('Error details:', data.error);
+              }
               return;
             }
 

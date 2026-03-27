@@ -13,14 +13,27 @@ interface Auth0Session {
 
 // Helper function to get session from NextRequest
 async function getAuth0Session(request: NextRequest): Promise<Auth0Session | null> {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] 🔐 getAuth0Session called`);
+
   try {
     // For testing purposes, we'll check for a test user header
     // In production, this would use proper Auth0 session handling
     const testUser = request.headers.get('x-test-user');
+    console.log(
+      `[${timestamp}] 🔍 x-test-user header:`,
+      testUser ? 'FOUND' : 'NOT FOUND',
+    );
 
     if (testUser) {
+      console.log(`[${timestamp}] 📝 Parsing test user from header...`);
       // Parse test user data from header
       const userData = JSON.parse(testUser);
+      console.log(`[${timestamp}] ✅ Header test user parsed successfully:`, {
+        sub: userData.sub,
+        email: userData.email,
+        name: userData.name,
+      });
       return {
         user: {
           sub: userData.sub || 'test-auth0-sub',
@@ -34,10 +47,39 @@ async function getAuth0Session(request: NextRequest): Promise<Auth0Session | nul
     // Also check for test user data in query parameters (for SSE endpoints)
     const url = new URL(request.url);
     const queryTestUser = url.searchParams.get('testUser');
+    console.log(
+      `[${timestamp}] 🔍 testUser query param:`,
+      queryTestUser ? 'FOUND' : 'NOT FOUND',
+    );
 
     if (queryTestUser) {
+      console.log(
+        `[${timestamp}] 🔍 Raw testUser param length:`,
+        queryTestUser.length,
+      );
+      console.log(
+        `[${timestamp}] 🔍 Raw testUser param (first 100 chars):`,
+        queryTestUser.substring(0, 100),
+      );
+
       try {
-        const userData = JSON.parse(decodeURIComponent(queryTestUser));
+        console.log(
+          `[${timestamp}] 📝 Decoding and parsing test user from query params...`,
+        );
+        const decoded = decodeURIComponent(queryTestUser);
+        console.log(`[${timestamp}] 📝 Decoded length:`, decoded.length);
+        console.log(
+          `[${timestamp}] 📝 Decoded (first 200 chars):`,
+          decoded.substring(0, 200),
+        );
+
+        const userData = JSON.parse(decoded);
+        console.log(`[${timestamp}] ✅ Query test user parsed successfully:`, {
+          sub: userData.sub,
+          email: userData.email,
+          name: userData.name,
+        });
+
         return {
           user: {
             sub: userData.sub || 'test-auth0-sub',
@@ -47,16 +89,36 @@ async function getAuth0Session(request: NextRequest): Promise<Auth0Session | nul
           },
         };
       } catch (parseError) {
-        console.error('Error parsing test user from query params:', parseError);
+        console.error(
+          `[${timestamp}] ❌ Error parsing test user from query params:`,
+          parseError,
+        );
+        console.error(`[${timestamp}] ❌ Parse error details:`, {
+          message:
+            parseError instanceof Error ? parseError.message : 'Unknown error',
+          stack: parseError instanceof Error ? parseError.stack : undefined,
+          rawParam: queryTestUser.substring(0, 200),
+        });
       }
     }
+
+    console.log(`[${timestamp}] ❌ No test user found in headers or query params`);
+    console.log(`[${timestamp}] 🔍 Request URL:`, request.url);
+    console.log(
+      `[${timestamp}] 🔍 Available headers:`,
+      Object.fromEntries(request.headers.entries()),
+    );
 
     // For now, return null (no session)
     // TODO: Implement proper Auth0 session handling for Next.js 15
     // This will be handled by the frontend calling the API with user data
     return null;
   } catch (error) {
-    console.error('Error getting Auth0 session:', error);
+    console.error(`[${timestamp}] 💥 Error getting Auth0 session:`, error);
+    console.error(
+      `[${timestamp}] 💥 Auth session error stack:`,
+      error instanceof Error ? error.stack : 'No stack trace',
+    );
     return null;
   }
 }
