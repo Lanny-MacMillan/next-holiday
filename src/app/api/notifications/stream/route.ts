@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { connections } from '@/lib/notifications/stream';
 
 // Log immediately when this file is loaded
@@ -14,8 +14,88 @@ export async function GET(request: NextRequest) {
   try {
     console.log('⚡ Starting authentication...');
 
-    // Use requireAuth like other routes
-    const user = await requireAuth(request);
+    // Get auth0Sub from query parameters (same pattern as /api/users/me)
+    const url = new URL(request.url);
+    const auth0SubParam =
+      url.searchParams.get('auth0Sub') || request.headers.get('x-auth0-sub');
+
+    console.log('🔑 Auth0Sub param:', auth0SubParam ? 'FOUND' : 'NOT FOUND');
+
+    if (!auth0SubParam) {
+      console.error('❌ No auth0Sub parameter provided');
+      const errorMessage = {
+        type: 'error',
+        message: 'Auth0 sub is required',
+        timestamp: new Date().toISOString(),
+      };
+
+      const errorStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(`data: ${JSON.stringify(errorMessage)}\n\n`);
+          controller.close();
+        },
+      });
+
+      return new Response(errorStream, {
+        status: 400,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Cache-Control',
+        },
+      });
+    }
+
+    // Find user by auth0Sub (same pattern as /api/users/me)
+    const user = await prisma.user.findUnique({
+      where: { auth0Sub: auth0SubParam },
+      select: {
+        id: true,
+        auth0Sub: true,
+        email: true,
+        name: true,
+        picture: true,
+        subscriptionPlan: true,
+        subscriptionStartDate: true,
+        subscriptionEndDate: true,
+        createdAt: true,
+      },
+    });
+
+    console.log(
+      '✅ User lookup result:',
+      user ? `Found user ${user.id}` : 'User not found',
+    );
+
+    if (!user) {
+      console.error('❌ User not found for auth0Sub:', auth0SubParam);
+      const errorMessage = {
+        type: 'error',
+        message: 'User not found',
+        timestamp: new Date().toISOString(),
+      };
+
+      const errorStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(`data: ${JSON.stringify(errorMessage)}\n\n`);
+          controller.close();
+        },
+      });
+
+      return new Response(errorStream, {
+        status: 404,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Cache-Control',
+        },
+      });
+    }
+
     console.log('✅ Authentication successful:', {
       userId: user.id,
       email: user.email,
