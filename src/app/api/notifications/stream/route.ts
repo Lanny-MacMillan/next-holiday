@@ -2,7 +2,13 @@ import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { connections } from '@/lib/notifications/stream';
 
+// Log immediately when this file is loaded
+console.log('🔥 SSE ROUTE FILE LOADED - Module import successful');
+
 export async function GET(request: NextRequest) {
+  // Log immediately when function is called - before any try/catch
+  console.log('🎯 SSE GET FUNCTION CALLED - Before try/catch');
+
   // Wrap everything in try-catch to catch ANY errors
   try {
     const requestUrl = request.url;

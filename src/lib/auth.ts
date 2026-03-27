@@ -148,6 +148,8 @@ export interface AuthUser {
 export async function getCurrentUser(
   request: NextRequest,
 ): Promise<AuthUser | null> {
+  console.log('🔑 getCurrentUser function called');
+
   try {
     // Get Auth0 session
     const session = await getAuth0Session(request);
