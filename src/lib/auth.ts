@@ -85,11 +85,14 @@ export async function getCurrentUser(
     const session = await getAuth0Session(request);
 
     if (!session?.user?.sub) {
+      console.log('No Auth0 session found');
       return null;
     }
 
+    console.log(`Attempting to find user with auth0Sub: ${session.user.sub}`);
+
     // Find user in database (don't create/update here to avoid race conditions)
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { auth0Sub: session.user.sub },
       select: {
         id: true,
