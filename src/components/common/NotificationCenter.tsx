@@ -198,6 +198,8 @@ export default function NotificationCenter({
           console.log('🔔 Notification stream connected');
           setIsConnected(true);
           setError(null);
+          // Reset failure count on successful connection
+          setSseFailureCount(0);
         };
 
         eventSource.onmessage = event => {
@@ -301,6 +303,24 @@ export default function NotificationCenter({
           const isConnecting = readyState === EventSource.CONNECTING;
           const isClosed = readyState === EventSource.CLOSED;
 
+          // Increment failure count and potentially switch to polling
+          setSseFailureCount(prev => {
+            const newCount = prev + 1;
+            console.warn(`🔥 SSE failure ${newCount}/${SSE_FAILURE_THRESHOLD}`);
+
+            // Switch to polling after threshold failures
+            if (newCount >= SSE_FAILURE_THRESHOLD) {
+              console.warn(
+                '📊 SSE failed repeatedly, switching to polling fallback',
+              );
+              setUsePolling(true);
+              eventSource?.close();
+              return newCount;
+            }
+
+            return newCount;
+          });
+
           // Use console.warn instead of console.error for expected connection issues
           if (isConnecting) {
             console.warn(
@@ -320,11 +340,14 @@ export default function NotificationCenter({
           setError('Connection lost, attempting to reconnect...');
           eventSource?.close();
 
-          // Auto-reconnect after 3 seconds
-          reconnectTimeout = setTimeout(() => {
-            console.log('🔄 Attempting to reconnect SSE...');
-            connectSSE();
-          }, 3000);
+          // Only attempt reconnect if not switching to polling
+          if (sseFailureCount + 1 < SSE_FAILURE_THRESHOLD) {
+            // Auto-reconnect after 3 seconds
+            reconnectTimeout = setTimeout(() => {
+              console.log('🔄 Attempting to reconnect SSE...');
+              connectSSE();
+            }, 3000);
+          }
         };
       } catch (err) {
         console.error('Failed to establish SSE connection:', err);
@@ -611,14 +634,33 @@ export default function NotificationCenter({
                       : '⏸️ Offline'}
                   </div>
                   {/* Debug control for development */}
-                  {usePolling && process.env.NODE_ENV === 'development' && (
-                    <button
-                      onClick={retrySSE}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                      title="Retry SSE connection"
-                    >
-                      Retry SSE
-                    </button>
+                  {process.env.NODE_ENV === 'development' && (
+                    <>
+                      {usePolling && (
+                        <button
+                          onClick={retrySSE}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          title="Retry SSE connection"
+                        >
+                          Retry SSE
+                        </button>
+                      )}
+                      {!usePolling && (
+                        <button
+                          onClick={() => {
+                            console.log(
+                              '🧪 Manually forcing polling mode for testing',
+                            );
+                            setUsePolling(true);
+                            setSseFailureCount(SSE_FAILURE_THRESHOLD);
+                          }}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+                          title="Force polling mode (for testing)"
+                        >
+                          Force Polling
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
