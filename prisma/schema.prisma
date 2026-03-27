@@ -140,6 +140,7 @@ model Holiday {
   shares            Share?
   tasks             Task[]
 
+  @@unique([accountId, holidayType], name: "unique_account_holiday_type")
   @@index([accountId, holidayType])
   @@index([startDate])
   @@index([isCustom])

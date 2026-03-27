@@ -16,6 +16,7 @@ export interface ShareMember {
 
 export interface HolidayShare {
   shareId: string;
+  holidayId: string; // UUID of the associated holiday
   holidayKey: string;
   ownerUserId: string;
   memberUserIds: string[]; // Keep for backward compatibility

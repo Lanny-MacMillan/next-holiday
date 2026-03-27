@@ -13,18 +13,45 @@ export async function validateAssigneeAccess(
 }> {
   try {
     // Check if user exists and has access to this holiday
+    // Access can be through:
+    // 1. Account membership (user is account member and holiday belongs to that account)
+    // 2. Holiday sharing (user is a share member of the holiday)
+    // 3. Owner of the shared holiday
     const user = await prisma.user.findFirst({
       where: {
         id: userId,
-        accountMembers: {
-          some: {
-            account: {
-              holidays: {
-                some: { id: holidayId },
+        OR: [
+          // Access through account membership
+          {
+            accountMembers: {
+              some: {
+                account: {
+                  holidays: {
+                    some: { id: holidayId },
+                  },
+                },
               },
             },
           },
-        },
+          // Access through holiday sharing
+          {
+            shareMemberships: {
+              some: {
+                share: {
+                  holidayId: holidayId,
+                },
+              },
+            },
+          },
+          // Owner of the shared holiday
+          {
+            ownedShares: {
+              some: {
+                holidayId: holidayId,
+              },
+            },
+          },
+        ],
       },
       select: {
         id: true,
@@ -46,7 +73,7 @@ export async function validateAssigneeAccess(
       user,
     };
   } catch (error) {
-    console.error('Error validating assignee access:', error);
+    console.error('💥 validateAssigneeAccess error:', error);
     return {
       valid: false,
       error: 'Failed to validate user access',
@@ -69,15 +96,38 @@ export async function validateMultipleAssigneeAccess(
     const validUsers = await prisma.user.findMany({
       where: {
         id: { in: userIds },
-        accountMembers: {
-          some: {
-            account: {
-              holidays: {
-                some: { id: holidayId },
+        OR: [
+          // Access through account membership
+          {
+            accountMembers: {
+              some: {
+                account: {
+                  holidays: {
+                    some: { id: holidayId },
+                  },
+                },
               },
             },
           },
-        },
+          // Access through holiday sharing
+          {
+            shareMemberships: {
+              some: {
+                share: {
+                  holidayId: holidayId,
+                },
+              },
+            },
+          },
+          // Owner of the shared holiday
+          {
+            ownedShares: {
+              some: {
+                holidayId: holidayId,
+              },
+            },
+          },
+        ],
       },
       select: { id: true },
     });

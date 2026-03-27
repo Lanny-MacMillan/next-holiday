@@ -150,7 +150,7 @@ export async function getUserByAuth0Sub(auth0Sub: string): Promise<AuthUser | nu
 }
 
 /**
- * Assert that a user has access to a holiday through their account membership
+ * Assert that a user has access to a holiday through their account membership OR share membership
  * Returns a 403 response if access is denied, null if access is granted
  */
 export async function assertHolidayAccess(
@@ -158,16 +158,39 @@ export async function assertHolidayAccess(
   userId: string,
 ): Promise<Response | null> {
   try {
+    // Check if user has access through account membership OR share membership
     const holiday = await prisma.holiday.findFirst({
       where: {
         id: holidayId,
-        account: {
-          members: {
-            some: {
-              userId: userId,
+        OR: [
+          // Access through account membership (original logic)
+          {
+            account: {
+              members: {
+                some: {
+                  userId: userId,
+                },
+              },
             },
           },
-        },
+          // Access through share membership (new logic)
+          // Note: Holiday has a one-to-one relationship with Share
+          {
+            shares: {
+              members: {
+                some: {
+                  userId: userId,
+                },
+              },
+            },
+          },
+          // Access as share owner (new logic)
+          {
+            shares: {
+              ownerUserId: userId,
+            },
+          },
+        ],
       },
       select: { id: true },
     });

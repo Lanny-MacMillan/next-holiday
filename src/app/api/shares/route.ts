@@ -55,10 +55,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Find holiday by holidayType scoped to the user's account
+    // Use the oldest holiday to ensure consistency when multiple holidays of same type exist
     const holiday = await prisma.holiday.findFirst({
       where: {
         holidayType: holidayDisplayName,
         accountId: userAccount.id,
+      },
+      orderBy: {
+        createdAt: 'asc', // Always use the oldest holiday for consistency
       },
     });
 
@@ -300,6 +304,7 @@ export async function GET(request: NextRequest) {
 
           return {
             shareId: share.id,
+            holidayId: share.holiday.id, // Add the holiday UUID for frontend use
             holidayKey:
               holidayDisplayNameToKey[share.holiday.holidayType] ||
               share.holiday.holidayType

@@ -82,6 +82,7 @@ export default function BirthdayGiftListPage() {
 
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
@@ -174,7 +175,7 @@ export default function BirthdayGiftListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      await updateGift(giftId, { isCompleted: newIsCompleted });
+      await updateGift(giftId, newIsCompleted);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
@@ -221,7 +222,7 @@ export default function BirthdayGiftListPage() {
     setIsEditSubmitting(true);
     try {
       const payload = transformGiftPayload(values, contacts, memoizedShareMembers);
-      await updateGift(selectedGift.id, payload);
+      await editGift(selectedGift.id, payload);
 
       // Refresh home data to ensure UI is in sync
       await refreshHomeData(auth0User, holidayId);
