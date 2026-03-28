@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
 import { toggleTheme } from '@/store/slices/themeSlice';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
+import { refreshHomeData } from '@/store/slices/homeSlice';
 
 export default function ThemeToggle() {
   const dispatch = useAppDispatch();
@@ -34,12 +35,24 @@ export default function ThemeToggle() {
             auth0Sub: auth0User.sub,
           }),
         ).unwrap();
+
+        // Refresh home data so all components get updated theme context
+        await dispatch(refreshHomeData(auth0User)).unwrap();
       } catch (error) {
         console.error('Failed to update theme in database:', error);
         // Revert optimistic update on error
         dispatch(toggleTheme());
       } finally {
         setIsLoading(false);
+      }
+    } else {
+      // If no user preferences, still refresh home data for theme consistency
+      if (auth0User) {
+        try {
+          await dispatch(refreshHomeData(auth0User)).unwrap();
+        } catch (error) {
+          console.error('Failed to refresh home data after theme change:', error);
+        }
       }
     }
   };
