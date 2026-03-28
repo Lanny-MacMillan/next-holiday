@@ -149,36 +149,48 @@ export default function NotificationCenter({
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Polling fallback state
+  const [usePolling, setUsePolling] = useState(false);
+  const [sseFailureCount, setSseFailureCount] = useState(0);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(
+    null,
+  );
+
+  // Threshold for switching to polling (after 3 SSE failures)
+  const SSE_FAILURE_THRESHOLD = 3;
+  const POLLING_INTERVAL = 10000; // 10 seconds
+
   // Initial fetch on mount
   useEffect(() => {
     fetchNotifications();
   }, [isAuthenticated, auth0User]);
 
-  // SSE connection for real-time notifications
+  // SSE connection with polling fallback
   useEffect(() => {
     // Only connect if authenticated and have user data
     if (!isAuthenticated || !auth0User) {
       return;
     }
 
+    // If we've determined polling should be used, start polling instead
+    if (usePolling) {
+      console.log('Using polling fallback for notifications');
+      startPolling();
+      return;
+    }
+
+    // Try SSE first
+    console.log('🔌 Attempting SSE connection...');
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
 
     const connectSSE = () => {
       try {
-        // Create URL with current user authentication for SSE
-        const testUser = {
-          sub: auth0User.sub || 'auth0|test-user-123',
-          email: auth0User.email || 'test@example.com',
-          name: auth0User.name || 'Test User',
-          picture: auth0User.picture || null,
-        };
-
+        // Create URL with auth0Sub parameter to match other API routes
         const sseUrl = new URL('/api/notifications/stream', window.location.origin);
-        sseUrl.searchParams.set(
-          'testUser',
-          encodeURIComponent(JSON.stringify(testUser)),
-        );
+        sseUrl.searchParams.set('auth0Sub', auth0User.sub || 'auth0|test-user-123');
+
+        console.log('🔌 Connecting to SSE with URL:', sseUrl.toString());
 
         eventSource = new EventSource(sseUrl.toString());
 
@@ -186,15 +198,36 @@ export default function NotificationCenter({
           console.log('🔔 Notification stream connected');
           setIsConnected(true);
           setError(null);
+          // Reset failure count on successful connection
+          setSseFailureCount(0);
         };
 
         eventSource.onmessage = event => {
           try {
             const data = JSON.parse(event.data);
 
+            // Handle debug logs - display them in browser console for easy debugging
+            if (data.type === 'debug_logs') {
+              console.group('🔍 SSE Debug Logs from Server');
+              data.logs?.forEach((log: any) => {
+                console.log(`[${log.timestamp}] ${log.message}`, log.data || '');
+              });
+              console.groupEnd();
+              return;
+            }
+
             // Handle system messages (heartbeat, connection status, etc.)
             if (data.type === 'heartbeat' || data.type === 'connection') {
               // These are system messages, not user notifications - ignore silently
+              return;
+            }
+
+            // Handle error messages from server
+            if (data.type === 'error') {
+              console.error('🚨 SSE Server Error:', data);
+              if (data.error) {
+                console.error('Error details:', data.error);
+              }
               return;
             }
 
@@ -266,14 +299,55 @@ export default function NotificationCenter({
         };
 
         eventSource.onerror = event => {
-          console.log('SSE connection error, will attempt reconnect...');
+          const readyState = eventSource?.readyState;
+          const isConnecting = readyState === EventSource.CONNECTING;
+          const isClosed = readyState === EventSource.CLOSED;
+
+          // Increment failure count and potentially switch to polling
+          setSseFailureCount(prev => {
+            const newCount = prev + 1;
+            console.warn(`🔥 SSE failure ${newCount}/${SSE_FAILURE_THRESHOLD}`);
+
+            // Switch to polling after threshold failures
+            if (newCount >= SSE_FAILURE_THRESHOLD) {
+              console.warn(
+                '📊 SSE failed repeatedly, switching to polling fallback',
+              );
+              setUsePolling(true);
+              eventSource?.close();
+              return newCount;
+            }
+
+            return newCount;
+          });
+
+          // Use console.warn instead of console.error for expected connection issues
+          if (isConnecting) {
+            console.warn(
+              '🔌 SSE connection issue - server may be offline or restarting',
+            );
+          } else if (isClosed) {
+            console.warn('📡 SSE connection closed by server');
+          } else {
+            console.group('🔥 SSE Connection Error Details');
+            console.warn('SSE Event:', event);
+            console.warn('EventSource readyState:', readyState);
+            console.warn('EventSource url:', eventSource?.url);
+            console.groupEnd();
+          }
+
           setIsConnected(false);
+          setError('Connection lost, attempting to reconnect...');
           eventSource?.close();
 
-          // Auto-reconnect after 3 seconds
-          reconnectTimeout = setTimeout(() => {
-            connectSSE();
-          }, 3000);
+          // Only attempt reconnect if not switching to polling
+          if (sseFailureCount + 1 < SSE_FAILURE_THRESHOLD) {
+            // Auto-reconnect after 3 seconds
+            reconnectTimeout = setTimeout(() => {
+              console.log('🔄 Attempting to reconnect SSE...');
+              connectSSE();
+            }, 3000);
+          }
         };
       } catch (err) {
         console.error('Failed to establish SSE connection:', err);
@@ -292,9 +366,13 @@ export default function NotificationCenter({
       if (eventSource) {
         eventSource.close();
       }
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
       setIsConnected(false);
     };
-  }, [isAuthenticated, auth0User]);
+  }, [isAuthenticated, auth0User, usePolling, sseFailureCount]);
 
   // Request browser notification permission on mount
   useEffect(() => {
@@ -302,6 +380,44 @@ export default function NotificationCenter({
       Notification.requestPermission();
     }
   }, []);
+
+  // Polling fallback functions
+  const startPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    console.log('📊 Starting notification polling every', POLLING_INTERVAL + 'ms');
+    setIsConnected(true); // Show as connected for UI purposes
+    setError(null);
+
+    // Initial poll
+    fetchNotifications();
+
+    // Set up polling interval
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, POLLING_INTERVAL);
+
+    setPollingInterval(interval);
+  };
+
+  const stopPolling = () => {
+    if (pollingInterval) {
+      console.log('📊 Stopping notification polling');
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+      setIsConnected(false);
+    }
+  };
+
+  // Function to manually switch back to SSE (for testing)
+  const retrySSE = () => {
+    console.log('🔄 Manually retrying SSE connection...');
+    stopPolling();
+    setUsePolling(false);
+    setSseFailureCount(0);
+  };
 
   const fetchNotifications = async () => {
     if (!isAuthenticated || !auth0User) {
@@ -461,9 +577,19 @@ export default function NotificationCenter({
         {/* Connection status indicator */}
         <div
           className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
-            isConnected ? 'bg-green-500' : 'bg-gray-400'
+            isConnected
+              ? usePolling
+                ? 'bg-blue-500'
+                : 'bg-green-500'
+              : 'bg-gray-400'
           }`}
-          title={isConnected ? 'Connected to notifications' : 'Reconnecting...'}
+          title={
+            isConnected
+              ? usePolling
+                ? 'Connected via polling (10s intervals)'
+                : 'Connected via real-time stream'
+              : 'Reconnecting...'
+          }
         />
       </button>
 
@@ -481,11 +607,62 @@ export default function NotificationCenter({
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Notifications
                 </h3>
-                {unreadCount > 0 && (
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {unreadCount} unread
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => {
+                        // Mark all unread notifications as read
+                        const unreadIds = notifications
+                          .filter(n => !n.isRead)
+                          .map(n => n.id);
+                        if (unreadIds.length > 0) {
+                          handleMarkAsRead(unreadIds);
+                        }
+                      }}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                      disabled={loading}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  {/* Connection type indicator */}
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {isConnected
+                      ? usePolling
+                        ? '📊 Polling'
+                        : '🔌 Real-time'
+                      : '⏸️ Offline'}
+                  </div>
+                  {/* Debug control for development */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <>
+                      {usePolling && (
+                        <button
+                          onClick={retrySSE}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          title="Retry SSE connection"
+                        >
+                          Retry SSE
+                        </button>
+                      )}
+                      {!usePolling && (
+                        <button
+                          onClick={() => {
+                            console.log(
+                              '🧪 Manually forcing polling mode for testing',
+                            );
+                            setUsePolling(true);
+                            setSseFailureCount(SSE_FAILURE_THRESHOLD);
+                          }}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+                          title="Force polling mode (for testing)"
+                        >
+                          Force Polling
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
