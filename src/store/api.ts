@@ -1356,13 +1356,13 @@ export const api = createApi({
           console.log('✅ Event data from API:', newEventFromApi);
 
           //   Import Home Slice to avoid circular dependencies
-          const { addEventToHomeData } = await import('./slices/homeSlice');
+          const { addTaskToHomeData } = await import('./slices/homeSlice');
 
-          //   Update Home Slice with API data
+          //   Update Home Slice with API data (events stored as tasks with category "Events")
           dispatch(
-            addEventToHomeData({
+            addTaskToHomeData({
               holidayId,
-              event: newEventFromApi,
+              task: newEventFromApi,
             }),
           );
 

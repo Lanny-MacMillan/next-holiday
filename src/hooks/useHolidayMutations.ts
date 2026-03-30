@@ -17,6 +17,7 @@ import {
   useDeleteGuestMutation,
   useCreateEventMutation,
   useUpdateEventMutation,
+  useEditEventMutation,
   useDeleteEventMutation,
 } from '@/store/api';
 
@@ -51,6 +52,7 @@ export function useHolidayMutations({
   const [deleteGuestMutation] = useDeleteGuestMutation();
   const [createEventMutation] = useCreateEventMutation();
   const [updateEventMutation] = useUpdateEventMutation();
+  const [editEventMutation] = useEditEventMutation();
   const [deleteEventMutation] = useDeleteEventMutation();
 
   const createGift = async (payload: any) => {
@@ -367,6 +369,25 @@ export function useHolidayMutations({
     }
   };
 
+  const editEvent = async (taskId: string, payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await editEventMutation({
+        holidayId,
+        taskId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
   const deleteEvent = async (taskId: string) => {
     if (!holidayId || !auth0User) {
       throw new Error('Missing holiday ID or user');
@@ -404,6 +425,7 @@ export function useHolidayMutations({
     deleteGuest,
     createEvent,
     updateEvent,
+    editEvent,
     deleteEvent,
     createLoading,
     updateLoading,

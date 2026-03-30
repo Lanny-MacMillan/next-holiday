@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -36,14 +35,12 @@ export default function MothersDayCardsPage() {
   const {
     createCard,
     updateCard,
+    editCard,
     deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -115,9 +112,6 @@ export default function MothersDayCardsPage() {
       // Refresh contacts to include any newly created ones
       dispatch(fetchContacts());
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
@@ -152,10 +146,7 @@ export default function MothersDayCardsPage() {
     if (!cardToDelete || !holidayId || !auth0User) return;
 
     try {
-      await deleteCard(cardToDelete.id, cardToDelete);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await deleteCard(cardToDelete.id);
 
       setShowDeleteModal(false);
       setCardToDelete(null);
@@ -175,10 +166,7 @@ export default function MothersDayCardsPage() {
       // Use enhanced transformCardPayload for consistent handling
       const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await updateCard(cardToEdit.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await editCard(cardToEdit.id, payload);
 
       setShowEditModal(false);
       setCardToEdit(null);
@@ -198,18 +186,8 @@ export default function MothersDayCardsPage() {
     try {
       const card = cards.find((c: any) => c.id === cardId);
       if (card) {
-        // Include all required fields when updating completion status
-        await updateCard(cardId, {
-          recipient: card.recipient,
-          message: card.message,
-          address: card.address || '',
-          contact_id: card.contact_id || null,
-          assigned_to: card.assignedTo || null,
-          isCompleted: !card.isCompleted,
-        });
-
-        // Refresh home data to ensure progress tracking updates
-        await refreshHomeData(auth0User, holidayId);
+        // Use simple boolean toggle for completion
+        await updateCard(cardId, !card.isCompleted);
       }
     } catch (error) {
       console.error('Error toggling card completion:', error);

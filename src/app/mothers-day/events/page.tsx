@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -36,18 +35,16 @@ export default function MothersDayEventsPage() {
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
-  // CRUD Operations Hook for tasks
+  // CRUD Operations Hook for events
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createEvent,
+    updateEvent,
+    editEvent,
+    deleteEvent,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -118,8 +115,8 @@ export default function MothersDayEventsPage() {
       // Optimistically update Redux state first (like Kwanzaa)
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: newTask }));
 
-      // Call API - use the hook with proper snake_case mapping
-      const result = await createTask({
+      // Call API - use the createEvent hook
+      const result = await createEvent({
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
@@ -137,9 +134,6 @@ export default function MothersDayEventsPage() {
         }),
       );
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-
-      // Refresh home data
-      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
@@ -175,11 +169,8 @@ export default function MothersDayEventsPage() {
         }),
       );
 
-      // Use the hook for API call
-      await updateTask(taskId, { isCompleted: newCompletionStatus });
-
-      // Refresh home data to ensure progress tracking updates
-      await refreshHomeData(auth0User, holidayId);
+      // Use the updateEvent hook for API call
+      await updateEvent(taskId, newCompletionStatus);
     } catch (error) {
       // Revert the optimistic update on error
       const currentTask = events.find((task: any) => task.id === taskId);
@@ -225,17 +216,14 @@ export default function MothersDayEventsPage() {
         }),
       );
 
-      // Use the hook for API call with proper snake_case mapping
-      await updateTask(editingTask.id, {
+      // Use the editEvent hook for API call with proper snake_case mapping
+      await editEvent(editingTask.id, {
         title: values.title,
         description: values.description || undefined,
         priority: values.priority as 'low' | 'medium' | 'high',
         assigned_to: values.assigned_to || null,
         due_date: values.dueDate || null,
       });
-
-      // Refresh home data to ensure progress tracking updates
-      await refreshHomeData(auth0User, holidayId);
 
       setShowEditModal(false);
       setEditingTask(null);
@@ -277,11 +265,8 @@ export default function MothersDayEventsPage() {
         removeTaskFromHomeData({ holidayId: holidayId, taskId: taskToDelete.id }),
       );
 
-      // Use the hook for API call
-      await deleteTask(taskToDelete.id);
-
-      // Refresh home data to ensure progress tracking updates
-      await refreshHomeData(auth0User, holidayId);
+      // Use the deleteEvent hook for API call
+      await deleteEvent(taskToDelete.id);
 
       setShowDeleteModal(false);
       setTaskToDelete(null);

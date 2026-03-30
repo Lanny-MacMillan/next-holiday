@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
@@ -36,13 +35,12 @@ export default function FathersDayGiftListPage() {
   const {
     createGift,
     updateGift,
+    editGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get share members for Enhanced Compatibility Layer
   const shareData = useAppSelector((state: RootState) =>
@@ -77,7 +75,6 @@ export default function FathersDayGiftListPage() {
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
       await createGift(payload);
-      await refreshHomeData(auth0User, holidayId);
 
       // Refresh address book contacts
       dispatch(fetchContacts());
@@ -118,8 +115,7 @@ export default function FathersDayGiftListPage() {
       if (!currentGift) return;
 
       const newIsCompleted = !currentGift.isCompleted;
-      await updateGift(giftId, { isCompleted: newIsCompleted });
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
     }
@@ -135,7 +131,6 @@ export default function FathersDayGiftListPage() {
 
     try {
       await deleteGift(giftToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
@@ -158,8 +153,7 @@ export default function FathersDayGiftListPage() {
     setIsEditSubmitting(true);
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      await updateGift(selectedGift.id, payload);
-      await refreshHomeData(auth0User, holidayId);
+      await editGift(selectedGift.id, payload);
       setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
