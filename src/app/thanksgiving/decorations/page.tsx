@@ -4,14 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
+import { setHomeData } from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -46,9 +40,6 @@ export default function ThanksgivingDecorationsPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing - Enhanced Compatibility Layer
   const isHolidayShared = useAppSelector((state: any) =>
@@ -135,13 +126,6 @@ export default function ThanksgivingDecorationsPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-      dispatch(
-        removeTaskFromHomeData({
-          holidayId: holidayId,
-          taskId: taskToDelete.id,
-        }),
-      );
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {
@@ -186,12 +170,6 @@ export default function ThanksgivingDecorationsPage() {
         category: 'Decorations',
       });
 
-      // Update Redux state immediately
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -217,18 +195,6 @@ export default function ThanksgivingDecorationsPage() {
       await updateTask(taskId, {
         isCompleted: newCompletionStatus,
       });
-
-      // Update Redux state immediately
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId,
-          updates: {
-            ...currentTask,
-            isCompleted: newCompletionStatus,
-          },
-        }),
-      );
     } catch (error) {
       console.error('Error toggling task:', error);
     }
@@ -265,18 +231,6 @@ export default function ThanksgivingDecorationsPage() {
       };
 
       await updateTask(editingTask.id, updates);
-
-      // Update Redux state immediately
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setEditingTask(null);
       setShowEditModal(false);

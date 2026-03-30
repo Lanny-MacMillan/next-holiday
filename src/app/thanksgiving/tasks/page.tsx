@@ -4,13 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-} from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -40,7 +34,6 @@ export default function ThanksgivingTasksPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
   const isHolidayShared = useAppSelector((state: any) =>
@@ -150,14 +143,6 @@ export default function ThanksgivingTasksPage() {
     if (!task || !holidayId) return;
 
     const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
-    dispatch(
-      updateTaskInHomeData({
-        holidayId,
-        taskId,
-        updates: { isCompleted: !task.isCompleted },
-      }),
-    );
-    await refreshHomeData(auth0User, holidayId);
   }
 
   // Modal handlers
@@ -200,8 +185,6 @@ export default function ThanksgivingTasksPage() {
 
     const result = await createTask(taskData);
     if (result) {
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
-      await refreshHomeData(auth0User, holidayId);
       closeForm();
     }
   };
@@ -221,14 +204,6 @@ export default function ThanksgivingTasksPage() {
 
     const result = await updateTask(editingTask.id, updateData);
     if (result) {
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates: updateData,
-        }),
-      );
-      await refreshHomeData(auth0User, holidayId);
       handleEditModalClose();
     }
   };
@@ -238,8 +213,6 @@ export default function ThanksgivingTasksPage() {
 
     const result = await deleteTask(taskToDelete.id);
     if (result) {
-      dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
-      await refreshHomeData(auth0User, holidayId);
       handleDeleteModalClose();
     }
   };

@@ -111,33 +111,31 @@ export async function POST(
             email: data.email.trim(),
           },
         });
+
+        if (contact) {
+          // Return error instead of updating existing contact
+          return badRequest([
+            {
+              code: 'custom',
+              path: ['email'],
+              message: `Email "${data.email}" is already tied to another contact: "${contact.name}"`,
+            },
+          ]);
+        }
       }
 
-      if (!contact) {
-        // Create new contact
-        contact = await prisma.contact.create({
-          data: {
-            id: uuidv4(),
-            accountId: account.id,
-            name: data.name,
-            email: data.email || null,
-            phone: data.phone || null,
-            streetAddress: data.address || null,
-            createdBy: user.id,
-          },
-        });
-      } else {
-        // Update existing contact if needed
-        contact = await prisma.contact.update({
-          where: { id: contact.id },
-          data: {
-            name: data.name,
-            phone: data.phone || contact.phone,
-            streetAddress: data.address || contact.streetAddress,
-            updatedAt: new Date(),
-          },
-        });
-      }
+      // Create new contact (only if email not found or no email provided)
+      contact = await prisma.contact.create({
+        data: {
+          id: uuidv4(),
+          accountId: account.id,
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone || null,
+          streetAddress: data.address || null,
+          createdBy: user.id,
+        },
+      });
     }
 
     // Create or update guest list entry

@@ -1220,9 +1220,41 @@ export const api = createApi({
             }
           : {},
       }),
-      invalidatesTags: (result, error, { holidayId }) => [
-        { type: 'GuestList', id: holidayId },
-      ],
+      // NOTE: No invalidatesTags since we manually update Home Slice in onQueryStarted
+      // Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Creating guest...', { holidayId, payload });
+
+          // Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract guest from response.data (not response.data.data for guests)
+          const newGuestFromApi = response.data;
+
+          console.log('📦 Guest response received:', response);
+          console.log('✅ Guest data from API:', newGuestFromApi);
+
+          // Import Home Slice to avoid circular dependencies
+          const { addGuestToHomeData } = await import('./slices/homeSlice');
+
+          // Update Home Slice with API data
+          dispatch(
+            addGuestToHomeData({
+              holidayId,
+              guest: newGuestFromApi,
+            }),
+          );
+
+          console.log('✅ Guest created and Home Slice updated:', newGuestFromApi);
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Guest creation failed:', error);
+        }
+      },
     }),
     createDecoration: builder.mutation<
       any,
@@ -3528,9 +3560,7 @@ export const api = createApi({
             }
           : {},
       }),
-      invalidatesTags: (result, error, { holidayId }) => [
-        { type: 'GuestList', id: holidayId },
-      ],
+      // NOTE: No invalidatesTags since we manually update Home Slice in onQueryStarted
       // Optimistic update for update guest
       async onQueryStarted(
         { holidayId, guestId, isCompleted, auth0User },
@@ -3554,6 +3584,8 @@ export const api = createApi({
                   // Store original for rollback
                   originalGuest = { ...guest };
                   guest.isCompleted = isCompleted;
+                  // Update RSVP status based on completion state
+                  guest.rsvpStatus = isCompleted ? 'confirmed' : 'pending';
                   guest.completedDate = isCompleted
                     ? new Date().toISOString()
                     : null;
@@ -3569,6 +3601,7 @@ export const api = createApi({
           const optimisticUpdate = {
             ...originalGuest,
             isCompleted,
+            rsvpStatus: isCompleted ? 'confirmed' : 'pending',
             completedDate: isCompleted ? new Date().toISOString() : null,
             updatedAt: new Date().toISOString(),
           };
@@ -3629,9 +3662,7 @@ export const api = createApi({
             }
           : {},
       }),
-      invalidatesTags: (result, error, { holidayId }) => [
-        { type: 'GuestList', id: holidayId },
-      ],
+      // NOTE: No invalidatesTags since we manually update Home Slice in onQueryStarted
       // Optimistic update for edit guest
       async onQueryStarted(
         { holidayId, guestId, payload, auth0User },

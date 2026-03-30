@@ -4,15 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  setHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-  updateTaskInHomeData,
-} from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -72,8 +65,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -154,12 +145,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
         category: 'Trick or Treat Prep',
       });
 
-      // Update Redux state immediately
-      dispatch(addTaskToHomeData({ holidayId, task: result }));
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -191,18 +176,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
       await updateTask(taskId, {
         isCompleted: newCompletionStatus,
       });
-
-      // Update Redux state immediately
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId,
-          updates: {
-            ...currentTask,
-            isCompleted: newCompletionStatus,
-          },
-        }),
-      );
     } catch (error) {
       console.error('Error toggling task:', error);
     }
@@ -228,18 +201,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
 
       await updateTask(editingTask.id, updates);
 
-      // Update Redux state immediately
-      dispatch(
-        updateTaskInHomeData({
-          holidayId,
-          taskId: editingTask.id,
-          updates,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -254,17 +215,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
 
     try {
       await deleteTask(taskId);
-
-      // Update Redux state immediately
-      dispatch(
-        removeTaskFromHomeData({
-          holidayId,
-          taskId,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error deleting task:', error);
     }

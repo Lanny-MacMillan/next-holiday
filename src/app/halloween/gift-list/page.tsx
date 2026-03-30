@@ -4,14 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateGiftInHomeData,
-  addGiftToHomeData,
-  removeGiftFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -44,13 +37,12 @@ export default function HalloweenGiftListPage() {
   const {
     createGift,
     updateGift,
+    editGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Data filtering using holidayData from the hook
   const gifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
@@ -90,12 +82,6 @@ export default function HalloweenGiftListPage() {
 
       const result = await createGift({ ...payload, isPurchased: false });
 
-      // Update Redux state immediately
-      dispatch(addGiftToHomeData({ holidayId, gift: result }));
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       // Refresh address book contacts
       dispatch(fetchContacts());
 
@@ -121,24 +107,7 @@ export default function HalloweenGiftListPage() {
 
     try {
       // Update API with isCompleted field (not isPurchased)
-      await updateGift(giftId, {
-        isCompleted: newCompletedStatus,
-      });
-
-      // Update Redux state immediately
-      dispatch(
-        updateGiftInHomeData({
-          holidayId,
-          giftId,
-          updates: {
-            ...currentGift,
-            isCompleted: newCompletedStatus,
-          },
-        }),
-      );
-
-      // Refresh home data to update budget calculations
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, newCompletedStatus);
     } catch (error) {
       console.error('Error toggling gift:', error);
     }
@@ -157,19 +126,7 @@ export default function HalloweenGiftListPage() {
       // Use standardized payload transformation with proper contact lookup
       const updates = transformGiftPayload(values, contacts, shareMembers);
 
-      await updateGift(editingGift.id, updates);
-
-      // Update Redux state immediately
-      dispatch(
-        updateGiftInHomeData({
-          holidayId,
-          giftId: editingGift.id,
-          updates,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await editGift(editingGift.id, updates);
 
       setEditingGift(null);
       setShowEditModal(false);
@@ -191,17 +148,6 @@ export default function HalloweenGiftListPage() {
 
     try {
       await deleteGift(giftId);
-
-      // Update Redux state immediately
-      dispatch(
-        removeGiftFromHomeData({
-          holidayId,
-          giftId,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error deleting gift:', error);
     }
