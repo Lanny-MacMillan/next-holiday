@@ -1446,6 +1446,43 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Resolutions', id: holidayId },
       ],
+      //   Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Creating resolution...', { holidayId, payload });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const newResolutionFromApi = response.data.data;
+
+          console.log('📦 Resolution response received:', response);
+          console.log('✅ Resolution data from API:', newResolutionFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { addTaskToHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            addTaskToHomeData({
+              holidayId,
+              task: newResolutionFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Resolution created and Home Slice updated:',
+            newResolutionFromApi,
+          );
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Resolution creation failed:', error);
+        }
+      },
     }),
     createReservations: builder.mutation<
       any,
@@ -1869,13 +1906,13 @@ export const api = createApi({
           );
 
           //   Import Home Slice to avoid circular dependencies
-          const { updateDecorationInHomeData } = await import('./slices/homeSlice');
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
 
           //   Update Home Slice with API data
           dispatch(
-            updateDecorationInHomeData({
+            updateTaskInHomeData({
               holidayId,
-              decorationId: taskId,
+              taskId: taskId,
               updates: updatedDecorationFromApi,
             }),
           );
@@ -1933,13 +1970,13 @@ export const api = createApi({
           );
 
           //   Import Home Slice to avoid circular dependencies
-          const { updateDecorationInHomeData } = await import('./slices/homeSlice');
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
 
           //   Update Home Slice with API data
           dispatch(
-            updateDecorationInHomeData({
+            updateTaskInHomeData({
               holidayId,
-              decorationId: taskId,
+              taskId: taskId,
               updates: updatedDecorationFromApi,
             }),
           );
@@ -2071,13 +2108,13 @@ export const api = createApi({
           console.log('✅ Updated event data from API:', updatedEventFromApi);
 
           //   Import Home Slice to avoid circular dependencies
-          const { updateEventInHomeData } = await import('./slices/homeSlice');
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
 
           //   Update Home Slice with API data
           dispatch(
-            updateEventInHomeData({
+            updateTaskInHomeData({
               holidayId,
-              eventId: taskId,
+              taskId: taskId,
               updates: updatedEventFromApi,
             }),
           );
@@ -2132,13 +2169,13 @@ export const api = createApi({
           console.log('✅ Updated event data from API:', updatedEventFromApi);
 
           //   Import Home Slice to avoid circular dependencies
-          const { updateEventInHomeData } = await import('./slices/homeSlice');
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
 
           //   Update Home Slice with API data
           dispatch(
-            updateEventInHomeData({
+            updateTaskInHomeData({
               holidayId,
-              eventId: taskId,
+              taskId: taskId,
               updates: updatedEventFromApi,
             }),
           );
@@ -2486,6 +2523,51 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Resolutions', id: holidayId },
       ],
+      //   Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, taskId, isCompleted, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Updating resolution...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedResolutionFromApi = response.data.data;
+
+          console.log('📦 Resolution update response received:', response);
+          console.log(
+            '✅ Updated resolution data from API:',
+            updatedResolutionFromApi,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId: taskId,
+              updates: updatedResolutionFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Resolution updated and Home Slice updated:',
+            updatedResolutionFromApi,
+          );
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Resolution update failed:', error);
+        }
+      },
     }),
     editDateIdeas: builder.mutation<
       any,
@@ -2532,6 +2614,47 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Resolutions', id: holidayId },
       ],
+      //   Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, taskId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Editing resolution...', { holidayId, taskId, payload });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedResolutionFromApi = response.data.data;
+
+          console.log('📦 Resolution edit response received:', response);
+          console.log(
+            '✅ Updated resolution data from API:',
+            updatedResolutionFromApi,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId: taskId,
+              updates: updatedResolutionFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Resolution edited and Home Slice updated:',
+            updatedResolutionFromApi,
+          );
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Resolution edit failed:', error);
+        }
+      },
     }),
     deleteDateIdeas: builder.mutation<
       any,

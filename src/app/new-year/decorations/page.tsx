@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -80,7 +79,6 @@ export default function NewYearDecorationsPage() {
   } = useHolidayMutations({ holidayId, auth0User });
 
   // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'new-year'),
@@ -184,9 +182,6 @@ export default function NewYearDecorationsPage() {
       // Use the standardized hook function
       await createTask(newTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating decoration task:', error);
@@ -254,9 +249,6 @@ export default function NewYearDecorationsPage() {
 
       await updateTask(editingTask.id, updates);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -285,9 +277,6 @@ export default function NewYearDecorationsPage() {
           taskId: taskToDelete.id,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setTaskToDelete(null);
