@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -46,9 +45,6 @@ export default function HanukkahTasksPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
-
   // Redux data access - tasks with category "Tasks"
   const tasks =
     holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || [];
@@ -89,9 +85,6 @@ export default function HanukkahTasksPage() {
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -128,9 +121,6 @@ export default function HanukkahTasksPage() {
         }),
       );
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowEditModal(false);
       setEditingTask(null);
     } catch (error) {
@@ -161,7 +151,6 @@ export default function HanukkahTasksPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {
@@ -191,9 +180,6 @@ export default function HanukkahTasksPage() {
           updates: { isCompleted: !task.isCompleted },
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling task completion:', error);
     }

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
@@ -38,14 +37,12 @@ export default function HanukkahGiftListPage() {
   const {
     createGift,
     updateGift,
+    editGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -88,14 +85,9 @@ export default function HanukkahGiftListPage() {
 
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      console.log('Add gift payload:', payload);
 
       // Use the standardized hook function
       const result = await createGift(payload);
-      console.log('Add gift result:', result);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Refresh address book contacts
       dispatch(fetchContacts());
@@ -139,10 +131,7 @@ export default function HanukkahGiftListPage() {
       const newIsCompleted = !currentGift.isCompleted;
 
       // Use the standardized hook function
-      await updateGift(giftId, { isCompleted: newIsCompleted });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
     }
@@ -166,9 +155,6 @@ export default function HanukkahGiftListPage() {
     try {
       // Use the standardized hook function
       await deleteGift(selectedGift.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setSelectedGift(null);
@@ -194,10 +180,7 @@ export default function HanukkahGiftListPage() {
       const payload = transformGiftPayload(values, contacts, shareMembers);
 
       // Use the standardized hook function
-      await updateGift(selectedGift.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await editGift(selectedGift.id, payload);
 
       setShowEditModal(false);
       setSelectedGift(null);

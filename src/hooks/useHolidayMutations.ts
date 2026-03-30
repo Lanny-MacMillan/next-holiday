@@ -6,9 +6,11 @@ import {
   useDeleteGiftMutation,
   useCreateTaskMutation,
   useUpdateTaskMutation,
+  useToggleTaskCompletionMutation,
   useDeleteTaskMutation,
   useCreateCardMutation,
   useUpdateCardMutation,
+  useEditCardMutation,
   useDeleteCardMutation,
   useCreateGuestMutation,
   useUpdateGuestMutation,
@@ -38,9 +40,11 @@ export function useHolidayMutations({
   const [deleteGiftMutation] = useDeleteGiftMutation();
   const [createTaskMutation] = useCreateTaskMutation();
   const [updateTaskMutation] = useUpdateTaskMutation();
+  const [toggleTaskCompletionMutation] = useToggleTaskCompletionMutation();
   const [deleteTaskMutation] = useDeleteTaskMutation();
   const [createCardMutation] = useCreateCardMutation();
   const [updateCardMutation] = useUpdateCardMutation();
+  const [editCardMutation] = useEditCardMutation();
   const [deleteCardMutation] = useDeleteCardMutation();
   const [createGuestMutation] = useCreateGuestMutation();
   const [updateGuestMutation] = useUpdateGuestMutation();
@@ -151,7 +155,26 @@ export function useHolidayMutations({
       const result = await updateTaskMutation({
         holidayId,
         taskId,
-        ...payload,
+        updates: payload, // ✅ Fix: wrap payload in updates property
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const toggleTask = async (taskId: string, isCompleted: boolean) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await toggleTaskCompletionMutation({
+        holidayId,
+        taskId,
+        isCompleted,
         auth0User,
       }).unwrap();
       return result;
@@ -196,7 +219,7 @@ export function useHolidayMutations({
     }
   };
 
-  const updateCard = async (cardId: string, payload: any) => {
+  const updateCard = async (cardId: string, isCompleted: boolean) => {
     if (!holidayId || !auth0User) {
       throw new Error('Missing holiday ID or user');
     }
@@ -206,7 +229,26 @@ export function useHolidayMutations({
       const result = await updateCardMutation({
         holidayId,
         cardId,
-        ...payload,
+        isCompleted,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const editCard = async (cardId: string, payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await editCardMutation({
+        holidayId,
+        cardId,
+        payload,
         auth0User,
       }).unwrap();
       return result;
@@ -351,9 +393,11 @@ export function useHolidayMutations({
     deleteGift,
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createCard,
     updateCard,
+    editCard,
     deleteCard,
     createGuest,
     updateGuest,

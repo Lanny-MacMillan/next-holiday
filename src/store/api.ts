@@ -515,64 +515,38 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
       ],
-      // Optimistic update for create task
+      //   SAME PATTERN AS createGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const {
-          syncAddToHomeSlice,
-          syncUpdateInHomeSlice,
-          syncRemoveFromHomeSlice,
-        } = await import('./syncUtils');
-
-        // Generate a temporary ID for the optimistic update
-        const tempId = `temp-${Date.now()}`;
-        const optimisticTask = {
-          id: tempId,
-          ...payload,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getTasks', { holidayId, auth0User }, draft => {
-            if (draft) {
-              draft.unshift(optimisticTask);
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        syncAddToHomeSlice({
-          entityType: 'task',
-          holidayId,
-          optimisticData: optimisticTask,
-          dispatch,
-        });
-
         try {
-          const { data: serverTask } = await queryFulfilled;
+          console.log('🚀 Creating task...', { holidayId, payload });
 
-          // 3. ✅ NEW: Update Home Slice with real server data
-          syncUpdateInHomeSlice({
-            entityType: 'task',
-            holidayId,
-            entityId: tempId,
-            serverData: serverTask,
-            dispatch,
-          });
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // Extract actual task data from response (API returns { data: task })
+          const newTaskFromApi = response.data.data;
+
+          console.log('📦 Task response received:', response);
+          console.log('🎁 Task data from API:', newTaskFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { addTaskToHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            addTaskToHomeData({
+              holidayId,
+              task: newTaskFromApi,
+            }),
+          );
+
+          console.log('  Task created and Home Slice updated:', newTaskFromApi);
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          syncRemoveFromHomeSlice({
-            entityType: 'task',
-            holidayId,
-            entityId: tempId,
-            dispatch,
-          });
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Task creation failed:', error);
         }
       },
     }),
@@ -598,31 +572,39 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
       ],
-      // Traditional Redux pattern: wait for API success then update state
+      //   Traditional Redux pattern: wait for API success then update Home Slice
       async onQueryStarted(
         { holidayId, taskId, updates, auth0User },
         { dispatch, queryFulfilled },
       ) {
         try {
-          // Wait for API to succeed
-          const { data: updatedTask } = await queryFulfilled;
+          console.log('🔄 Updating task...', { holidayId, taskId, updates });
 
-          // Import Home Slice actions to avoid circular dependencies
+          //   Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual task data from response (API returns { data: task })
+          const updatedTaskFromApi = response.data.data;
+
+          console.log('📦 Task update response received:', response);
+          console.log('🎁 Updated task data from API:', updatedTaskFromApi);
+
+          //   Import Home Slice actions to avoid circular dependencies
           const { updateTaskInHomeData } = await import('./slices/homeSlice');
 
-          // Update Home Slice with server response
-          if (updatedTask) {
-            dispatch(
-              updateTaskInHomeData({
-                holidayId,
-                taskId,
-                updates: updatedTask,
-              }),
-            );
-          }
+          //   Update Home Slice with server response
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log('  Task updated and Home Slice updated:', updatedTaskFromApi);
         } catch (error) {
-          // Let RTK Query handle the error state
-          console.error('Failed to update task:', error);
+          // ❌ API failed - let RTK Query handle the error state
+          console.error('❌ Failed to update task:', error);
         }
       },
     }),
@@ -699,31 +681,46 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
       ],
-      // Traditional Redux pattern: wait for API success then update state
+      //   Traditional Redux pattern: wait for API success then update Home Slice
       async onQueryStarted(
         { holidayId, taskId, isCompleted, auth0User },
         { dispatch, queryFulfilled },
       ) {
         try {
-          // Wait for API to succeed
-          const { data: updatedTask } = await queryFulfilled;
+          console.log('🔄 Toggling task completion...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
 
-          // Import Home Slice actions to avoid circular dependencies
+          //   Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual task data from response (API returns { data: task })
+          const updatedTaskFromApi = response.data.data;
+
+          console.log('📦 Toggle task response received:', response);
+          console.log('🎁 Updated task data from API:', updatedTaskFromApi);
+
+          //   Import Home Slice actions to avoid circular dependencies
           const { updateTaskInHomeData } = await import('./slices/homeSlice');
 
-          // Update Home Slice with server response
-          if (updatedTask) {
-            dispatch(
-              updateTaskInHomeData({
-                holidayId,
-                taskId,
-                updates: updatedTask,
-              }),
-            );
-          }
+          //   Update Home Slice with server response
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '  Task completion toggled and Home Slice updated:',
+            updatedTaskFromApi,
+          );
         } catch (error) {
-          // Let RTK Query handle the error state
-          console.error('Failed to toggle task completion:', error);
+          // ❌ API failed - let RTK Query handle the error state
+          console.error('❌ Failed to toggle task completion:', error);
         }
       },
     }),
@@ -772,29 +769,32 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Gifts', id: holidayId },
       ],
-      // ✅ SIMPLIFIED: Traditional Redux pattern - wait for success, then update Home Slice
+      //   SIMPLIFIED: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
         try {
-          console.log('🚀 Creating gift...', { holidayId, payload });
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
 
-          // ✅ Wait for successful API response (no optimistic updates)
-          const { data: newGift } = await queryFulfilled;
+          //   Extract actual gift data from response
+          const newGiftFromApi = response.data;
 
-          // ✅ Import Home Slice to avoid circular dependencies
+          //   API now returns recipient field directly - no transformation needed!
+
+          //   Import Home Slice to avoid circular dependencies
           const { addGiftToHomeData } = await import('./slices/homeSlice');
 
-          // ✅ Update Home Slice with real server data
+          //   Update Home Slice with API data (recipient field already correct)
           dispatch(
             addGiftToHomeData({
               holidayId,
-              gift: newGift,
+              gift: newGiftFromApi,
             }),
           );
 
-          console.log('✅ Gift created and Home Slice updated:', newGift);
+          console.log('  Gift created and Home Slice updated:', newGiftFromApi);
         } catch (error) {
           // ❌ API failed - no state update needed, just log
           console.error('❌ Gift creation failed:', error);
@@ -823,64 +823,39 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Cards', id: holidayId },
       ],
-      // Optimistic update for create card
+      //   SAME PATTERN AS createGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const {
-          syncAddToHomeSlice,
-          syncUpdateInHomeSlice,
-          syncRemoveFromHomeSlice,
-        } = await import('./syncUtils');
-
-        // Generate a temporary ID for the optimistic update
-        const tempId = `temp-${Date.now()}`;
-        const optimisticCard = {
-          id: tempId,
-          ...payload,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getCards', { holidayId, auth0User }, draft => {
-            if (draft) {
-              draft.unshift(optimisticCard);
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        syncAddToHomeSlice({
-          entityType: 'card',
-          holidayId,
-          optimisticData: optimisticCard,
-          dispatch,
-        });
-
         try {
-          const { data: serverCard } = await queryFulfilled;
+          console.log('🚀 Creating card...', { holidayId, payload });
 
-          // 3. ✅ NEW: Update Home Slice with real server data
-          syncUpdateInHomeSlice({
-            entityType: 'card',
-            holidayId,
-            entityId: tempId,
-            serverData: serverCard,
-            dispatch,
-          });
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual card data from response (API returns { data: card })
+          const newCardFromApi = response.data.data;
+
+          console.log('📦 Card response received:', response);
+          console.log('🎁 Card data from API:', newCardFromApi);
+          console.log('  Card recipient from API:', newCardFromApi.recipient);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { addCardToHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            addCardToHomeData({
+              holidayId,
+              card: newCardFromApi,
+            }),
+          );
+
+          console.log('  Card created and Home Slice updated:', newCardFromApi);
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          syncRemoveFromHomeSlice({
-            entityType: 'card',
-            holidayId,
-            entityId: tempId,
-            dispatch,
-          });
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Card creation failed:', error);
         }
       },
     }),
@@ -1024,76 +999,50 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Cards', id: holidayId },
       ],
-      // Optimistic update for update card
+      //   SAME PATTERN AS updateGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, cardId, isCompleted, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const { syncUpdateInHomeSlice } = await import('./syncUtils');
-
-        // Store original card for rollback
-        let originalCard: any = null;
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getCards', { holidayId, auth0User }, draft => {
-            if (draft) {
-              const card = draft.find((c: any) => c.id === cardId);
-              if (card) {
-                // Store original for rollback
-                originalCard = { ...card };
-                card.isCompleted = isCompleted;
-                card.completedDate = isCompleted ? new Date().toISOString() : null;
-                card.updatedAt = new Date().toISOString();
-              }
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        if (originalCard) {
-          const optimisticUpdate = {
-            ...originalCard,
-            isCompleted,
-            completedDate: isCompleted ? new Date().toISOString() : null,
-            updatedAt: new Date().toISOString(),
-          };
-
-          syncUpdateInHomeSlice({
-            entityType: 'card',
-            holidayId,
-            entityId: cardId,
-            serverData: optimisticUpdate,
-            dispatch,
-          });
-        }
-
         try {
-          const { data: serverCard } = await queryFulfilled;
+          console.log('🔄 Toggling card completion...', {
+            holidayId,
+            cardId,
+            isCompleted,
+          });
 
-          // 3. ✅ NEW: Update Home Slice with actual server data if different
-          if (serverCard) {
-            syncUpdateInHomeSlice({
-              entityType: 'card',
+          //   Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual card data from response (API returns { data: card })
+          const updatedCardFromApi = response.data.data;
+
+          console.log('📦 Toggle card response received:', response);
+          console.log('🎁 Updated card data from API:', updatedCardFromApi);
+          console.log(
+            '  Updated card recipient from API:',
+            updatedCardFromApi.recipient,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateCardInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateCardInHomeData({
               holidayId,
-              entityId: cardId,
-              serverData: serverCard,
-              dispatch,
-            });
-          }
+              cardId,
+              updates: updatedCardFromApi,
+            }),
+          );
+
+          console.log(
+            '  Card completion toggled and Home Slice updated:',
+            updatedCardFromApi,
+          );
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          if (originalCard) {
-            syncUpdateInHomeSlice({
-              entityType: 'card',
-              holidayId,
-              entityId: cardId,
-              serverData: originalCard,
-              dispatch,
-            });
-          }
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Card completion toggle failed:', error);
         }
       },
     }),
@@ -1119,74 +1068,43 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Cards', id: holidayId },
       ],
-      // Optimistic update for edit card
+      //   SAME PATTERN AS editGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, cardId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const { syncUpdateInHomeSlice } = await import('./syncUtils');
-
-        // Store original card for rollback
-        let originalCard: any = null;
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getCards', { holidayId, auth0User }, draft => {
-            if (draft) {
-              const card = draft.find((c: any) => c.id === cardId);
-              if (card) {
-                // Store original for rollback
-                originalCard = { ...card };
-                Object.assign(card, payload);
-                card.updatedAt = new Date().toISOString();
-              }
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        if (originalCard) {
-          const optimisticUpdate = {
-            ...originalCard,
-            ...payload,
-            updatedAt: new Date().toISOString(),
-          };
-
-          syncUpdateInHomeSlice({
-            entityType: 'card',
-            holidayId,
-            entityId: cardId,
-            serverData: optimisticUpdate,
-            dispatch,
-          });
-        }
-
         try {
-          const { data: serverCard } = await queryFulfilled;
+          console.log('🔄 Editing card...', { holidayId, cardId, payload });
 
-          // 3. ✅ NEW: Update Home Slice with actual server data if different
-          if (serverCard) {
-            syncUpdateInHomeSlice({
-              entityType: 'card',
+          //   Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual card data from response (API returns { data: card })
+          const updatedCardFromApi = response.data.data;
+
+          console.log('📦 Edit card response received:', response);
+          console.log('🎁 Updated card data from API:', updatedCardFromApi);
+          console.log(
+            '  Updated card recipient from API:',
+            updatedCardFromApi.recipient,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateCardInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateCardInHomeData({
               holidayId,
-              entityId: cardId,
-              serverData: serverCard,
-              dispatch,
-            });
-          }
+              cardId,
+              updates: updatedCardFromApi,
+            }),
+          );
+
+          console.log('  Card edited and Home Slice updated:', updatedCardFromApi);
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          if (originalCard) {
-            syncUpdateInHomeSlice({
-              entityType: 'card',
-              holidayId,
-              entityId: cardId,
-              serverData: originalCard,
-              dispatch,
-            });
-          }
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Card edit failed:', error);
         }
       },
     }),
@@ -1227,7 +1145,7 @@ export const api = createApi({
         // Store the deleted card data for rollback
         let deletedCard: any = null;
 
-        // 1. ✅ Optimistic RTK Query cache update
+        // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData('getCards', { holidayId, auth0User }, draft => {
             console.log('UpdateQueryData callback - draft:', draft);
@@ -1248,7 +1166,7 @@ export const api = createApi({
           }),
         );
 
-        // 2. ✅ NEW: Optimistic Home Slice sync
+        // 2.   NEW: Optimistic Home Slice sync
         syncRemoveFromHomeSlice({
           entityType: 'card',
           holidayId,
@@ -1260,14 +1178,14 @@ export const api = createApi({
           await queryFulfilled;
           console.log('Delete card query fulfilled successfully');
 
-          // 3. ✅ Delete confirmed by server - no additional sync needed
+          // 3.   Delete confirmed by server - no additional sync needed
         } catch (error) {
           console.log(
             'Delete card query failed, reverting optimistic update:',
             error,
           );
 
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
+          // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (deletedCard) {
             syncAddToHomeSlice({
@@ -1325,39 +1243,41 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Decorations', id: holidayId },
       ],
-      // Optimistic update for create decoration
+      //   Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Generate a temporary ID for the optimistic update
-        const tempId = `temp-${Date.now()}`;
-        const optimisticDecoration = {
-          id: tempId,
-          ...payload,
-          category: 'Decorations',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Optimistically add the decoration to the cache
-        const patchResult = dispatch(
-          api.util.updateQueryData(
-            'getDecorations',
-            { holidayId, auth0User },
-            draft => {
-              if (draft) {
-                draft.unshift(optimisticDecoration);
-              }
-            },
-          ),
-        );
-
         try {
-          await queryFulfilled;
+          console.log('🚀 Creating decoration...', { holidayId, payload });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const newDecorationFromApi = response.data.data;
+
+          console.log('📦 Decoration response received:', response);
+          console.log('✅ Decoration data from API:', newDecorationFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { addDecorationToHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            addDecorationToHomeData({
+              holidayId,
+              decoration: newDecorationFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Decoration created and Home Slice updated:',
+            newDecorationFromApi,
+          );
         } catch (error) {
-          // If the create fails, revert the optimistic update
-          patchResult.undo();
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Decoration creation failed:', error);
         }
       },
     }),
@@ -1383,65 +1303,38 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Events', id: holidayId },
       ],
-      // Optimistic update for create event
+      //   Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const {
-          syncAddToHomeSlice,
-          syncUpdateInHomeSlice,
-          syncRemoveFromHomeSlice,
-        } = await import('./syncUtils');
-
-        // Generate a temporary ID for the optimistic update
-        const tempId = `temp-${Date.now()}`;
-        const optimisticEvent = {
-          id: tempId,
-          ...payload,
-          category: 'Events',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getEvents', { holidayId, auth0User }, draft => {
-            if (draft) {
-              draft.unshift(optimisticEvent);
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        syncAddToHomeSlice({
-          entityType: 'event',
-          holidayId,
-          optimisticData: optimisticEvent,
-          dispatch,
-        });
-
         try {
-          const { data: serverEvent } = await queryFulfilled;
+          console.log('🚀 Creating event...', { holidayId, payload });
 
-          // 3. ✅ NEW: Update Home Slice with real server data
-          syncUpdateInHomeSlice({
-            entityType: 'event',
-            holidayId,
-            entityId: tempId,
-            serverData: serverEvent,
-            dispatch,
-          });
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const newEventFromApi = response.data.data;
+
+          console.log('📦 Event response received:', response);
+          console.log('✅ Event data from API:', newEventFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { addEventToHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            addEventToHomeData({
+              holidayId,
+              event: newEventFromApi,
+            }),
+          );
+
+          console.log('✅ Event created and Home Slice updated:', newEventFromApi);
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          syncRemoveFromHomeSlice({
-            entityType: 'event',
-            holidayId,
-            entityId: tempId,
-            dispatch,
-          });
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Event creation failed:', error);
         }
       },
     }),
@@ -1467,6 +1360,43 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'CandleLighting', id: holidayId },
       ],
+      //   Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Creating candle lighting task...', { holidayId, payload });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const newTaskFromApi = response.data.data;
+
+          console.log('📦 Candle lighting task response received:', response);
+          console.log('✅ Candle lighting task data from API:', newTaskFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { addTaskToHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data (candle lighting is a task category)
+          dispatch(
+            addTaskToHomeData({
+              holidayId,
+              task: newTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Candle lighting task created and Home Slice updated:',
+            newTaskFromApi,
+          );
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Candle lighting task creation failed:', error);
+        }
+      },
     }),
     createDateIdeas: builder.mutation<
       any,
@@ -1708,25 +1638,46 @@ export const api = createApi({
         { dispatch, queryFulfilled },
       ) {
         try {
+          console.log('🔄 Toggling gift completion...', {
+            holidayId,
+            giftId,
+            isCompleted,
+          });
+
           // Wait for API to succeed
-          const { data: updatedGift } = await queryFulfilled;
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual gift data from response
+          const updatedGiftFromApi = response.data;
+
+          console.log('📦 Toggle gift response received:', response);
+          console.log('🎁 Updated gift data from API:', updatedGiftFromApi);
+          console.log(
+            '  Updated gift recipient from API:',
+            updatedGiftFromApi.recipient,
+          );
 
           // Import Home Slice actions to avoid circular dependencies
           const { updateGiftInHomeData } = await import('./slices/homeSlice');
 
           // Update Home Slice with server response
-          if (updatedGift) {
+          if (updatedGiftFromApi) {
             dispatch(
               updateGiftInHomeData({
                 holidayId,
                 giftId,
-                updates: updatedGift,
+                updates: updatedGiftFromApi,
               }),
+            );
+
+            console.log(
+              '  Gift completion toggled and Home Slice updated:',
+              updatedGiftFromApi,
             );
           }
         } catch (error) {
           // Let RTK Query handle the error state
-          console.error('Failed to update gift:', error);
+          console.error('❌ Failed to update gift completion:', error);
         }
       },
     }),
@@ -1752,29 +1703,45 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Gifts', id: holidayId },
       ],
-      // Optimistic update for edit gift
+      //   SAME PATTERN AS createGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, giftId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Optimistically update the gift in the cache
-        const patchResult = dispatch(
-          api.util.updateQueryData('getGifts', { holidayId, auth0User }, draft => {
-            if (draft) {
-              const gift = draft.find((g: any) => g.id === giftId);
-              if (gift) {
-                Object.assign(gift, payload);
-                gift.updatedAt = new Date().toISOString();
-              }
-            }
-          }),
-        );
-
         try {
-          await queryFulfilled;
+          console.log('🔄 Editing gift...', { holidayId, giftId, payload });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          //   Extract actual gift data from response
+          const updatedGiftFromApi = response.data;
+
+          console.log('📦 Edit gift response received:', response);
+          console.log('🎁 Updated gift data from API:', updatedGiftFromApi);
+
+          //   API should return recipient field directly - same as createGift
+          console.log(
+            '  Updated gift recipient from API:',
+            updatedGiftFromApi.recipient,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateGiftInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data (recipient field already correct)
+          dispatch(
+            updateGiftInHomeData({
+              holidayId,
+              giftId,
+              updates: updatedGiftFromApi,
+            }),
+          );
+
+          console.log('  Gift edited and Home Slice updated:', updatedGiftFromApi);
         } catch (error) {
-          // If the edit fails, revert the optimistic update
-          patchResult.undo();
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Gift edit failed:', error);
         }
       },
     }),
@@ -1848,36 +1815,49 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Decorations', id: holidayId },
       ],
-      // Optimistic update for update decoration
+      //   Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, taskId, isCompleted, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Optimistically update the decoration in the cache
-        const patchResult = dispatch(
-          api.util.updateQueryData(
-            'getDecorations',
-            { holidayId, auth0User },
-            draft => {
-              if (draft) {
-                const decoration = draft.find((d: any) => d.id === taskId);
-                if (decoration) {
-                  decoration.isCompleted = isCompleted;
-                  decoration.completedDate = isCompleted
-                    ? new Date().toISOString()
-                    : null;
-                  decoration.updatedAt = new Date().toISOString();
-                }
-              }
-            },
-          ),
-        );
-
         try {
-          await queryFulfilled;
+          console.log('🔄 Updating decoration completion...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedDecorationFromApi = response.data.data;
+
+          console.log('📦 Update decoration response received:', response);
+          console.log(
+            '✅ Updated decoration data from API:',
+            updatedDecorationFromApi,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateDecorationInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateDecorationInHomeData({
+              holidayId,
+              decorationId: taskId,
+              updates: updatedDecorationFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Decoration updated and Home Slice updated:',
+            updatedDecorationFromApi,
+          );
         } catch (error) {
-          // If the update fails, revert the optimistic update
-          patchResult.undo();
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Decoration update failed:', error);
         }
       },
     }),
@@ -1903,33 +1883,45 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Decorations', id: holidayId },
       ],
-      // Optimistic update for edit decoration
+      //   Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, taskId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Optimistically update the decoration in the cache
-        const patchResult = dispatch(
-          api.util.updateQueryData(
-            'getDecorations',
-            { holidayId, auth0User },
-            draft => {
-              if (draft) {
-                const decoration = draft.find((d: any) => d.id === taskId);
-                if (decoration) {
-                  Object.assign(decoration, payload);
-                  decoration.updatedAt = new Date().toISOString();
-                }
-              }
-            },
-          ),
-        );
-
         try {
-          await queryFulfilled;
+          console.log('🔄 Editing decoration...', { holidayId, taskId, payload });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedDecorationFromApi = response.data.data;
+
+          console.log('📦 Edit decoration response received:', response);
+          console.log(
+            '✅ Updated decoration data from API:',
+            updatedDecorationFromApi,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateDecorationInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateDecorationInHomeData({
+              holidayId,
+              decorationId: taskId,
+              updates: updatedDecorationFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Decoration edited and Home Slice updated:',
+            updatedDecorationFromApi,
+          );
         } catch (error) {
-          // If the edit fails, revert the optimistic update
-          patchResult.undo();
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Decoration edit failed:', error);
         }
       },
     }),
@@ -2028,76 +2020,46 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Events', id: holidayId },
       ],
-      // Optimistic update for update event
+      //   Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, taskId, isCompleted, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const { syncUpdateInHomeSlice } = await import('./syncUtils');
-
-        // Store original event for rollback
-        let originalEvent: any = null;
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getEvents', { holidayId, auth0User }, draft => {
-            if (draft) {
-              const event = draft.find((e: any) => e.id === taskId);
-              if (event) {
-                // Store original for rollback
-                originalEvent = { ...event };
-                event.isCompleted = isCompleted;
-                event.completedDate = isCompleted ? new Date().toISOString() : null;
-                event.updatedAt = new Date().toISOString();
-              }
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        if (originalEvent) {
-          const optimisticUpdate = {
-            ...originalEvent,
-            isCompleted,
-            completedDate: isCompleted ? new Date().toISOString() : null,
-            updatedAt: new Date().toISOString(),
-          };
-
-          syncUpdateInHomeSlice({
-            entityType: 'event',
-            holidayId,
-            entityId: taskId,
-            serverData: optimisticUpdate,
-            dispatch,
-          });
-        }
-
         try {
-          const { data: serverEvent } = await queryFulfilled;
+          console.log('🔄 Updating event completion...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
 
-          // 3. ✅ NEW: Update Home Slice with actual server data if different
-          if (serverEvent) {
-            syncUpdateInHomeSlice({
-              entityType: 'event',
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedEventFromApi = response.data.data;
+
+          console.log('📦 Update event response received:', response);
+          console.log('✅ Updated event data from API:', updatedEventFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateEventInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateEventInHomeData({
               holidayId,
-              entityId: taskId,
-              serverData: serverEvent,
-              dispatch,
-            });
-          }
+              eventId: taskId,
+              updates: updatedEventFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Event updated and Home Slice updated:',
+            updatedEventFromApi,
+          );
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          if (originalEvent) {
-            syncUpdateInHomeSlice({
-              entityType: 'event',
-              holidayId,
-              entityId: taskId,
-              serverData: originalEvent,
-              dispatch,
-            });
-          }
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Event update failed:', error);
         }
       },
     }),
@@ -2123,74 +2085,42 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Events', id: holidayId },
       ],
-      // Optimistic update for edit event
+      //   Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted(
         { holidayId, taskId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const { syncUpdateInHomeSlice } = await import('./syncUtils');
-
-        // Store original event for rollback
-        let originalEvent: any = null;
-
-        // 1. ✅ Optimistic RTK Query cache update
-        const patchResult = dispatch(
-          api.util.updateQueryData('getEvents', { holidayId, auth0User }, draft => {
-            if (draft) {
-              const event = draft.find((e: any) => e.id === taskId);
-              if (event) {
-                // Store original for rollback
-                originalEvent = { ...event };
-                Object.assign(event, payload);
-                event.updatedAt = new Date().toISOString();
-              }
-            }
-          }),
-        );
-
-        // 2. ✅ NEW: Optimistic Home Slice sync
-        if (originalEvent) {
-          const optimisticUpdate = {
-            ...originalEvent,
-            ...payload,
-            updatedAt: new Date().toISOString(),
-          };
-
-          syncUpdateInHomeSlice({
-            entityType: 'event',
-            holidayId,
-            entityId: taskId,
-            serverData: optimisticUpdate,
-            dispatch,
-          });
-        }
-
         try {
-          const { data: serverEvent } = await queryFulfilled;
+          console.log('🔄 Editing event...', { holidayId, taskId, payload });
 
-          // 3. ✅ NEW: Update Home Slice with actual server data if different
-          if (serverEvent) {
-            syncUpdateInHomeSlice({
-              entityType: 'event',
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedEventFromApi = response.data.data;
+
+          console.log('📦 Edit event response received:', response);
+          console.log('✅ Updated event data from API:', updatedEventFromApi);
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateEventInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data
+          dispatch(
+            updateEventInHomeData({
               holidayId,
-              entityId: taskId,
-              serverData: serverEvent,
-              dispatch,
-            });
-          }
+              eventId: taskId,
+              updates: updatedEventFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Event edited and Home Slice updated:',
+            updatedEventFromApi,
+          );
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
-          patchResult.undo();
-          if (originalEvent) {
-            syncUpdateInHomeSlice({
-              entityType: 'event',
-              holidayId,
-              entityId: taskId,
-              serverData: originalEvent,
-              dispatch,
-            });
-          }
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Event edit failed:', error);
         }
       },
     }),
@@ -2231,7 +2161,7 @@ export const api = createApi({
         // Store the deleted event data for rollback
         let deletedEvent: any = null;
 
-        // 1. ✅ Optimistic RTK Query cache update
+        // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData('getEvents', { holidayId, auth0User }, draft => {
             console.log('UpdateQueryData callback - draft:', draft);
@@ -2252,7 +2182,7 @@ export const api = createApi({
           }),
         );
 
-        // 2. ✅ NEW: Optimistic Home Slice sync
+        // 2.   NEW: Optimistic Home Slice sync
         syncRemoveFromHomeSlice({
           entityType: 'event',
           holidayId,
@@ -2264,14 +2194,14 @@ export const api = createApi({
           await queryFulfilled;
           console.log('Delete event query fulfilled successfully');
 
-          // 3. ✅ Delete confirmed by server - no additional sync needed
+          // 3.   Delete confirmed by server - no additional sync needed
         } catch (error) {
           console.log(
             'Delete event query failed, reverting optimistic update:',
             error,
           );
 
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
+          // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (deletedEvent) {
             syncAddToHomeSlice({
@@ -2312,6 +2242,51 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'CandleLighting', id: holidayId },
       ],
+      //   Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, taskId, isCompleted, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🔄 Updating candle lighting task completion...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedTaskFromApi = response.data.data;
+
+          console.log('📦 Update candle lighting response received:', response);
+          console.log(
+            '✅ Updated candle lighting data from API:',
+            updatedTaskFromApi,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data (candle lighting is a task category)
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Candle lighting task updated and Home Slice updated:',
+            updatedTaskFromApi,
+          );
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Candle lighting task update failed:', error);
+        }
+      },
     }),
     editCandleLighting: builder.mutation<
       any,
@@ -2335,6 +2310,51 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'CandleLighting', id: holidayId },
       ],
+      //   Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, taskId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🔄 Editing candle lighting task...', {
+            holidayId,
+            taskId,
+            payload,
+          });
+
+          //   Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // 🚨 CRITICAL: Extract entity from { data: entity } format
+          const updatedTaskFromApi = response.data.data;
+
+          console.log('📦 Edit candle lighting response received:', response);
+          console.log(
+            '✅ Updated candle lighting data from API:',
+            updatedTaskFromApi,
+          );
+
+          //   Import Home Slice to avoid circular dependencies
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          //   Update Home Slice with API data (candle lighting is a task category)
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Candle lighting task edited and Home Slice updated:',
+            updatedTaskFromApi,
+          );
+        } catch (error) {
+          // ❌ API failed - no state update needed, just log
+          console.error('❌ Candle lighting task edit failed:', error);
+        }
+      },
     }),
     deleteCandleLighting: builder.mutation<
       any,
@@ -3282,7 +3302,7 @@ export const api = createApi({
         // Store original guest for rollback
         let originalGuest: any = null;
 
-        // 1. ✅ Optimistic RTK Query cache update
+        // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData(
             'getGuestList',
@@ -3304,7 +3324,7 @@ export const api = createApi({
           ),
         );
 
-        // 2. ✅ NEW: Optimistic Home Slice sync
+        // 2.   NEW: Optimistic Home Slice sync
         if (originalGuest) {
           const optimisticUpdate = {
             ...originalGuest,
@@ -3325,7 +3345,7 @@ export const api = createApi({
         try {
           const { data: serverGuest } = await queryFulfilled;
 
-          // 3. ✅ NEW: Update Home Slice with actual server data if different
+          // 3.   NEW: Update Home Slice with actual server data if different
           if (serverGuest) {
             syncUpdateInHomeSlice({
               entityType: 'guest',
@@ -3336,7 +3356,7 @@ export const api = createApi({
             });
           }
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
+          // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (originalGuest) {
             syncUpdateInHomeSlice({
@@ -3383,7 +3403,7 @@ export const api = createApi({
         // Store original guest for rollback
         let originalGuest: any = null;
 
-        // 1. ✅ Optimistic RTK Query cache update
+        // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData(
             'getGuestList',
@@ -3402,7 +3422,7 @@ export const api = createApi({
           ),
         );
 
-        // 2. ✅ NEW: Optimistic Home Slice sync
+        // 2.   NEW: Optimistic Home Slice sync
         if (originalGuest) {
           const optimisticUpdate = {
             ...originalGuest,
@@ -3422,7 +3442,7 @@ export const api = createApi({
         try {
           const { data: serverGuest } = await queryFulfilled;
 
-          // 3. ✅ NEW: Update Home Slice with actual server data if different
+          // 3.   NEW: Update Home Slice with actual server data if different
           if (serverGuest) {
             syncUpdateInHomeSlice({
               entityType: 'guest',
@@ -3433,7 +3453,7 @@ export const api = createApi({
             });
           }
         } catch (error) {
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
+          // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (originalGuest) {
             syncUpdateInHomeSlice({
@@ -3484,7 +3504,7 @@ export const api = createApi({
         // Store the deleted guest data for rollback
         let deletedGuest: any = null;
 
-        // 1. ✅ Optimistic RTK Query cache update
+        // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData(
             'getGuestList',
@@ -3509,7 +3529,7 @@ export const api = createApi({
           ),
         );
 
-        // 2. ✅ NEW: Optimistic Home Slice sync
+        // 2.   NEW: Optimistic Home Slice sync
         syncRemoveFromHomeSlice({
           entityType: 'guest',
           holidayId,
@@ -3521,14 +3541,14 @@ export const api = createApi({
           await queryFulfilled;
           console.log('Delete guest query fulfilled successfully');
 
-          // 3. ✅ Delete confirmed by server - no additional sync needed
+          // 3.   Delete confirmed by server - no additional sync needed
         } catch (error) {
           console.log(
             'Delete guest query failed, reverting optimistic update:',
             error,
           );
 
-          // 4. ✅ Revert both RTK Query cache and Home Slice on error
+          // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (deletedGuest) {
             syncAddToHomeSlice({

@@ -220,13 +220,42 @@ export async function POST(
           data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null, // Handle empty string
         createdBy: user.id,
       },
+      include: {
+        contact: true,
+        assignedUser: true, // Include assigned user data
+      },
     });
+
+    // Transform gift to match the expected UI interface (same as GET endpoint)
+    const transformedGift = {
+      id: gift.id,
+      holidayId: gift.holidayId,
+      contactId: gift.contactId,
+      name: gift.name,
+      description: gift.description,
+      price: Number(gift.price),
+      actualPrice: gift.actualPrice ? Number(gift.actualPrice) : null,
+      store: gift.store,
+      productLink: gift.productLink,
+      notes: gift.notes,
+      recipient: gift.contact?.name || 'Unknown', // ✅ This is the key fix!
+      isCompleted: gift.isCompleted,
+      completedDate: gift.completedDate?.toISOString() || null,
+      assignedTo: gift.assignedTo,
+      assignedToName: gift.assignedUser?.name || null,
+      createdBy: gift.createdBy,
+      shareId: gift.shareId,
+      createdAt: gift.createdAt.toISOString(),
+      updatedAt: gift.updatedAt.toISOString(),
+    };
 
     // Debug logging for created gift
     console.log('🎁 Gift created:');
     console.log('  Gift ID:', gift.id);
     console.log('  assignedTo field in DB:', gift.assignedTo);
     console.log('  Original assigned_to:', data.assigned_to);
+    console.log('  Contact name:', gift.contact?.name);
+    console.log('  Transformed recipient:', transformedGift.recipient);
 
     // Create assignment notification if assigned to someone other than creator
     if (data.assigned_to && data.assigned_to !== user.id) {
@@ -276,7 +305,7 @@ export async function POST(
       }
     }
 
-    return created(gift, {
+    return created(transformedGift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
@@ -377,7 +406,34 @@ export async function PUT(
         isCompleted,
         completedDate: isCompleted ? new Date() : null,
       },
+      include: {
+        contact: true,
+        assignedUser: true, // Include assigned user data
+      },
     });
+
+    // Transform gift to match the expected UI interface (same as POST and PATCH methods)
+    const transformedGift = {
+      id: updatedGift.id,
+      holidayId: updatedGift.holidayId,
+      contactId: updatedGift.contactId,
+      name: updatedGift.name,
+      description: updatedGift.description,
+      price: Number(updatedGift.price),
+      actualPrice: updatedGift.actualPrice ? Number(updatedGift.actualPrice) : null,
+      store: updatedGift.store,
+      productLink: updatedGift.productLink,
+      notes: updatedGift.notes,
+      recipient: updatedGift.contact?.name || 'Unknown', // ✅ This is the key fix!
+      isCompleted: updatedGift.isCompleted,
+      completedDate: updatedGift.completedDate?.toISOString() || null,
+      assignedTo: updatedGift.assignedTo,
+      assignedToName: updatedGift.assignedUser?.name || null,
+      createdBy: updatedGift.createdBy,
+      shareId: updatedGift.shareId,
+      createdAt: updatedGift.createdAt.toISOString(),
+      updatedAt: updatedGift.updatedAt.toISOString(),
+    };
 
     // Send completion notification if gift was just completed
     if (isCompleted && !existingGift.isCompleted && existingGift.assignedTo) {
@@ -418,23 +474,7 @@ export async function PUT(
       }, 0); // Run in next tick
     }
 
-    // Transform the response to match UI expectations
-    const transformedGift = {
-      id: updatedGift.id,
-      name: updatedGift.name,
-      description: updatedGift.description,
-      price: Number(updatedGift.price),
-      recipient: 'Unknown', // Will be populated by the GET endpoint transformation
-      isCompleted: updatedGift.isCompleted,
-      completedDate: updatedGift.completedDate?.toISOString(),
-      store: updatedGift.store,
-      productLink: updatedGift.productLink,
-      notes: updatedGift.notes,
-      shareId: updatedGift.shareId,
-      createdAt: updatedGift.createdAt.toISOString(),
-      updatedAt: updatedGift.updatedAt.toISOString(),
-    };
-
+    // Transform the response to match UI expectations (using the complete transformedGift from above)
     return ok(transformedGift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
@@ -518,14 +558,41 @@ export async function PATCH(
           : null;
     }
 
-    // Update the gift
+    // Update the gift with contact data included (same as POST method)
     const updatedGift = await prisma.gift.update({
       where: {
         id: giftId,
         holidayId: id,
       },
       data: updateGiftData,
+      include: {
+        contact: true,
+        assignedUser: true, // Include assigned user data
+      },
     });
+
+    // Transform gift to match the expected UI interface (same as POST method)
+    const transformedGift = {
+      id: updatedGift.id,
+      holidayId: updatedGift.holidayId,
+      contactId: updatedGift.contactId,
+      name: updatedGift.name,
+      description: updatedGift.description,
+      price: Number(updatedGift.price),
+      actualPrice: updatedGift.actualPrice ? Number(updatedGift.actualPrice) : null,
+      store: updatedGift.store,
+      productLink: updatedGift.productLink,
+      notes: updatedGift.notes,
+      recipient: updatedGift.contact?.name || 'Unknown', // ✅ This is the key fix!
+      isCompleted: updatedGift.isCompleted,
+      completedDate: updatedGift.completedDate?.toISOString() || null,
+      assignedTo: updatedGift.assignedTo,
+      assignedToName: updatedGift.assignedUser?.name || null,
+      createdBy: updatedGift.createdBy,
+      shareId: updatedGift.shareId,
+      createdAt: updatedGift.createdAt.toISOString(),
+      updatedAt: updatedGift.updatedAt.toISOString(),
+    };
 
     // Handle assignment change notifications
     if (
@@ -585,7 +652,7 @@ export async function PATCH(
       }, 0); // Run in next tick
     }
 
-    return ok(updatedGift, {
+    return ok(transformedGift, {
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {

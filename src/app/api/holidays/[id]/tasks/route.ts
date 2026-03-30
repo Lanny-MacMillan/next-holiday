@@ -114,9 +114,13 @@ export async function POST(
       }
     }
 
-    return created(task, {
-      'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-    });
+    // ✅ Return in same format as gifts API
+    return created(
+      { data: task },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
   } catch (error) {
     console.error('Error creating task:', error);
     return serverError('Failed to create task');
@@ -183,6 +187,14 @@ export async function PUT(
       return badRequest('Task not found');
     }
 
+    // Create completion date in user's local date (not UTC timestamp)
+    const today = new Date();
+    const localDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+
     // Update the task
     const task = await prisma.task.update({
       where: {
@@ -191,7 +203,7 @@ export async function PUT(
       },
       data: {
         isCompleted,
-        completedDate: isCompleted ? new Date() : null,
+        completedDate: isCompleted ? localDate : null,
       },
     });
 
@@ -234,7 +246,8 @@ export async function PUT(
       }, 0); // Run in next tick
     }
 
-    return ok(task);
+    // ✅ Return in same format as gifts API
+    return ok({ data: task });
   } catch (error) {
     console.error('Error updating task:', error);
     return serverError('Failed to update task');
@@ -280,25 +293,39 @@ export async function PATCH(
       'priority',
       'category',
       'dueDate',
+      'due_date', // Allow both camelCase and snake_case for compatibility
       'assignedTo',
+      'assigned_to', // Allow both camelCase and snake_case for compatibility
       'isCompleted',
     ];
     const filteredData: any = {};
 
     for (const field of allowedFields) {
       if (updateData[field] !== undefined) {
-        filteredData[field] = updateData[field];
+        // Transform snake_case to camelCase for database fields
+        if (field === 'due_date') {
+          filteredData.dueDate = updateData[field];
+        } else if (field === 'assigned_to') {
+          filteredData.assignedTo = updateData[field];
+        } else {
+          filteredData[field] = updateData[field];
+        }
       }
     }
 
-    // Convert dueDate if provided
+    // Convert dueDate if provided (from either format)
     if (filteredData.dueDate) {
       filteredData.dueDate = new Date(filteredData.dueDate);
     }
 
-    // Add completion date if task is being completed
+    // Add completion date if task is being completed (use local date, not UTC timestamp)
     if (filteredData.isCompleted && !existingTask.isCompleted) {
-      filteredData.completedDate = new Date();
+      const today = new Date();
+      filteredData.completedDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+      );
     } else if (filteredData.isCompleted === false && existingTask.isCompleted) {
       filteredData.completedDate = null;
     }
@@ -411,7 +438,8 @@ export async function PATCH(
       }, 0); // Run in next tick
     }
 
-    return ok(task);
+    // ✅ Return in same format as gifts API
+    return ok({ data: task });
   } catch (error) {
     console.error('Error updating task:', error);
     return serverError('Failed to update task');

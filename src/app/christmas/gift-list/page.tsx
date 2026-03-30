@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { refreshShares } from '@/store/slices/sharesSlice';
@@ -64,9 +64,6 @@ export default function ChristmasGiftListPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get share members for Enhanced Compatibility Layer
   // shareData is already retrieved above for holidayId logic
@@ -133,6 +130,10 @@ export default function ChristmasGiftListPage() {
   }, [dispatch, auth0User?.sub]);
 
   async function handleAddGift(values: Record<string, any>) {
+    console.log('🎁 Form values received:', values);
+    console.log('🎁 Recipient field value:', values.recipient);
+    console.log('🎁 Name field value:', values.name);
+
     if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
@@ -161,11 +162,13 @@ export default function ChristmasGiftListPage() {
 
       const payload = transformGiftPayload(values, contacts, shareMembers);
 
+      console.log('🔄 Transform input - values:', values);
+      console.log('🔄 Transform input - values.recipient:', values.recipient);
+      console.log('🔄 Transform output payload:', payload);
+      console.log('🔄 Payload recipient_name:', payload.recipient_name);
+
       // Use the standardized hook function
       await createGift(payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Refresh address book contacts
       dispatch(fetchContacts());
@@ -227,9 +230,6 @@ export default function ChristmasGiftListPage() {
 
       // Use the standardized hook function
       await updateGift(giftId, newIsCompleted);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
@@ -247,9 +247,6 @@ export default function ChristmasGiftListPage() {
     try {
       // Use the standardized hook function
       await deleteGift(giftToDelete.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -298,9 +295,6 @@ export default function ChristmasGiftListPage() {
 
       // Use the standardized hook function
       await editGift(selectedGift.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Show success toast
       setToastMessage('Gift updated successfully!');
