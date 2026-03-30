@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -78,7 +77,6 @@ export default function EasterDecorationsPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  const { refreshHomeData } = useRefreshHomeData();
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Check if the holiday is shared to conditionally show assign to field
@@ -145,9 +143,6 @@ export default function EasterDecorationsPage() {
         due_date: values.dueDate || undefined,
       });
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Failed to add task:', error);
@@ -164,9 +159,6 @@ export default function EasterDecorationsPage() {
       await updateTask(taskId, {
         isCompleted: !task.isCompleted,
       });
-
-      // Refresh home data for proper UI updates
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Failed to toggle task completion:', error);
     }
@@ -202,9 +194,6 @@ export default function EasterDecorationsPage() {
         isCompleted: editingTask.isCompleted,
       });
 
-      // Refresh home data for proper UI updates
-      await refreshHomeData(auth0User, holidayId);
-
       setShowEditModal(false);
       setEditingTask(null);
     } catch (error) {
@@ -228,7 +217,6 @@ export default function EasterDecorationsPage() {
     try {
       await deleteTask(taskToDelete.id);
 
-      await refreshHomeData(auth0User, holidayId);
       handleDeleteModalClose();
     } catch (error) {
       console.error('Error deleting task:', error);

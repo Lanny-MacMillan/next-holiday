@@ -7,7 +7,6 @@ import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -36,14 +35,13 @@ export default function EasterBasketListPage() {
 
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Use only Redux data - no GET API calls on holiday pages
 
@@ -72,9 +70,6 @@ export default function EasterBasketListPage() {
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
       await createGift(payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowAddModal(false);
     } catch (error) {
@@ -125,12 +120,7 @@ export default function EasterBasketListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      await updateGift(giftId, {
-        isCompleted: newIsCompleted,
-      });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
@@ -147,9 +137,6 @@ export default function EasterBasketListPage() {
 
     try {
       await deleteGift(giftToDelete.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -174,10 +161,7 @@ export default function EasterBasketListPage() {
     setIsEditSubmitting(true);
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      await updateGift(selectedGift.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await editGift(selectedGift.id, payload);
 
       setShowEditModal(false);
       setSelectedGift(null);
