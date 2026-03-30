@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -98,7 +97,6 @@ export default function KwanzaaDecorationsPage() {
   } = useHolidayMutations({ holidayId, auth0User });
 
   // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'kwanzaa'),
@@ -175,9 +173,6 @@ export default function KwanzaaDecorationsPage() {
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating decoration:', error);
@@ -201,9 +196,6 @@ export default function KwanzaaDecorationsPage() {
         // Update Redux state immediately
         dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
       }
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDefaultTasks(false);
     } catch (error) {
@@ -232,7 +224,6 @@ export default function KwanzaaDecorationsPage() {
       );
 
       // Refresh home data to update progress on main holiday page
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling decoration:', error);
     }
@@ -258,8 +249,6 @@ export default function KwanzaaDecorationsPage() {
           updates: result,
         }),
       );
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setEditingTask(null);
       setShowEditModal(false);
@@ -286,9 +275,6 @@ export default function KwanzaaDecorationsPage() {
       dispatch(
         removeTaskFromHomeData({ holidayId: holidayId, taskId: taskToDelete.id }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setTaskToDelete(null);

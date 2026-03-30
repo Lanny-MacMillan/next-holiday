@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -41,7 +40,6 @@ export default function KwanzaaTasksPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
   const isHolidayShared = useAppSelector((state: any) =>
@@ -153,7 +151,6 @@ export default function KwanzaaTasksPage() {
         updates: { isCompleted: !task.isCompleted },
       }),
     );
-    await refreshHomeData(auth0User, holidayId);
   }
 
   // Modal handlers
@@ -197,7 +194,6 @@ export default function KwanzaaTasksPage() {
     const result = await createTask(taskData);
     if (result) {
       dispatch(addTaskToHomeData({ holidayId, task: result }));
-      await refreshHomeData(auth0User, holidayId);
       closeForm();
     }
   };
@@ -223,7 +219,6 @@ export default function KwanzaaTasksPage() {
           updates: result,
         }),
       );
-      await refreshHomeData(auth0User, holidayId);
       handleEditModalClose();
     }
   };
@@ -234,7 +229,6 @@ export default function KwanzaaTasksPage() {
     const result = await deleteTask(taskToDelete.id);
     if (result) {
       dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
-      await refreshHomeData(auth0User, holidayId);
       handleDeleteModalClose();
     }
   };

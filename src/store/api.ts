@@ -775,13 +775,16 @@ export const api = createApi({
         { dispatch, queryFulfilled },
       ) {
         try {
+          console.log('🚀 Creating gift...', { holidayId, payload });
+
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
 
-          //   Extract actual gift data from response
-          const newGiftFromApi = response.data;
+          //   ✅ CRITICAL: Extract gift from { data: gift } format
+          const newGiftFromApi = response.data.data;
 
-          //   API now returns recipient field directly - no transformation needed!
+          console.log('📦 Gift response received:', response);
+          console.log('✅ Gift data from API:', newGiftFromApi);
 
           //   Import Home Slice to avoid circular dependencies
           const { addGiftToHomeData } = await import('./slices/homeSlice');
@@ -1604,6 +1607,42 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'KwanzaaPrinciples', id: holidayId },
       ],
+      async onQueryStarted(
+        { holidayId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Creating Kwanzaa principles task...', {
+            holidayId,
+            payload,
+          });
+
+          // ✅ Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract task from { data: task } format
+          const newTaskFromApi = response.data.data;
+
+          console.log('📦 Kwanzaa principles task response received:', response);
+          console.log('✅ Kwanzaa principles task data from API:', newTaskFromApi);
+
+          const { addTaskToHomeData } = await import('./slices/homeSlice');
+
+          dispatch(
+            addTaskToHomeData({
+              holidayId,
+              task: newTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Kwanzaa principles task created and Home Slice updated:',
+            newTaskFromApi,
+          );
+        } catch (error) {
+          console.error('❌ Kwanzaa principles task creation failed:', error);
+        }
+      },
     }),
     updateGift: builder.mutation<
       any,
@@ -1647,15 +1686,11 @@ export const api = createApi({
           // Wait for API to succeed
           const { data: response } = await queryFulfilled;
 
-          //   Extract actual gift data from response
-          const updatedGiftFromApi = response.data;
+          //   ✅ CRITICAL: Extract gift from { data: gift } format
+          const updatedGiftFromApi = response.data.data;
 
           console.log('📦 Toggle gift response received:', response);
-          console.log('🎁 Updated gift data from API:', updatedGiftFromApi);
-          console.log(
-            '  Updated gift recipient from API:',
-            updatedGiftFromApi.recipient,
-          );
+          console.log('✅ Updated gift data from API:', updatedGiftFromApi);
 
           // Import Home Slice actions to avoid circular dependencies
           const { updateGiftInHomeData } = await import('./slices/homeSlice');
@@ -1714,17 +1749,11 @@ export const api = createApi({
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
 
-          //   Extract actual gift data from response
-          const updatedGiftFromApi = response.data;
+          //   ✅ CRITICAL: Extract gift from { data: gift } format
+          const updatedGiftFromApi = response.data.data;
 
           console.log('📦 Edit gift response received:', response);
-          console.log('🎁 Updated gift data from API:', updatedGiftFromApi);
-
-          //   API should return recipient field directly - same as createGift
-          console.log(
-            '  Updated gift recipient from API:',
-            updatedGiftFromApi.recipient,
-          );
+          console.log('✅ Updated gift data from API:', updatedGiftFromApi);
 
           //   Import Home Slice to avoid circular dependencies
           const { updateGiftInHomeData } = await import('./slices/homeSlice');
@@ -3195,6 +3224,50 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'KwanzaaPrinciples', id: holidayId },
       ],
+      async onQueryStarted(
+        { holidayId, taskId, isCompleted, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🔄 Toggling Kwanzaa principles task completion...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
+
+          // ✅ Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract task from { data: task } format
+          const updatedTaskFromApi = response.data.data;
+
+          console.log(
+            '📦 Updated Kwanzaa principles task response received:',
+            response,
+          );
+          console.log(
+            '✅ Updated Kwanzaa principles task data from API:',
+            updatedTaskFromApi,
+          );
+
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Kwanzaa principles task toggled and Home Slice updated:',
+            updatedTaskFromApi,
+          );
+        } catch (error) {
+          console.error('❌ Kwanzaa principles task toggle failed:', error);
+        }
+      },
     }),
     editKwanzaaPrinciples: builder.mutation<
       any,
@@ -3218,6 +3291,50 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'KwanzaaPrinciples', id: holidayId },
       ],
+      async onQueryStarted(
+        { holidayId, taskId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🔄 Editing Kwanzaa principles task...', {
+            holidayId,
+            taskId,
+            payload,
+          });
+
+          // ✅ Wait for successful API response
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract task from { data: task } format
+          const updatedTaskFromApi = response.data.data;
+
+          console.log(
+            '📦 Edit Kwanzaa principles task response received:',
+            response,
+          );
+          console.log(
+            '✅ Updated Kwanzaa principles task data from API:',
+            updatedTaskFromApi,
+          );
+
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Kwanzaa principles task edited and Home Slice updated:',
+            updatedTaskFromApi,
+          );
+        } catch (error) {
+          console.error('❌ Kwanzaa principles task edit failed:', error);
+        }
+      },
     }),
     deleteKwanzaaPrinciples: builder.mutation<
       any,

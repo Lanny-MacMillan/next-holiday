@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
@@ -88,9 +87,6 @@ export default function DailyPrinciplesPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
-
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'kwanzaa'),
@@ -162,9 +158,6 @@ export default function DailyPrinciplesPage() {
           updates: { isCompleted: !principle.isCompleted },
         }),
       );
-
-      // Refresh home data to update progress on main holiday page
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling principle:', error);
     }
@@ -178,9 +171,6 @@ export default function DailyPrinciplesPage() {
 
       // Remove from Redux state on success
       dispatch(removeTaskFromHomeData({ holidayId: holidayId, taskId }));
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Check if this was the last task and re-show default principles prompt
       const remainingTasks = displayTasks.filter((c: any) => c.id !== taskId);
@@ -208,9 +198,6 @@ export default function DailyPrinciplesPage() {
 
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
     } catch (error) {
@@ -251,9 +238,6 @@ export default function DailyPrinciplesPage() {
         dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
       }
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       console.log('✅ All default principles added successfully');
       setShowDefaultPrinciples(false);
     } catch (error) {
@@ -281,9 +265,6 @@ export default function DailyPrinciplesPage() {
           updates: result,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setSelectedTask(null);
       setShowFormModal(false);

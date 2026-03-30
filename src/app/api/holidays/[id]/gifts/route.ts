@@ -305,9 +305,12 @@ export async function POST(
       }
     }
 
-    return created(transformedGift, {
-      'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-    });
+    return created(
+      { data: transformedGift },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
   } catch (error) {
     console.error('Error creating gift:', error);
     return serverError('Failed to create gift');
@@ -475,9 +478,12 @@ export async function PUT(
     }
 
     // Transform the response to match UI expectations (using the complete transformedGift from above)
-    return ok(transformedGift, {
-      'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-    });
+    return ok(
+      { data: transformedGift },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
   } catch (error) {
     console.error('Error updating gift:', error);
     return serverError('Failed to update gift');
@@ -652,9 +658,12 @@ export async function PATCH(
       }, 0); // Run in next tick
     }
 
-    return ok(transformedGift, {
-      'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-    });
+    return ok(
+      { data: transformedGift },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
   } catch (error) {
     console.error('Error updating gift:', error);
     return serverError('Failed to update gift');
