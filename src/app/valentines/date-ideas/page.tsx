@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
@@ -45,8 +44,6 @@ export default function ValentinesDateIdeasPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'valentines'),
@@ -140,9 +137,6 @@ export default function ValentinesDateIdeasPage() {
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId, task: result }));
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -181,9 +175,6 @@ export default function ValentinesDateIdeasPage() {
           updates,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
       setEditingTask(null);
@@ -243,9 +234,6 @@ export default function ValentinesDateIdeasPage() {
           taskId: taskToDelete.id,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setTaskToDelete(null);

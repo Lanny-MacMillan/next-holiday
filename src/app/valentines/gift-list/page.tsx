@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -41,14 +40,13 @@ export default function ValentinesGiftListPage() {
 
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'valentines'),
@@ -157,9 +155,6 @@ export default function ValentinesGiftListPage() {
       // Update Redux state directly
       updateGiftInRedux(result, 'add');
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       // Refresh address book contacts
       dispatch(fetchContacts());
 
@@ -202,7 +197,7 @@ export default function ValentinesGiftListPage() {
       const newIsCompleted = !currentGift.isCompleted;
 
       // Update the gift using the hook
-      await updateGift(giftId, { isCompleted: newIsCompleted });
+      await updateGift(giftId, newIsCompleted);
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
@@ -227,9 +222,6 @@ export default function ValentinesGiftListPage() {
       // Update Redux state directly
       updateGiftInRedux({ id: giftToDelete.id }, 'delete');
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
@@ -252,13 +244,10 @@ export default function ValentinesGiftListPage() {
 
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      const result = await updateGift(selectedGift.id, payload);
+      const result = await editGift(selectedGift.id, payload);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowEditModal(false);
       setSelectedGift(null);
@@ -445,7 +434,7 @@ export default function ValentinesGiftListPage() {
           }).fields
         }
         initialValues={{
-          recipient: selectedGift?.contact?.name || '',
+          recipient: selectedGift?.recipient || '',
           name: selectedGift?.name || '', // Enhanced Compatibility Layer uses 'name' field
           description: selectedGift?.description || '',
           price: selectedGift?.price || '',
