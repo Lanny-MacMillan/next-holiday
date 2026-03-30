@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
+import { updateGuestInHomeData } from '@/store/slices/homeSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -16,12 +16,8 @@ import ReservationsTracker from '@/components/cards/reservation/ReservationsTrac
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { guestsFormConfig, editGuestsFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
-import {
-  updateGuestInHomeData,
-  addGuestToHomeData,
-  removeGuestFromHomeData,
-} from '@/store/slices/homeSlice';
 
 interface Guest {
   id: string;
@@ -45,14 +41,14 @@ export default function BirthdayGuestListPage() {
 
   const {
     createGuest,
-    updateGuest,
+    updateGuest, // For completion toggling
+    editGuest, // For field editing
     deleteGuest,
     createGuestState,
     updateGuestState,
+    editGuestState,
     deleteGuestState,
   } = useGuestMutations();
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get guest lists from holiday data
   const guestLists = useMemo(
@@ -119,9 +115,6 @@ export default function BirthdayGuestListPage() {
       }).unwrap();
 
       if (result) {
-        // Refresh home data to get the new guest with real ID
-        await refreshHomeData(auth0User, holidayId);
-
         // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
         dispatch(resetContacts());
         dispatch(fetchContacts());
@@ -136,21 +129,96 @@ export default function BirthdayGuestListPage() {
   async function handleUpdateGuest(formValues: Record<string, any>) {
     if (!editingGuest || !holidayId || !auth0User) return;
 
+    console.log('🎯 Form values received:', formValues);
+    console.log('🎭 Current editing guest:', editingGuest);
+
     try {
-      const result = await updateGuest({
+      // Find the original guest list entry
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === editingGuest.id,
+      );
+      if (!originalGuestList) return;
+
+      // Prepare payload with all form data (matching Fourth of July pattern)
+      const updatePayload = {
+        name: formValues.name,
+        email: formValues.email,
+        phone: formValues.phone,
+        address: formValues.address,
+        rsvpStatus: formValues.rsvp_status, // Note: form uses rsvp_status
+        notes: formValues.notes,
+      };
+
+      // Manual optimistic update - update Home Slice immediately
+      console.log('🔄 Manual optimistic update for guest:', editingGuest.id);
+      console.log('📝 Update payload:', updatePayload);
+      console.log('📂 Original guest list:', originalGuestList);
+
+      const optimisticUpdate = {
+        ...originalGuestList,
+        rsvpStatus: updatePayload.rsvpStatus,
+        isCompleted: updatePayload.rsvpStatus === 'confirmed',
+        notes: updatePayload.notes,
+        updatedAt: new Date().toISOString(),
+        // Update nested contact data
+        contact: {
+          ...originalGuestList.contact,
+          name: updatePayload.name,
+          email: updatePayload.email || originalGuestList.contact?.email,
+          phone: updatePayload.phone || originalGuestList.contact?.phone,
+          streetAddress:
+            updatePayload.address || originalGuestList.contact?.streetAddress,
+        },
+      };
+
+      console.log('✨ Dispatching optimistic update:', optimisticUpdate);
+
+      dispatch(
+        updateGuestInHomeData({
+          holidayId,
+          guestId: editingGuest.id,
+          updates: optimisticUpdate,
+        }),
+      );
+
+      // Use editGuest mutation with full form data
+      const result = await editGuest({
         holidayId,
         guestId: editingGuest.id,
-        isCompleted: formValues.rsvpStatus === 'confirmed',
+        payload: updatePayload,
+        auth0User,
       }).unwrap();
 
       if (result) {
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+        console.log('✅ API call successful, updating with server data:', result);
+
+        // Update Home Slice with actual server response
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: result,
+          }),
+        );
+
         setEditingGuest(null);
         setShowEditModal(false);
       }
     } catch (error) {
       console.error('Failed to update guest:', error);
+      // Revert on error - restore original guest list data
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === editingGuest.id,
+      );
+      if (originalGuestList) {
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: originalGuestList,
+          }),
+        );
+      }
     }
   }
 
@@ -172,22 +240,21 @@ export default function BirthdayGuestListPage() {
       const newRsvpStatus =
         guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
 
-      const updatedGuestList = {
-        ...guestList,
-        rsvpStatus: newRsvpStatus,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update Redux immediately for responsive UI
+      // Manual optimistic update - update Home Slice immediately for UI responsiveness
       dispatch(
         updateGuestInHomeData({
           holidayId,
-          guestId: guestId,
-          updates: updatedGuestList,
+          guestId,
+          updates: {
+            ...guestList,
+            rsvpStatus: newRsvpStatus,
+            isCompleted: newRsvpStatus === 'confirmed',
+            updatedAt: new Date().toISOString(),
+          },
         }),
       );
 
-      // Persist to API in background
+      // Then make API call
       try {
         await updateGuest({
           auth0User,
@@ -195,12 +262,16 @@ export default function BirthdayGuestListPage() {
           guestId,
           isCompleted: newRsvpStatus === 'confirmed',
         }).unwrap();
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
       } catch (error) {
         console.error('Failed to toggle guest:', error);
-        // Could implement rollback logic here if needed
+        // Revert on error
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId,
+            updates: guestList,
+          }),
+        );
       }
     }
   }
@@ -223,16 +294,6 @@ export default function BirthdayGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Update Redux for responsive UI
-        dispatch(
-          removeGuestFromHomeData({
-            holidayId,
-            guestId: deleteConfirm.guestId,
-          }),
-        );
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
         setDeleteConfirm({ show: false, guestId: null });
       } catch (error) {
         console.error('Failed to delete guest:', error);
@@ -299,6 +360,9 @@ export default function BirthdayGuestListPage() {
     shareMembers: [],
     auth0User: auth0User,
   });
+
+  // Debug form config to ensure RSVP status field is properly configured
+  console.log('🎪 Edit form config fields:', editFormConfig.fields);
 
   return (
     <div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -420,7 +484,7 @@ export default function BirthdayGuestListPage() {
           email: editingGuest?.email || '',
           phone: editingGuest?.phone || '',
           address: editingGuest?.address || '',
-          rsvpStatus: editingGuest?.rsvpStatus || 'pending',
+          rsvp_status: editingGuest?.rsvpStatus || 'pending', // Note: form field is rsvp_status
           notes: editingGuest?.notes || '',
         }}
         onSubmit={handleUpdateGuest}
@@ -428,8 +492,8 @@ export default function BirthdayGuestListPage() {
           setShowEditModal(false);
           setEditingGuest(null);
         }}
-        loading={updateGuestState.isLoading}
-        submitText={updateGuestState.isLoading ? 'Processing...' : 'Update Guest'}
+        loading={editGuestState.isLoading}
+        submitText={editGuestState.isLoading ? 'Processing...' : 'Update Guest'}
         cancelText="Cancel"
         cardClassName="card"
         submitButtonColor="#f59e0b"

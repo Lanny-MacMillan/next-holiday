@@ -113,29 +113,37 @@ export async function POST(
         });
 
         if (contact) {
-          // Return error instead of updating existing contact
-          return badRequest([
-            {
-              code: 'custom',
-              path: ['email'],
-              message: `Email "${data.email}" is already tied to another contact: "${contact.name}"`,
-            },
-          ]);
+          // If the existing contact has the same name, reuse it
+          if (contact.name.trim().toLowerCase() === data.name.trim().toLowerCase()) {
+            // Contact with same name and email already exists - use it
+            // We'll create/update the guest list entry below
+          } else {
+            // Different person has this email - return error
+            return badRequest([
+              {
+                code: 'custom',
+                path: ['email'],
+                message: `Email "${data.email}" is already tied to another contact: "${contact.name}"`,
+              },
+            ]);
+          }
         }
       }
 
-      // Create new contact (only if email not found or no email provided)
-      contact = await prisma.contact.create({
-        data: {
-          id: uuidv4(),
-          accountId: account.id,
-          name: data.name,
-          email: data.email || null,
-          phone: data.phone || null,
-          streetAddress: data.address || null,
-          createdBy: user.id,
-        },
-      });
+      // Create new contact only if one wasn't found
+      if (!contact) {
+        contact = await prisma.contact.create({
+          data: {
+            id: uuidv4(),
+            accountId: account.id,
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone || null,
+            streetAddress: data.address || null,
+            createdBy: user.id,
+          },
+        });
+      }
     }
 
     // Create or update guest list entry

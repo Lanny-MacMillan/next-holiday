@@ -60,9 +60,12 @@ export async function PATCH(
       },
     });
 
-    return ok(updatedTask, {
-      'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-    });
+    return ok(
+      { data: updatedTask },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
   } catch (error) {
     console.error('Error updating task:', error);
     return serverError('Failed to update task');

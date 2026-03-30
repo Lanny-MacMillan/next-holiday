@@ -555,9 +555,9 @@ export const api = createApi({
       { holidayId: string; taskId: string; updates: any; auth0User?: any }
     >({
       query: ({ holidayId, taskId, updates, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
+        url: `holidays/${holidayId}/tasks/${taskId}`,
         method: 'PATCH',
-        body: { taskId, ...updates },
+        body: updates,
         headers: auth0User
           ? {
               'x-test-user': JSON.stringify({
@@ -583,7 +583,7 @@ export const api = createApi({
           //   Wait for successful API response
           const { data: response } = await queryFulfilled;
 
-          //   Extract actual task data from response (API returns { data: task })
+          //   Extract actual task data from response (API returns { success: true, data: { data: task } })
           const updatedTaskFromApi = response.data.data;
 
           console.log('📦 Task update response received:', response);
@@ -601,7 +601,7 @@ export const api = createApi({
             }),
           );
 
-          console.log('  Task updated and Home Slice updated:', updatedTaskFromApi);
+          console.log('✅ Task updated and Home Slice updated:', updatedTaskFromApi);
         } catch (error) {
           // ❌ API failed - let RTK Query handle the error state
           console.error('❌ Failed to update task:', error);
@@ -3662,19 +3662,16 @@ export const api = createApi({
             }
           : {},
       }),
-      // NOTE: No invalidatesTags since we manually update Home Slice in onQueryStarted
-      // Optimistic update for edit guest
+      // NOTE: No invalidatesTags since we manually update Home Slice in the component
+      // Optimistic RTK Query cache update only - Home Slice handled manually in component
       async onQueryStarted(
         { holidayId, guestId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Import sync utilities to avoid circular dependencies
-        const { syncUpdateInHomeSlice } = await import('./syncUtils');
-
         // Store original guest for rollback
         let originalGuest: any = null;
 
-        // 1.   Optimistic RTK Query cache update
+        // 1. Optimistic RTK Query cache update only
         const patchResult = dispatch(
           api.util.updateQueryData(
             'getGuestList',
@@ -3693,48 +3690,20 @@ export const api = createApi({
           ),
         );
 
-        // 2.   NEW: Optimistic Home Slice sync
-        if (originalGuest) {
-          const optimisticUpdate = {
-            ...originalGuest,
-            ...payload,
-            updatedAt: new Date().toISOString(),
-          };
-
-          syncUpdateInHomeSlice({
-            entityType: 'guest',
-            holidayId,
-            entityId: guestId,
-            serverData: optimisticUpdate,
-            dispatch,
-          });
-        }
-
         try {
-          const { data: serverGuest } = await queryFulfilled;
+          const { data: response } = await queryFulfilled;
 
-          // 3.   NEW: Update Home Slice with actual server data if different
-          if (serverGuest) {
-            syncUpdateInHomeSlice({
-              entityType: 'guest',
-              holidayId,
-              entityId: guestId,
-              serverData: serverGuest,
-              dispatch,
-            });
-          }
+          // ✅ CRITICAL: Extract guest from { success: true, data: guest } format
+          const serverGuest = response.data;
+
+          console.log('📦 Edit guest response received:', response);
+          console.log('✅ Guest data from API:', serverGuest);
+
+          // NOTE: Home Slice updates handled manually in component
         } catch (error) {
-          // 4.   Revert both RTK Query cache and Home Slice on error
+          // Revert RTK Query cache on error
           patchResult.undo();
-          if (originalGuest) {
-            syncUpdateInHomeSlice({
-              entityType: 'guest',
-              holidayId,
-              entityId: guestId,
-              serverData: originalGuest,
-              dispatch,
-            });
-          }
+          console.error('❌ Guest edit failed:', error);
         }
       },
     }),

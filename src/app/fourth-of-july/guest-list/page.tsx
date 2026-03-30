@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
+import { updateGuestInHomeData } from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -52,7 +52,6 @@ export default function FourthOfJulyGuestListPage() {
   const shareMembers = shareData?.members || [];
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get guest lists from holiday data
   const guestLists = holidayData?.guestLists || [];
@@ -107,6 +106,46 @@ export default function FourthOfJulyGuestListPage() {
     if (!holidayId || !auth0User) return;
 
     if (editingGuest) {
+      // Find the original guest list entry to preserve other data
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === editingGuest.id,
+      );
+
+      if (originalGuestList) {
+        // Manual optimistic update - update Home Slice immediately
+        const updatePayload = {
+          name: formValues.name,
+          email: formValues.email || undefined,
+          phone: formValues.phone || undefined,
+          address: formValues.address || undefined,
+          rsvpStatus: formValues.rsvp_status as 'pending' | 'confirmed' | 'declined',
+          notes: formValues.notes || undefined,
+        };
+
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: {
+              ...originalGuestList,
+              rsvpStatus: updatePayload.rsvpStatus,
+              notes: updatePayload.notes,
+              isCompleted: updatePayload.rsvpStatus === 'confirmed',
+              updatedAt: new Date().toISOString(),
+              // Update nested contact data
+              contact: {
+                ...originalGuestList.contact,
+                name: updatePayload.name,
+                email: updatePayload.email || originalGuestList.contact?.email,
+                phone: updatePayload.phone || originalGuestList.contact?.phone,
+                streetAddress:
+                  updatePayload.address || originalGuestList.contact?.streetAddress,
+              },
+            },
+          }),
+        );
+      }
+
       // Update existing guest
       try {
         await editGuest({
@@ -117,7 +156,7 @@ export default function FourthOfJulyGuestListPage() {
             email: formValues.email || undefined,
             phone: formValues.phone || undefined,
             address: formValues.address || undefined,
-            rsvpStatus: formValues.rsvpStatus as
+            rsvpStatus: formValues.rsvp_status as
               | 'pending'
               | 'confirmed'
               | 'declined',
@@ -125,11 +164,18 @@ export default function FourthOfJulyGuestListPage() {
           },
           auth0User,
         }).unwrap();
-
-        // Refresh data after successful update
-        await refreshHomeData(auth0User, holidayId);
       } catch (error) {
         console.error('Failed to update guest:', error);
+        // Revert on error by refreshing data
+        if (originalGuestList) {
+          dispatch(
+            updateGuestInHomeData({
+              holidayId,
+              guestId: editingGuest.id,
+              updates: originalGuestList,
+            }),
+          );
+        }
       }
 
       setEditingGuest(null);
@@ -152,9 +198,6 @@ export default function FourthOfJulyGuestListPage() {
           },
           auth0User,
         }).unwrap();
-
-        // Refresh data after successful creation
-        await refreshHomeData(auth0User, holidayId);
 
         // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
         dispatch(resetContacts());
@@ -179,18 +222,44 @@ export default function FourthOfJulyGuestListPage() {
   async function handleToggleGuest(guestId: string) {
     if (!holidayId || !auth0User) return;
 
+    const guestList = guestLists.find((gl: any) => gl.id === guestId);
+    if (!guestList) return;
+
+    const newRsvpStatus =
+      guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
+
+    // Manual optimistic update - update Home Slice immediately
+    dispatch(
+      updateGuestInHomeData({
+        holidayId,
+        guestId,
+        updates: {
+          ...guestList,
+          rsvpStatus: newRsvpStatus,
+          isCompleted: newRsvpStatus === 'confirmed',
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    );
+
+    // Then make API call
     try {
       await updateGuest({
         holidayId,
         guestId,
-        isCompleted: true, // This will toggle the RSVP status
+        isCompleted: newRsvpStatus === 'confirmed',
         auth0User,
       }).unwrap();
-
-      // Refresh data after successful toggle
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Failed to toggle guest:', error);
+      // Revert on error
+      dispatch(
+        updateGuestInHomeData({
+          holidayId,
+          guestId,
+          updates: guestList,
+        }),
+      );
     }
   }
 
@@ -205,18 +274,11 @@ export default function FourthOfJulyGuestListPage() {
 
   async function confirmDelete() {
     if (deleteConfirm.guestId && holidayId && auth0User) {
-      try {
-        await deleteGuest({
-          holidayId,
-          guestId: deleteConfirm.guestId,
-          auth0User,
-        }).unwrap();
-
-        // Refresh data after successful deletion
-        await refreshHomeData(auth0User, holidayId);
-      } catch (error) {
-        console.error('Failed to delete guest:', error);
-      }
+      await deleteGuest({
+        holidayId,
+        guestId: deleteConfirm.guestId,
+        auth0User,
+      }).unwrap();
 
       setDeleteConfirm({ show: false, guestId: null });
     }
@@ -389,7 +451,7 @@ export default function FourthOfJulyGuestListPage() {
                 email: editingGuest.email || '',
                 phone: editingGuest.phone || '',
                 address: editingGuest.address || '',
-                rsvpStatus: editingGuest.rsvpStatus,
+                rsvp_status: editingGuest.rsvpStatus || 'pending',
                 notes: editingGuest.notes || '',
               }
             : {}
