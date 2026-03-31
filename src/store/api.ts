@@ -1653,6 +1653,42 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'BabyShowerGames', id: holidayId },
       ],
+      // Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🚀 Creating baby shower game...', { holidayId, payload });
+
+          // Wait for successful API response (no optimistic updates)
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract task from { data: task } format
+          const newTaskFromApi = response.data.data;
+
+          console.log('📦 Baby shower game response received:', response);
+          console.log('✅ Game data from API:', newTaskFromApi);
+
+          // Import Home Slice to avoid circular dependencies
+          const { addTaskToHomeData } = await import('./slices/homeSlice');
+
+          // Update Home Slice with API data
+          dispatch(
+            addTaskToHomeData({
+              holidayId,
+              task: newTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Baby shower game created and Home Slice updated:',
+            newTaskFromApi,
+          );
+        } catch (error) {
+          console.error('❌ Baby shower game creation failed:', error);
+        }
+      },
     }),
     createKwanzaaPrinciples: builder.mutation<
       any,
@@ -3216,6 +3252,49 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'BabyShowerGames', id: holidayId },
       ],
+      // Traditional Redux pattern: wait for API success then update state
+      async onQueryStarted(
+        { holidayId, taskId, isCompleted, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🔄 Toggling baby shower game completion...', {
+            holidayId,
+            taskId,
+            isCompleted,
+          });
+
+          // Wait for API to succeed
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract task from { data: task } format
+          const updatedTaskFromApi = response.data.data;
+
+          console.log('📦 Toggle baby shower game response received:', response);
+          console.log('✅ Updated game data from API:', updatedTaskFromApi);
+
+          // Import Home Slice actions to avoid circular dependencies
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          // Update Home Slice with server response
+          if (updatedTaskFromApi) {
+            dispatch(
+              updateTaskInHomeData({
+                holidayId,
+                taskId,
+                updates: updatedTaskFromApi,
+              }),
+            );
+
+            console.log(
+              '✅ Baby shower game completion toggled and Home Slice updated:',
+              updatedTaskFromApi,
+            );
+          }
+        } catch (error) {
+          console.error('❌ Failed to update baby shower game completion:', error);
+        }
+      },
     }),
     editPartyPlanning: builder.mutation<
       any,
@@ -3262,6 +3341,44 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'BabyShowerGames', id: holidayId },
       ],
+      // Traditional Redux pattern - wait for success, then update Home Slice
+      async onQueryStarted(
+        { holidayId, taskId, payload, auth0User },
+        { dispatch, queryFulfilled },
+      ) {
+        try {
+          console.log('🔄 Editing baby shower game...', {
+            holidayId,
+            taskId,
+            payload,
+          });
+
+          const { data: response } = await queryFulfilled;
+
+          // ✅ CRITICAL: Extract task from { data: task } format
+          const updatedTaskFromApi = response.data.data;
+
+          console.log('📦 Edit baby shower game response received:', response);
+          console.log('✅ Updated game data from API:', updatedTaskFromApi);
+
+          const { updateTaskInHomeData } = await import('./slices/homeSlice');
+
+          dispatch(
+            updateTaskInHomeData({
+              holidayId,
+              taskId,
+              updates: updatedTaskFromApi,
+            }),
+          );
+
+          console.log(
+            '✅ Baby shower game edited and Home Slice updated:',
+            updatedTaskFromApi,
+          );
+        } catch (error) {
+          console.error('❌ Baby shower game edit failed:', error);
+        }
+      },
     }),
     deletePartyPlanning: builder.mutation<
       any,

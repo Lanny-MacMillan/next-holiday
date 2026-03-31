@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -40,8 +39,6 @@ export default function BabyShowerGamesPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -157,7 +154,6 @@ export default function BabyShowerGamesPage() {
     };
 
     await createTask(newTask);
-    await refreshHomeData(auth0User, holidayId);
     setShowAddForm(false);
   }
 
@@ -179,7 +175,6 @@ export default function BabyShowerGamesPage() {
     };
 
     await updateTask(editingTask.id, updatedTask);
-    await refreshHomeData(auth0User, holidayId);
     setEditingTask(null);
     setShowAddForm(false);
   }
@@ -201,7 +196,6 @@ export default function BabyShowerGamesPage() {
     if (taskToDelete && holidayId && auth0User) {
       try {
         await deleteTask(taskToDelete.id);
-        await refreshHomeData(auth0User, holidayId);
       } catch (error) {
         console.error('Failed to delete task:', error);
       }
@@ -225,7 +219,6 @@ export default function BabyShowerGamesPage() {
 
     try {
       await updateTask(taskId, updates);
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }
