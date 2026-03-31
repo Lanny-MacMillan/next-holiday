@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -37,13 +36,12 @@ export default function GraduationCardsPage() {
   const {
     createCard,
     updateCard,
+    editCard,
     deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get share members for Enhanced Compatibility Layer
   const shareData = useAppSelector((state: any) =>
@@ -134,7 +132,6 @@ export default function GraduationCardsPage() {
       // Refresh contacts to include any newly created ones
       dispatch(fetchContacts());
 
-      await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
@@ -150,10 +147,7 @@ export default function GraduationCardsPage() {
     if (!cardToDelete || !holidayId) return;
 
     try {
-      await deleteCard(cardToDelete.id, cardToDelete);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await deleteCard(cardToDelete.id);
 
       setShowDeleteModal(false);
       setCardToDelete(null);
@@ -170,11 +164,10 @@ export default function GraduationCardsPage() {
 
     setIsEditSubmitting(true);
     try {
-      // Use enhanced transformCardPayload for consistent handling
+      // Use editCard for field editing - RTK Query handles Home Slice updates automatically
       const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await updateCard(cardToEdit.id, payload);
-      await refreshHomeData(auth0User, holidayId);
+      await editCard(cardToEdit.id, payload);
       setShowEditModal(false);
       setCardToEdit(null);
     } catch (error) {
@@ -192,18 +185,8 @@ export default function GraduationCardsPage() {
     if (!card || !holidayId) return;
 
     try {
-      // Include all required fields when updating completion status
-      await updateCard(cardId, {
-        recipient: card.recipient,
-        message: card.message,
-        address: card.address || '',
-        contact_id: card.contact_id || null,
-        assigned_to: card.assignedTo || null,
-        isCompleted: !card.isCompleted,
-      });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      // RTK Query updateCard mutation handles Home Slice updates automatically
+      await updateCard(cardId, !card.isCompleted);
     } catch (error) {
       console.error('Error toggling card completion:', error);
       setToastMessage('Error updating card status. Please try again.');

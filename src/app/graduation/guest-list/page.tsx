@@ -4,20 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
-import {
-  updateGuestInHomeData,
-  addGuestToHomeData,
-  removeGuestFromHomeData,
-} from '@/store/slices/homeSlice';
+import { updateGuestInHomeData } from '@/store/slices/homeSlice';
 import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
-import {
-  selectIsHolidayShared,
-  selectShareByHolidayKey,
-} from '@/store/slices/sharesSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
-import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -45,28 +35,14 @@ interface Guest {
 
 export default function GraduationGuestListPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
-  const isHolidayShared = useAppSelector((state: any) =>
-    selectIsHolidayShared(state, 'graduation'),
-  );
 
-  // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector((state: any) =>
-    selectShareByHolidayKey(state, 'graduation'),
-  );
-  const shareMembers = shareData?.members || [];
-
-  // Use new standardized hooks
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
 
   const {
-    holidayId: guestHolidayId,
-    auth0User: guestAuth0User,
-    guests,
     createGuest,
-    updateGuest,
-    editGuest,
+    updateGuest, // For completion toggling
+    editGuest, // For field editing
     deleteGuest,
     createGuestState,
     updateGuestState,
@@ -74,30 +50,28 @@ export default function GraduationGuestListPage() {
     deleteGuestState,
   } = useGuestMutations();
 
-  const { refreshHomeData } = useRefreshHomeData();
-
   // Get guest lists from holiday data
   const guestLists = useMemo(
     () => holidayData?.guestLists || [],
     [holidayData?.guestLists],
   );
 
-  // Transform guest list data to match expected format - using guests from hook
-  // const guests = useMemo(() =>
-  //   guestLists.map((guestList: any) => ({
-  //     id: guestList.id,
-  //     name: guestList.contact?.name || 'Unknown',
-  //     email: guestList.contact?.email || undefined,
-  //     phone: guestList.contact?.phone || undefined,
-  //     address: guestList.contact?.streetAddress || undefined,
-  //     rsvpStatus: guestList.rsvpStatus || 'pending',
-  //     numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
-  //     notes: guestList.notes || undefined,
-  //     isCompleted: guestList.rsvpStatus === 'confirmed',
-  //     createdAt: guestList.createdAt,
-  //     updatedAt: guestList.updatedAt,
-  //   }))
-  // , [guestLists]);
+  // Transform guest list data to match expected format
+  const guests = guestLists.map((guestList: any) => ({
+    id: guestList.id,
+    name: guestList.contact?.name || 'Unknown',
+    email: guestList.contact?.email || undefined,
+    phone: guestList.contact?.phone || undefined,
+    address: guestList.contact?.streetAddress || undefined,
+    rsvpStatus: guestList.rsvpStatus || 'pending',
+    numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
+    notes: guestList.notes || undefined,
+    isCompleted: guestList.rsvpStatus === 'confirmed',
+    createdAt: guestList.createdAt,
+    updatedAt: guestList.updatedAt,
+  }));
+
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   const isLoading = !homeInitialized;
 
@@ -107,6 +81,7 @@ export default function GraduationGuestListPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
@@ -133,7 +108,7 @@ export default function GraduationGuestListPage() {
     try {
       const selectedContact = contacts?.find((c: any) => c.name === values.name);
 
-      await createGuest({
+      const result = await createGuest({
         holidayId,
         payload: {
           name: values.name,
@@ -144,14 +119,15 @@ export default function GraduationGuestListPage() {
           contactId: selectedContact?.id,
         },
         auth0User,
-      });
-      await refreshHomeData(auth0User, holidayId);
+      }).unwrap();
 
-      // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
-      dispatch(resetContacts());
-      dispatch(fetchContacts());
+      if (result) {
+        // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
+        dispatch(resetContacts());
+        dispatch(fetchContacts());
 
-      setShowAddModal(false);
+        setShowAddModal(false);
+      }
     } catch (error) {
       console.error('Error creating guest:', error);
     } finally {
@@ -159,7 +135,7 @@ export default function GraduationGuestListPage() {
     }
   };
 
-  const handleToggleRSVP = async (guestId: string) => {
+  async function handleToggleGuest(guestId: string) {
     if (!holidayId || !auth0User) return;
 
     const guestList = guestLists.find((gl: any) => gl.id === guestId);
@@ -168,80 +144,151 @@ export default function GraduationGuestListPage() {
       const newRsvpStatus =
         guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
 
-      const updatedGuestList = {
-        ...guestList,
-        rsvpStatus: newRsvpStatus,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update Redux immediately for responsive UI
+      // Manual optimistic update - update Home Slice immediately for UI responsiveness
       dispatch(
         updateGuestInHomeData({
           holidayId,
-          guestId: guestId,
-          updates: updatedGuestList,
+          guestId,
+          updates: {
+            ...guestList,
+            rsvpStatus: newRsvpStatus,
+            isCompleted: newRsvpStatus === 'confirmed',
+            updatedAt: new Date().toISOString(),
+          },
         }),
       );
 
+      // Then make API call
       try {
         await updateGuest({
+          auth0User,
           holidayId,
           guestId,
           isCompleted: newRsvpStatus === 'confirmed',
-          auth0User,
-        });
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+        }).unwrap();
       } catch (error) {
-        console.error('Error updating guest RSVP:', error);
+        console.error('Failed to toggle guest:', error);
+        // Revert on error
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId,
+            updates: guestList,
+          }),
+        );
       }
     }
-  };
+  }
 
-  const handleEditGuest = async (values: Record<string, any>) => {
+  async function handleUpdateGuest(formValues: Record<string, any>) {
     if (!selectedGuest || !holidayId || !auth0User) return;
 
-    setIsEditSubmitting(true);
     try {
-      await updateGuest({
+      // Find the original guest list entry
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === selectedGuest.id,
+      );
+      if (!originalGuestList) return;
+
+      // Prepare payload with all form data (matching birthday pattern)
+      const updatePayload = {
+        name: formValues.name,
+        email: formValues.email,
+        phone: formValues.phone,
+        address: formValues.address,
+        rsvpStatus: formValues.rsvp_status, // Note: form uses rsvp_status
+        notes: formValues.notes,
+      };
+
+      // Manual optimistic update - update Home Slice immediately
+      const optimisticUpdate = {
+        ...originalGuestList,
+        rsvpStatus: updatePayload.rsvpStatus,
+        isCompleted: updatePayload.rsvpStatus === 'confirmed',
+        notes: updatePayload.notes,
+        updatedAt: new Date().toISOString(),
+        // Update nested contact data
+        contact: {
+          ...originalGuestList.contact,
+          name: updatePayload.name,
+          email: updatePayload.email || originalGuestList.contact?.email,
+          phone: updatePayload.phone || originalGuestList.contact?.phone,
+          streetAddress:
+            updatePayload.address || originalGuestList.contact?.streetAddress,
+        },
+      };
+
+      dispatch(
+        updateGuestInHomeData({
+          holidayId,
+          guestId: selectedGuest.id,
+          updates: optimisticUpdate,
+        }),
+      );
+
+      // Use editGuest mutation with full form data
+      const result = await editGuest({
         holidayId,
         guestId: selectedGuest.id,
-        isCompleted: values.rsvpStatus === 'confirmed',
+        payload: updatePayload,
         auth0User,
-      });
-      await refreshHomeData(auth0User, holidayId);
-      setShowEditModal(false);
-      setSelectedGuest(null);
-    } catch (error) {
-      console.error('Error updating guest:', error);
-    } finally {
-      setIsEditSubmitting(false);
-    }
-  };
+      }).unwrap();
 
-  const confirmDelete = async () => {
+      if (result) {
+        // Update Home Slice with actual server response
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: selectedGuest.id,
+            updates: result,
+          }),
+        );
+
+        setSelectedGuest(null);
+        setShowEditModal(false);
+      }
+    } catch (error) {
+      console.error('Failed to update guest:', error);
+      // Revert on error - restore original guest list data
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === selectedGuest.id,
+      );
+      if (originalGuestList) {
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: selectedGuest.id,
+            updates: originalGuestList,
+          }),
+        );
+      }
+    }
+  }
+
+  async function confirmDelete() {
     if (deleteConfirm.guestId && holidayId && auth0User) {
       try {
-        await deleteGuest({
+        const result = await deleteGuest({
           holidayId,
           guestId: deleteConfirm.guestId,
           auth0User,
-        });
+        }).unwrap();
 
-        // Refresh data after successful deletion
-        await refreshHomeData(auth0User, holidayId);
+        setDeleteConfirm({ show: false, guestId: null });
       } catch (error) {
         console.error('Failed to delete guest:', error);
       }
-
-      setDeleteConfirm({ show: false, guestId: null });
     }
-  };
+  }
 
   const cancelDelete = () => {
     setDeleteConfirm({ show: false, guestId: null });
   };
+
+  function handleEditGuest(guest: Guest) {
+    setSelectedGuest(guest);
+    setShowEditModal(true);
+  }
 
   // Helper functions
   const openForm = () => {
@@ -309,7 +356,7 @@ export default function GraduationGuestListPage() {
     <GuestCardItem
       key={guest.id}
       guest={guest}
-      onToggle={handleToggleRSVP}
+      onToggle={handleToggleGuest}
       onEdit={handleEditGuestOpen}
       onDelete={handleDeleteGuest}
       holiday="graduation"
@@ -319,13 +366,13 @@ export default function GraduationGuestListPage() {
   // Enhanced Compatibility Layer form config (using guest-list type)
   const formConfig = getFormConfigEnhanced('guests', 'add', {
     holidayKey: 'graduation',
-    shareMembers: shareMembers,
+    shareMembers: [],
     auth0User: auth0User,
   });
 
   const editFormConfig = getFormConfigEnhanced('guests', 'edit', {
     holidayKey: 'graduation',
-    shareMembers: shareMembers,
+    shareMembers: [],
     auth0User: auth0User,
   });
 
@@ -337,6 +384,7 @@ export default function GraduationGuestListPage() {
       name: guest.name || '',
       email: guest.email || '',
       phone: guest.phone || '',
+      address: guest.address || '',
       rsvpStatus: guest.rsvpStatus || 'pending',
       notes: guest.notes || '',
     };
@@ -365,7 +413,7 @@ export default function GraduationGuestListPage() {
             <GuestCardItem
               key={guest.id}
               guest={guest}
-              onToggle={handleToggleRSVP}
+              onToggle={handleToggleGuest}
               onEdit={handleEditGuestOpen}
               onDelete={handleDeleteGuest}
               holiday="graduation"
@@ -382,7 +430,7 @@ export default function GraduationGuestListPage() {
             <GuestCardItem
               key={guest.id}
               guest={guest}
-              onToggle={handleToggleRSVP}
+              onToggle={handleToggleGuest}
               onEdit={handleEditGuestOpen}
               onDelete={handleDeleteGuest}
               holiday="graduation"
@@ -399,7 +447,7 @@ export default function GraduationGuestListPage() {
             <GuestCardItem
               key={guest.id}
               guest={guest}
-              onToggle={handleToggleRSVP}
+              onToggle={handleToggleGuest}
               onEdit={handleEditGuestOpen}
               onDelete={handleDeleteGuest}
               holiday="graduation"
@@ -419,7 +467,6 @@ export default function GraduationGuestListPage() {
         submitText={isSubmitting ? 'Processing...' : 'Add Guest'}
         cardClassName="card-guests-graduation"
         contacts={contacts}
-        shareMembers={shareMembers}
       />
 
       {/* Edit Modal */}
@@ -428,13 +475,12 @@ export default function GraduationGuestListPage() {
         title="Edit Guest"
         fields={editFormConfig.fields}
         initialValues={getEditInitialValues(selectedGuest)}
-        onSubmit={handleEditGuest}
+        onSubmit={handleUpdateGuest}
         onClose={closeEditForm}
         loading={isEditSubmitting}
         submitText={isEditSubmitting ? 'Processing...' : 'Update Guest'}
         cardClassName="card-guests-graduation"
         contacts={contacts}
-        shareMembers={shareMembers}
       />
 
       {/* Delete Confirmation Modal */}

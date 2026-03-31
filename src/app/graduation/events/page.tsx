@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -64,15 +63,14 @@ export default function GraduationEventsPage() {
     useHolidayPageData();
 
   const {
-    createTask,
-    updateTask,
-    deleteTask,
+    createEvent,
+    updateEvent,
+    editEvent,
+    deleteEvent,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -168,7 +166,8 @@ export default function GraduationEventsPage() {
 
     setIsSubmitting(true);
     try {
-      const result = await createTask({
+      // RTK Query createEvent mutation handles Home Slice updates automatically
+      const result = await createEvent({
         title: values.title,
         description: values.description,
         priority: values.priority,
@@ -176,7 +175,6 @@ export default function GraduationEventsPage() {
         due_date: values.dueDate || undefined, // Snake case for API
         category: 'Events',
       });
-      await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -187,7 +185,7 @@ export default function GraduationEventsPage() {
 
   const addDefaultEventTasks = async () => {
     for (const task of defaultEventTasks) {
-      await createTask({
+      await createEvent({
         title: task.title,
         description: task.description,
         priority: task.priority,
@@ -203,17 +201,11 @@ export default function GraduationEventsPage() {
     const currentTask = events.find((task: any) => task.id === taskId);
     if (!currentTask || !holidayId) return;
 
-    const newCompletionStatus = !currentTask.isCompleted;
-
     try {
-      await updateTask(taskId, {
-        isCompleted: newCompletionStatus,
-      });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      // RTK Query updateEvent mutation handles Home Slice updates automatically
+      await updateEvent(taskId, !currentTask.isCompleted);
     } catch (error) {
-      console.error('Error toggling task:', error);
+      console.error('Error toggling event:', error);
     }
   };
 
@@ -235,8 +227,8 @@ export default function GraduationEventsPage() {
         due_date: values.dueDate || null, // Snake case for API
       };
 
-      await updateTask(editingTask.id, updates);
-      await refreshHomeData(auth0User, holidayId);
+      // RTK Query editEvent mutation handles Home Slice updates automatically
+      await editEvent(editingTask.id, updates);
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -258,12 +250,12 @@ export default function GraduationEventsPage() {
     if (!taskToDelete?.id || !holidayId || !auth0User) return;
 
     try {
-      await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
+      // RTK Query deleteEvent mutation handles Home Slice updates automatically
+      await deleteEvent(taskToDelete.id);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error('Error deleting event:', error);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     }
