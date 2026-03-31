@@ -78,6 +78,16 @@ export const selectNeedsHolidaySelection = createSelector(
 );
 
 // Utility selectors for common patterns (memoized)
+export const selectHolidayIdByKey = createSelector(
+  [selectHolidayPreferences, (_: RootState, holidayKey: string) => holidayKey],
+  (holidayPreferences, holidayKey) => {
+    if (!holidayPreferences.length || !holidayKey) return null;
+
+    const preference = holidayPreferences.find(pref => pref.holiday === holidayKey);
+    return preference?.holidayId || null;
+  },
+);
+
 export const selectHolidayIdByRoute = createSelector(
   [selectHolidayPreferences, (_: RootState, route: string) => route],
   (holidayPreferences, route) => {
