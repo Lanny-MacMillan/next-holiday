@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
 import {
@@ -33,14 +32,13 @@ export default function BirthdayCardsPage() {
 
   const {
     createCard,
-    updateCard,
+    updateCard, // Only for completion toggling
+    editCard, // For field editing
     deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Enhanced Compatibility Layer - Get share members with current user inclusion
   const shareData = useAppSelector((state: RootState) =>
@@ -133,9 +131,6 @@ export default function BirthdayCardsPage() {
       // Refresh contacts to include any newly created ones
       dispatch(fetchContacts());
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating card:', error);
@@ -170,10 +165,7 @@ export default function BirthdayCardsPage() {
     if (!cardToDelete || !holidayId) return;
 
     try {
-      await deleteCard(cardToDelete.id, cardToDelete);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await deleteCard(cardToDelete.id);
 
       setShowDeleteModal(false);
       setCardToDelete(null);
@@ -193,10 +185,7 @@ export default function BirthdayCardsPage() {
       // Use enhanced transformCardPayload for consistent handling
       const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await updateCard(cardToEdit.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await editCard(cardToEdit.id, payload);
 
       setShowEditModal(false);
       setCardToEdit(null);
@@ -216,18 +205,8 @@ export default function BirthdayCardsPage() {
     try {
       const card = cards.find((c: any) => c.id === cardId);
       if (card) {
-        // Include all required fields when updating completion status
-        await updateCard(cardId, {
-          recipient: card.recipient,
-          message: card.message,
-          address: card.address || '',
-          contact_id: card.contact_id || null,
-          assigned_to: card.assignedTo || null,
-          isCompleted: !card.isCompleted,
-        });
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+        // Use simple boolean parameter for completion toggling
+        await updateCard(cardId, !card.isCompleted);
       }
     } catch (error) {
       console.error('Error toggling card completion:', error);

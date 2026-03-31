@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
 import { updateSettings } from '@/store/slices/themeSlice';
+import { refreshHomeData } from '@/store/slices/homeSlice';
 
 export default function DisplayModeToggle() {
   const dispatch = useAppDispatch();
@@ -35,12 +36,27 @@ export default function DisplayModeToggle() {
             auth0Sub: auth0User.sub,
           }),
         ).unwrap();
+
+        // Refresh home data so all components get updated display mode context
+        await dispatch(refreshHomeData(auth0User)).unwrap();
       } catch (error) {
         console.error('Failed to update display mode in database:', error);
         // Revert local state if database update fails
         dispatch(updateSettings({ displayMode: currentDisplayMode }));
       } finally {
         setIsLoading(false);
+      }
+    } else {
+      // If no user preferences, still refresh home data for display mode consistency
+      if (auth0User) {
+        try {
+          await dispatch(refreshHomeData(auth0User)).unwrap();
+        } catch (error) {
+          console.error(
+            'Failed to refresh home data after display mode change:',
+            error,
+          );
+        }
       }
     }
   };

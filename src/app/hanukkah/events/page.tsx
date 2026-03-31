@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -40,9 +39,6 @@ export default function HanukkahEventsPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux data access - events are stored as tasks with category "Events" like in Kwanzaa
   const events = useMemo(
@@ -108,9 +104,6 @@ export default function HanukkahEventsPage() {
       // Use the standardized hook function
       await createTask(newTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowFormModal(false);
     } catch (error) {
       console.error('Error creating event:', error);
@@ -126,9 +119,6 @@ export default function HanukkahEventsPage() {
     try {
       // Use the standardized hook function
       await updateTask(eventId, { isCompleted: !event.isCompleted });
-
-      // Refresh home data to update progress on main holiday page
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling event:', error);
     }
@@ -155,9 +145,6 @@ export default function HanukkahEventsPage() {
       // Use the standardized hook function
       await updateTask(selectedEvent.id, updatedTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowFormModal(false);
       setSelectedEvent(null);
     } catch (error) {
@@ -179,9 +166,6 @@ export default function HanukkahEventsPage() {
     try {
       // Use the standardized hook function
       await deleteTask(eventToDelete.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setEventToDelete(null);

@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -43,14 +42,13 @@ export default function GraduationGiftListPage() {
 
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Filter gifts from holiday data (exclude cards)
   const gifts = useMemo(
@@ -96,7 +94,6 @@ export default function GraduationGiftListPage() {
         ...payload,
         assigned_to: values.assigned_to || undefined, // Snake case for API
       });
-      await refreshHomeData(auth0User, holidayId);
 
       // Refresh address book contacts
       dispatch(fetchContacts());
@@ -118,15 +115,9 @@ export default function GraduationGiftListPage() {
     const currentGift = gifts.find((gift: any) => gift.id === giftId);
     if (!currentGift || !holidayId) return;
 
-    const newIsCompleted = !currentGift.isCompleted;
-
     try {
-      await updateGift(giftId, {
-        isCompleted: newIsCompleted,
-      });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      // RTK Query updateGift mutation handles Home Slice updates automatically
+      await updateGift(giftId, !currentGift.isCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
     }
@@ -138,11 +129,10 @@ export default function GraduationGiftListPage() {
     setIsEditSubmitting(true);
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      await updateGift(selectedGift.id, {
+      await editGift(selectedGift.id, {
         ...payload,
         assigned_to: values.assigned_to || null, // Snake case for API
       });
-      await refreshHomeData(auth0User, holidayId);
       setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {
@@ -161,9 +151,6 @@ export default function GraduationGiftListPage() {
     if (deleteConfirm.giftId && holidayId && auth0User) {
       try {
         await deleteGift(deleteConfirm.giftId);
-
-        // Refresh data after successful deletion
-        await refreshHomeData(auth0User, holidayId);
       } catch (error) {
         console.error('Failed to delete gift:', error);
       }

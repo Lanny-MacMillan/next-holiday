@@ -125,7 +125,7 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
         ) : (
           // Non-empty state - render items in a card container with white border in dark mode
           <div
-            className={`card ${cardClassName} rounded-lg shadow-sm overflow-hidden`}
+            className={`card ${cardClassName} rounded-lg shadow-sm overflow-visible`}
             // style={{
             //   borderLeftWidth: isDarkMode ? '4px' : '0',
             //   borderLeftStyle: 'solid' as const,
@@ -137,9 +137,14 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
             //   }),
             // }}
           >
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-visible">
               {items.map((item, index) => (
-                <div key={item.id || item.email || index}>{renderItem(item)}</div>
+                <div
+                  key={item.id || item.email || index}
+                  className="overflow-visible"
+                >
+                  {renderItem(item)}
+                </div>
               ))}
             </div>
           </div>

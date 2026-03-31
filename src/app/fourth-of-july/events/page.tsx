@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -27,7 +26,6 @@ export default function FourthOfJulyEventsPage() {
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -52,7 +50,8 @@ export default function FourthOfJulyEventsPage() {
   // Use hooks for CRUD operations
   const {
     createTask,
-    updateTask,
+    updateEvent,
+    editEvent,
     deleteTask,
     createLoading,
     updateLoading,
@@ -131,7 +130,6 @@ export default function FourthOfJulyEventsPage() {
       };
 
       await createTask(taskData);
-      await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Failed to add event:', error);
@@ -149,12 +147,8 @@ export default function FourthOfJulyEventsPage() {
 
     const newCompletionStatus = !currentTask.isCompleted;
 
-    try {
-      await updateTask(taskId, { isCompleted: newCompletionStatus });
-      await refreshHomeData(auth0User, holidayId);
-    } catch (error) {
-      console.error('Failed to toggle task:', error);
-    }
+    // Use dedicated updateEvent function - RTK Query handles Home Slice updates automatically
+    await updateEvent(taskId, newCompletionStatus);
   }
 
   const handleEditEvent = (task: any) => {
@@ -175,8 +169,8 @@ export default function FourthOfJulyEventsPage() {
         category: 'Events',
       };
 
-      await updateTask(editingTask.id, updatedTask);
-      await refreshHomeData(auth0User, holidayId);
+      // Use dedicated editEvent function - RTK Query handles Home Slice updates automatically
+      await editEvent(editingTask.id, updatedTask);
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -197,14 +191,9 @@ export default function FourthOfJulyEventsPage() {
   async function handleConfirmDelete() {
     if (!taskToDelete || !holidayId || !auth0User) return;
 
-    try {
-      await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
-      setShowDeleteModal(false);
-      setTaskToDelete(null);
-    } catch (error) {
-      console.error('Failed to delete task:', error);
-    }
+    await deleteTask(taskToDelete.id);
+    setShowDeleteModal(false);
+    setTaskToDelete(null);
   }
 
   function handleCancelDelete() {

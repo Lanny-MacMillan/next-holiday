@@ -38,6 +38,21 @@ const EventItems = <T extends BaseEventTask>({
   holidayColor,
   backgroundColor,
 }: EventItemsProps<T>) => {
+  // Safe date formatting to avoid timezone issues
+  const formatDate = (dateString: string) => {
+    // Handle both date-only strings (YYYY-MM-DD) and ISO timestamps
+    if (dateString.includes('T')) {
+      // ISO timestamp - extract date part only to avoid timezone issues
+      const datePart = dateString.split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString();
+    } else {
+      // Date-only string - create date without timezone conversion
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString();
+    }
+  };
+
   // Get display mode from Redux settings and user preferences (fallback to prop)
   const { settings } = useAppSelector((state: any) => state.theme);
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
@@ -211,7 +226,7 @@ const EventItems = <T extends BaseEventTask>({
                 )}
                 {task.completedDate && (
                   <div className="text-xs text-green-200 mt-1">
-                    Completed: {new Date(task.completedDate).toLocaleDateString()}
+                    Completed: {formatDate(task.completedDate)}
                   </div>
                 )}
               </div>
@@ -363,7 +378,7 @@ const EventItems = <T extends BaseEventTask>({
             <div
               className={`text-xs text-${themeColor}-600 dark:text-${themeColor}-400 mt-1`}
             >
-              Completed: {new Date(task.completedDate).toLocaleDateString()}
+              Completed: {formatDate(task.completedDate)}
             </div>
           )}
         </div>

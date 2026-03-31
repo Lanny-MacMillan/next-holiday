@@ -5,13 +5,8 @@ import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
-import {
-  selectIsHolidayShared,
-  selectShareByHolidayKey,
-} from '@/store/slices/sharesSlice';
-import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
+import { updateGuestInHomeData } from '@/store/slices/homeSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -22,7 +17,11 @@ import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
-import { getFormConfigEnhanced } from '@/config/formConfigs';
+import {
+  getFormConfigEnhanced,
+  guestsFormConfig,
+  editGuestsFormConfig,
+} from '@/config/formConfigs';
 
 interface Guest {
   id: string;
@@ -55,39 +54,50 @@ export default function BabyShowerGuestListPage() {
     deleteGuestState,
   } = useGuestMutations();
 
-  const { refreshHomeData } = useRefreshHomeData();
-
-  // Get guest lists from home data
-  const guestLists = useAppSelector(
-    holidayId ? selectGuestListsByHoliday(holidayId) : () => [],
-  ) as any[];
+  // Get guest lists from holiday data (matching birthday/thanksgiving pattern)
+  const guestLists = useMemo(
+    () => holidayData?.guestLists || [],
+    [holidayData?.guestLists],
+  );
 
   // Transform guest list data to match expected format
-  const guests = useMemo(
-    () =>
-      guestLists.map((guestList: any) => ({
-        id: guestList.id,
-        name: guestList.contact?.name || 'Unknown',
-        email: guestList.contact?.email || undefined,
-        phone: guestList.contact?.phone || undefined,
-        address: guestList.contact?.streetAddress || undefined,
-        rsvpStatus: guestList.rsvpStatus || 'pending',
-        numberOfGuests: 1, // Default to 1 since this isn't stored in the current schema
-        notes: guestList.notes || undefined,
-        isCompleted: guestList.rsvpStatus === 'confirmed',
-        createdAt: guestList.createdAt,
-        updatedAt: guestList.updatedAt,
-      })),
-    [guestLists],
-  );
+  const guests = useMemo(() => {
+    const guestsMap = new Map();
 
-  const contacts = useAppSelector((state: any) => state.addressBook.contacts);
+    const transformedGuests = guestLists
+      .filter((guestList: any) => guestList && guestList.id)
+      .map((guestList: any) => {
+        const transformed = {
+          id: guestList.id,
+          name: guestList.contact?.name || 'Unknown Guest',
+          email: guestList.contact?.email || undefined,
+          phone: guestList.contact?.phone || undefined,
+          address: guestList.contact?.streetAddress || undefined,
+          rsvpStatus: guestList.rsvpStatus || 'pending',
+          numberOfGuests: guestList.numberOfGuests || 1,
+          notes: guestList.notes || undefined,
+          isCompleted:
+            guestList.rsvpStatus === 'confirmed' || guestList.isCompleted || false,
+          createdAt: guestList.createdAt,
+          updatedAt: guestList.updatedAt,
+        };
+        return transformed;
+      })
+      .filter((guest: any) => {
+        // Ensure unique guests by ID to prevent duplicate keys
+        if (guestsMap.has(guest.id)) return false;
+        guestsMap.set(guest.id, true);
+        return true;
+      });
+
+    return transformedGuests;
+  }, [guestLists]);
+
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector((state: any) =>
-    selectShareByHolidayKey(state, 'baby-shower'),
-  );
-  const shareMembers = shareData?.members || [];
+  const shareMembers =
+    useAppSelector((state: any) => state.shares.shareMembers) || [];
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     show: boolean;
@@ -116,26 +126,94 @@ export default function BabyShowerGuestListPage() {
     if (!holidayId || !auth0User) return;
 
     if (editingGuest) {
-      // Update existing guest
-      await editGuest({
-        holidayId,
-        guestId: editingGuest.id,
-        payload: {
-          name: formValues.name,
-          email: formValues.email || undefined,
-          phone: formValues.phone || undefined,
-          address: formValues.address || undefined,
-          rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
-          notes: formValues.notes || undefined,
-        },
-        auth0User,
-      }).unwrap();
+      // Find original guest list data for error reversion
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === editingGuest.id,
+      );
+      if (!originalGuestList) return;
 
-      await refreshHomeData(auth0User, holidayId);
+      // Prepare update payload (matching form config field names)
+      const updatePayload = {
+        name: formValues.name,
+        email: formValues.email || undefined,
+        phone: formValues.phone || undefined,
+        address: formValues.address || undefined,
+        rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined', // Matches form config field id
+        notes: formValues.notes || undefined,
+      };
+
+      // Manual optimistic update - update Home Slice immediately (like thanksgiving)
+      const optimisticUpdate = {
+        ...originalGuestList,
+        rsvpStatus: updatePayload.rsvpStatus,
+        notes: updatePayload.notes,
+        isCompleted: updatePayload.rsvpStatus === 'confirmed',
+        updatedAt: new Date().toISOString(),
+        // Update nested contact data
+        contact: {
+          ...originalGuestList.contact,
+          name: updatePayload.name,
+          email: updatePayload.email || originalGuestList.contact?.email,
+          phone: updatePayload.phone || originalGuestList.contact?.phone,
+          streetAddress:
+            updatePayload.address || originalGuestList.contact?.streetAddress,
+        },
+      };
+
+      dispatch(
+        updateGuestInHomeData({
+          holidayId,
+          guestId: editingGuest.id,
+          updates: optimisticUpdate,
+        }),
+      );
+
+      // Then make API call
+      try {
+        const result = await editGuest({
+          holidayId,
+          guestId: editingGuest.id,
+          payload: updatePayload,
+          auth0User,
+        });
+
+        // Extract the actual guest data from nested response structure
+        const actualGuestData = result?.data?.data || result?.data;
+
+        if (actualGuestData) {
+          // Update Home Slice with the real server response
+          const serverResponseUpdate = {
+            ...actualGuestData,
+            isCompleted: actualGuestData.rsvpStatus === 'confirmed',
+            // Preserve contact structure
+            contact: actualGuestData.contact || originalGuestList.contact,
+          };
+
+          dispatch(
+            updateGuestInHomeData({
+              holidayId,
+              guestId: editingGuest.id,
+              updates: serverResponseUpdate,
+            }),
+          );
+        }
+      } catch (error) {
+        console.error('❌ Failed to update guest:', error);
+
+        // Revert optimistic update on error
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: originalGuestList, // Revert to original
+          }),
+        );
+      }
+
       setEditingGuest(null);
       setShowForm(false);
     } else {
-      // Add new guest
+      // Add new guest - createGuest mutation should handle Home Slice updates automatically
       await createGuest({
         holidayId,
         payload: {
@@ -143,13 +221,12 @@ export default function BabyShowerGuestListPage() {
           email: formValues.email || undefined,
           phone: formValues.phone || undefined,
           address: formValues.address || undefined,
-          rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
+          rsvpStatus: formValues.rsvpStatus || 'pending', // Ensure RSVP status is preserved
+          numberOfGuests: parseInt(formValues.numberOfGuests) || 1,
           notes: formValues.notes || undefined,
         },
         auth0User,
       }).unwrap();
-
-      await refreshHomeData(auth0User, holidayId);
 
       // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
       dispatch(resetContacts());
@@ -171,16 +248,37 @@ export default function BabyShowerGuestListPage() {
   async function handleToggleGuest(guestId: string) {
     if (!holidayId || !auth0User) return;
 
+    const guestList = guestLists.find((gl: any) => gl.id === guestId);
+    if (!guestList) return;
+
+    const newRsvpStatus =
+      guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
+
+    // Manual optimistic update - update Home Slice immediately
+    dispatch(
+      updateGuestInHomeData({
+        holidayId,
+        guestId,
+        updates: {
+          ...guestList,
+          rsvpStatus: newRsvpStatus,
+          isCompleted: newRsvpStatus === 'confirmed',
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    );
+
+    // Then make API call
     try {
       await updateGuest({
         holidayId,
         guestId,
-        isCompleted: true, // This will toggle the RSVP status
+        isCompleted: newRsvpStatus === 'confirmed',
         auth0User,
-      }).unwrap();
-
-      await refreshHomeData(auth0User, holidayId);
+      });
     } catch (error) {
+      // Revert on error
+      dispatch(updateGuestInHomeData({ holidayId, guestId, updates: guestList }));
       console.error('Error toggling guest:', error);
     }
   }
@@ -202,8 +300,6 @@ export default function BabyShowerGuestListPage() {
           guestId: deleteConfirm.guestId,
           auth0User,
         }).unwrap();
-
-        await refreshHomeData(auth0User, holidayId);
       } catch (error) {
         console.error('Failed to delete guest:', error);
       }
@@ -248,29 +344,50 @@ export default function BabyShowerGuestListPage() {
     );
   }
 
-  const sortedGuests = sortGuests(guests);
-  const pendingGuests = sortedGuests.filter(
-    (guest: Guest) => guest.rsvpStatus === 'pending',
-  );
-  const confirmedGuests = sortedGuests.filter(
-    (guest: Guest) => guest.rsvpStatus === 'confirmed',
-  );
-  const declinedGuests = sortedGuests.filter(
-    (guest: Guest) => guest.rsvpStatus === 'declined',
+  // Wrap filtered sections in useMemo to ensure proper re-rendering
+  const sortedGuests = useMemo(() => {
+    return sortGuests(guests);
+  }, [guests, sortBy]);
+
+  const pendingGuests = useMemo(() => {
+    const filtered = sortedGuests.filter(
+      (guest: Guest) => guest.rsvpStatus === 'pending',
+    );
+    return filtered;
+  }, [sortedGuests]);
+
+  const confirmedGuests = useMemo(() => {
+    const filtered = sortedGuests.filter(
+      (guest: Guest) => guest.rsvpStatus === 'confirmed',
+    );
+    return filtered;
+  }, [sortedGuests]);
+
+  const declinedGuests = useMemo(() => {
+    const filtered = sortedGuests.filter(
+      (guest: Guest) => guest.rsvpStatus === 'declined',
+    );
+    return filtered;
+  }, [sortedGuests]);
+
+  // Form configurations - use direct imports like working versions
+  const addFormConfig = useMemo(
+    () => ({
+      ...guestsFormConfig,
+      contacts: contacts,
+      shareMembers: shareMembers,
+    }),
+    [contacts, shareMembers],
   );
 
-  // Enhanced Compatibility Layer form configurations
-  const addFormConfig = getFormConfigEnhanced('guests', 'add', {
-    holidayKey: 'baby-shower',
-    shareMembers: shareMembers,
-    auth0User: auth0User,
-  });
-
-  const editFormConfig = getFormConfigEnhanced('guests', 'edit', {
-    holidayKey: 'baby-shower',
-    shareMembers: shareMembers,
-    auth0User: auth0User,
-  });
+  const editFormConfig = useMemo(
+    () => ({
+      ...editGuestsFormConfig,
+      contacts: contacts,
+      shareMembers: shareMembers,
+    }),
+    [contacts, shareMembers],
+  );
 
   return (
     <div className="min-h-screen baby-shower-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -390,7 +507,7 @@ export default function BabyShowerGuestListPage() {
                 email: editingGuest.email || '',
                 phone: editingGuest.phone || '',
                 address: editingGuest.address || '',
-                rsvpStatus: editingGuest.rsvpStatus,
+                rsvpStatus: editingGuest.rsvpStatus, // Matches form config field id
                 notes: editingGuest.notes || '',
               }
             : {}

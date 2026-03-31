@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -37,11 +36,11 @@ export default function FourthOfJulySuppliesListPage() {
   const shareMembers = shareData?.members || [];
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Use hooks for gift CRUD operations
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
@@ -86,13 +85,13 @@ export default function FourthOfJulySuppliesListPage() {
   }, [dispatch, homeInitialized]);
 
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.name?.trim() || !values.recipient?.trim()) return;
+    // For supplies, only name is required (no recipient needed)
+    if (!values.name?.trim()) return;
     if (!holidayId || !auth0User) return;
     setIsSubmitting(true);
     try {
       const giftData = transformGiftPayload(values, contacts, shareMembers);
       await createGift(giftData);
-      await refreshHomeData(auth0User, holidayId);
       setShowAddModal(false);
     } catch (error) {
       console.error('Failed to add gift:', error);
@@ -126,9 +125,7 @@ export default function FourthOfJulySuppliesListPage() {
       if (!currentGift) return;
 
       // Toggle the completion status
-      const updateData = { isCompleted: !currentGift.isCompleted };
-      await updateGift(giftId, updateData);
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, !currentGift.isCompleted);
     } catch (error) {
       console.error('Failed to toggle gift:', error);
     }
@@ -144,7 +141,6 @@ export default function FourthOfJulySuppliesListPage() {
 
     try {
       await deleteGift(giftToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
@@ -167,8 +163,7 @@ export default function FourthOfJulySuppliesListPage() {
     setIsEditSubmitting(true);
     try {
       const giftData = transformGiftPayload(values, contacts, shareMembers);
-      await updateGift(selectedGift.id, giftData);
-      await refreshHomeData(auth0User, holidayId);
+      await editGift(selectedGift.id, giftData);
       setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {

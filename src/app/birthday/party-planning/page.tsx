@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -114,8 +113,6 @@ export default function BirthdayPartyPlanningPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get party planning tasks from holiday data
   const partyPlanning = useMemo(
@@ -243,9 +240,6 @@ export default function BirthdayPartyPlanningPage() {
         category: 'Party Planning',
       });
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -269,8 +263,6 @@ export default function BirthdayPartyPlanningPage() {
         });
       }
 
-      // Refresh home data ONCE after all tasks are added
-      await refreshHomeData(auth0User, holidayId);
       setShowDefaultTasks(false);
     } catch (error) {
       console.error('Failed to add default tasks:', error);
@@ -291,9 +283,6 @@ export default function BirthdayPartyPlanningPage() {
       const newCompletionStatus = !currentTask.isCompleted;
 
       await updateTask(taskId, { isCompleted: newCompletionStatus });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling task:', error);
     }
@@ -318,9 +307,6 @@ export default function BirthdayPartyPlanningPage() {
 
       await updateTask(editingTask.id, updatedTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -341,9 +327,6 @@ export default function BirthdayPartyPlanningPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Check if this was the last task and re-show default tasks prompt
       const remainingTasks = partyPlanning.filter(

@@ -18,6 +18,7 @@ import {
 } from '@/store/slices/invitesSlice';
 import { setHomeData, removeSharedHolidayData } from '@/store/slices/homeSlice';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useShareCleanup } from '@/hooks/useShareCleanup';
 import SharedUserList from './SharedUserList';
 import UserAvatar from './UserAvatar';
 
@@ -40,6 +41,7 @@ export default function SharedIndicatorEnhanced({
 }: SharedIndicatorEnhancedProps) {
   const { user } = useAuth0();
   const dispatch = useAppDispatch();
+  const { cleanupAfterLeaveShare, cleanupAfterRemoveMember } = useShareCleanup();
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -145,7 +147,7 @@ export default function SharedIndicatorEnhanced({
 
     try {
       if (actionToConfirm.type === 'leave') {
-        const result = await dispatch(
+        await dispatch(
           leaveShare({
             shareId: share.shareId,
             userId: actionToConfirm.userId,
@@ -153,29 +155,8 @@ export default function SharedIndicatorEnhanced({
           }),
         ).unwrap();
 
-        // Immediately remove the shared holiday data from Redux for better UX
-        // Find the holidayId for this holidayKey
-        const holidayPref = homeData?.holidayPreferences?.find(pref => {
-          // Normalize both keys for comparison
-          const normalizeKey = (key: string) =>
-            key.toLowerCase().replace(/[-\s']/g, '');
-          return (
-            normalizeKey(pref.holiday) === normalizeKey(holidayKey) ||
-            normalizeKey(pref.holidayId) === normalizeKey(holidayKey)
-          );
-        });
-
-        if (holidayPref?.holidayId) {
-          dispatch(removeSharedHolidayData({ holidayId: holidayPref.holidayId }));
-        } else {
-          console.error('❌ SharedIndicator: Could not find holiday to remove', {
-            holidayKey,
-            availableHolidays: homeData?.holidayPreferences?.map(p => ({
-              holiday: p.holiday,
-              holidayId: p.holidayId,
-            })),
-          });
-        }
+        // Use comprehensive cleanup after leaving share
+        await cleanupAfterLeaveShare(user);
       } else {
         await dispatch(
           removeMemberFromShare({
@@ -183,42 +164,9 @@ export default function SharedIndicatorEnhanced({
             userId: actionToConfirm.userId,
           }),
         ).unwrap();
-      }
 
-      // Small delay to ensure backend operations are completed
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Refresh all data to update the homepage
-      if (user?.sub) {
-        await dispatch(refreshShares(user.sub)); // Use refreshShares instead of fetchShares
-
-        // Also refresh home data to ensure holiday cards update properly
-        try {
-          const response = await fetch('/api/home', {
-            headers: {
-              'Content-Type': 'application/json',
-              'x-test-user': JSON.stringify({
-                sub: user.sub,
-                email: user.email,
-                name: user.name,
-                picture: user.picture,
-              }),
-            },
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            const data = result.data;
-
-            // Update Redux store with fresh home data
-            dispatch(setHomeData(data));
-          }
-        } catch (refreshError) {
-          console.error(
-            'Failed to refresh home data after share operation:',
-            refreshError,
-          );
-        }
+        // Use cleanup after removing member
+        await cleanupAfterRemoveMember(user);
       }
 
       setShowConfirmModal(false);

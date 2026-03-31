@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import {
@@ -32,12 +31,12 @@ export default function MothersDayTasksPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
   const dispatch = useAppDispatch();
@@ -120,7 +119,7 @@ export default function MothersDayTasksPage() {
     const task = tasks.find((t: any) => t.id === taskId);
     if (!task || !holidayId) return;
 
-    const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
+    await toggleTask(taskId, !task.isCompleted);
     dispatch(
       updateTaskInHomeData({
         holidayId,
@@ -128,7 +127,6 @@ export default function MothersDayTasksPage() {
         updates: { isCompleted: !task.isCompleted },
       }),
     );
-    await refreshHomeData(auth0User, holidayId);
   }
 
   // Modal handlers
@@ -170,7 +168,6 @@ export default function MothersDayTasksPage() {
     const result = await createTask(taskData);
     if (result) {
       dispatch(addTaskToHomeData({ holidayId, task: result }));
-      await refreshHomeData(auth0User, holidayId);
       closeForm();
     }
   };
@@ -192,7 +189,6 @@ export default function MothersDayTasksPage() {
           updates: formData,
         }),
       );
-      await refreshHomeData(auth0User, holidayId);
       handleEditModalClose();
     }
   };
@@ -203,7 +199,6 @@ export default function MothersDayTasksPage() {
     const result = await deleteTask(taskToDelete.id);
     if (result) {
       dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
-      await refreshHomeData(auth0User, holidayId);
       handleDeleteModalClose();
     }
   };

@@ -3,16 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import Toast from '@/components/common/Toast';
-import {
-  updateGiftInHomeData,
-  addGiftToHomeData,
-  removeGiftFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
+import { setHomeData } from '@/store/slices/homeSlice';
 import { transformSuppliesPayload } from '@/utils/formTransformers';
 import {
   selectIsHolidayShared,
@@ -86,15 +80,13 @@ export default function ThanksgivingShoppingListPage() {
   // Use standardized mutation hooks for gifts
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Use only Redux data - no GET API calls on holiday pages
   const displayGifts = useMemo(
@@ -129,10 +121,6 @@ export default function ThanksgivingShoppingListPage() {
       const payload = transformSuppliesPayload(values, shareMembers);
       const result = await createGift(payload);
 
-      dispatch(addGiftToHomeData({ holidayId, gift: result }));
-
-      await refreshHomeData(auth0User, holidayId);
-
       setShowFormModal(false);
     } catch (error) {
       console.error('Error creating supply item:', error);
@@ -164,18 +152,7 @@ export default function ThanksgivingShoppingListPage() {
       const newIsCompleted = !currentGift.isCompleted;
 
       // Update the gift using hook
-      await updateGift(giftId, {
-        isCompleted: newIsCompleted,
-      });
-
-      // Update Redux state immediately
-      dispatch(
-        updateGiftInHomeData({
-          holidayId,
-          giftId,
-          updates: { isCompleted: newIsCompleted },
-        }),
-      );
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
       setToastMessage('Error updating item. Please try again.');
@@ -195,17 +172,6 @@ export default function ThanksgivingShoppingListPage() {
     try {
       // Delete gift using hook
       await deleteGift(giftToDelete.id);
-
-      // Update Redux state immediately
-      dispatch(
-        removeGiftFromHomeData({
-          holidayId,
-          giftId: giftToDelete.id,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -233,19 +199,7 @@ export default function ThanksgivingShoppingListPage() {
     try {
       const payload = transformSuppliesPayload(values, shareMembers);
       // Update gift using hook
-      const result = await updateGift(selectedGift.id, payload);
-
-      // Update Redux state immediately
-      dispatch(
-        updateGiftInHomeData({
-          holidayId,
-          giftId: selectedGift.id,
-          updates: result,
-        }),
-      );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      const result = await editGift(selectedGift.id, payload);
 
       setShowFormModal(false);
       setSelectedGift(null);

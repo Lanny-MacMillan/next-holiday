@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -98,8 +97,6 @@ export default function ValentinesReservationsPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'valentines'),
@@ -200,9 +197,6 @@ export default function ValentinesReservationsPage() {
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId, task: result }));
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -279,9 +273,6 @@ export default function ValentinesReservationsPage() {
         }),
       );
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -310,9 +301,6 @@ export default function ValentinesReservationsPage() {
           taskId: taskToDelete.id,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setTaskToDelete(null);

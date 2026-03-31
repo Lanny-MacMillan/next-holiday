@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
+import { refreshShares } from '@/store/slices/sharesSlice';
+import { selectHolidayPrefById } from '@/store/selectors/home';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
@@ -27,11 +29,35 @@ export default function ChristmasGiftListPage() {
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
   // Use standardized hooks
-  const { holidayId, holidayData, auth0User, homeInitialized } =
-    useHolidayPageData();
+  const {
+    holidayId: baseHolidayId,
+    holidayData: baseHolidayData,
+    auth0User,
+    homeInitialized,
+    holidayPreferences,
+  } = useHolidayPageData();
+
+  // Get share data first to potentially override holidayId
+  const shareData = useAppSelector(state => {
+    if (!baseHolidayId) return null;
+    // The shares come as an array, and we need to find one that matches this holiday
+    // The API response uses holidayKey (like 'christmas'), not holidayId (UUID)
+    return state.shares.shares.find(
+      (share: any) => share?.holidayKey === 'christmas', // Use the holiday key, not the UUID
+    );
+  });
+
+  // Use shared holiday ID if available, otherwise fall back to base holiday ID
+  const holidayId = shareData?.holidayId || baseHolidayId;
+
+  // Get holiday data for the correct holiday ID (shared vs base)
+  const holidayData =
+    useAppSelector(state => selectHolidayPrefById(state, holidayId)) ||
+    baseHolidayData;
 
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
@@ -39,38 +65,45 @@ export default function ChristmasGiftListPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
-
   // Get share members for Enhanced Compatibility Layer
-  const shareData = useAppSelector(state =>
-    selectShareByHolidayKey(state, 'christmas'),
-  );
+  // shareData is already retrieved above for holidayId logic
   const baseMembers = shareData?.members || [];
+
   // Always include current user in shareMembers for assignTo functionality
   const shareMembers = auth0User
     ? [
-        // Add current user first
-        {
-          userId: auth0User.sub || '',
-          uuid: auth0User.id || '', // Database UUID for Enhanced Compatibility Layer
-          name: auth0User.name || 'Me',
-          email: auth0User.email || '',
-          role: 'owner' as const,
-        },
-        // Add other members, filtering out current user if already present
+        // First, try to find current user in baseMembers (which has updated names)
+        ...baseMembers
+          .filter((member: any) => member.userId === auth0User.sub)
+          .map((member: any) => ({
+            ...member,
+            uuid: member.uuid || member.userId,
+            role: 'owner' as const, // Mark current user as owner
+          })),
+        // If current user not in baseMembers, add them manually with Auth0 data
+        ...(baseMembers.find((member: any) => member.userId === auth0User.sub)
+          ? []
+          : [
+              {
+                userId: auth0User.sub || '',
+                uuid: auth0User.id || '',
+                name: auth0User.name || 'Me',
+                email: auth0User.email || '',
+                role: 'owner' as const,
+              },
+            ]),
+        // Add other members, filtering out current user
         ...baseMembers
           .filter((member: any) => member.userId !== auth0User.sub)
           .map((member: any) => ({
             ...member,
-            uuid: member.uuid || member.userId, // Preserve existing uuid, fallback to userId only if needed
+            uuid: member.uuid || member.userId,
           })),
       ]
     : baseMembers;
 
   // Use memoized gifts filtering from holiday data
   const displayGifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
-
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -89,9 +122,18 @@ export default function ChristmasGiftListPage() {
   useEffect(() => {
     // Always fetch contacts for address book functionality
     dispatch(fetchContacts());
-  }, [dispatch]);
+
+    // Force refresh shares data to get the latest with holidayId field
+    if (auth0User?.sub) {
+      dispatch(refreshShares(auth0User.sub));
+    }
+  }, [dispatch, auth0User?.sub]);
 
   async function handleAddGift(values: Record<string, any>) {
+    console.log('🎁 Form values received:', values);
+    console.log('🎁 Recipient field value:', values.recipient);
+    console.log('🎁 Name field value:', values.name);
+
     if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
@@ -120,11 +162,13 @@ export default function ChristmasGiftListPage() {
 
       const payload = transformGiftPayload(values, contacts, shareMembers);
 
+      console.log('🔄 Transform input - values:', values);
+      console.log('🔄 Transform input - values.recipient:', values.recipient);
+      console.log('🔄 Transform output payload:', payload);
+      console.log('🔄 Payload recipient_name:', payload.recipient_name);
+
       // Use the standardized hook function
       await createGift(payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Refresh address book contacts
       dispatch(fetchContacts());
@@ -185,12 +229,7 @@ export default function ChristmasGiftListPage() {
       const newIsCompleted = !currentGift.isCompleted;
 
       // Use the standardized hook function
-      await updateGift(giftId, {
-        isCompleted: newIsCompleted,
-      });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
@@ -208,9 +247,6 @@ export default function ChristmasGiftListPage() {
     try {
       // Use the standardized hook function
       await deleteGift(giftToDelete.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -258,10 +294,7 @@ export default function ChristmasGiftListPage() {
       const payload = transformGiftPayload(values, contacts, shareMembers);
 
       // Use the standardized hook function
-      await updateGift(selectedGift.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      await editGift(selectedGift.id, payload);
 
       // Show success toast
       setToastMessage('Gift updated successfully!');
@@ -366,26 +399,14 @@ export default function ChristmasGiftListPage() {
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
-    // For assigned_to, we need to reverse-map UUID back to Auth0 user ID for form display
+    // For assigned_to, use the UUID directly (not Auth0 user ID)
     let assignedToValue = '';
     if (selectedGift.assignedTo) {
-      // Find the member whose UUID matches the selectedGift.assignedTo
-      const assignedMember = shareMembers.find(
-        (m: any) => m.uuid === selectedGift.assignedTo,
-      );
-      if (assignedMember) {
-        assignedToValue = assignedMember.userId; // Use the Auth0 user ID for form
-        console.log(
-          `Reverse-mapping UUID ${selectedGift.assignedTo} to userId ${assignedMember.userId} for form display`,
-        );
-      } else {
-        console.warn(
-          `Could not find member for UUID ${selectedGift.assignedTo}, clearing assignment in form`,
-        );
-      }
+      // The form field expects UUID format, and selectedGift.assignedTo is already a UUID
+      assignedToValue = selectedGift.assignedTo;
     }
 
-    return {
+    const initialValues = {
       recipient: selectedGift.recipient || '',
       name: selectedGift.name || '',
       description: selectedGift.description || '',
@@ -395,6 +416,8 @@ export default function ChristmasGiftListPage() {
       assigned_to: assignedToValue,
       notes: selectedGift.notes || '',
     };
+
+    return initialValues;
   };
 
   return (

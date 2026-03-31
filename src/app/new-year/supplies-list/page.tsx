@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import Toast from '@/components/common/Toast';
 import {
@@ -35,15 +34,13 @@ export default function NewYearSuppliesListPage() {
 
   const {
     createGift,
-    updateGift,
+    updateGift, // For completion toggling
+    editGift, // For field editing
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     state.shares ? state.shares.shareMembers?.length > 0 : false,
@@ -92,16 +89,6 @@ export default function NewYearSuppliesListPage() {
     auth0User: { sub: auth0User?.sub, id: auth0User?.id, name: auth0User?.name },
   });
 
-  // Helper function to update Redux state after gift operations (kept for compatibility)
-  const updateGiftInRedux = (
-    giftData: any,
-    operation: 'add' | 'update' | 'delete',
-  ) => {
-    // Since we're using standardized hooks, this function is simplified
-    // The hooks handle Redux updates automatically
-    console.log(`Gift operation: ${operation}`, giftData);
-  };
-
   // State management
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -138,10 +125,6 @@ export default function NewYearSuppliesListPage() {
       console.log('Payload created successfully:', payload);
 
       const result = await createGift(payload);
-      updateGiftInRedux(result, 'add');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowAddModal(false);
     } catch (error) {
@@ -168,14 +151,8 @@ export default function NewYearSuppliesListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      // Update the gift using the hook
-      await updateGift(giftId, { isCompleted: newIsCompleted });
-
-      // Update Redux state directly
-      updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
-
-      // Refresh home data to ensure UI is in sync and progress updates
-      await refreshHomeData(auth0User, holidayId);
+      // Update the gift using the hook with correct parameter structure
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
       setToastMessage('Error updating item. Please try again.');
@@ -195,12 +172,6 @@ export default function NewYearSuppliesListPage() {
     try {
       // Delete using the hook
       await deleteGift(giftToDelete.id);
-
-      // Update Redux state directly
-      updateGiftInRedux({ id: giftToDelete.id }, 'delete');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -232,15 +203,9 @@ export default function NewYearSuppliesListPage() {
       const payload = transformSuppliesPayload(values, shareMembers);
       console.log('Update payload created:', payload);
 
-      // Update using the hook
-      const result = await updateGift(selectedGift.id, payload);
+      // Update using the editGift hook for field updates
+      const result = await editGift(selectedGift.id, payload);
       console.log('Update result:', result);
-
-      // Update Redux state directly
-      updateGiftInRedux(result, 'update');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowEditModal(false);
       setSelectedGift(null);

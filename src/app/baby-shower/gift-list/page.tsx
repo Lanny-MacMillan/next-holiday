@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -42,13 +41,12 @@ export default function BabyShowerGiftListPage() {
   const {
     createGift,
     updateGift,
+    editGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get gift lists from holiday data
   const displayGifts = useMemo(() => {
@@ -83,9 +81,7 @@ export default function BabyShowerGiftListPage() {
 
     const result = await createGift(payload);
 
-    // First refresh home data to get fresh contacts from database
-    await refreshHomeData(auth0User, holidayId);
-
+    // Fetch contacts to keep address book in sync
     dispatch(fetchContacts());
 
     setShowAddModal(false);
@@ -112,8 +108,7 @@ export default function BabyShowerGiftListPage() {
       // Toggle the completion status
       const newIsCompleted = !currentGift.isCompleted;
 
-      await updateGift(giftId, { isCompleted: newIsCompleted });
-      await refreshHomeData(auth0User, holidayId);
+      await updateGift(giftId, newIsCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
@@ -130,7 +125,6 @@ export default function BabyShowerGiftListPage() {
 
     try {
       await deleteGift(giftToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
@@ -152,8 +146,7 @@ export default function BabyShowerGiftListPage() {
     if (!selectedGift || !holidayId || !auth0User) return;
 
     const payload = transformGiftPayload(values, contacts, shareMembers);
-    await updateGift(selectedGift.id, payload);
-    await refreshHomeData(auth0User, holidayId);
+    await editGift(selectedGift.id, payload);
     setShowEditModal(false);
     setSelectedGift(null);
   }

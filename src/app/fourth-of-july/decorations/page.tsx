@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -27,7 +26,6 @@ export default function FourthOfJulyDecorationsPage() {
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -42,6 +40,7 @@ export default function FourthOfJulyDecorationsPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
@@ -103,7 +102,6 @@ export default function FourthOfJulyDecorationsPage() {
 
     try {
       await createTask(taskData);
-      await refreshHomeData(auth0User, holidayId);
       setShowForm(false);
     } catch (error) {
       console.error('Failed to add task:', error);
@@ -119,8 +117,7 @@ export default function FourthOfJulyDecorationsPage() {
     }
 
     try {
-      await updateTask(taskId, { isCompleted: !currentTask.isCompleted });
-      await refreshHomeData(auth0User, holidayId);
+      await toggleTask(taskId, !currentTask.isCompleted);
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }
@@ -145,7 +142,6 @@ export default function FourthOfJulyDecorationsPage() {
 
     try {
       await updateTask(editingTask.id, updatedTask);
-      await refreshHomeData(auth0User, holidayId);
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -166,7 +162,6 @@ export default function FourthOfJulyDecorationsPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {

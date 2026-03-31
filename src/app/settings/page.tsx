@@ -11,7 +11,7 @@ import {
 import { updateSettings } from '@/store/slices/themeSlice';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
 import { saveHolidayPreferences } from '@/store/slices/holidayPreferencesSlice';
-import { setHomeData } from '@/store/slices/homeSlice';
+import { setHomeData, refreshHomeData } from '@/store/slices/homeSlice';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import HolidayDeleteConfirmationModal from '@/components/modals/HolidayDeleteConfirmationModal';
@@ -343,6 +343,18 @@ export default function SettingsPage() {
               auth0Sub: user.sub,
             }),
           ).unwrap();
+
+          // If theme or display mode changed, refresh home data for component updates
+          if (key === 'theme' || key === 'displayMode') {
+            try {
+              await dispatch(refreshHomeData(user)).unwrap();
+            } catch (refreshError) {
+              console.error(
+                'Failed to refresh home data after theme/display mode change:',
+                refreshError,
+              );
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to update preferences in database:', error);

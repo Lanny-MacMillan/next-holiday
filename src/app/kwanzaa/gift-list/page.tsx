@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateGiftInHomeData,
@@ -41,15 +40,13 @@ export default function KwanzaaGiftListPage() {
   // Use standardized mutation hooks for gift operations
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -109,9 +106,6 @@ export default function KwanzaaGiftListPage() {
       // Update Redux state immediately
       dispatch(addGiftToHomeData({ holidayId: holidayId, gift: result }));
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       // Refresh address book contacts
       dispatch(fetchContacts());
 
@@ -143,9 +137,7 @@ export default function KwanzaaGiftListPage() {
       const currentGift = gifts.find((gift: any) => gift.id === giftId);
       if (!currentGift) return;
 
-      const result = await updateGift(giftId, {
-        isCompleted: !currentGift.isCompleted,
-      });
+      const result = await updateGift(giftId, !currentGift.isCompleted);
 
       // Update Redux state
       dispatch(
@@ -155,9 +147,6 @@ export default function KwanzaaGiftListPage() {
           updates: { isCompleted: !currentGift.isCompleted },
         }),
       );
-
-      // Refresh home data to update progress on main holiday page
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
     }
@@ -182,9 +171,6 @@ export default function KwanzaaGiftListPage() {
         }),
       );
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
@@ -207,7 +193,7 @@ export default function KwanzaaGiftListPage() {
 
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      const result = await updateGift(selectedGift.id, payload);
+      const result = await editGift(selectedGift.id, payload);
 
       // Update Redux state
       dispatch(
@@ -217,9 +203,6 @@ export default function KwanzaaGiftListPage() {
           updates: result,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
       setSelectedGift(null);

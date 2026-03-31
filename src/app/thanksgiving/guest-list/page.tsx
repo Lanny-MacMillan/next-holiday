@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+
 import { fetchContacts, resetContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
 import GuestCardItem from '@/components/cards/guest/GuestCardItem';
@@ -14,15 +14,13 @@ import RSVPSection from '@/components/common/RSVPSection';
 import ReservationsTracker from '@/components/cards/reservation/ReservationsTracker';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
+import Toast from '@/components/common/Toast';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
+import { guestsFormConfig, editGuestsFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
-import {
-  updateGuestInHomeData,
-  addGuestToHomeData,
-  removeGuestFromHomeData,
-  setHomeData,
-} from '@/store/slices/homeSlice';
+import { setHomeData } from '@/store/slices/homeSlice';
+import { updateGuestInHomeData } from '@/store/slices/homeSlice';
 
 interface Guest {
   id: string;
@@ -60,25 +58,32 @@ export default function ThanksgivingGuestListPage() {
     error: guestsError,
   } = useGuestMutations();
 
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
-
   // Get share members for Enhanced Compatibility Layer
   const shareMembers =
     useAppSelector((state: any) => state.shares.shareMembers) || [];
 
-  // Enhanced Compatibility Layer - Guest form configuration
-  const addFormConfig = getFormConfigEnhanced('guests', 'add', {
-    holidayKey: 'thanksgiving',
-    shareMembers: shareMembers,
-    auth0User: auth0User,
-  });
+  // Get contacts from Redux
+  const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-  const editFormConfig = getFormConfigEnhanced('guests', 'edit', {
-    holidayKey: 'thanksgiving',
-    shareMembers: shareMembers,
-    auth0User: auth0User,
-  });
+  // Enhanced Compatibility Layer - Guest form configuration
+  // Use direct form configs instead of getFormConfigEnhanced to ensure all fields are included
+  const addFormConfig = useMemo(
+    () => ({
+      ...guestsFormConfig,
+      contacts: contacts,
+      shareMembers: shareMembers,
+    }),
+    [contacts, shareMembers],
+  );
+
+  const editFormConfig = useMemo(
+    () => ({
+      ...editGuestsFormConfig,
+      contacts: contacts,
+      shareMembers: shareMembers,
+    }),
+    [contacts, shareMembers],
+  );
 
   // Get guest lists from Redux home data (consistent with other pages)
   // This ensures immediate UI updates when Redux state changes
@@ -86,23 +91,38 @@ export default function ThanksgivingGuestListPage() {
 
   // Transform guest list data to match expected format with proper defaults
   const transformedGuests = useMemo(() => {
-    return guestLists.map((guestList: any) => ({
-      id: guestList.id,
-      name: guestList.contact?.name || 'Unknown Guest', // Get name from nested contact object
-      email: guestList.contact?.email || undefined,
-      phone: guestList.contact?.phone || undefined,
-      address: guestList.contact?.streetAddress || undefined,
-      rsvpStatus: guestList.rsvpStatus || 'pending',
-      numberOfGuests: guestList.numberOfGuests || 1, // Ensure numberOfGuests is never NaN or undefined
-      notes: guestList.notes || undefined,
-      isCompleted:
-        guestList.rsvpStatus === 'confirmed' || guestList.isCompleted || false,
-      createdAt: guestList.createdAt,
-      updatedAt: guestList.updatedAt,
-    }));
-  }, [guestLists]);
+    console.log('🔄 Transforming guests from guestLists:', guestLists);
 
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
+    const guestsMap = new Map();
+
+    const transformed = guestLists
+      .filter((guestList: any) => guestList && guestList.id) // Filter out undefined/null items
+      .map((guestList: any) => ({
+        id: guestList.id,
+        name: guestList.contact?.name || 'Unknown Guest', // Get name from nested contact object
+        email: guestList.contact?.email || undefined,
+        phone: guestList.contact?.phone || undefined,
+        address: guestList.contact?.streetAddress || undefined,
+        rsvpStatus: guestList.rsvpStatus || 'pending',
+        numberOfGuests: guestList.numberOfGuests || 1, // Ensure numberOfGuests is never NaN or undefined
+        notes: guestList.notes || undefined,
+        isCompleted:
+          guestList.rsvpStatus === 'confirmed' || guestList.isCompleted || false,
+        createdAt: guestList.createdAt,
+        updatedAt: guestList.updatedAt,
+      }))
+      .filter((guest: any) => {
+        // Ensure unique guests by ID to prevent duplicate keys
+        if (guestsMap.has(guest.id)) {
+          return false;
+        }
+        guestsMap.set(guest.id, true);
+        return true;
+      });
+
+    console.log('✅ Transformed guests:', transformed);
+    return transformed;
+  }, [guestLists]);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     show: boolean;
@@ -115,6 +135,11 @@ export default function ThanksgivingGuestListPage() {
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [sortBy, setSortBy] = useState<string>('none');
   const [showSortModal, setShowSortModal] = useState(false);
+
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   useEffect(() => {
     // Always fetch contacts for address book functionality
@@ -132,10 +157,123 @@ export default function ThanksgivingGuestListPage() {
 
     if (editingGuest) {
       // Update existing guest
+      const updatePayload = {
+        name: formValues.name,
+        email: formValues.email || undefined,
+        phone: formValues.phone || undefined,
+        address: formValues.address || undefined,
+        rsvpStatus: formValues.rsvpStatus as 'pending' | 'confirmed' | 'declined',
+        numberOfGuests: formValues.numberOfGuests || 1, // Ensure numberOfGuests defaults to 1
+        notes: formValues.notes || undefined,
+      };
+
+      console.log('🔄 Edit guest:', {
+        guestId: editingGuest.id,
+        currentData: editingGuest,
+        updatePayload,
+      });
+
+      // Find the original guest list item for Home Slice update
+      const originalGuestList = guestLists.find(
+        (gl: any) => gl.id === editingGuest.id,
+      );
+      if (originalGuestList) {
+        // Manual optimistic update - update Home Slice immediately
+        dispatch(
+          updateGuestInHomeData({
+            holidayId,
+            guestId: editingGuest.id,
+            updates: {
+              ...originalGuestList,
+              rsvpStatus: updatePayload.rsvpStatus,
+              numberOfGuests: updatePayload.numberOfGuests,
+              notes: updatePayload.notes,
+              isCompleted: updatePayload.rsvpStatus === 'confirmed',
+              updatedAt: new Date().toISOString(),
+              // Update nested contact data
+              contact: {
+                ...originalGuestList.contact,
+                name: updatePayload.name,
+                email: updatePayload.email || originalGuestList.contact?.email,
+                phone: updatePayload.phone || originalGuestList.contact?.phone,
+                streetAddress:
+                  updatePayload.address || originalGuestList.contact?.streetAddress,
+              },
+            },
+          }),
+        );
+        console.log('✅ Dispatched Home Slice edit update immediately');
+      }
+
       try {
         const result = await editGuest({
           holidayId,
           guestId: editingGuest.id,
+          payload: updatePayload,
+          auth0User,
+        }).unwrap();
+
+        console.log('✅ Edit guest success:', result);
+        setEditingGuest(null);
+        setShowForm(false);
+      } catch (error: any) {
+        console.error('❌ Failed to update guest:', error);
+
+        // Revert optimistic update on error
+        if (originalGuestList) {
+          dispatch(
+            updateGuestInHomeData({
+              holidayId,
+              guestId: editingGuest.id,
+              updates: originalGuestList, // Revert to original
+            }),
+          );
+        }
+
+        // Check for duplicate email error from guest API (nested array format)
+        if (error?.data?.error && Array.isArray(error.data.error)) {
+          const duplicateEmailError = error.data.error.find(
+            (err: any) =>
+              err.message && err.message.includes('already tied to another contact'),
+          );
+          if (duplicateEmailError) {
+            setToastMessage(duplicateEmailError.message);
+          } else {
+            setToastMessage('Error updating guest. Please try again.');
+          }
+        }
+        // Check for duplicate email error from guest API (direct array format - fallback)
+        else if (error?.data && Array.isArray(error.data)) {
+          const duplicateEmailError = error.data.find(
+            (err: any) =>
+              err.message && err.message.includes('already tied to another contact'),
+          );
+          if (duplicateEmailError) {
+            setToastMessage(duplicateEmailError.message);
+          } else {
+            setToastMessage('Error updating guest. Please try again.');
+          }
+        }
+        // Check for duplicate email error from contacts API (string format)
+        else if (
+          error?.data &&
+          typeof error.data === 'string' &&
+          error.data.includes('already tied to another contact')
+        ) {
+          setToastMessage(error.data);
+        } else if (error?.message) {
+          setToastMessage(`Error updating guest: ${error.message}`);
+        } else {
+          setToastMessage('Error updating guest. Please try again.');
+        }
+        setToastType('error');
+        setShowToast(true);
+      }
+    } else {
+      // Add new guest
+      try {
+        console.log('🚀 Frontend: Creating guest with payload:', {
+          holidayId,
           payload: {
             name: formValues.name,
             email: formValues.email || undefined,
@@ -149,28 +287,8 @@ export default function ThanksgivingGuestListPage() {
             notes: formValues.notes || undefined,
           },
           auth0User,
-        }).unwrap();
+        });
 
-        // Update Redux state immediately (following pattern from other pages)
-        dispatch(
-          updateGuestInHomeData({
-            holidayId,
-            guestId: editingGuest.id,
-            updates: result,
-          }),
-        );
-
-        // Refresh home data to ensure UI is in sync (following pattern from other pages)
-        await refreshHomeData(auth0User, holidayId);
-
-        setEditingGuest(null);
-        setShowForm(false);
-      } catch (error) {
-        console.error('Failed to update guest:', error);
-      }
-    } else {
-      // Add new guest
-      try {
         const result = await createGuest({
           holidayId,
           payload: {
@@ -188,24 +306,54 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately (following pattern from other pages)
-        dispatch(
-          addGuestToHomeData({
-            holidayId,
-            guest: result,
-          }),
-        );
-
-        // Refresh home data to ensure UI is in sync (following pattern from other pages)
-        await refreshHomeData(auth0User, holidayId);
+        console.log('✅ Frontend: Guest created successfully:', result);
 
         // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
         dispatch(resetContacts());
         dispatch(fetchContacts());
 
         setShowForm(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to create guest:', error);
+
+        // Check for duplicate email error from guest API (nested array format)
+        if (error?.data?.error && Array.isArray(error.data.error)) {
+          const duplicateEmailError = error.data.error.find(
+            (err: any) =>
+              err.message && err.message.includes('already tied to another contact'),
+          );
+          if (duplicateEmailError) {
+            setToastMessage(duplicateEmailError.message);
+          } else {
+            setToastMessage('Error creating guest. Please try again.');
+          }
+        }
+        // Check for duplicate email error from guest API (direct array format - fallback)
+        else if (error?.data && Array.isArray(error.data)) {
+          const duplicateEmailError = error.data.find(
+            (err: any) =>
+              err.message && err.message.includes('already tied to another contact'),
+          );
+          if (duplicateEmailError) {
+            setToastMessage(duplicateEmailError.message);
+          } else {
+            setToastMessage('Error creating guest. Please try again.');
+          }
+        }
+        // Check for duplicate email error from contacts API (string format)
+        else if (
+          error?.data &&
+          typeof error.data === 'string' &&
+          error.data.includes('already tied to another contact')
+        ) {
+          setToastMessage(error.data);
+        } else if (error?.message) {
+          setToastMessage(`Error creating guest: ${error.message}`);
+        } else {
+          setToastMessage('Error creating guest. Please try again.');
+        }
+        setToastType('error');
+        setShowToast(true);
       }
     }
   };
@@ -229,30 +377,47 @@ export default function ThanksgivingGuestListPage() {
       const newRsvpStatus =
         guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
 
+      console.log('🔄 Toggle guest:', {
+        guestId,
+        currentStatus: guestList.rsvpStatus,
+        newStatus: newRsvpStatus,
+        isCompleted: newRsvpStatus === 'confirmed',
+      });
+
+      // Manual optimistic update - update Home Slice immediately
+      dispatch(
+        updateGuestInHomeData({
+          holidayId,
+          guestId,
+          updates: {
+            ...guestList,
+            rsvpStatus: newRsvpStatus,
+            isCompleted: newRsvpStatus === 'confirmed',
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      );
+      console.log('✅ Dispatched Home Slice update immediately');
+
       try {
-        await updateGuest({
+        const result = await updateGuest({
           holidayId,
           guestId,
           isCompleted: newRsvpStatus === 'confirmed',
           auth0User,
         }).unwrap();
 
-        // Update Redux state immediately with the original structure (not transformed)
-        const updatedGuestList = {
-          ...guestList,
-          rsvpStatus: newRsvpStatus,
-          updatedAt: new Date().toISOString(),
-        };
-
+        console.log('✅ Toggle guest success:', result);
+      } catch (error) {
+        console.error('❌ Failed to toggle guest:', error);
+        // Revert optimistic update on error
         dispatch(
           updateGuestInHomeData({
             holidayId,
-            guestId: guestId,
-            updates: updatedGuestList,
+            guestId,
+            updates: guestList, // Revert to original
           }),
         );
-      } catch (error) {
-        console.error('Failed to toggle guest:', error);
       }
     }
   };
@@ -274,17 +439,6 @@ export default function ThanksgivingGuestListPage() {
           guestId: deleteConfirm.guestId,
           auth0User,
         }).unwrap();
-
-        // Update Redux state immediately (following pattern from other pages)
-        dispatch(
-          removeGuestFromHomeData({
-            holidayId,
-            guestId: deleteConfirm.guestId,
-          }),
-        );
-
-        // Refresh home data to ensure UI is in sync (following pattern from other pages)
-        await refreshHomeData(auth0User, holidayId);
 
         setDeleteConfirm({ show: false, guestId: null });
       } catch (error) {
@@ -502,6 +656,14 @@ export default function ThanksgivingGuestListPage() {
           { value: 'date-created', label: 'Date Created' },
         ]}
         title="Sort Guests"
+      />
+
+      {/* Toast for error messages */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        type={toastType}
       />
     </div>
   );

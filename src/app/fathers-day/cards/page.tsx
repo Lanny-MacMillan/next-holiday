@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
 import FormModal from '@/components/modals/FormModal';
@@ -42,13 +41,12 @@ export default function FathersDayCardsPage() {
   const {
     createCard,
     updateCard,
+    editCard,
     deleteCard,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Get share members for Enhanced Compatibility Layer
   const shareData = useAppSelector((state: RootState) =>
@@ -115,7 +113,6 @@ export default function FathersDayCardsPage() {
       // Refresh contacts to include any newly created ones
       dispatch(fetchContacts());
 
-      await refreshHomeData(auth0User, holidayId);
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating card:', error);
@@ -154,8 +151,7 @@ export default function FathersDayCardsPage() {
   const confirmDelete = async () => {
     if (cardToDelete && holidayId) {
       try {
-        await deleteCard(cardToDelete.id, cardToDelete);
-        await refreshHomeData(auth0User, holidayId);
+        await deleteCard(cardToDelete.id);
         setShowDeleteModal(false);
         setCardToDelete(null);
       } catch (error) {
@@ -174,8 +170,7 @@ export default function FathersDayCardsPage() {
       // Use enhanced transformCardPayload for consistent handling
       const payload = transformCardPayload(values, contacts, shareMembers);
 
-      await updateCard(cardToEdit.id, payload);
-      await refreshHomeData(auth0User, holidayId);
+      await editCard(cardToEdit.id, payload);
       setShowEditModal(false);
       setCardToEdit(null);
     } catch (error) {
@@ -193,16 +188,8 @@ export default function FathersDayCardsPage() {
       try {
         const card = cards.find((c: any) => c.id === cardId);
         if (card) {
-          // Include all required fields when updating completion status
-          await updateCard(cardId, {
-            recipient: card.recipient,
-            message: card.message,
-            address: card.address || '',
-            contact_id: card.contact_id || null,
-            assigned_to: card.assignedTo || null,
-            isCompleted: !card.isCompleted,
-          });
-          await refreshHomeData(auth0User, holidayId);
+          // Use simple boolean toggle for completion
+          await updateCard(cardId, !card.isCompleted);
         }
       } catch (error) {
         console.error('Error toggling card completion:', error);

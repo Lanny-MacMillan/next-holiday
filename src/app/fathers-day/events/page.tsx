@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -33,13 +32,12 @@ export default function FathersDayEventsPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'fathers-day'),
@@ -107,7 +105,6 @@ export default function FathersDayEventsPage() {
       };
 
       await createTask(payload);
-      await refreshHomeData(auth0User, holidayId);
       setShowAddModal(false);
     } catch (error) {
       console.error('Failed to add task:', error);
@@ -124,8 +121,7 @@ export default function FathersDayEventsPage() {
       if (!currentTask) return;
 
       const newCompletionStatus = !currentTask.isCompleted;
-      await updateTask(taskId, { isCompleted: newCompletionStatus });
-      await refreshHomeData(auth0User, holidayId);
+      await toggleTask(taskId, newCompletionStatus);
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }
@@ -155,7 +151,6 @@ export default function FathersDayEventsPage() {
       };
 
       await updateTask(editingTask.id, payload);
-      await refreshHomeData(auth0User, holidayId);
       setShowEditModal(false);
       setEditingTask(null);
     } catch (error) {
@@ -169,7 +164,6 @@ export default function FathersDayEventsPage() {
     if (!taskToDelete || !holidayId) return;
     try {
       await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {

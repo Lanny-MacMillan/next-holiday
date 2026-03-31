@@ -4,14 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
-import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-} from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -34,12 +28,12 @@ export default function FourthOfJulyTasksPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
   const dispatch = useAppDispatch();
@@ -127,15 +121,8 @@ export default function FourthOfJulyTasksPage() {
     const task = tasks.find((t: any) => t.id === taskId);
     if (!task || !holidayId) return;
 
-    const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
-    dispatch(
-      updateTaskInHomeData({
-        holidayId,
-        taskId,
-        updates: { isCompleted: !task.isCompleted },
-      }),
-    );
-    await refreshHomeData(auth0User, holidayId);
+    // Use dedicated toggleTask function - RTK Query handles Home Slice updates automatically
+    await toggleTask(taskId, !task.isCompleted);
   }
 
   // Modal handlers
@@ -177,12 +164,8 @@ export default function FourthOfJulyTasksPage() {
         isCompleted: false,
       };
 
-      const result = await createTask(taskData);
-      if (result) {
-        dispatch(addTaskToHomeData({ holidayId, task: result }));
-        await refreshHomeData(auth0User, holidayId);
-        closeForm();
-      }
+      await createTask(taskData);
+      closeForm();
     } catch (error) {
       console.error('Error creating task:', error);
     } finally {
@@ -202,18 +185,8 @@ export default function FourthOfJulyTasksPage() {
         due_date: formData.dueDate || null,
       };
 
-      const result = await updateTask(editingTask.id, updateData);
-      if (result) {
-        dispatch(
-          updateTaskInHomeData({
-            holidayId,
-            taskId: editingTask.id,
-            updates: updateData,
-          }),
-        );
-        await refreshHomeData(auth0User, holidayId);
-        handleEditModalClose();
-      }
+      await updateTask(editingTask.id, updateData);
+      handleEditModalClose();
     } catch (error) {
       console.error('Error updating task:', error);
     } finally {
@@ -224,12 +197,8 @@ export default function FourthOfJulyTasksPage() {
   const handleDeleteTask = async () => {
     if (!taskToDelete || !holidayId) return;
 
-    const result = await deleteTask(taskToDelete.id);
-    if (result) {
-      dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
-      await refreshHomeData(auth0User, holidayId);
-      handleDeleteModalClose();
-    }
+    await deleteTask(taskToDelete.id);
+    handleDeleteModalClose();
   };
 
   // Sort handler

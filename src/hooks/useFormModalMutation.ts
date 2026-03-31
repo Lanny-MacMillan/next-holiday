@@ -34,7 +34,6 @@ export function useFormModalMutation() {
       }
 
       try {
-        // Fetch database user to get the UUID
         const response = await fetch(
           `/api/users/by-auth0-sub?sub=${encodeURIComponent(auth0User.sub)}`,
         );
@@ -59,7 +58,6 @@ export function useFormModalMutation() {
     enhanceUserWithDatabaseId();
   }, [auth0User?.sub]);
 
-  // Only resolve holidayId if home data is initialized
   const holidayId = homeInitialized
     ? getHolidayIdFromRoute(pathname, holidayPreferences)
     : null;
@@ -81,7 +79,8 @@ export function useFormModalMutation() {
 
     // Extract the resource type from the pathname
     const pathSegments = pathname.split('/');
-    const resourceType = pathSegments[2]; // e.g., "/christmas/gift-list" -> "gift-list"
+    // e.g., "/christmas/gift-list" -> "gift-list"
+    const resourceType = pathSegments[2];
 
     switch (resourceType) {
       case 'gift-list':
@@ -142,7 +141,8 @@ export function useFormModalMutation() {
     type: mutationInfo?.type,
     isLoading: mutationInfo?.state.isLoading || false,
     error: mutationInfo?.state.error,
-    auth0User: enhancedAuth0User, // Use enhanced user with database UUID
+    auth0User: enhancedAuth0User, // enhanced user with database UUID
+
     // Card-specific mutations
     updateCard,
     editCard,

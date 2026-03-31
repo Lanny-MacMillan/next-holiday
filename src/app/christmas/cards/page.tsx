@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
@@ -32,6 +32,7 @@ export default function ChristmasCardsPage() {
   const {
     createCard,
     updateCard,
+    editCard, // ✅ Add editCard for field editing
     deleteCard,
     createLoading,
     updateLoading,
@@ -39,7 +40,6 @@ export default function ChristmasCardsPage() {
   } = useHolidayMutations({ holidayId, auth0User });
 
   // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Enhanced Compatibility Layer - Get share members with current user inclusion
   const shareData = useAppSelector(state =>
@@ -115,21 +115,13 @@ export default function ChristmasCardsPage() {
 
     setIsSubmitting(true);
     try {
-      console.log('=== ADD CARD DEBUG ===');
-      console.log('Form values:', values);
-      console.log('ShareMembers for transform:', shareMembers);
-
       const payload = transformCardPayload(values, contacts, shareMembers);
-      console.log('Transformed payload:', payload);
 
       // Use the standardized hook function
       await createCard(payload);
 
       // Refresh contacts to include any newly created ones
       dispatch(fetchContacts());
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowForm(false);
     } catch (error) {
@@ -178,10 +170,7 @@ export default function ChristmasCardsPage() {
     if (cardToDelete && holidayId && auth0User) {
       try {
         // Use the standardized hook function
-        await deleteCard(cardToDelete.id, cardToDelete);
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+        await deleteCard(cardToDelete.id);
 
         setShowDeleteModal(false);
         setCardToDelete(null);
@@ -196,18 +185,10 @@ export default function ChristmasCardsPage() {
 
     setIsEditSubmitting(true);
     try {
-      console.log('=== EDIT CARD DEBUG ===');
-      console.log('Form values:', values);
-      console.log('ShareMembers for transform:', shareMembers);
-
       const payload = transformCardPayload(values, contacts, shareMembers);
-      console.log('Transformed payload:', payload);
 
-      // Use the standardized hook function
-      await updateCard(cardToEdit.id, payload);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      // ✅ Use editCard for field editing (not updateCard)
+      await editCard(cardToEdit.id, payload);
 
       setShowEditModal(false);
       setCardToEdit(null);
@@ -238,16 +219,8 @@ export default function ChristmasCardsPage() {
     try {
       const card = cards.find((c: any) => c.id === cardId);
       if (card && holidayId && auth0User) {
-        // Use the standardized hook function
-        await updateCard(cardId, {
-          recipient: card.recipient,
-          message: card.message || '',
-          address: card.address || '',
-          isCompleted: !card.isCompleted,
-        });
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
+        // ✅ Use updateCard for completion toggling only (simplified)
+        await updateCard(cardId, !card.isCompleted);
       }
     } catch (error) {
       console.error('Error toggling card completion:', error);

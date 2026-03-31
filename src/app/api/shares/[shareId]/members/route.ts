@@ -204,6 +204,30 @@ export async function DELETE(
       },
     });
 
+    // Clean up all shared holiday data for the removed user
+    try {
+      // Call the cleanup API internally
+      const cleanupResponse = await fetch(
+        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/shares/${shareId}/cleanup-user-data`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: userIdParam }),
+        },
+      );
+
+      if (cleanupResponse.ok) {
+        const cleanupResult = await cleanupResponse.json();
+      } else {
+        console.error(`❌ Failed to cleanup shared data: ${cleanupResponse.status}`);
+      }
+    } catch (cleanupError) {
+      console.error('❌ Error during cleanup:', cleanupError);
+      // Don't fail the member removal if cleanup fails
+    }
+
     // Get updated share with members
     const updatedShare = await prisma.share.findUnique({
       where: { id: shareId },

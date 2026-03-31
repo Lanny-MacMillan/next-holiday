@@ -9,7 +9,7 @@ import {
 } from '@/store/slices/sharesSlice';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import SortModal from '@/components/modals/SortModal';
@@ -51,6 +51,7 @@ export default function TasksPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
@@ -58,7 +59,6 @@ export default function TasksPage() {
   } = useHolidayMutations({ holidayId, auth0User });
 
   // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -151,9 +151,6 @@ export default function TasksPage() {
       // Use the standardized hook function
       await createTask(newTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Failed to add task:', error);
@@ -182,13 +179,8 @@ export default function TasksPage() {
       // Toggle the completion status
       const newCompletionStatus = !currentTask.isCompleted;
 
-      // Use the standardized hook function
-      await updateTask(taskId, {
-        isCompleted: newCompletionStatus,
-      });
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
+      // ✅ Use the dedicated toggleTask function for completion changes
+      await toggleTask(taskId, newCompletionStatus);
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }
@@ -207,7 +199,6 @@ export default function TasksPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {
@@ -242,9 +233,6 @@ export default function TasksPage() {
 
         // Use the standardized hook function
         await updateTask(editingTask.id, updatedTask);
-
-        // Refresh home data to ensure UI is in sync
-        await refreshHomeData(auth0User, holidayId);
 
         setEditingTask(null);
         setShowEditModal(false);

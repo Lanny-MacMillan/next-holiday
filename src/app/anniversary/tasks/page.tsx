@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
@@ -34,12 +33,12 @@ export default function AnniversaryTasksPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
   const dispatch = useAppDispatch();
@@ -140,15 +139,8 @@ export default function AnniversaryTasksPage() {
     const task = tasks.find((t: any) => t.id === taskId);
     if (!task || !holidayId) return;
 
-    const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
-    dispatch(
-      updateTaskInHomeData({
-        holidayId,
-        taskId,
-        updates: { isCompleted: !task.isCompleted },
-      }),
-    );
-    await refreshHomeData(auth0User, holidayId);
+    // ✅ Use toggleTask for completion toggle - RTK Query handles Home Slice update
+    await toggleTask(taskId, !task.isCompleted);
   }
 
   // Modal handlers
@@ -194,8 +186,6 @@ export default function AnniversaryTasksPage() {
 
       const result = await createTask(taskData);
       if (result) {
-        dispatch(addTaskToHomeData({ holidayId, task: result }));
-        await refreshHomeData(auth0User, holidayId);
         closeAddForm();
       }
     } catch (error) {
@@ -218,14 +208,6 @@ export default function AnniversaryTasksPage() {
 
       const result = await updateTask(editingTask.id, taskData);
       if (result) {
-        dispatch(
-          updateTaskInHomeData({
-            holidayId,
-            taskId: editingTask.id,
-            updates: taskData,
-          }),
-        );
-        await refreshHomeData(auth0User, holidayId);
         handleEditModalClose();
       }
     } catch (error) {
@@ -240,13 +222,6 @@ export default function AnniversaryTasksPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-      dispatch(
-        removeTaskFromHomeData({
-          holidayId: holidayId,
-          taskId: taskToDelete.id,
-        }),
-      );
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {

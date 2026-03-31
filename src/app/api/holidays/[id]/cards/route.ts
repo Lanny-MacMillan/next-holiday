@@ -29,6 +29,12 @@ const updateBodySchema = z.object({
   assigned_to: z.string().uuid().nullable().optional(), // NEW
 });
 
+// Simple schema for completion toggling (like gifts)
+const toggleCompletionSchema = z.object({
+  cardId: z.string().uuid(),
+  isCompleted: z.boolean(),
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -61,6 +67,8 @@ export async function POST(
       select: { name: true },
     });
     const holidayName = holiday?.name || 'Holiday';
+
+    // SAME PATTERN AS GIFTS: Create with contact include and data transformation
     const card = await prisma.card.create({
       data: {
         holidayId: id,
@@ -71,7 +79,17 @@ export async function POST(
         assignedTo: data.assigned_to, // NEW
         createdBy: user.id,
       },
+      include: {
+        contact: true,
+        assignedUser: true,
+      },
     });
+
+    //  Transform data for UI (like gifts)
+    const transformedCard = {
+      ...card,
+      recipient: card.contact?.name || card.recipient,
+    };
 
     // Create assignment notification if assigned to someone other than creator
     if (data.assigned_to && data.assigned_to !== user.id) {
@@ -121,9 +139,13 @@ export async function POST(
       }
     }
 
-    return created(card, {
-      'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-    });
+    // Return in same format as gifts API
+    return created(
+      { data: transformedCard },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
   } catch (error) {
     console.error('Error creating card:', error);
     return serverError('Failed to create card');
@@ -142,6 +164,87 @@ export async function PUT(
 
     const json = await request.json();
 
+    //  Try simple completion toggle format first (like gifts)
+    const simpleToggleParsed = toggleCompletionSchema.safeParse(json);
+    if (simpleToggleParsed.success) {
+      // Handle simple completion toggle
+      const { cardId, isCompleted } = simpleToggleParsed.data;
+
+      const existingCard = await prisma.card.findUnique({
+        where: { id: cardId },
+        select: {
+          isCompleted: true,
+          assignedTo: true,
+          createdBy: true,
+          recipient: true,
+        },
+      });
+
+      if (!existingCard) {
+        return badRequest('Card not found');
+      }
+
+      //  Update with contact include and data transformation
+      const card = await prisma.card.update({
+        where: { id: cardId },
+        data: {
+          isCompleted,
+          sentDate: isCompleted ? new Date() : null, //  Use sentDate instead of completedDate
+        },
+        include: {
+          contact: true,
+          assignedUser: true,
+        },
+      });
+
+      //  Transform data for UI (like gifts)
+      const transformedCard = {
+        ...card,
+        recipient: card.contact?.name || card.recipient,
+      };
+
+      // Handle completion notifications (existing logic)
+      if (isCompleted && !existingCard.isCompleted && existingCard.assignedTo) {
+        setTimeout(async () => {
+          try {
+            const [holiday, completerName] = await Promise.all([
+              prisma.holiday.findUnique({ where: { id }, select: { name: true } }),
+              getUserName(user.id),
+            ]);
+
+            const holidayName = holiday?.name || 'Holiday';
+            const assignerUserId = existingCard.createdBy;
+
+            if (assignerUserId && assignerUserId !== user.id) {
+              await broadcastCompletion(
+                assignerUserId,
+                completerName,
+                'card',
+                `Card for ${existingCard.recipient}`,
+                cardId,
+                id,
+                holidayName,
+              );
+            }
+          } catch (error) {
+            console.warn(
+              'Completion notification failed (card completion succeeded):',
+              error,
+            );
+          }
+        }, 0);
+      }
+
+      //  Return in same format as gifts API
+      return ok(
+        { data: transformedCard },
+        {
+          'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+        },
+      );
+    }
+
+    //  Fall back to complex action-based format
     const parsed = updateBodySchema.safeParse(json);
     if (!parsed.success) {
       return badRequest(parsed.error.issues);
@@ -192,12 +295,23 @@ export async function PUT(
           data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null;
       }
 
+      // SAME PATTERN AS GIFTS: Update with contact include and data transformation
       const card = await prisma.card.update({
         where: {
           id: data.id,
         },
         data: updateData,
+        include: {
+          contact: true,
+          assignedUser: true,
+        },
       });
+
+      //  Transform data for UI (like gifts)
+      const transformedCard = {
+        ...card,
+        recipient: card.contact?.name || card.recipient,
+      };
 
       // Handle assignment change notifications
       if (
@@ -301,15 +415,144 @@ export async function PUT(
         }, 0); // Run in next tick
       }
 
-      return ok(card, {
-        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
-      });
+      //  Return in same format as gifts API
+      return ok(
+        { data: transformedCard },
+        {
+          'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+        },
+      );
     }
 
     return badRequest('Invalid action');
   } catch (error) {
     console.error('Error updating card:', error);
     return serverError('Failed to update card');
+  }
+}
+
+const editBodySchema = z.object({
+  cardId: z.string().uuid(),
+  recipient: z.string().min(1).optional(),
+  message: z.string().min(1).optional(),
+  address: z.string().nullable().optional(),
+  contact_id: z.string().uuid().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const user = await requireAuth(request);
+    const { id } = await params;
+    const forbidden = await assertHolidayAccess(id, user.id);
+    if (forbidden) return forbidden;
+
+    const json = await request.json();
+    const parsed = editBodySchema.safeParse(json);
+    if (!parsed.success) {
+      return badRequest(parsed.error.issues);
+    }
+
+    const data = parsed.data;
+
+    // Validate assignee access if assigning to someone
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assigneeValidation = await validateAssigneeAccess(data.assigned_to, id);
+      if (!assigneeValidation.valid) {
+        return badRequest(assigneeValidation.error || 'Invalid assignee');
+      }
+    }
+
+    // Check if card exists
+    const existingCard = await prisma.card.findUnique({
+      where: { id: data.cardId },
+      select: {
+        assignedTo: true,
+        createdBy: true,
+        recipient: true,
+      },
+    });
+
+    if (!existingCard) {
+      return badRequest('Card not found');
+    }
+
+    // Build update data only for provided fields
+    const updateData: any = {};
+    if (data.recipient !== undefined) updateData.recipient = data.recipient;
+    if (data.message !== undefined) updateData.message = data.message;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.contact_id !== undefined) updateData.contactId = data.contact_id;
+
+    // Handle assigned_to field
+    if (data.assigned_to !== undefined) {
+      updateData.assignedTo =
+        data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null;
+    }
+
+    // SAME PATTERN AS GIFTS: Update with contact include and data transformation
+    const card = await prisma.card.update({
+      where: { id: data.cardId },
+      data: updateData,
+      include: {
+        contact: true,
+        assignedUser: true,
+      },
+    });
+
+    // Transform data for UI (like gifts)
+    const transformedCard = {
+      ...card,
+      recipient: card.contact?.name || card.recipient,
+    };
+
+    // Handle assignment change notifications (async)
+    if (
+      data.assigned_to !== undefined &&
+      existingCard.assignedTo !== updateData.assignedTo
+    ) {
+      setTimeout(async () => {
+        try {
+          const [holiday, assignerName] = await Promise.all([
+            prisma.holiday.findUnique({ where: { id }, select: { name: true } }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+
+          if (updateData.assignedTo && updateData.assignedTo !== user.id) {
+            await broadcastAssignment(
+              updateData.assignedTo,
+              assignerName,
+              'card',
+              `Card for ${existingCard.recipient}`,
+              data.cardId,
+              id,
+              holidayName,
+            );
+          }
+        } catch (error) {
+          console.warn(
+            'Assignment notification failed (card edit succeeded):',
+            error,
+          );
+        }
+      }, 0);
+    }
+
+    //  Return in same format as gifts API
+    return ok(
+      { data: transformedCard },
+      {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
+      },
+    );
+  } catch (error) {
+    console.error('Error editing card:', error);
+    return serverError('Failed to edit card');
   }
 }
 

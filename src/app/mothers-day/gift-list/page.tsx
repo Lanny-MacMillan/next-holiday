@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateGiftInHomeData,
@@ -44,14 +43,12 @@ export default function GiftListPage() {
   const {
     createGift,
     updateGift,
+    editGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -143,9 +140,6 @@ export default function GiftListPage() {
       // Update Redux state directly
       updateGiftInRedux(result, 'add');
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       // Refresh address book contacts
       dispatch(fetchContacts());
 
@@ -185,13 +179,10 @@ export default function GiftListPage() {
       const newIsCompleted = !currentGift.isCompleted;
 
       // Update the gift using the hook
-      await updateGift(giftId, { isCompleted: newIsCompleted });
+      await updateGift(giftId, newIsCompleted);
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftId, isCompleted: newIsCompleted }, 'update');
-
-      // Refresh home data to ensure progress tracking updates
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling gift:', error);
       // Handle error (could show a toast notification)
@@ -212,9 +203,6 @@ export default function GiftListPage() {
 
       // Update Redux state directly
       updateGiftInRedux({ id: giftToDelete.id }, 'delete');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setGiftToDelete(null);
@@ -241,14 +229,11 @@ export default function GiftListPage() {
     try {
       const payload = transformGiftPayload(values, contacts, []);
 
-      // Update using the hook
-      const result = await updateGift(selectedGift.id, payload);
+      // Update using the editGift hook for field editing
+      const result = await editGift(selectedGift.id, payload);
 
       // Update Redux state directly
       updateGiftInRedux(result, 'update');
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowFormModal(false);
       setSelectedGift(null);

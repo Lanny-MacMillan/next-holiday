@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -93,9 +92,6 @@ export default function CandleLightingPage() {
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
 
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
-
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'hanukkah'),
@@ -165,9 +161,6 @@ export default function CandleLightingPage() {
       // Use the standardized hook function
       await createTask(newTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowForm(false);
     } catch (error) {
       console.error('Error creating candle lighting task:', error);
@@ -191,9 +184,6 @@ export default function CandleLightingPage() {
           });
 
           console.log(`✅ Added task ${i + 1}: ${task.title}`);
-
-          // Refresh home data after each task to ensure consistency
-          await refreshHomeData(auth0User, holidayId);
         } catch (taskError) {
           console.error(`❌ Error adding task ${i + 1}:`, taskError);
         }
@@ -221,9 +211,6 @@ export default function CandleLightingPage() {
 
       // Use the standardized hook function
       await updateTask(taskId, { isCompleted: newCompletionStatus });
-
-      // Refresh home data to update progress on main holiday page
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }
@@ -251,9 +238,6 @@ export default function CandleLightingPage() {
       // Use the standardized hook function
       await updateTask(editingTask.id, updatedTask);
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -275,9 +259,6 @@ export default function CandleLightingPage() {
     try {
       // Use the standardized hook function
       await deleteTask(taskToDelete.id);
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       // Check if this was the last task and re-show default tasks prompt
       const remainingTasks = candleLighting.filter(

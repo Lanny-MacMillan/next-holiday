@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
@@ -36,14 +35,13 @@ export default function GiftListPage() {
 
   const {
     createGift,
+    editGift,
     updateGift,
     deleteGift,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   const displayGifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
   const isLoading = !homeInitialized;
@@ -90,7 +88,6 @@ export default function GiftListPage() {
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
       await createGift(payload);
-      await refreshHomeData(auth0User, holidayId);
 
       // Refresh address book contacts
       dispatch(fetchContacts());
@@ -125,12 +122,8 @@ export default function GiftListPage() {
       const currentGift = displayGifts.find((gift: any) => gift.id === giftId);
       if (!currentGift) return;
 
-      const payload = {
-        isCompleted: !currentGift.isCompleted,
-      };
-
-      await updateGift(giftId, payload);
-      await refreshHomeData(auth0User, holidayId);
+      // ✅ Use simple boolean parameter for completion toggle
+      await updateGift(giftId, !currentGift.isCompleted);
     } catch (error) {
       console.error('Error toggling gift:', error);
     }
@@ -146,7 +139,6 @@ export default function GiftListPage() {
 
     try {
       await deleteGift(giftToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setGiftToDelete(null);
     } catch (error) {
@@ -170,8 +162,8 @@ export default function GiftListPage() {
     setIsEditSubmitting(true);
     try {
       const payload = transformGiftPayload(values, contacts, shareMembers);
-      await updateGift(selectedGift.id, payload);
-      await refreshHomeData(auth0User, holidayId);
+      // ✅ Use editGift for editing fields
+      await editGift(selectedGift.id, payload);
       setShowEditModal(false);
       setSelectedGift(null);
     } catch (error) {

@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -30,13 +29,12 @@ export default function AnniversaryDateIdeasPage() {
   const {
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
     createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const { refreshHomeData } = useRefreshHomeData();
 
   const isHolidayShared = useAppSelector((state: any) =>
     selectIsHolidayShared(state, 'anniversary'),
@@ -170,7 +168,6 @@ export default function AnniversaryDateIdeasPage() {
       };
 
       await createTask(payload);
-      await refreshHomeData(auth0User, holidayId);
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating date idea:', error);
@@ -195,7 +192,6 @@ export default function AnniversaryDateIdeasPage() {
       };
 
       await updateTask(editingTask.id, payload);
-      await refreshHomeData(auth0User, holidayId);
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
@@ -223,7 +219,6 @@ export default function AnniversaryDateIdeasPage() {
 
     try {
       await deleteTask(taskToDelete.id);
-      await refreshHomeData(auth0User, holidayId);
       setShowDeleteModal(false);
       setTaskToDelete(null);
     } catch (error) {
@@ -245,12 +240,8 @@ export default function AnniversaryDateIdeasPage() {
       const currentTask = dateIdeas.find((task: any) => task.id === taskId);
       if (!currentTask) return;
 
-      const payload = {
-        isCompleted: !currentTask.isCompleted,
-      };
-
-      await updateTask(taskId, payload);
-      await refreshHomeData(auth0User, holidayId);
+      // ✅ Use toggleTask for completion toggle
+      await toggleTask(taskId, !currentTask.isCompleted);
     } catch (error) {
       console.error('Error toggling date idea:', error);
     }

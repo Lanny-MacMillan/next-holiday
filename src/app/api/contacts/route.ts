@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     let contact;
 
-    // If email is provided, try to upsert by email
+    // If email is provided, check for duplicates and throw error
     if (contactData.email && contactData.email.trim()) {
       // First try to find existing contact with same email
       const existingContact = await prisma.contact.findFirst({
@@ -120,23 +120,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingContact) {
-        // Update existing contact
-        contact = await prisma.contact.update({
-          where: { id: existingContact.id },
-          data: {
-            name: contactData.name,
-            phone: contactData.phone,
-            streetAddress: contactData.streetAddress || null,
-            city: contactData.city || null,
-            state: contactData.state || null,
-            postalCode: contactData.zipCode || null,
-            relationship: contactData.relationship || null,
-            notes: contactData.notes || null,
-            updatedAt: new Date(),
-          },
-        });
+        // Return error instead of updating existing contact
+        return badRequest(
+          `Email "${contactData.email}" is already tied to another contact: "${existingContact.name}"`,
+        );
       } else {
-        // Create new contact
+        // Create new contact with email
         contact = await prisma.contact.create({
           data: {
             id: uuidv4(),

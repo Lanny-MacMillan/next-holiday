@@ -136,6 +136,17 @@ export const BASE_FORM_CONFIGS = {
       { id: 'email', type: 'email', placeholder: 'Email' },
       { id: 'phone', type: 'tel', placeholder: 'Phone' },
       { id: 'address', type: 'text', placeholder: 'Address' },
+      {
+        id: 'rsvp_status',
+        type: 'select',
+        placeholder: 'RSVP Status',
+        options: [
+          { value: 'pending', label: 'Pending' },
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'declined', label: 'Declined' },
+        ],
+        defaultValue: 'pending',
+      },
       { id: 'notes', type: 'textarea', placeholder: 'Notes', rows: 3 },
     ],
     submitText: 'Add Guest',

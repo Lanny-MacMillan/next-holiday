@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { acceptInvite, declineInvite } from '@/store/slices/invitesSlice';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
+import { selectHolidayPreferences } from '@/store/selectors/home';
+import { addShare } from '@/store/slices/sharesSlice';
+import { migrateHolidayDataToShare } from '@/utils/shareMigration';
 
 // Simple SVG icons to avoid external dependencies
 const BellIcon = ({
@@ -148,6 +154,15 @@ export default function NotificationCenter({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  // Confirmation modal state for invite acceptance warnings
+  const [confirmInvite, setConfirmInvite] = useState<{
+    invite: Notification;
+    hasExistingHoliday: boolean;
+  } | null>(null);
+  const [acceptingInvite, setAcceptingInvite] = useState(false);
+
+  // Get holiday preferences from Redux state
+  const holidayPreferences = useAppSelector(selectHolidayPreferences);
 
   // Polling fallback state
   const [usePolling, setUsePolling] = useState(false);
@@ -502,46 +517,109 @@ export default function NotificationCenter({
     }
   };
 
-  const handleAcceptInvite = async (inviteId: string) => {
+  const dispatch = useAppDispatch();
+  const { refreshHomeData } = useRefreshHomeData();
+
+  // Utility function to get holiday display name from key
+  const getHolidayDisplayName = (holidayKey: string): string => {
+    const displayNames: Record<string, string> = {
+      christmas: 'Christmas',
+      thanksgiving: 'Thanksgiving',
+      halloween: 'Halloween',
+      easter: 'Easter',
+      valentines: "Valentine's Day",
+      'new-year': 'New Year',
+      hanukkah: 'Hanukkah',
+      kwanzaa: 'Kwanzaa',
+      'mothers-day': "Mother's Day",
+      'fathers-day': "Father's Day",
+      'fourth-of-july': 'Fourth of July',
+      birthday: 'Birthday',
+      anniversary: 'Anniversary',
+      graduation: 'Graduation',
+      'baby-shower': 'Baby Shower',
+    };
+    return displayNames[holidayKey] || holidayKey;
+  };
+
+  // Helper to check if user already has this holiday
+  const checkExistingHoliday = (holidayKey: string): boolean => {
+    const holidayDisplayName = getHolidayDisplayName(holidayKey);
+    return holidayPreferences.some(pref => pref.holiday === holidayDisplayName);
+  };
+
+  // Handle accept button click - check for existing holiday first
+  const handleAcceptClick = (notification: Notification) => {
+    if (!notification.holiday?.holidayType) {
+      // If we don't have holiday info, proceed without warning
+      handleConfirmAccept(notification.entityId!);
+      return;
+    }
+
+    const hasExisting = checkExistingHoliday(notification.holiday.holidayType);
+    setConfirmInvite({ invite: notification, hasExistingHoliday: hasExisting });
+  };
+
+  // Actually accept the invite after confirmation
+  const handleConfirmAccept = async (inviteId: string) => {
+    if (!inviteId) return;
+
+    setAcceptingInvite(true);
     try {
-      setLoading(true);
+      // Use Redux action instead of manual fetch
+      const result = await dispatch(acceptInvite({ inviteId, auth0User }));
 
-      // Create headers with authentication if user is available
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      if (acceptInvite.fulfilled.match(result)) {
+        // Add the share to our state
+        if (result.payload?.share) {
+          dispatch(addShare(result.payload.share));
+        }
 
-      if (auth0User) {
-        headers['x-test-user'] = JSON.stringify({
-          sub: auth0User.sub,
-          email: auth0User.email,
-          name: auth0User.name,
+        // Migrate existing holiday data to the share if needed
+        if (result.payload?.invite?.holidayKey && result.payload?.share?.shareId) {
+          await migrateHolidayDataToShare(
+            result.payload.invite.holidayKey,
+            result.payload.share.shareId,
+            dispatch,
+          );
+        }
+
+        // Remove invite notification from local state
+        setNotifications(prev => {
+          const filtered = prev.filter(n => n.entityId !== inviteId);
+          const removedNotification = prev.find(n => n.entityId === inviteId);
+          if (removedNotification && !removedNotification.isRead) {
+            setUnreadCount(curr => Math.max(0, curr - 1));
+          }
+          return filtered;
         });
-      }
 
-      const response = await fetch(`/api/invites/${inviteId}/accept`, {
-        method: 'POST',
-        headers,
-      });
+        // Refresh home data to update shared holidays
+        if (auth0User) {
+          await refreshHomeData(auth0User, 'all');
+        }
 
-      if (!response.ok) {
+        // Close confirmation modal
+        setConfirmInvite(null);
+      } else {
         throw new Error('Failed to accept invite');
       }
-
-      // Remove invite notification from local state
-      setNotifications(prev => {
-        const filtered = prev.filter(n => n.entityId !== inviteId);
-        const removedNotification = prev.find(n => n.entityId === inviteId);
-        if (removedNotification && !removedNotification.isRead) {
-          setUnreadCount(curr => Math.max(0, curr - 1));
-        }
-        return filtered;
-      });
     } catch (err) {
       console.error('Error accepting invite:', err);
       setError('Failed to accept invite');
     } finally {
-      setLoading(false);
+      setAcceptingInvite(false);
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    // Find the notification for this invite to check for existing holiday
+    const inviteNotification = notifications.find(n => n.entityId === inviteId);
+    if (inviteNotification) {
+      handleAcceptClick(inviteNotification);
+    } else {
+      // Fallback to direct acceptance if notification not found
+      handleConfirmAccept(inviteId);
     }
   };
 
@@ -737,7 +815,7 @@ export default function NotificationCenter({
                     key={`${notification.id}-${index}`}
                     notification={notification}
                     onMarkRead={handleMarkAsRead}
-                    onAcceptInvite={handleAcceptInvite}
+                    onAcceptInvite={handleAcceptClick}
                     onDeclineInvite={handleDeclineInvite}
                     loading={loading}
                   />
@@ -774,6 +852,106 @@ export default function NotificationCenter({
           </div>
         </>
       )}
+
+      {/* Holiday Data Warning Modal */}
+      {confirmInvite && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                Accept Holiday Invitation
+              </h3>
+
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                {confirmInvite.hasExistingHoliday ? (
+                  <>
+                    You already have{' '}
+                    <strong>
+                      {confirmInvite.invite.holiday?.name ||
+                        getHolidayDisplayName(
+                          confirmInvite.invite.holiday?.holidayType ||
+                            'this holiday',
+                        )}
+                    </strong>{' '}
+                    with your own data (tasks, gifts, etc.).
+                  </>
+                ) : (
+                  <>
+                    Accept the invite to share{' '}
+                    <strong>
+                      {confirmInvite.invite.holiday?.name ||
+                        getHolidayDisplayName(
+                          confirmInvite.invite.holiday?.holidayType ||
+                            'this holiday',
+                        )}
+                    </strong>{' '}
+                    with{' '}
+                    <strong>
+                      {confirmInvite.invite.fromUser?.name || 'another user'}
+                    </strong>
+                    ?
+                  </>
+                )}
+              </p>
+
+              {confirmInvite.hasExistingHoliday && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-3">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-semibold mb-2">
+                    ⚠️ Important:
+                  </p>
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <strong>
+                      Accepting this invite will replace your existing holiday data
+                    </strong>{' '}
+                    with the shared holiday data. This action cannot be undone.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 p-6 pt-0">
+              <button
+                onClick={() => setConfirmInvite(null)}
+                disabled={acceptingInvite}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmAccept(confirmInvite.invite.entityId!)}
+                disabled={acceptingInvite || !confirmInvite.invite.entityId}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {acceptingInvite && (
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {confirmInvite.hasExistingHoliday
+                  ? 'Accept & Replace My Data'
+                  : 'Accept Invitation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -781,7 +959,7 @@ export default function NotificationCenter({
 interface NotificationItemProps {
   notification: Notification;
   onMarkRead: (notificationIds: string[]) => void;
-  onAcceptInvite: (inviteId: string) => void;
+  onAcceptInvite: (notification: Notification) => void;
   onDeclineInvite: (inviteId: string) => void;
   loading: boolean;
 }
@@ -826,9 +1004,7 @@ function NotificationItem({
             {/* Action Buttons for Invites */}
             <div className="flex space-x-2 mt-3">
               <button
-                onClick={() =>
-                  notification.entityId && onAcceptInvite(notification.entityId)
-                }
+                onClick={() => onAcceptInvite(notification)}
                 disabled={loading || !notification.entityId}
                 className="flex-1 px-3 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

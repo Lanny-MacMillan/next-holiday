@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
@@ -50,9 +49,6 @@ export default function KwanzaaEventsPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  // Use standardized data refresh hook
-  const { refreshHomeData } = useRefreshHomeData();
 
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
@@ -131,9 +127,6 @@ export default function KwanzaaEventsPage() {
       // Update Redux state immediately
       dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating event:', error);
@@ -159,9 +152,6 @@ export default function KwanzaaEventsPage() {
           updates: { isCompleted: !event.isCompleted },
         }),
       );
-
-      // Refresh home data to update progress on main holiday page
-      await refreshHomeData(auth0User, holidayId);
     } catch (error) {
       console.error('Error toggling event:', error);
     }
@@ -195,9 +185,6 @@ export default function KwanzaaEventsPage() {
         }),
       );
 
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
-
       setShowEditModal(false);
       setEditingTask(null);
     } catch (error) {
@@ -228,9 +215,6 @@ export default function KwanzaaEventsPage() {
           taskId: taskToDelete.id,
         }),
       );
-
-      // Refresh home data to ensure UI is in sync
-      await refreshHomeData(auth0User, holidayId);
 
       setShowDeleteModal(false);
       setTaskToDelete(null);

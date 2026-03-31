@@ -111,10 +111,27 @@ export async function POST(
             email: data.email.trim(),
           },
         });
+
+        if (contact) {
+          // If the existing contact has the same name, reuse it
+          if (contact.name.trim().toLowerCase() === data.name.trim().toLowerCase()) {
+            // Contact with same name and email already exists - use it
+            // We'll create/update the guest list entry below
+          } else {
+            // Different person has this email - return error
+            return badRequest([
+              {
+                code: 'custom',
+                path: ['email'],
+                message: `Email "${data.email}" is already tied to another contact: "${contact.name}"`,
+              },
+            ]);
+          }
+        }
       }
 
+      // Create new contact only if one wasn't found
       if (!contact) {
-        // Create new contact
         contact = await prisma.contact.create({
           data: {
             id: uuidv4(),
@@ -124,17 +141,6 @@ export async function POST(
             phone: data.phone || null,
             streetAddress: data.address || null,
             createdBy: user.id,
-          },
-        });
-      } else {
-        // Update existing contact if needed
-        contact = await prisma.contact.update({
-          where: { id: contact.id },
-          data: {
-            name: data.name,
-            phone: data.phone || contact.phone,
-            streetAddress: data.address || contact.streetAddress,
-            updatedAt: new Date(),
           },
         });
       }

@@ -1,4 +1,25 @@
 import { useState } from 'react';
+import {
+  useCreateGiftMutation,
+  useEditGiftMutation,
+  useUpdateGiftMutation,
+  useDeleteGiftMutation,
+  useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useToggleTaskCompletionMutation,
+  useDeleteTaskMutation,
+  useCreateCardMutation,
+  useUpdateCardMutation,
+  useEditCardMutation,
+  useDeleteCardMutation,
+  useCreateGuestMutation,
+  useUpdateGuestMutation,
+  useDeleteGuestMutation,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useEditEventMutation,
+  useDeleteEventMutation,
+} from '@/store/api';
 
 interface UseHolidayMutationsProps {
   holidayId: string | null;
@@ -13,15 +34,26 @@ export function useHolidayMutations({
   const [updateLoading, setUpdateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const getAuthHeaders = () => ({
-    'Content-Type': 'application/json',
-    'x-test-user': JSON.stringify({
-      sub: auth0User?.sub,
-      email: auth0User?.email,
-      name: auth0User?.name,
-      picture: auth0User?.picture,
-    }),
-  });
+  // RTK Query mutation hooks
+  const [createGiftMutation] = useCreateGiftMutation();
+  const [editGiftMutation] = useEditGiftMutation();
+  const [updateGiftMutation] = useUpdateGiftMutation();
+  const [deleteGiftMutation] = useDeleteGiftMutation();
+  const [createTaskMutation] = useCreateTaskMutation();
+  const [updateTaskMutation] = useUpdateTaskMutation();
+  const [toggleTaskCompletionMutation] = useToggleTaskCompletionMutation();
+  const [deleteTaskMutation] = useDeleteTaskMutation();
+  const [createCardMutation] = useCreateCardMutation();
+  const [updateCardMutation] = useUpdateCardMutation();
+  const [editCardMutation] = useEditCardMutation();
+  const [deleteCardMutation] = useDeleteCardMutation();
+  const [createGuestMutation] = useCreateGuestMutation();
+  const [updateGuestMutation] = useUpdateGuestMutation();
+  const [deleteGuestMutation] = useDeleteGuestMutation();
+  const [createEventMutation] = useCreateEventMutation();
+  const [updateEventMutation] = useUpdateEventMutation();
+  const [editEventMutation] = useEditEventMutation();
+  const [deleteEventMutation] = useDeleteEventMutation();
 
   const createGift = async (payload: any) => {
     if (!holidayId || !auth0User) {
@@ -30,40 +62,50 @@ export function useHolidayMutations({
 
     setCreateLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/gifts`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create gift');
-      }
-
-      return await response.json();
+      const result = await createGiftMutation({
+        holidayId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setCreateLoading(false);
     }
   };
 
-  const updateGift = async (giftId: string, payload: any) => {
+  const editGift = async (giftId: string, payload: any) => {
     if (!holidayId || !auth0User) {
       throw new Error('Missing holiday ID or user');
     }
 
     setUpdateLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
+      const result = await editGiftMutation({
+        holidayId,
+        giftId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
-      if (!response.ok) {
-        throw new Error('Failed to update gift');
-      }
+  const updateGift = async (giftId: string, isCompleted: boolean) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
 
-      return await response.json();
+    setUpdateLoading(true);
+    try {
+      const result = await updateGiftMutation({
+        holidayId,
+        giftId,
+        isCompleted,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setUpdateLoading(false);
     }
@@ -76,16 +118,12 @@ export function useHolidayMutations({
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/gifts/${giftId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete gift');
-      }
-
-      return await response.json();
+      const result = await deleteGiftMutation({
+        holidayId,
+        giftId,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setDeleteLoading(false);
     }
@@ -98,17 +136,12 @@ export function useHolidayMutations({
 
     setCreateLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/tasks`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create task');
-      }
-
-      return await response.json();
+      const result = await createTaskMutation({
+        holidayId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setCreateLoading(false);
     }
@@ -121,17 +154,32 @@ export function useHolidayMutations({
 
     setUpdateLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
+      const result = await updateTaskMutation({
+        holidayId,
+        taskId,
+        updates: payload, // ✅ Fix: wrap payload in updates property
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
-      if (!response.ok) {
-        throw new Error('Failed to update task');
-      }
+  const toggleTask = async (taskId: string, isCompleted: boolean) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
 
-      return await response.json();
+    setUpdateLoading(true);
+    try {
+      const result = await toggleTaskCompletionMutation({
+        holidayId,
+        taskId,
+        isCompleted,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setUpdateLoading(false);
     }
@@ -144,16 +192,12 @@ export function useHolidayMutations({
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/tasks/${taskId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete task');
-      }
-
-      return await response.json();
+      const result = await deleteTaskMutation({
+        holidayId,
+        taskId,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setDeleteLoading(false);
     }
@@ -166,95 +210,223 @@ export function useHolidayMutations({
 
     setCreateLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/cards`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create card');
-      }
-
-      return await response.json();
+      const result = await createCardMutation({
+        holidayId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setCreateLoading(false);
     }
   };
 
-  const updateCard = async (cardId: string, payload: any) => {
+  const updateCard = async (cardId: string, isCompleted: boolean) => {
     if (!holidayId || !auth0User) {
       throw new Error('Missing holiday ID or user');
     }
 
     setUpdateLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/cards`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          id: cardId,
-          action: 'update',
-          ...payload,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update card');
-      }
-
-      return await response.json();
+      const result = await updateCardMutation({
+        holidayId,
+        cardId,
+        isCompleted,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setUpdateLoading(false);
     }
   };
 
-  const deleteCard = async (cardId: string, cardData: any) => {
+  const editCard = async (cardId: string, payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await editCardMutation({
+        holidayId,
+        cardId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const deleteCard = async (cardId: string) => {
     if (!holidayId || !auth0User) {
       throw new Error('Missing holiday ID or user');
     }
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/holidays/${holidayId}/cards`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          id: cardId,
-          action: 'delete',
-          recipient: cardData.recipient,
-          message: cardData.message || '',
-          address: cardData.address || '',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete card');
-      }
-
-      return await response.json();
+      const result = await deleteCardMutation({
+        holidayId,
+        cardId,
+        auth0User,
+      }).unwrap();
+      return result;
     } finally {
       setDeleteLoading(false);
     }
   };
 
+  const createGuest = async (payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setCreateLoading(true);
+    try {
+      const result = await createGuestMutation({
+        holidayId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const updateGuest = async (guestId: string, payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await updateGuestMutation({
+        holidayId,
+        guestId,
+        ...payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const deleteGuest = async (guestId: string) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setDeleteLoading(true);
+    try {
+      const result = await deleteGuestMutation({
+        holidayId,
+        guestId,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const createEvent = async (payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setCreateLoading(true);
+    try {
+      const result = await createEventMutation({
+        holidayId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const updateEvent = async (taskId: string, isCompleted: boolean) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await updateEventMutation({
+        holidayId,
+        taskId,
+        isCompleted,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const editEvent = async (taskId: string, payload: any) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setUpdateLoading(true);
+    try {
+      const result = await editEventMutation({
+        holidayId,
+        taskId,
+        payload,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const deleteEvent = async (taskId: string) => {
+    if (!holidayId || !auth0User) {
+      throw new Error('Missing holiday ID or user');
+    }
+
+    setDeleteLoading(true);
+    try {
+      const result = await deleteEventMutation({
+        holidayId,
+        taskId,
+        auth0User,
+      }).unwrap();
+      return result;
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Return all the functions
   return {
-    // Gift operations
     createGift,
+    editGift,
     updateGift,
     deleteGift,
-
-    // Task operations
     createTask,
     updateTask,
+    toggleTask,
     deleteTask,
-
-    // Card operations
     createCard,
     updateCard,
+    editCard,
     deleteCard,
-
-    // Loading states
+    createGuest,
+    updateGuest,
+    deleteGuest,
+    createEvent,
+    updateEvent,
+    editEvent,
+    deleteEvent,
     createLoading,
     updateLoading,
     deleteLoading,

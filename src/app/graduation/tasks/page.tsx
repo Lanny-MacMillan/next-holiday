@@ -4,13 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
-import {
-  updateTaskInHomeData,
-  addTaskToHomeData,
-  removeTaskFromHomeData,
-} from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,
@@ -39,7 +33,6 @@ export default function GraduationTasksPage() {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-  const { refreshHomeData } = useRefreshHomeData();
 
   // Redux & Sharing
   const dispatch = useAppDispatch();
@@ -126,15 +119,8 @@ export default function GraduationTasksPage() {
     const task = tasks.find((t: any) => t.id === taskId);
     if (!task || !holidayId) return;
 
-    const result = await updateTask(taskId, { isCompleted: !task.isCompleted });
-    dispatch(
-      updateTaskInHomeData({
-        holidayId,
-        taskId,
-        updates: { isCompleted: !task.isCompleted },
-      }),
-    );
-    await refreshHomeData(auth0User, holidayId);
+    // RTK Query updateTask mutation handles Home Slice updates automatically
+    await updateTask(taskId, { isCompleted: !task.isCompleted });
   }
 
   // Modal handlers
@@ -177,10 +163,9 @@ export default function GraduationTasksPage() {
         isCompleted: false,
       };
 
+      // RTK Query createTask mutation handles Home Slice updates automatically
       const result = await createTask(taskData);
       if (result) {
-        dispatch(addTaskToHomeData({ holidayId, task: result }));
-        await refreshHomeData(auth0User, holidayId);
         closeForm();
       }
     } catch (error) {
@@ -203,16 +188,9 @@ export default function GraduationTasksPage() {
         due_date: formData.dueDate || null, // Snake case for API
       };
 
+      // RTK Query updateTask mutation handles Home Slice updates automatically
       const result = await updateTask(editingTask.id, taskData);
       if (result) {
-        dispatch(
-          updateTaskInHomeData({
-            holidayId,
-            taskId: editingTask.id,
-            updates: taskData,
-          }),
-        );
-        await refreshHomeData(auth0User, holidayId);
         handleEditModalClose();
       }
     } catch (error) {
@@ -225,10 +203,9 @@ export default function GraduationTasksPage() {
   const handleDeleteTask = async () => {
     if (!taskToDelete || !holidayId) return;
 
+    // RTK Query deleteTask mutation handles Home Slice updates automatically
     const result = await deleteTask(taskToDelete.id);
     if (result) {
-      dispatch(removeTaskFromHomeData({ holidayId, taskId: taskToDelete.id }));
-      await refreshHomeData(auth0User, holidayId);
       handleDeleteModalClose();
     }
   };

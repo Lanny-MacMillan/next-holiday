@@ -1,7 +1,9 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { HomeData } from '@/types/home';
-import { leaveShare } from './sharesSlice';
+import { leaveShare, removeMemberFromShare } from './sharesSlice';
 import { acceptInvite } from './invitesSlice';
+import { toggleTheme, updateSettings } from './themeSlice';
+import { updateUserPreferences } from './userPreferencesSlice';
 
 // Async thunk to refresh home data
 export const refreshHomeData = createAsyncThunk(
@@ -478,45 +480,40 @@ const homeSlice = createSlice({
     // Listen to share actions to automatically update home data
     builder
       .addCase(leaveShare.fulfilled, (state, action: any) => {
-        // When a user successfully leaves a share, check if we need to remove holiday data
-        if (!state.data?.holidayPreferences) {
-          return;
-        }
-
-        const { userLeftShare, holidayKey } = action.payload;
-
-        if (userLeftShare && holidayKey) {
-          const initialLength = state.data.holidayPreferences.length;
-
-          // Find and remove the holiday preference for the left share
-          const normalizeKey = (key: string) =>
-            key.toLowerCase().replace(/[-\s']/g, '');
-          const normalizedHolidayKey = normalizeKey(holidayKey);
-
-          // Log all current holidays for debugging
-          state.data.holidayPreferences.forEach((pref, index) => {
-            const normalizedPrefHoliday = normalizeKey(pref.holiday || '');
-          });
-
-          state.data.holidayPreferences = state.data.holidayPreferences.filter(
-            pref => {
-              const normalizedPrefHoliday = normalizeKey(pref.holiday || '');
-              const shouldKeep = normalizedPrefHoliday !== normalizedHolidayKey;
-              return shouldKeep;
-            },
-          );
-
-          const finalLength = state.data.holidayPreferences.length;
-        } else {
-          console.log('🏠 HomeSlice: Not removing holiday data', {
-            userLeftShare,
-            holidayKey,
-          });
-        }
+        // When a user successfully leaves a share, we need to refresh all data
+        // The server-side cleanup handles removing shared data from the database
+        // We just need to trigger a refresh to update the UI
+        console.log('🏠 HomeSlice: User left share, triggering data refresh');
+        state.loading = true; // This will trigger a refresh in components
+      })
+      // Also handle when someone else is removed from a share
+      .addCase(removeMemberFromShare.fulfilled, (state, action: any) => {
+        // When a member is removed from a share, refresh data to update UI
+        console.log(
+          '🏠 HomeSlice: Member removed from share, triggering data refresh',
+        );
+        state.loading = true; // This will trigger a refresh in components
       })
       // Listen to accept invite actions to refresh home data
       .addCase(acceptInvite.fulfilled, (state, action: any) => {
         // Mark loading state so UI shows that refresh is happening
+        state.loading = true;
+      })
+      // Listen to theme changes and trigger refresh to update components
+      .addCase(toggleTheme, state => {
+        // Theme changed - components may need updated data
+        state.loading = true;
+      })
+      // Listen to display mode/other settings changes
+      .addCase(updateSettings, (state, action) => {
+        // Settings changed - components may need updated data
+        if (action.payload.displayMode || action.payload.theme) {
+          state.loading = true;
+        }
+      })
+      // Listen to user preferences database updates
+      .addCase(updateUserPreferences.fulfilled, (state, action) => {
+        // User preferences updated in database - trigger refresh for consistency
         state.loading = true;
       })
       // Handle home data refresh results

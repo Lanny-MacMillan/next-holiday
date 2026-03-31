@@ -49,6 +49,48 @@ export async function POST(
     });
 
     if (!existingMember) {
+      // Get the share details to determine what holiday type this is
+      const shareWithHoliday = await prisma.share.findUnique({
+        where: { id: invite.shareId },
+        include: {
+          holiday: {
+            select: {
+              holidayType: true,
+            },
+          },
+        },
+      });
+
+      if (!shareWithHoliday) {
+        return NextResponse.json({ error: 'Share not found' }, { status: 404 });
+      }
+
+      // Find user's account to check for existing holiday of same type
+      const userAccount = await prisma.account.findFirst({
+        where: { ownerUserId: actualUserId },
+      });
+
+      if (userAccount) {
+        // Check if user has existing holiday of same type
+        const existingHoliday = await prisma.holiday.findFirst({
+          where: {
+            accountId: userAccount.id,
+            holidayType: shareWithHoliday.holiday.holidayType,
+          },
+        });
+
+        // If user has existing holiday of same type, delete it (cascade will handle related data)
+        if (existingHoliday) {
+          console.log(
+            `Deleting existing ${shareWithHoliday.holiday.holidayType} holiday before accepting share invitation`,
+          );
+          await prisma.holiday.delete({
+            where: { id: existingHoliday.id },
+          });
+        }
+      }
+
+      // Now add user to the share
       await prisma.shareMember.create({
         data: {
           shareId: invite.shareId,
