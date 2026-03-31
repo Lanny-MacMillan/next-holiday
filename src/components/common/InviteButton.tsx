@@ -15,6 +15,7 @@ import {
   selectIsUserInShare,
   selectIsOwnerByHolidayKey,
 } from '@/store/slices/sharesSlice';
+import { selectHolidayIdByKey } from '@/store/selectors/home';
 import FormModal from '../modals/FormModal';
 import Toast from './Toast';
 import SharedIndicatorEnhanced from './SharedIndicatorEnhanced';
@@ -41,6 +42,9 @@ export default function InviteButton({
 
   // Get current user's share for this holiday
   const share = useAppSelector(state => selectShareByHolidayKey(state, holidayKey));
+
+  // Get holidayId from holidayKey
+  const holidayId = useAppSelector(state => selectHolidayIdByKey(state, holidayKey));
 
   // Get outgoing invites to check for pending invites
   const outgoingInvites = useAppSelector(state =>
@@ -150,8 +154,14 @@ export default function InviteButton({
 
       // If no share exists, create one
       if (!currentShare) {
+        if (!holidayId) {
+          showToastMessage('Holiday not found. Please refresh the page.');
+          return;
+        }
+
         const shareResult = await dispatch(
           createShare({
+            holidayId,
             holidayKey,
             ownerUserId: user.sub,
             memberUserIds: [user.sub],
