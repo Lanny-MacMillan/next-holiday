@@ -71,19 +71,11 @@ export async function POST(
       try {
         const assignerName = await getUserName(user.id);
 
-        // Database notification (existing system) - this is the primary system
-        await createAssignmentNotification({
-          userId: data.assigned_to,
-          fromUserId: user.id,
-          entityType: 'task',
-          entityId: task.id,
-          holidayId: id,
-          title: 'Task Assignment',
-          message: `${assignerName} assigned you a task: ${task.title}`,
-        });
+        // NOTE: Database notification creation is now handled by SSE service
+        // No need to create database notification here since broadcastAssignment()
+        // calls the SSE service which handles both database creation AND real-time delivery
 
         // Real-time notification (enhancement layer) - completely isolated
-        // This will NEVER affect the main API operation
         setTimeout(async () => {
           try {
             await broadcastAssignment(

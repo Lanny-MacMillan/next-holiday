@@ -113,49 +113,68 @@ export default function InviteButton({
       return;
     }
 
-    // Validation 4: Prevent inviting existing members
+    // Validation 4: Prevent inviting existing members - use server-side validation as primary check
+    // Client-side validation can have stale data, especially after recent member changes
     if (share?.members) {
       const existingMemberByEmail = share.members.find(
-        (member: ShareMember) => member.email?.toLowerCase() === inviteEmail,
+        (member: ShareMember) =>
+          member.email?.toLowerCase() === inviteEmail && member.userId !== user?.sub, // Exclude current user from email check
       );
+      const existingMemberByUserId = share.members.find(
+        (member: ShareMember) =>
+          member.userId === inviteEmail && member.userId !== user?.sub, // Exclude current user from userId check
+      );
+
+      // Only show warning for obvious duplicates, let server handle edge cases
       if (existingMemberByEmail) {
         showToastMessage('This person is already a member of this holiday!');
         return;
       }
-
-      // Also check by userId for Auth0 sub invitations
-      const existingMemberByUserId = share.members.find(
-        (member: ShareMember) => member.userId === inviteEmail,
-      );
       if (existingMemberByUserId) {
         showToastMessage('This person is already a member of this holiday!');
         return;
       }
     }
 
-    // Additional fallback: Check against memberUserIds array for backward compatibility
-    if (share?.memberUserIds) {
-      if (share.memberUserIds.includes(inviteEmail)) {
-        showToastMessage('This person is already a member of this holiday!');
-        return;
-      }
-      if (share.memberUserIds.includes(user.sub)) {
-        // Prevent inviting self via memberUserIds
-        if (inviteEmail === user.sub) {
-          showToastMessage('You cannot invite yourself!');
-          return;
-        }
+    setIsLoading(true);
+
+    // First, refresh shares to ensure we have the latest member data
+    // This prevents validation errors with stale data after member removal
+    if (user?.sub) {
+      try {
+        await dispatch(refreshShares(user.sub)).unwrap();
+      } catch (refreshError) {
+        console.warn('⚠️ Could not refresh shares before validation:', refreshError);
+        // Continue anyway - validation will use current state
       }
     }
 
-    setIsLoading(true);
     try {
       let currentShare = share;
+
+      // Validate share state before proceeding
+      if (currentShare) {
+        console.log('🔍 Using existing share:', {
+          shareId: currentShare.shareId,
+          holidayKey: currentShare.holidayKey,
+          ownerUserId: currentShare.ownerUserId,
+          memberCount:
+            currentShare.members?.length || currentShare.memberUserIds?.length || 0,
+        });
+      }
 
       // If no share exists, create one
       if (!currentShare) {
         if (!holidayId) {
-          showToastMessage('Holiday not found. Please refresh the page.');
+          console.warn('❌ InviteButton: Holiday ID not found for key:', holidayKey);
+          // Try to refresh shares and home data as this might be a state consistency issue
+          try {
+            await dispatch(refreshShares(user.sub)).unwrap();
+            showToastMessage('Please try again after refreshing the data.');
+          } catch (refreshError) {
+            console.error('❌ Failed to refresh shares:', refreshError);
+            showToastMessage('Holiday not found. Please refresh the page.');
+          }
           return;
         }
 
@@ -169,7 +188,7 @@ export default function InviteButton({
         ).unwrap();
 
         // Handle share creation status messages
-        if (shareResult.shareStatus) {
+        if (shareResult.shareStatus && shareResult.shareStatus !== 'owner_access') {
           const statusMessages: Record<string, string> = {
             created_new: `Created new ${holidayName} share`,
             joined_existing: `Joined existing ${holidayName} share`,
@@ -224,13 +243,6 @@ export default function InviteButton({
       setShowInviteModal(false);
     } catch (error: any) {
       console.error('Failed to send invite:', error);
-      console.log('Error object structure:', {
-        message: error?.message,
-        error: error?.error,
-        dataError: error?.data?.error,
-        type: typeof error,
-        fullError: error,
-      }); // Debug log
 
       // Extract error message from different possible error structures
       let errorMessage = 'Failed to send invite. Please try again.';
@@ -245,8 +257,6 @@ export default function InviteButton({
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-
-      console.log('Extracted error message:', errorMessage); // Debug log
 
       // Use the actual API error message directly if it's informative
       if (

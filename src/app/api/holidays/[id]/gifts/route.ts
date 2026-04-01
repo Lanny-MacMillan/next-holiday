@@ -195,13 +195,6 @@ export async function POST(
       }
     }
 
-    // Debug logging for assignment field
-    console.log('🔍 Gift creation debug:');
-    console.log('  Raw assigned_to from request:', data.assigned_to);
-    console.log('  Parsed data keys:', Object.keys(data));
-    console.log('  assigned_to type:', typeof data.assigned_to);
-    console.log('  Final contactId:', contactId);
-
     const gift = await prisma.gift.create({
       data: {
         holidayId: id,
@@ -249,29 +242,14 @@ export async function POST(
       updatedAt: gift.updatedAt.toISOString(),
     };
 
-    // Debug logging for created gift
-    console.log('🎁 Gift created:');
-    console.log('  Gift ID:', gift.id);
-    console.log('  assignedTo field in DB:', gift.assignedTo);
-    console.log('  Original assigned_to:', data.assigned_to);
-    console.log('  Contact name:', gift.contact?.name);
-    console.log('  Transformed recipient:', transformedGift.recipient);
-
     // Create assignment notification if assigned to someone other than creator
     if (data.assigned_to && data.assigned_to !== user.id) {
       try {
         const assignerName = await getUserName(user.id);
 
-        // Database notification (existing system) - this is the primary system
-        await createAssignmentNotification({
-          userId: data.assigned_to,
-          fromUserId: user.id,
-          entityType: 'gift',
-          entityId: gift.id,
-          holidayId: id,
-          title: 'Gift Assignment',
-          message: `${assignerName} assigned you a gift: ${gift.name}`,
-        });
+        // NOTE: Database notification creation is now handled by SSE service
+        // No need to create database notification here since broadcastAssignment()
+        // calls the SSE service which handles both database creation AND real-time delivery
 
         // Real-time notification (enhancement layer) - completely isolated
         // This will NEVER affect the main API operation

@@ -83,8 +83,35 @@ export const selectHolidayIdByKey = createSelector(
   (holidayPreferences, holidayKey) => {
     if (!holidayPreferences.length || !holidayKey) return null;
 
+    // Try to find by exact holiday type match first
     const preference = holidayPreferences.find(pref => pref.holiday === holidayKey);
-    return preference?.holidayId || null;
+    if (preference?.holidayId) {
+      return preference.holidayId;
+    }
+
+    // Fallback: try normalized matching for edge cases
+    const normalizedKey = holidayKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const fallbackPreference = holidayPreferences.find(
+      pref =>
+        pref.holiday?.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedKey,
+    );
+
+    if (fallbackPreference?.holidayId) {
+      console.warn('⚠️ Found holiday ID using fallback matching:', {
+        requested: holidayKey,
+        found: fallbackPreference.holiday,
+        holidayId: fallbackPreference.holidayId,
+      });
+      return fallbackPreference.holidayId;
+    }
+
+    console.warn(
+      '❌ No holiday ID found for key:',
+      holidayKey,
+      'Available preferences:',
+      holidayPreferences.map(p => ({ holiday: p.holiday, id: p.holidayId })),
+    );
+    return null;
   },
 );
 

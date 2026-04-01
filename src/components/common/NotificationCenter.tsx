@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { acceptInvite, declineInvite } from '@/store/slices/invitesSlice';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { selectHolidayPreferences } from '@/store/selectors/home';
-import { addShare } from '@/store/slices/sharesSlice';
+import { addShare, refreshShares } from '@/store/slices/sharesSlice';
 import { migrateHolidayDataToShare } from '@/utils/shareMigration';
 
 // Simple SVG icons to avoid external dependencies
@@ -105,6 +105,44 @@ const UserIcon = ({
   </svg>
 );
 
+const XIcon = ({
+  size = 14,
+  className = '',
+}: {
+  size?: number;
+  className?: string;
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <line
+      x1="18"
+      y1="6"
+      x2="6"
+      y2="18"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <line
+      x1="6"
+      y1="6"
+      x2="18"
+      y2="18"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 interface Notification {
   id: string;
   type:
@@ -160,6 +198,9 @@ export default function NotificationCenter({
     hasExistingHoliday: boolean;
   } | null>(null);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
+  const [deletingNotification, setDeletingNotification] = useState<string | null>(
+    null,
+  );
 
   // Get holiday preferences from Redux state
   const holidayPreferences = useAppSelector(selectHolidayPreferences);
@@ -189,28 +230,25 @@ export default function NotificationCenter({
 
     // If we've determined polling should be used, start polling instead
     if (usePolling) {
-      console.log('Using polling fallback for notifications');
       startPolling();
       return;
     }
 
     // Try SSE first
-    console.log('🔌 Attempting SSE connection...');
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
 
     const connectSSE = () => {
       try {
-        // Create URL with auth0Sub parameter to match other API routes
-        const sseUrl = new URL('/api/notifications/stream', window.location.origin);
+        // Connect to external SSE service instead of internal API
+        const sseServiceUrl =
+          process.env.NEXT_PUBLIC_SSE_SERVICE_URL || 'http://localhost:4000';
+        const sseUrl = new URL('/stream', sseServiceUrl);
         sseUrl.searchParams.set('auth0Sub', auth0User.sub || 'auth0|test-user-123');
-
-        console.log('🔌 Connecting to SSE with URL:', sseUrl.toString());
 
         eventSource = new EventSource(sseUrl.toString());
 
         eventSource.onopen = () => {
-          console.log('🔔 Notification stream connected');
           setIsConnected(true);
           setError(null);
           // Reset failure count on successful connection
@@ -223,11 +261,7 @@ export default function NotificationCenter({
 
             // Handle debug logs - display them in browser console for easy debugging
             if (data.type === 'debug_logs') {
-              console.group('🔍 SSE Debug Logs from Server');
-              data.logs?.forEach((log: any) => {
-                console.log(`[${log.timestamp}] ${log.message}`, log.data || '');
-              });
-              console.groupEnd();
+              // Ignore debug logs in production
               return;
             }
 
@@ -259,31 +293,45 @@ export default function NotificationCenter({
               return;
             }
 
-            console.log('📬 New notification received:', notification.title);
-
-            // Add to notifications list with better deduplication
+            // Add to notifications list with enhanced deduplication
             setNotifications(prev => {
               // Safety check: ensure notification has valid ID
               if (!notification.id || typeof notification.id !== 'string') {
-                console.warn('Skipping notification with invalid ID:', notification);
                 return prev;
               }
 
-              // Check for duplicates by ID, but also by content for real-time notifications
+              // Check for duplicates by ID first (most reliable)
               const existsById = prev.some(n => n.id === notification.id);
+              if (existsById) {
+                return prev;
+              }
 
-              // For real-time notifications (temp IDs), also check by content to avoid duplicates
-              const existsByContent =
-                notification.id.startsWith('temp-') &&
-                prev.some(
-                  n =>
-                    n.entityId === notification.entityId &&
-                    n.entityType === notification.entityType &&
-                    n.type === notification.type &&
-                    n.message === notification.message,
+              // For all notifications, check for recent duplicates by content
+              // This catches cases where the same notification is sent multiple times
+              const recentTimeThreshold = Date.now() - 30 * 1000; // 30 seconds
+              const existsByRecentContent = prev.some(n => {
+                // Parse the creation time (handle both ISO strings and timestamps)
+                const nTime = new Date(n.createdAt).getTime();
+                const notificationTime = new Date(notification.createdAt).getTime();
+
+                // Only check recent notifications to avoid false positives
+                if (
+                  nTime < recentTimeThreshold &&
+                  notificationTime < recentTimeThreshold
+                ) {
+                  return false;
+                }
+
+                return (
+                  n.entityId === notification.entityId &&
+                  n.entityType === notification.entityType &&
+                  n.type === notification.type &&
+                  n.title === notification.title &&
+                  n.message === notification.message
                 );
+              });
 
-              if (existsById || existsByContent) {
+              if (existsByRecentContent) {
                 return prev;
               }
 
@@ -359,7 +407,6 @@ export default function NotificationCenter({
           if (sseFailureCount + 1 < SSE_FAILURE_THRESHOLD) {
             // Auto-reconnect after 3 seconds
             reconnectTimeout = setTimeout(() => {
-              console.log('🔄 Attempting to reconnect SSE...');
               connectSSE();
             }, 3000);
           }
@@ -402,7 +449,6 @@ export default function NotificationCenter({
       clearInterval(pollingInterval);
     }
 
-    console.log('📊 Starting notification polling every', POLLING_INTERVAL + 'ms');
     setIsConnected(true); // Show as connected for UI purposes
     setError(null);
 
@@ -419,7 +465,6 @@ export default function NotificationCenter({
 
   const stopPolling = () => {
     if (pollingInterval) {
-      console.log('📊 Stopping notification polling');
       clearInterval(pollingInterval);
       setPollingInterval(null);
       setIsConnected(false);
@@ -428,7 +473,6 @@ export default function NotificationCenter({
 
   // Function to manually switch back to SSE (for testing)
   const retrySSE = () => {
-    console.log('🔄 Manually retrying SSE connection...');
     stopPolling();
     setUsePolling(false);
     setSseFailureCount(0);
@@ -517,6 +561,52 @@ export default function NotificationCenter({
     }
   };
 
+  const handleDeleteNotification = async (notificationId: string) => {
+    if (!isAuthenticated || !auth0User) {
+      return;
+    }
+
+    try {
+      setDeletingNotification(notificationId);
+
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': JSON.stringify({
+            sub: auth0User.sub,
+            email: auth0User.email,
+            name: auth0User.name,
+            picture: auth0User.picture,
+          }),
+        },
+        body: JSON.stringify({
+          notificationIds: [notificationId],
+          action: 'delete',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete notification');
+      }
+
+      // Remove notification from local state
+      setNotifications(prev => {
+        const filtered = prev.filter(n => n.id !== notificationId);
+        const deletedNotification = prev.find(n => n.id === notificationId);
+        if (deletedNotification && !deletedNotification.isRead) {
+          setUnreadCount(curr => Math.max(0, curr - 1));
+        }
+        return filtered;
+      });
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      setError('Failed to delete notification');
+    } finally {
+      setDeletingNotification(null);
+    }
+  };
+
   const dispatch = useAppDispatch();
   const { refreshHomeData } = useRefreshHomeData();
 
@@ -596,6 +686,16 @@ export default function NotificationCenter({
 
         // Refresh home data to update shared holidays
         if (auth0User) {
+          // 🔥 IMPROVED FIX: Proper state refresh sequence after invite acceptance
+          // 1. Initial refresh to get the new holiday preference
+          await refreshHomeData(auth0User, 'all');
+
+          // 2. Refresh shares to ensure proper share data is loaded
+          if (auth0User.sub) {
+            await dispatch(refreshShares(auth0User.sub)).unwrap();
+          }
+
+          // 3. Force a second home data refresh to ensure shared data is properly linked
           await refreshHomeData(auth0User, 'all');
         }
 
@@ -739,41 +839,32 @@ export default function NotificationCenter({
                     </button>
                   )}
                   {/* Connection type indicator */}
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {isConnected
-                      ? usePolling
-                        ? '📊 Polling'
-                        : '🔌 Real-time'
-                      : '⏸️ Offline'}
+                  <div className="text-xs font-medium">
+                    {isConnected ? (
+                      usePolling ? (
+                        <span className="text-blue-600 dark:text-blue-400">
+                          Polling
+                        </span>
+                      ) : (
+                        <span className="text-green-600 dark:text-green-400">
+                          Live
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Offline
+                      </span>
+                    )}
                   </div>
                   {/* Debug control for development */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <>
-                      {usePolling && (
-                        <button
-                          onClick={retrySSE}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                          title="Retry SSE connection"
-                        >
-                          Retry SSE
-                        </button>
-                      )}
-                      {!usePolling && (
-                        <button
-                          onClick={() => {
-                            console.log(
-                              '🧪 Manually forcing polling mode for testing',
-                            );
-                            setUsePolling(true);
-                            setSseFailureCount(SSE_FAILURE_THRESHOLD);
-                          }}
-                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
-                          title="Force polling mode (for testing)"
-                        >
-                          Force Polling
-                        </button>
-                      )}
-                    </>
+                  {process.env.NODE_ENV === 'development' && usePolling && (
+                    <button
+                      onClick={retrySSE}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      title="Retry SSE connection"
+                    >
+                      Retry SSE
+                    </button>
                   )}
                 </div>
               </div>
@@ -817,7 +908,9 @@ export default function NotificationCenter({
                     onMarkRead={handleMarkAsRead}
                     onAcceptInvite={handleAcceptClick}
                     onDeclineInvite={handleDeclineInvite}
+                    onDelete={handleDeleteNotification}
                     loading={loading}
+                    deletingNotification={deletingNotification}
                   />
                 ))
               )}
@@ -961,7 +1054,9 @@ interface NotificationItemProps {
   onMarkRead: (notificationIds: string[]) => void;
   onAcceptInvite: (notification: Notification) => void;
   onDeclineInvite: (inviteId: string) => void;
+  onDelete: (notificationId: string) => void;
   loading: boolean;
+  deletingNotification: string | null;
 }
 
 function NotificationItem({
@@ -969,8 +1064,11 @@ function NotificationItem({
   onMarkRead,
   onAcceptInvite,
   onDeclineInvite,
+  onDelete,
   loading,
+  deletingNotification,
 }: NotificationItemProps) {
+  const isDeleting = deletingNotification === notification.id;
   if (notification.isInvite) {
     return (
       <div className="p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -986,9 +1084,45 @@ function NotificationItem({
               <h4 className="text-sm font-medium text-gray-900 dark:text-white">
                 {notification.title}
               </h4>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {formatTimeAgo(notification.createdAt)}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatTimeAgo(notification.createdAt)}
+                </span>
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    onDelete(notification.id);
+                  }}
+                  className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                  title="Delete notification"
+                  disabled={loading || isDeleting}
+                >
+                  {isDeleting ? (
+                    <svg
+                      className="animate-spin h-3 w-3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  ) : (
+                    <XIcon size={12} />
+                  )}
+                </button>
+              </div>
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -1052,22 +1186,58 @@ function NotificationItem({
               {notification.title}
             </h4>
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {formatTimeAgo(notification.createdAt)}
-              </span>
-              {!notification.isRead && (
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatTimeAgo(notification.createdAt)}
+                </span>
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    onMarkRead([notification.id]);
+                    onDelete(notification.id);
                   }}
-                  className="text-blue-500 hover:text-blue-700 transition-colors"
-                  title="Mark as read"
-                  disabled={loading}
+                  className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                  title="Delete notification"
+                  disabled={loading || isDeleting}
                 >
-                  <CheckCircleIcon size={14} />
+                  {isDeleting ? (
+                    <svg
+                      className="animate-spin h-3 w-3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  ) : (
+                    <XIcon size={12} />
+                  )}
                 </button>
-              )}
+                {!notification.isRead && (
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      onMarkRead([notification.id]);
+                    }}
+                    className="text-blue-500 hover:text-blue-700 transition-colors"
+                    title="Mark as read"
+                    disabled={loading}
+                  >
+                    <CheckCircleIcon size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

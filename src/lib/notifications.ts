@@ -12,6 +12,72 @@ export interface NotificationData {
 }
 
 /**
+ * Sends a notification to the SSE service for real-time delivery
+ */
+async function sendToSSEService(notification: any) {
+  if (!process.env.SSE_SERVICE_URL || !process.env.SSE_API_SECRET) {
+    console.warn(
+      '[SSE] SSE service not configured - skipping real-time notification',
+      {
+        SSE_SERVICE_URL: !!process.env.SSE_SERVICE_URL,
+        SSE_API_SECRET: !!process.env.SSE_API_SECRET,
+      },
+    );
+    return;
+  }
+
+  try {
+    const url = `${process.env.SSE_SERVICE_URL}/api/notify`;
+    const payload = {
+      userId: notification.userId,
+      notification: {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        entityType: notification.entityType,
+        entityId: notification.entityId,
+        holidayId: notification.holidayId,
+        fromUserId: notification.fromUserId,
+        isRead: notification.isRead,
+        isDismissed: notification.isDismissed,
+        createdAt: notification.createdAt,
+      },
+    };
+
+    console.log('📡 [SSE] Sending to SSE service:', { url, payload });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.SSE_API_SECRET}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      console.error('❌ [SSE] SSE service responded with error:', {
+        status: response.status,
+        statusText: response.statusText,
+        responseText: responseText,
+      });
+    } else {
+      console.error('✅ [SSE] Real-time notification sent successfully');
+    }
+  } catch (error) {
+    console.error('💥 [SSE] Failed to send real-time notification to SSE service:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      url: process.env.SSE_SERVICE_URL,
+    });
+    // Notification is still saved in DB, just no real-time delivery
+  }
+}
+
+/**
  * Creates an assignment notification when a task/gift/card is assigned to a user
  */
 export async function createAssignmentNotification(data: NotificationData) {
@@ -39,7 +105,8 @@ export async function createAssignmentNotification(data: NotificationData) {
     return null;
   }
 
-  return prisma.notification.create({
+  // 1. Save to database
+  const dbNotification = await prisma.notification.create({
     data: {
       userId: data.userId,
       fromUserId: data.fromUserId,
@@ -51,6 +118,11 @@ export async function createAssignmentNotification(data: NotificationData) {
       holidayId: data.holidayId,
     },
   });
+
+  // Note: Real-time delivery is now handled by broadcastAssignment() in the API endpoints
+  // This function only handles database persistence for backward compatibility
+
+  return dbNotification;
 }
 
 /**
@@ -67,7 +139,8 @@ export async function createCompletionNotification(data: NotificationData) {
     return null;
   }
 
-  return prisma.notification.create({
+  // 1. Save to database
+  const dbNotification = await prisma.notification.create({
     data: {
       userId: data.userId,
       fromUserId: data.fromUserId,
@@ -79,6 +152,11 @@ export async function createCompletionNotification(data: NotificationData) {
       holidayId: data.holidayId,
     },
   });
+
+  // Note: Real-time delivery is now handled by broadcastCompletion() in the API endpoints
+  // This function only handles database persistence for backward compatibility
+
+  return dbNotification;
 }
 
 /**
@@ -96,7 +174,8 @@ export async function createInviteNotification(
     return null;
   }
 
-  return prisma.notification.create({
+  // 1. Save to database
+  const dbNotification = await prisma.notification.create({
     data: {
       userId: data.userId,
       fromUserId: data.fromUserId,
@@ -109,6 +188,11 @@ export async function createInviteNotification(
       inviteId: data.inviteId,
     },
   });
+
+  // Note: Real-time delivery is now handled by broadcastInvite() in the API endpoints
+  // This function only handles database persistence for backward compatibility
+
+  return dbNotification;
 }
 
 /**

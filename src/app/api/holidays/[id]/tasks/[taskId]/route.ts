@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { ok, badRequest, serverError, notFound } from '@/lib/http';
+import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import { broadcastAssignment } from '@/lib/realTimeNotifications';
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -32,9 +34,15 @@ export async function PATCH(
 
     const data = parsed.data;
 
-    // Check if task exists
     const existingTask = await prisma.task.findUnique({
       where: { id: taskId },
+      select: {
+        id: true,
+        title: true,
+        assignedTo: true,
+        createdBy: true,
+        isCompleted: true,
+      },
     });
 
     if (!existingTask) {
@@ -59,6 +67,53 @@ export async function PATCH(
         ...(data.isCompleted !== undefined && { isCompleted: data.isCompleted }),
       },
     });
+
+    // Handle assignment change notifications
+    const newAssignedTo =
+      data.assigned_to && data.assigned_to !== '' ? data.assigned_to : null;
+    if (
+      data.assigned_to !== undefined &&
+      existingTask.assignedTo !== newAssignedTo
+    ) {
+      // Run notification asynchronously to not block the response
+      setTimeout(async () => {
+        try {
+          const [holiday, assignerName] = await Promise.all([
+            prisma.holiday.findUnique({
+              where: { id: holidayId },
+              select: { name: true },
+            }),
+            getUserName(user.id),
+          ]);
+
+          const holidayName = holiday?.name || 'Holiday';
+
+          if (newAssignedTo && newAssignedTo !== user.id) {
+            // NOTE: Database notification creation is now handled by SSE service
+            // No need to create database notification here since broadcastAssignment()
+            // calls the SSE service which handles both database creation AND real-time delivery
+
+            // Also use broadcast system for real-time
+            await broadcastAssignment(
+              newAssignedTo,
+              assignerName,
+              'task',
+              existingTask.title,
+              taskId,
+              holidayId,
+              holidayName,
+            );
+          }
+        } catch (error) {
+          console.error(
+            '💥 [TASK PATCH REAL] Assignment notification failed:',
+            error,
+          );
+        }
+      }, 0);
+    } else {
+      console.error('[TASK PATCH REAL] No assignment change detected');
+    }
 
     return ok(
       { data: updatedTask },

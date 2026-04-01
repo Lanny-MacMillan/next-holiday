@@ -497,7 +497,11 @@ const homeSlice = createSlice({
       // Listen to accept invite actions to refresh home data
       .addCase(acceptInvite.fulfilled, (state, action: any) => {
         // Mark loading state so UI shows that refresh is happening
+        // This is critical for new shared holidays to show proper loading state
         state.loading = true;
+        console.log(
+          '🏠 HomeSlice: Invite accepted, triggering comprehensive data refresh',
+        );
       })
       // Listen to theme changes and trigger refresh to update components
       .addCase(toggleTheme, state => {

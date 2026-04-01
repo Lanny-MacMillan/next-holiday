@@ -223,14 +223,19 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
 
       setConfirmInvite(null);
 
-      // 🔥 FIX: Use existing refreshHomeData function that already works
-      // The issue was timing, not the Redux pattern
+      // 🔥 IMPROVED FIX: Proper state refresh sequence after invite acceptance
+      // 1. Refresh home data first to get the new holiday preference
       await refreshHomeData();
 
-      // Refresh shares data to include the newly joined share
+      // 2. Refresh shares to ensure proper share data is loaded
       if (user?.sub) {
-        await dispatch(refreshShares(user.sub));
+        await dispatch(refreshShares(user.sub)).unwrap();
 
+        // 3. Force a second home data refresh to ensure shared data is properly linked
+        // This ensures the holiday preferences include all shared data
+        await refreshHomeData();
+
+        // 4. Refresh inbox invites to update notification state
         await dispatch(fetchInboxInvites(user.sub));
       }
 

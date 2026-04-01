@@ -2,6 +2,57 @@
 import { sendNotificationToUser } from '@/lib/notifications/stream';
 import { prisma } from './prisma';
 
+/**
+ * Send notification to external SSE service
+ */
+async function sendToExternalSSEService(userId: string, notification: any) {
+  if (!process.env.SSE_SERVICE_URL || !process.env.SSE_API_SECRET) {
+    console.warn(
+      '⚠️ [BROADCAST] External SSE service not configured - using internal fallback',
+    );
+    return sendNotificationToUser(userId, notification);
+  }
+
+  try {
+    console.log('🚀 [BROADCAST] Sending to external SSE service...', {
+      userId,
+      type: notification.type,
+      title: notification.title,
+    });
+
+    const response = await fetch(`${process.env.SSE_SERVICE_URL}/api/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.SSE_API_SECRET}`,
+      },
+      body: JSON.stringify({
+        userId,
+        notification,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        '❌ [BROADCAST] External SSE service error:',
+        response.status,
+        response.statusText,
+      );
+      // Don't fallback to internal SSE - just fail
+      // This prevents duplicate notifications
+      return false;
+    } else {
+      console.log('✅ [BROADCAST] External SSE service success');
+      return true;
+    }
+  } catch (error) {
+    console.error('💥 [BROADCAST] External SSE service failed:', error);
+    // Don't fallback to internal SSE - just fail
+    // This prevents duplicate notifications
+    return false;
+  }
+}
+
 interface NotificationPayload {
   userId: string;
   type:
@@ -26,9 +77,26 @@ interface NotificationPayload {
  */
 export async function broadcastNotification(payload: NotificationPayload) {
   try {
+    console.log('📣 [BROADCAST] Broadcasting notification...', {
+      userId: payload.userId,
+      type: payload.type,
+      title: payload.title,
+      entityType: payload.entityType,
+      entityId: payload.entityId,
+      isInvite: payload.isInvite,
+    });
+
     // Check user preferences first
     const prefs = await prisma.notificationPreferences.findUnique({
       where: { userId: payload.userId },
+    });
+
+    console.log('🔧 [BROADCAST] User preferences found:', {
+      userId: payload.userId,
+      hasPrefs: !!prefs,
+      inviteNotifications: prefs?.inviteNotifications,
+      assignmentNotifications: prefs?.assignmentNotifications,
+      completionNotifications: prefs?.completionNotifications,
     });
 
     // Determine if notification is allowed based on type and user preferences
@@ -54,13 +122,32 @@ export async function broadcastNotification(payload: NotificationPayload) {
 
     if (!notificationAllowed) {
       console.log(
-        `User ${payload.userId} has disabled ${payload.type} notifications, skipping broadcast`,
+        `❌ [BROADCAST] User ${payload.userId} has disabled ${payload.type} notifications, skipping broadcast`,
+        {
+          type: payload.type,
+          prefsFound: !!prefs,
+          assignmentNotifications: prefs?.assignmentNotifications,
+          completionNotifications: prefs?.completionNotifications,
+          inviteNotifications: prefs?.inviteNotifications,
+        },
       );
       return false;
     }
 
     // Check holiday access authorization if this is for a holiday
-    if (payload.holidayId && payload.entityType !== 'invite') {
+    // Note: Skip access check for assignment notifications since users should receive
+    // notifications for items assigned to them regardless of holiday sharing structure
+    if (
+      payload.holidayId &&
+      payload.entityType !== 'invite' &&
+      !payload.type.includes('_assigned')
+    ) {
+      console.log('🔐 [BROADCAST] Checking holiday access authorization...', {
+        userId: payload.userId,
+        holidayId: payload.holidayId,
+        entityType: payload.entityType,
+      });
+
       const hasAccess = await prisma.holiday.findFirst({
         where: {
           id: payload.holidayId,
@@ -68,15 +155,50 @@ export async function broadcastNotification(payload: NotificationPayload) {
             members: { some: { userId: payload.userId } },
           },
         },
+        include: {
+          account: {
+            include: {
+              members: {
+                select: {
+                  userId: true,
+                  user: { select: { email: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      console.log('🔐 [BROADCAST] Holiday access check detailed result:', {
+        userId: payload.userId,
+        holidayId: payload.holidayId,
+        hasAccess: !!hasAccess,
+        holidayFound: !!hasAccess,
+        accountMembers: hasAccess?.account?.members || 'Holiday not found',
       });
 
       if (!hasAccess) {
         console.warn(
-          `User ${payload.userId} does not have access to holiday ${payload.holidayId}, skipping notification`,
+          `❌ [BROADCAST] User ${payload.userId} does not have access to holiday ${payload.holidayId}, skipping notification`,
         );
         return false;
       }
+    } else if (payload.type.includes('_assigned')) {
+      console.log(
+        '⏭️ [BROADCAST] Skipping holiday access check for assignment notification',
+        {
+          userId: payload.userId,
+          type: payload.type,
+          reason: 'Users should receive notifications for items assigned to them',
+        },
+      );
     }
+
+    console.log('📦 [BROADCAST] Creating notification payload...', {
+      userId: payload.userId,
+      type: payload.type,
+      entityId: payload.entityId,
+    });
 
     // Create a unique ID that incorporates entity information to prevent conflicts
     const entityPrefix = payload.entityId
@@ -112,8 +234,20 @@ export async function broadcastNotification(payload: NotificationPayload) {
       return false;
     }
 
-    // Send via SSE to user's active connections
-    const sent = sendNotificationToUser(payload.userId, notification);
+    console.log('🚀 [BROADCAST] Sending to external SSE service...', {
+      userId: payload.userId,
+      notificationId: notification.id,
+      type: notification.type,
+    });
+
+    // Send via external SSE service (with internal fallback)
+    const sent = await sendToExternalSSEService(payload.userId, notification);
+
+    console.log('📨 [BROADCAST] External SSE service result:', {
+      userId: payload.userId,
+      sent,
+      notificationId: notification.id,
+    });
 
     if (sent) {
       console.log(
