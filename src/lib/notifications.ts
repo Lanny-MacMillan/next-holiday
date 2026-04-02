@@ -63,7 +63,7 @@ async function sendToSSEService(notification: any) {
         responseText: responseText,
       });
     } else {
-      console.error('[SSE] Real-time notification sent successfully');
+      console.log('[SSE] Real-time notification sent successfully');
     }
   } catch (error) {
     console.error('[SSE] Failed to send real-time notification to SSE service:', {

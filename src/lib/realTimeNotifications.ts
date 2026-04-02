@@ -115,18 +115,7 @@ export async function broadcastNotification(payload: NotificationPayload) {
             members: { some: { userId: payload.userId } },
           },
         },
-        include: {
-          account: {
-            include: {
-              members: {
-                select: {
-                  userId: true,
-                  user: { select: { email: true } },
-                },
-              },
-            },
-          },
-        },
+        select: { id: true },
       });
 
       if (!hasAccess) {
@@ -173,14 +162,10 @@ export async function broadcastNotification(payload: NotificationPayload) {
       return false;
     }
 
-    // Send via external SSE service (with internal fallback)
+    // Send via external SSE service
+    // Note: Database persistence is handled by the SSE service or calling code,
+    // not in this broadcast function
     const sent = await sendToExternalSSEService(payload.userId, notification);
-
-    if (sent) {
-      // Notification sent successfully
-    } else {
-      // No active connections, notification stored in DB only
-    }
 
     return sent;
   } catch (error) {

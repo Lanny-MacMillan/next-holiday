@@ -568,36 +568,80 @@ export default function NotificationCenter({
     try {
       setDeletingNotification(notificationId);
 
-      const response = await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: {
+      // Check if this is an invite notification
+      const notification = notifications.find(n => n.id === notificationId);
+      const isInvite =
+        notification?.isInvite || notification?.type === 'invite_received';
+
+      if (isInvite && notification?.entityId) {
+        // For invite notifications, decline the invite instead of just deleting
+        // We need to call the decline endpoint directly to ensure the invite is properly handled
+        const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-          'x-test-user': JSON.stringify({
+        };
+
+        if (auth0User) {
+          headers['x-test-user'] = JSON.stringify({
             sub: auth0User.sub,
             email: auth0User.email,
             name: auth0User.name,
-            picture: auth0User.picture,
-          }),
-        },
-        body: JSON.stringify({
-          notificationIds: [notificationId],
-          action: 'delete',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete notification');
-      }
-
-      // Remove notification from local state
-      setNotifications(prev => {
-        const filtered = prev.filter(n => n.id !== notificationId);
-        const deletedNotification = prev.find(n => n.id === notificationId);
-        if (deletedNotification && !deletedNotification.isRead) {
-          setUnreadCount(curr => Math.max(0, curr - 1));
+          });
         }
-        return filtered;
-      });
+
+        const response = await fetch(
+          `/api/invites/${notification.entityId}/decline`,
+          {
+            method: 'POST',
+            headers,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to decline invite');
+        }
+
+        // Remove the notification from local state
+        setNotifications(prev => {
+          const filtered = prev.filter(n => n.id === notificationId);
+          const removedNotification = prev.find(n => n.id === notificationId);
+          if (removedNotification && !removedNotification.isRead) {
+            setUnreadCount(curr => Math.max(0, curr - 1));
+          }
+          return filtered;
+        });
+      } else {
+        // For regular notifications, use the delete action
+        const response = await fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-test-user': JSON.stringify({
+              sub: auth0User.sub,
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+            }),
+          },
+          body: JSON.stringify({
+            notificationIds: [notificationId],
+            action: 'delete',
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete notification');
+        }
+
+        // Remove notification from local state
+        setNotifications(prev => {
+          const filtered = prev.filter(n => n.id !== notificationId);
+          const deletedNotification = prev.find(n => n.id === notificationId);
+          if (deletedNotification && !deletedNotification.isRead) {
+            setUnreadCount(curr => Math.max(0, curr - 1));
+          }
+          return filtered;
+        });
+      }
     } catch (err) {
       console.error('Error deleting notification:', err);
       setError('Failed to delete notification');

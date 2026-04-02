@@ -97,20 +97,24 @@ export const selectHolidayIdByKey = createSelector(
     );
 
     if (fallbackPreference?.holidayId) {
-      console.warn('⚠️ Found holiday ID using fallback matching:', {
-        requested: holidayKey,
-        found: fallbackPreference.holiday,
-        holidayId: fallbackPreference.holidayId,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ Found holiday ID using fallback matching:', {
+          requested: holidayKey,
+          found: fallbackPreference.holiday,
+          holidayId: fallbackPreference.holidayId,
+        });
+      }
       return fallbackPreference.holidayId;
     }
 
-    console.warn(
-      '❌ No holiday ID found for key:',
-      holidayKey,
-      'Available preferences:',
-      holidayPreferences.map(p => ({ holiday: p.holiday, id: p.holidayId })),
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '❌ No holiday ID found for key:',
+        holidayKey,
+        'Available preferences:',
+        holidayPreferences.map(p => ({ holiday: p.holiday, id: p.holidayId })),
+      );
+    }
     return null;
   },
 );

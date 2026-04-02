@@ -111,8 +111,6 @@ export async function PATCH(
           );
         }
       }, 0);
-    } else {
-      console.error('[TASK PATCH REAL] No assignment change detected');
     }
 
     return ok(

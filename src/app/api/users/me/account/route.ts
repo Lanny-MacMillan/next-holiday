@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         return newAccount;
       });
     } else {
-      console.error('Found existing account:', account.id);
+      console.log('Found existing account:', account.id);
     }
 
     return ok(toPlain(account));
