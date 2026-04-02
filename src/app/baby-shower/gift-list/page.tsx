@@ -52,8 +52,6 @@ export default function BabyShowerGiftListPage() {
   const displayGifts = useMemo(() => {
     // Try both giftList and gifts properties to handle different data structures
     const gifts = holidayData?.giftList || holidayData?.gifts || [];
-    console.log('Gift list updated:', gifts.length, 'gifts'); // Debug log
-    console.log('Holiday data structure:', holidayData); // Debug log
     return gifts;
   }, [holidayData?.giftList, holidayData?.gifts, holidayData]);
 

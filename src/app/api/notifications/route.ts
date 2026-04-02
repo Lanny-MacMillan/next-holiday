@@ -119,8 +119,8 @@ export async function PATCH(request: NextRequest) {
       return badRequest('Invalid notificationIds array');
     }
 
-    if (!action || !['read', 'dismiss'].includes(action)) {
-      return badRequest('Action must be "read" or "dismiss"');
+    if (!action || !['read', 'dismiss', 'delete'].includes(action)) {
+      return badRequest('Action must be "read", "dismiss", or "delete"');
     }
 
     // Handle invite notifications separately (they're not in the notifications table)
@@ -143,18 +143,28 @@ export async function PATCH(request: NextRequest) {
 
     // Update regular notifications
     if (regularNotificationIds.length > 0) {
-      const updateData =
-        action === 'read'
-          ? { isRead: true, readAt: new Date() }
-          : { isDismissed: true, dismissedAt: new Date() };
+      if (action === 'delete') {
+        // Delete notifications permanently
+        await prisma.notification.deleteMany({
+          where: {
+            id: { in: regularNotificationIds },
+            userId: user.id, // Security: only delete user's own notifications
+          },
+        });
+      } else {
+        const updateData =
+          action === 'read'
+            ? { isRead: true, readAt: new Date() }
+            : { isDismissed: true, dismissedAt: new Date() };
 
-      await prisma.notification.updateMany({
-        where: {
-          id: { in: regularNotificationIds },
-          userId: user.id, // Security: only update user's own notifications
-        },
-        data: updateData,
-      });
+        await prisma.notification.updateMany({
+          where: {
+            id: { in: regularNotificationIds },
+            userId: user.id, // Security: only update user's own notifications
+          },
+          data: updateData,
+        });
+      }
     }
 
     // Handle invite notifications (bridge pattern)

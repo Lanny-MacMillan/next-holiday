@@ -129,9 +129,6 @@ export default function BirthdayGuestListPage() {
   async function handleUpdateGuest(formValues: Record<string, any>) {
     if (!editingGuest || !holidayId || !auth0User) return;
 
-    console.log('🎯 Form values received:', formValues);
-    console.log('🎭 Current editing guest:', editingGuest);
-
     try {
       // Find the original guest list entry
       const originalGuestList = guestLists.find(
@@ -148,11 +145,6 @@ export default function BirthdayGuestListPage() {
         rsvpStatus: formValues.rsvp_status, // Note: form uses rsvp_status
         notes: formValues.notes,
       };
-
-      // Manual optimistic update - update Home Slice immediately
-      console.log('🔄 Manual optimistic update for guest:', editingGuest.id);
-      console.log('📝 Update payload:', updatePayload);
-      console.log('📂 Original guest list:', originalGuestList);
 
       const optimisticUpdate = {
         ...originalGuestList,
@@ -171,8 +163,6 @@ export default function BirthdayGuestListPage() {
         },
       };
 
-      console.log('✨ Dispatching optimistic update:', optimisticUpdate);
-
       dispatch(
         updateGuestInHomeData({
           holidayId,
@@ -190,8 +180,6 @@ export default function BirthdayGuestListPage() {
       }).unwrap();
 
       if (result) {
-        console.log('✅ API call successful, updating with server data:', result);
-
         // Update Home Slice with actual server response
         dispatch(
           updateGuestInHomeData({
@@ -360,9 +348,6 @@ export default function BirthdayGuestListPage() {
     shareMembers: [],
     auth0User: auth0User,
   });
-
-  // Debug form config to ensure RSVP status field is properly configured
-  console.log('🎪 Edit form config fields:', editFormConfig.fields);
 
   return (
     <div className="min-h-screen birthday-gradient flex flex-col items-center p-4 sm:p-8 font-sans">

@@ -165,6 +165,10 @@ export default function SharedIndicatorEnhanced({
           }),
         ).unwrap();
 
+        // Force refresh of shares after removing member to ensure consistent state
+        if (user?.sub) {
+          await dispatch(refreshShares(user.sub)).unwrap();
+        }
         // Use cleanup after removing member
         await cleanupAfterRemoveMember(user);
       }

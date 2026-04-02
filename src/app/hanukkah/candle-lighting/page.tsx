@@ -182,8 +182,6 @@ export default function CandleLightingPage() {
             priority: task.priority,
             category: task.category,
           });
-
-          console.log(`✅ Added task ${i + 1}: ${task.title}`);
         } catch (taskError) {
           console.error(`❌ Error adding task ${i + 1}:`, taskError);
         }
@@ -264,9 +262,7 @@ export default function CandleLightingPage() {
       const remainingTasks = candleLighting.filter(
         (c: any) => c.id !== taskToDelete.id,
       );
-      console.log('Candle Lighting after delete:', remainingTasks.length);
       if (remainingTasks.length === 0) {
-        console.log('No tasks remaining, showing default tasks prompt');
         setShowDefaultTasks(true);
       }
 

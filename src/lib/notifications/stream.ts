@@ -6,7 +6,6 @@ export function sendNotificationToUser(userId: string, notification: any) {
   const userConnections = connections.get(userId);
 
   if (!userConnections || userConnections.size === 0) {
-    console.log(`No active SSE connections for user: ${userId}`);
     return false;
   }
 
@@ -33,9 +32,6 @@ export function sendNotificationToUser(userId: string, notification: any) {
     connections.delete(userId);
   }
 
-  console.log(
-    `📡 Sent notification to ${successCount} connections for user: ${userId}`,
-  );
   return successCount > 0;
 }
 

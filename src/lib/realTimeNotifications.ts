@@ -2,6 +2,50 @@
 import { sendNotificationToUser } from '@/lib/notifications/stream';
 import { prisma } from './prisma';
 
+/**
+ * Send notification to external SSE service
+ */
+async function sendToExternalSSEService(userId: string, notification: any) {
+  if (!process.env.SSE_SERVICE_URL || !process.env.SSE_API_SECRET) {
+    console.warn(
+      '⚠️ [BROADCAST] External SSE service not configured - using internal fallback',
+    );
+    return sendNotificationToUser(userId, notification);
+  }
+
+  try {
+    const response = await fetch(`${process.env.SSE_SERVICE_URL}/api/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.SSE_API_SECRET}`,
+      },
+      body: JSON.stringify({
+        userId,
+        notification,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        '❌ [BROADCAST] External SSE service error:',
+        response.status,
+        response.statusText,
+      );
+      // Don't fallback to internal SSE - just fail
+      // This prevents duplicate notifications
+      return false;
+    } else {
+      return true;
+    }
+  } catch (error) {
+    console.error('💥 [BROADCAST] External SSE service failed:', error);
+    // Don't fallback to internal SSE - just fail
+    // This prevents duplicate notifications
+    return false;
+  }
+}
+
 interface NotificationPayload {
   userId: string;
   type:
@@ -53,14 +97,17 @@ export async function broadcastNotification(payload: NotificationPayload) {
     }
 
     if (!notificationAllowed) {
-      console.log(
-        `User ${payload.userId} has disabled ${payload.type} notifications, skipping broadcast`,
-      );
       return false;
     }
 
     // Check holiday access authorization if this is for a holiday
-    if (payload.holidayId && payload.entityType !== 'invite') {
+    // Note: Skip access check for assignment notifications since users should receive
+    // notifications for items assigned to them regardless of holiday sharing structure
+    if (
+      payload.holidayId &&
+      payload.entityType !== 'invite' &&
+      !payload.type.includes('_assigned')
+    ) {
       const hasAccess = await prisma.holiday.findFirst({
         where: {
           id: payload.holidayId,
@@ -68,14 +115,17 @@ export async function broadcastNotification(payload: NotificationPayload) {
             members: { some: { userId: payload.userId } },
           },
         },
+        select: { id: true },
       });
 
       if (!hasAccess) {
         console.warn(
-          `User ${payload.userId} does not have access to holiday ${payload.holidayId}, skipping notification`,
+          `❌ [BROADCAST] User ${payload.userId} does not have access to holiday ${payload.holidayId}, skipping notification`,
         );
         return false;
       }
+    } else if (payload.type.includes('_assigned')) {
+      // Skip holiday access check for assignment notifications
     }
 
     // Create a unique ID that incorporates entity information to prevent conflicts
@@ -112,18 +162,10 @@ export async function broadcastNotification(payload: NotificationPayload) {
       return false;
     }
 
-    // Send via SSE to user's active connections
-    const sent = sendNotificationToUser(payload.userId, notification);
-
-    if (sent) {
-      console.log(
-        `✅ Real-time notification sent to user ${payload.userId}: ${payload.title}`,
-      );
-    } else {
-      console.log(
-        `⚠️ No active connections for user ${payload.userId}, notification stored in DB only`,
-      );
-    }
+    // Send via external SSE service
+    // Note: Database persistence is handled by the SSE service or calling code,
+    // not in this broadcast function
+    const sent = await sendToExternalSSEService(payload.userId, notification);
 
     return sent;
   } catch (error) {

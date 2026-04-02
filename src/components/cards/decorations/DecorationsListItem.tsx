@@ -192,7 +192,6 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    console.log('Edit button clicked for task:', task.title);
                     onEditTask(task);
                   }}
                   className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors cursor-pointer relative z-30"
@@ -241,7 +240,6 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
             <button
               onClick={e => {
                 e.stopPropagation();
-                console.log('Edit button clicked for task:', task.title);
                 onEditTask(task);
               }}
               className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm cursor-pointer transition-colors"
@@ -369,7 +367,6 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
               <button
                 onClick={e => {
                   e.stopPropagation();
-                  console.log('Edit button clicked for task:', task.title);
                   onEditTask(task);
                 }}
                 className="text-white border border-yellow-300 hover:bg-yellow-300 hover:text-white text-xs sm:text-sm px-2 py-1 rounded transition-colors cursor-pointer relative z-30"
@@ -427,7 +424,6 @@ const DecorationsListItem: React.FC<DecorationsListItemProps> = ({
           <button
             onClick={e => {
               e.stopPropagation();
-              console.log('Edit button clicked for task:', task.title);
               onEditTask(task);
             }}
             className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm cursor-pointer transition-colors"

@@ -133,6 +133,12 @@ export async function POST(request: NextRequest) {
           );
         }
       }, 0); // Run in next tick
+    } else {
+      console.error('[INVITE] No finalToUserId, skipping real-time notification', {
+        originalToUserId: toUserId,
+        originalToEmail: toEmail,
+        userLookupStatus,
+      });
     }
 
     // Add status to response for frontend handling
@@ -174,7 +180,7 @@ export async function GET(request: NextRequest) {
         internalUserId = user?.id || null;
         userEmail = user?.email || null;
       } catch (error) {
-        console.log(
+        console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
       }
@@ -210,7 +216,7 @@ export async function GET(request: NextRequest) {
         });
         internalUserId = user?.id || null;
       } catch (error) {
-        console.log(
+        console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
       }
@@ -248,7 +254,7 @@ export async function GET(request: NextRequest) {
         internalUserId = user?.id || null;
         userEmail = user?.email || null;
       } catch (error) {
-        console.log(
+        console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
       }

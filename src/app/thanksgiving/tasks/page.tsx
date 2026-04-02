@@ -79,14 +79,13 @@ export default function ThanksgivingTasksPage() {
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [sortBy, setSortBy] = useState<SortOption>('none');
 
-  const themeColor = '#f59e0b'; // Amber for Thanksgiving
-  console.log('shareMembers', shareMembers);
-  // Load contacts if holiday is shared
+  const themeColor = '#f59e0b';
+
   useEffect(() => {
     if (isHolidayShared && auth0User) {
       dispatch(fetchContacts(auth0User.sub));
     }
-  }, [isHolidayShared, auth0User, dispatch]);
+  }, [isHolidayShared, auth0User]);
 
   // Name resolution helper functions
   const getAssignedUserName = (assignedToUuid: string): string | null => {

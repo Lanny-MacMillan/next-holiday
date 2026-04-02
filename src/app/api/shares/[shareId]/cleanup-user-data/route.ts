@@ -52,10 +52,6 @@ export async function POST(
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
 
-    console.log(
-      `🧹 Cleaning up share data for user ${userId} from share ${shareId} (${share.holiday.name})`,
-    );
-
     // Clean up all shared data for this user in a transaction
     const cleanupResults = await prisma.$transaction(async tx => {
       // Clean up tasks associated with this share
@@ -132,8 +128,6 @@ export async function POST(
         deletedBudgetTransactions: deletedBudgetTransactions.count,
       };
     });
-
-    console.log(`🧹 Cleanup completed:`, cleanupResults);
 
     return NextResponse.json({
       success: true,

@@ -69,7 +69,6 @@ const initialState: HolidayPreferencesState = {
 export const fetchHolidayPreferences = createAsyncThunk(
   'holidayPreferences/fetchHolidayPreferences',
   async (request: FetchHolidayPreferencesRequest & { auth0User?: any }) => {
-    console.log('Fetching holiday preferences for account:', request.accountId);
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -173,7 +172,6 @@ const holidayPreferencesSlice = createSlice({
         state.initialized = true;
         // The API returns the preferences directly, no transformation needed
         state.preferences = action.payload;
-        console.log('Holiday preferences fetched from API:', action.payload);
       })
       .addCase(fetchHolidayPreferences.rejected, (state, action) => {
         state.loading = false;

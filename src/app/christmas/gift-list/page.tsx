@@ -130,10 +130,6 @@ export default function ChristmasGiftListPage() {
   }, [dispatch, auth0User?.sub]);
 
   async function handleAddGift(values: Record<string, any>) {
-    console.log('🎁 Form values received:', values);
-    console.log('🎁 Recipient field value:', values.recipient);
-    console.log('🎁 Name field value:', values.name);
-
     if (!values.name?.trim() || !values.recipient?.trim()) return;
     if (!holidayId || !auth0User) return;
 
@@ -156,16 +152,11 @@ export default function ChristmasGiftListPage() {
           );
         }
       } else {
-        console.log('No assignment field in form values');
-        console.log('Available form fields:', Object.keys(values));
+        console.error('No assignment field in form values');
+        console.error('Available form fields:', Object.keys(values));
       }
 
       const payload = transformGiftPayload(values, contacts, shareMembers);
-
-      console.log('🔄 Transform input - values:', values);
-      console.log('🔄 Transform input - values.recipient:', values.recipient);
-      console.log('🔄 Transform output payload:', payload);
-      console.log('🔄 Payload recipient_name:', payload.recipient_name);
 
       // Use the standardized hook function
       await createGift(payload);
@@ -287,8 +278,8 @@ export default function ChristmasGiftListPage() {
           );
         }
       } else {
-        console.log('No assignment field in form values for update');
-        console.log('Available form fields:', Object.keys(values));
+        console.error('No assignment field in form values for update');
+        console.error('Available form fields:', Object.keys(values));
       }
 
       const payload = transformGiftPayload(values, contacts, shareMembers);

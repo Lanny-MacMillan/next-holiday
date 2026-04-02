@@ -221,10 +221,6 @@ export default function DailyPrinciplesPage() {
         dueDate.setDate(kwanzaaStartDate.getDate() + (principle.dayNumber - 1));
         const dueDateString = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
-        console.log(
-          `Adding principle ${i + 1}/${defaultKwanzaaPrinciples.length}: ${principle.name}`,
-        );
-
         const result = await createTask({
           title: principle.name,
           description: principle.description,
@@ -238,7 +234,6 @@ export default function DailyPrinciplesPage() {
         dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
       }
 
-      console.log('✅ All default principles added successfully');
       setShowDefaultPrinciples(false);
     } catch (error) {
       console.error('Failed to add default principles:', error);

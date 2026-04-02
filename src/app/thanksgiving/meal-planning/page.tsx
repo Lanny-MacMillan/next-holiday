@@ -128,9 +128,6 @@ export default function ThanksgivingMealPlanningPage() {
         ]
       : baseMembers;
 
-  console.log('Meal Planning - shareMembers:', shareMembers);
-  console.log('Meal Planning - isHolidayShared:', isHolidayShared);
-
   // Name resolution helper functions
   const getAssignedUserName = (assignedToUuid: string): string | null => {
     if (!assignedToUuid || !shareMembers.length) return null;

@@ -39,19 +39,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  console.log('Request body:', body);
 
   const { auth0Sub, email, name, picture } = body;
 
   try {
-    console.log('POST /api/users called');
-
     if (!auth0Sub) {
-      console.log('Missing auth0Sub');
       return Response.json({ error: 'Auth0 sub is required' }, { status: 400 });
     }
-
-    console.log('Creating/updating user with auth0Sub:', auth0Sub);
 
     // Use upsert to handle create/update atomically and avoid race conditions
     const user = await prisma.user.upsert({
@@ -80,7 +74,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userPreferencesExist) {
-      console.log('Creating default user preferences for new user:', user.id);
       await prisma.userPreferences.upsert({
         where: { userId: user.id },
         create: {
@@ -89,10 +82,7 @@ export async function POST(request: NextRequest) {
         },
         update: {}, // No updates needed, just ensure it exists
       });
-      console.log('Default user preferences created successfully');
     }
-
-    console.log('User created/updated successfully:', user.id);
 
     // Return user without sensitive fields
     const { auth0Sub: _, ...userResponse } = user;
@@ -102,7 +92,6 @@ export async function POST(request: NextRequest) {
 
     // Handle the specific case where upsert fails due to concurrent requests
     if (error.code === 'P2002' && error.meta?.target?.includes('auth0_sub')) {
-      console.log('Concurrent user creation detected, fetching existing user');
       try {
         const existingUser = await prisma.user.findUnique({
           where: { auth0Sub },
@@ -115,10 +104,6 @@ export async function POST(request: NextRequest) {
           });
 
           if (!userPreferencesExist) {
-            console.log(
-              'Creating missing default user preferences for:',
-              existingUser.id,
-            );
             await prisma.userPreferences.upsert({
               where: { userId: existingUser.id },
               create: {

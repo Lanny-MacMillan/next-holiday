@@ -116,7 +116,7 @@ export function useHolidayPageData(): HolidayPageData {
             (card: any) => card.isCompleted,
           ).length;
         } else {
-          console.log('No cards or tasks data found for progress calculation');
+          console.error('No cards or tasks data found for progress calculation');
         }
         break;
 

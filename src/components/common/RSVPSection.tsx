@@ -93,7 +93,6 @@ const RSVPSection: React.FC<RSVPSectionProps> = ({
       }, ${guestCount} guests)`;
     }
   };
-  console.log('borderColor', borderColor);
   if (isGamifiedMode) {
     // Gamified mode design
     return (

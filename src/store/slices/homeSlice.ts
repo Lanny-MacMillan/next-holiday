@@ -5,7 +5,6 @@ import { acceptInvite } from './invitesSlice';
 import { toggleTheme, updateSettings } from './themeSlice';
 import { updateUserPreferences } from './userPreferencesSlice';
 
-// Async thunk to refresh home data
 export const refreshHomeData = createAsyncThunk(
   'home/refreshHomeData',
   async (auth0User: any) => {
@@ -470,53 +469,33 @@ const homeSlice = createSlice({
       if (!state.data?.holidayPreferences) return;
 
       const { holidayId } = action.payload;
-      // Remove the holiday preference completely for shared holidays the user no longer has access to
       state.data.holidayPreferences = state.data.holidayPreferences.filter(
         pref => pref.holidayId !== holidayId,
       );
     },
   },
   extraReducers: builder => {
-    // Listen to share actions to automatically update home data
     builder
       .addCase(leaveShare.fulfilled, (state, action: any) => {
-        // When a user successfully leaves a share, we need to refresh all data
-        // The server-side cleanup handles removing shared data from the database
-        // We just need to trigger a refresh to update the UI
-        console.log('🏠 HomeSlice: User left share, triggering data refresh');
-        state.loading = true; // This will trigger a refresh in components
+        state.loading = true;
       })
-      // Also handle when someone else is removed from a share
       .addCase(removeMemberFromShare.fulfilled, (state, action: any) => {
-        // When a member is removed from a share, refresh data to update UI
-        console.log(
-          '🏠 HomeSlice: Member removed from share, triggering data refresh',
-        );
-        state.loading = true; // This will trigger a refresh in components
+        state.loading = true;
       })
-      // Listen to accept invite actions to refresh home data
       .addCase(acceptInvite.fulfilled, (state, action: any) => {
-        // Mark loading state so UI shows that refresh is happening
         state.loading = true;
       })
-      // Listen to theme changes and trigger refresh to update components
       .addCase(toggleTheme, state => {
-        // Theme changed - components may need updated data
         state.loading = true;
       })
-      // Listen to display mode/other settings changes
       .addCase(updateSettings, (state, action) => {
-        // Settings changed - components may need updated data
         if (action.payload.displayMode || action.payload.theme) {
           state.loading = true;
         }
       })
-      // Listen to user preferences database updates
       .addCase(updateUserPreferences.fulfilled, (state, action) => {
-        // User preferences updated in database - trigger refresh for consistency
         state.loading = true;
       })
-      // Handle home data refresh results
       .addCase(refreshHomeData.fulfilled, (state, action) => {
         state.data = action.payload;
         state.loading = false;

@@ -96,11 +96,24 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingShare) {
-      // Check if user is already a member
+      // Check if user is the owner of the existing share
+      const isOwner = existingShare.ownerUserId === ownerUser.id;
+
+      // Check if user is already a member (but not the owner)
       const isUserMember = existingShare.members.some(
         member => member.user.auth0Sub === ownerUserId,
       );
 
+      // If user is the owner, return success status (they're accessing their own share)
+      if (isOwner) {
+        return NextResponse.json({
+          ...existingShare,
+          shareStatus: 'owner_access',
+          message: `Accessing your ${holidayDisplayName} share`,
+        });
+      }
+
+      // If user is a member but not owner, they're joining an existing share
       return NextResponse.json({
         ...existingShare,
         shareStatus: isUserMember ? 'already_member' : 'joined_existing',

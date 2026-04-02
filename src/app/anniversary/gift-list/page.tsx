@@ -59,8 +59,6 @@ export default function GiftListPage() {
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
-    // Fetch contacts for address book functionality
-    // Only fetch if home data is initialized (which contains contacts)
     if (homeInitialized) {
       dispatch(fetchContacts());
     }

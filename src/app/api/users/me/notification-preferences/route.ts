@@ -25,14 +25,12 @@ export async function GET(request: NextRequest) {
 
     // If no preferences exist, create default ones
     if (!preferences) {
-      console.log('Creating default notification preferences for user:', user.id);
       preferences = await prisma.notificationPreferences.create({
         data: {
           userId: user.id,
           ...DEFAULT_NOTIFICATION_PREFERENCES,
         },
       });
-      console.log('Default notification preferences created successfully');
     }
 
     return Response.json(preferences);

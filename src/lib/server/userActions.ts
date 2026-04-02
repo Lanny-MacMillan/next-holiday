@@ -102,14 +102,6 @@ export async function addUserToDb(auth0User: {
     } catch (transactionError: any) {
       // Handle race condition where user was created by another concurrent request
       if (transactionError.code === 'P2002') {
-        console.log(
-          'Unique constraint violation detected, handling race condition:',
-          {
-            target: transactionError.meta?.target,
-            auth0Sub: auth0User.sub,
-          },
-        );
-
         try {
           // Wait a bit to let the other transaction complete
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -127,10 +119,6 @@ export async function addUserToDb(auth0User: {
 
           if (existingUser) {
             const account = existingUser.accountMembers?.[0]?.account || null;
-            console.log('Successfully recovered from race condition:', {
-              userId: existingUser.id,
-              hasAccount: !!account,
-            });
             return { success: true, data: { user: existingUser, account } };
           } else {
             console.error(

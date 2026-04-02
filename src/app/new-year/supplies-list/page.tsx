@@ -74,21 +74,6 @@ export default function NewYearSuppliesListPage() {
       ]
     : baseMembers;
 
-  // Debug shareMembers to identify UUID issues
-  console.log('ShareMembers debug info:', {
-    baseMembers: baseMembers.map((m: any) => ({
-      userId: m.userId,
-      uuid: m.uuid,
-      name: m.name,
-    })),
-    finalShareMembers: shareMembers.map((m: any) => ({
-      userId: m.userId,
-      uuid: m.uuid,
-      name: m.name,
-    })),
-    auth0User: { sub: auth0User?.sub, id: auth0User?.id, name: auth0User?.name },
-  });
-
   // State management
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -104,15 +89,8 @@ export default function NewYearSuppliesListPage() {
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
 
   async function handleAddGift(values: Record<string, any>) {
-    console.log('handleAddGift called with values:', values);
-    console.log('Form validation check:', {
-      nameValid: !!values.name?.trim(),
-      name: values.name,
-    });
-
     // Only name is required
     if (!values.name?.trim()) {
-      console.log('Validation failed - missing required fields');
       setToastMessage('Please fill in the Item Name field');
       setToastType('error');
       setShowToast(true);
@@ -120,9 +98,7 @@ export default function NewYearSuppliesListPage() {
     }
 
     try {
-      console.log('Attempting to transform payload...');
       const payload = transformSuppliesPayload(values, shareMembers);
-      console.log('Payload created successfully:', payload);
 
       const result = await createGift(payload);
 
@@ -136,8 +112,6 @@ export default function NewYearSuppliesListPage() {
   }
 
   function openForm() {
-    console.log('Opening Add Supply modal');
-    console.log('ShareMembers available:', shareMembers?.length || 0);
     setShowAddModal(true);
     setSelectedGift(null);
   }
@@ -196,16 +170,11 @@ export default function NewYearSuppliesListPage() {
   async function handleUpdateGift(values: Record<string, any>) {
     if (!selectedGift) return;
 
-    console.log('handleUpdateGift called with values:', values);
-    console.log('shareMembers available:', shareMembers);
-
     try {
       const payload = transformSuppliesPayload(values, shareMembers);
-      console.log('Update payload created:', payload);
 
       // Update using the editGift hook for field updates
       const result = await editGift(selectedGift.id, payload);
-      console.log('Update result:', result);
 
       setShowEditModal(false);
       setSelectedGift(null);

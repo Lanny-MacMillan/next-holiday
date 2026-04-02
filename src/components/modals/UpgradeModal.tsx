@@ -180,12 +180,6 @@ export default function UpgradeModal({
           }),
         ).unwrap();
 
-        // Success!
-        console.log('Upgrade successful:', {
-          payment: paymentResult,
-          upgrade: upgradeResult,
-        });
-
         onUpgrade();
         onClose();
       } else {

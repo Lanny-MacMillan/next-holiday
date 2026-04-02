@@ -22,7 +22,6 @@ export default function PerformanceDashboard({
       let monitor = getPerformanceMonitor();
 
       if (!monitor) {
-        console.log('🔧 Performance monitor not found, initializing...');
         monitor = initPerformanceMonitor();
       }
 
@@ -33,18 +32,6 @@ export default function PerformanceDashboard({
         setMetrics(monitor.getMetrics());
         setVitals(monitor.getWebVitals());
         setSummary(monitor.getSummary());
-
-        // Debug info
-        console.log(
-          '📊 Dashboard opened - Metrics count:',
-          monitor.getMetrics().length,
-        );
-        console.log(
-          '📊 Dashboard opened - Vitals count:',
-          monitor.getWebVitals().length,
-        );
-      } else {
-        console.warn('⚠️ Performance monitor could not be initialized');
       }
     }
   }, [isVisible]);
@@ -229,7 +216,6 @@ export default function PerformanceDashboard({
                 let monitor = getPerformanceMonitor();
 
                 if (!monitor) {
-                  console.log('🔧 Performance monitor not found, initializing...');
                   monitor = initPerformanceMonitor();
                 }
 
@@ -244,15 +230,6 @@ export default function PerformanceDashboard({
 
                   // Send to analytics and log
                   monitor.sendToAnalytics();
-
-                  console.log('🔍 PERFORMANCE DEBUG INFO:');
-                  console.log('- Metrics collected:', monitor.getMetrics().length);
-                  console.log(
-                    '- Web Vitals collected:',
-                    monitor.getWebVitals().length,
-                  );
-                  console.log('- Full metrics data:', monitor.getMetrics());
-                  console.log('- Full vitals data:', monitor.getWebVitals());
                 } else {
                   console.error('❌ Performance monitor could not be initialized');
                 }

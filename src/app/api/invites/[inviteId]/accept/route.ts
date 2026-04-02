@@ -81,9 +81,6 @@ export async function POST(
 
         // If user has existing holiday of same type, delete it (cascade will handle related data)
         if (existingHoliday) {
-          console.log(
-            `Deleting existing ${shareWithHoliday.holiday.holidayType} holiday before accepting share invitation`,
-          );
           await prisma.holiday.delete({
             where: { id: existingHoliday.id },
           });
@@ -100,13 +97,63 @@ export async function POST(
       });
     }
 
-    // Get updated share
+    // Get updated share with complete data for frontend synchronization
     const share = await prisma.share.findUnique({
       where: { id: invite.shareId },
-      include: { members: true },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                auth0Sub: true,
+                name: true,
+                email: true,
+                picture: true,
+              },
+            },
+          },
+        },
+        holiday: {
+          select: {
+            id: true,
+            holidayType: true,
+            name: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            auth0Sub: true,
+            name: true,
+            email: true,
+            picture: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json({ invite: updatedInvite, share });
+    // Transform the response to match the expected frontend format
+    const responseShare = share
+      ? {
+          ...share,
+          shareId: share.id,
+          holidayKey: share.holiday.holidayType
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-'),
+          memberUserIds: share.members.map(m => m.user.auth0Sub),
+          members: share.members.map(m => ({
+            userId: m.user.auth0Sub,
+            name: m.user.name,
+            email: m.user.email,
+            picture: m.user.picture,
+            joinedAt: m.joinedAt,
+          })),
+        }
+      : null;
+
+    return NextResponse.json({ invite: updatedInvite, share: responseShare });
   } catch (error) {
     console.error('Error accepting invite:', error);
     return NextResponse.json({ error: 'Failed to accept invite' }, { status: 500 });

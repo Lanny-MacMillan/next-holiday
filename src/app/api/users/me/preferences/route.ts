@@ -34,17 +34,12 @@ export async function GET(request: NextRequest) {
 
     // If no preferences exist, create default ones
     if (!preferences) {
-      console.log(
-        'Creating default user preferences for existing user:',
-        currentUser.id,
-      );
       preferences = await prisma.userPreferences.create({
         data: {
           userId: currentUser.id,
           ...DEFAULT_USER_PREFERENCES,
         },
       });
-      console.log('Default user preferences created successfully');
     }
 
     return Response.json(preferences);

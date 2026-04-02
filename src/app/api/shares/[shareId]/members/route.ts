@@ -82,9 +82,6 @@ export async function POST(
       );
 
       if (!ownerIsMember) {
-        console.log(
-          `🔧 Adding holiday owner ${holidayOwnerUserId} to share ${shareId}`,
-        );
         try {
           await prisma.shareMember.create({
             data: {
@@ -228,15 +225,52 @@ export async function DELETE(
       // Don't fail the member removal if cleanup fails
     }
 
-    // Get updated share with members
+    // Get updated share with members and holiday info
     const updatedShare = await prisma.share.findUnique({
       where: { id: shareId },
-      include: { members: true },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                auth0Sub: true,
+                name: true,
+                email: true,
+                picture: true,
+              },
+            },
+          },
+        },
+        holiday: {
+          select: {
+            id: true,
+            holidayType: true,
+            name: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            auth0Sub: true,
+            name: true,
+            email: true,
+            picture: true,
+          },
+        },
+      },
     });
 
+    if (!updatedShare) {
+      return NextResponse.json(
+        { error: 'Share not found after update' },
+        { status: 404 },
+      );
+    }
+
     // If there's only one member left (the owner), delete all pending invites
-    // to clean up the share state
-    if (updatedShare && updatedShare.members.length === 1) {
+    // to clean up the share state, but keep the share itself for future invitations
+    if (updatedShare.members.length === 1) {
       await prisma.invite.deleteMany({
         where: {
           shareId: shareId,
@@ -245,7 +279,25 @@ export async function DELETE(
       });
     }
 
-    return NextResponse.json(updatedShare);
+    // Transform the response to match the expected format
+    const responseShare = {
+      ...updatedShare,
+      shareId: updatedShare.id,
+      holidayKey: updatedShare.holiday.holidayType
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-'),
+      memberUserIds: updatedShare.members.map(m => m.user.auth0Sub),
+      members: updatedShare.members.map(m => ({
+        userId: m.user.auth0Sub,
+        name: m.user.name,
+        email: m.user.email,
+        picture: m.user.picture,
+        joinedAt: m.joinedAt,
+      })),
+    };
+
+    return NextResponse.json(responseShare);
   } catch (error) {
     console.error('Error removing member from share:', error);
     return NextResponse.json(
