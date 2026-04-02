@@ -93,8 +93,6 @@ export default function EasterEventsPage() {
     if (!values.title?.trim()) return;
     if (!holidayId || !auth0User) return;
 
-    console.log('Form values received:', values);
-
     setIsSubmitting(true);
     try {
       const payload = {
@@ -109,11 +107,7 @@ export default function EasterEventsPage() {
         holidayId: holidayId,
       };
 
-      console.log('API payload being sent:', payload);
-
       const result = await createTask(payload);
-
-      console.log('API response received:', result);
 
       setShowForm(false);
     } catch (error) {

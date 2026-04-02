@@ -152,17 +152,6 @@ export default function InviteButton({
     try {
       let currentShare = share;
 
-      // Validate share state before proceeding
-      if (currentShare) {
-        console.log('🔍 Using existing share:', {
-          shareId: currentShare.shareId,
-          holidayKey: currentShare.holidayKey,
-          ownerUserId: currentShare.ownerUserId,
-          memberCount:
-            currentShare.members?.length || currentShare.memberUserIds?.length || 0,
-        });
-      }
-
       // If no share exists, create one
       if (!currentShare) {
         if (!holidayId) {

@@ -171,8 +171,6 @@ export default function SharedIndicatorEnhanced({
         }
         // Use cleanup after removing member
         await cleanupAfterRemoveMember(user);
-
-        console.log(`✅ Successfully removed member and refreshed share state`);
       }
 
       setShowConfirmModal(false);

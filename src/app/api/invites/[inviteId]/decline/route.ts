@@ -49,10 +49,6 @@ export async function POST(
 
       // If there are no more pending invites and only one member (the owner), delete the share
       if (remainingPendingInvites.length === 0 && invite.share.members.length <= 1) {
-        console.log(
-          `Cleaning up share ${invite.share.id} - no pending invites and only owner remaining`,
-        );
-
         // Delete the share (cascade delete will handle invites and members)
         await prisma.share.delete({
           where: { id: invite.share.id },

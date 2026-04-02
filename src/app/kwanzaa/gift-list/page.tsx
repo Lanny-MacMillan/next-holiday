@@ -291,50 +291,22 @@ export default function KwanzaaGiftListPage() {
     auth0User: auth0User,
   });
 
-  // Debug: Log form config to see what fields are generated
-  console.log('Gift form config fields:', formConfig.fields);
-  console.log('ShareMembers for form:', shareMembers);
-
   // Initial values for editing
   const getInitialValues = () => {
     if (!selectedGift) return {};
 
-    // For assigned_to, try multiple approaches since Enhanced Compatibility Layer might expect different formats
+    // Set assignment value using UUID
     let assignedToValue = '';
     if (selectedGift.assignedTo) {
-      console.log('Processing assignment for gift:', selectedGift);
-      console.log('Gift assignedTo UUID:', selectedGift.assignedTo);
-      console.log('Available shareMembers:', shareMembers);
-
-      // First try: Use UUID directly (Enhanced system might expect this)
       assignedToValue = selectedGift.assignedTo;
-      console.log('Trying UUID directly:', assignedToValue);
 
-      // Second try: Find the member and use userId (Auth0 ID)
+      // Validate that the assigned member exists
       const assignedMember = shareMembers.find(
         (m: any) => m.uuid === selectedGift.assignedTo,
       );
-      if (assignedMember) {
-        const userIdValue = assignedMember.userId;
-        console.log(
-          `Found member: ${assignedMember.name} (UUID: ${assignedMember.uuid}, userId: ${userIdValue})`,
-        );
-
-        // Try userId approach as backup
-        // assignedToValue = userIdValue;
-        console.log('Using UUID for assignment field:', assignedToValue);
-      } else {
-        console.warn(
-          `Could not find member for UUID ${selectedGift.assignedTo} in shareMembers`,
-        );
-        console.warn(
-          'ShareMembers available:',
-          shareMembers.map((m: any) => ({
-            uuid: m.uuid,
-            userId: m.userId,
-            name: m.name,
-          })),
-        );
+      if (!assignedMember) {
+        // Member not found, but keep the UUID for form compatibility
+        assignedToValue = selectedGift.assignedTo;
       }
     }
 
@@ -349,8 +321,6 @@ export default function KwanzaaGiftListPage() {
       assigned_to: assignedToValue,
       notes: selectedGift.notes || '',
     };
-
-    console.log('Final initial values for edit form:', initialValues);
 
     return initialValues;
   };

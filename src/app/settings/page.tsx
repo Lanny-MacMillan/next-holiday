@@ -1222,7 +1222,6 @@ export default function SettingsPage() {
         onUpgrade={() => {
           // Refresh user data or show success message
           console.log('Upgrade successful!');
-          // Could dispatch a refresh of user state here
         }}
       />
     </div>

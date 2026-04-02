@@ -45,8 +45,6 @@ async function sendToSSEService(notification: any) {
       },
     };
 
-    console.log('📡 [SSE] Sending to SSE service:', { url, payload });
-
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -59,16 +57,16 @@ async function sendToSSEService(notification: any) {
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.error('❌ [SSE] SSE service responded with error:', {
+      console.error('[SSE] SSE service responded with error:', {
         status: response.status,
         statusText: response.statusText,
         responseText: responseText,
       });
     } else {
-      console.error('✅ [SSE] Real-time notification sent successfully');
+      console.error('[SSE] Real-time notification sent successfully');
     }
   } catch (error) {
-    console.error('💥 [SSE] Failed to send real-time notification to SSE service:', {
+    console.error('[SSE] Failed to send real-time notification to SSE service:', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       url: process.env.SSE_SERVICE_URL,

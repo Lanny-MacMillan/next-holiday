@@ -19,6 +19,9 @@ frontend:
         - env | grep -e NEXT_PUBLIC_AUTH0_DOMAIN >> .env.production
         - env | grep -e NEXT_PUBLIC_DISABLE_SERIALIZABLE_CHECK >> .env.production
         - env | grep -e NODE_ENV >> .env.production
+        - env | grep -e SSE_API_SECRET >> .env.production
+        - env | grep -e SSE_SERVICE_URL >> .env.production
+        - env | grep -e NEXT_PUBLIC_SSE_SERVICE_URL >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next

@@ -7,7 +7,6 @@ import { acceptInvite, declineInvite } from '@/store/slices/invitesSlice';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { selectHolidayPreferences } from '@/store/selectors/home';
 import { addShare, refreshShares } from '@/store/slices/sharesSlice';
-import { migrateHolidayDataToShare } from '@/utils/shareMigration';
 
 // Simple SVG icons to avoid external dependencies
 const BellIcon = ({
@@ -663,15 +662,6 @@ export default function NotificationCenter({
         // Add the share to our state
         if (result.payload?.share) {
           dispatch(addShare(result.payload.share));
-        }
-
-        // Migrate existing holiday data to the share if needed
-        if (result.payload?.invite?.holidayKey && result.payload?.share?.shareId) {
-          await migrateHolidayDataToShare(
-            result.payload.invite.holidayKey,
-            result.payload.share.shareId,
-            dispatch,
-          );
         }
 
         // Remove invite notification from local state

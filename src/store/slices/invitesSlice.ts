@@ -101,17 +101,12 @@ export const createInvite = createAsyncThunk(
     });
 
     if (!response.ok) {
-      // Extract error message from API response
       let errorMessage = `Failed to create invite (${response.status})`;
 
       try {
         const errorData = await response.json();
-        console.log('API Error Response:', errorData); // Debug log
         errorMessage = errorData.error || errorData.message || errorMessage;
-        console.log('Throwing error:', errorMessage); // Debug log
       } catch (jsonError) {
-        // If response.json() fails, try to use response.statusText
-        console.log('JSON parsing failed, using statusText:', response.statusText); // Debug log
         errorMessage = response.statusText || errorMessage;
       }
 
@@ -129,7 +124,6 @@ export const acceptInvite = createAsyncThunk(
       'Content-Type': 'application/json',
     };
 
-    // Add authentication header if auth0User is provided
     if (auth0User) {
       headers['x-test-user'] = JSON.stringify({
         sub: auth0User.sub,
@@ -187,7 +181,6 @@ export const dismissInvite = createAsyncThunk(
       'Content-Type': 'application/json',
     };
 
-    // Add authentication header if auth0User is provided
     if (auth0User) {
       headers['x-test-user'] = JSON.stringify({
         sub: auth0User.sub,

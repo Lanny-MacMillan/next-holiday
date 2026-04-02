@@ -41,7 +41,6 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
   gamified = false,
   gamifiedBackgroundColor,
 }) => {
-  // Get display mode from Redux settings and user preferences (fallback to prop)
   const { settings } = useAppSelector((state: any) => state.theme);
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
   const isGamifiedMode =
@@ -54,7 +53,6 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
   const hoverColor =
     theme.hoverColor || 'hover:bg-green-50 dark:hover:bg-green-900/20';
 
-  // Apply border color if provided
   const borderStyle: React.CSSProperties = borderColor
     ? {
         borderLeftWidth: '4px',
@@ -65,9 +63,7 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
   const backgroundColor =
     gamifiedBackgroundColor || getCardGamifiedBackgroundColor();
 
-  console.log('backgroundColor', getCardGamifiedBackgroundColor());
   if (isGamifiedMode) {
-    // Gamified mode design
     return (
       <li
         className={`relative card rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden ${backgroundColor} text-white ${
@@ -80,7 +76,6 @@ const HolidayCard: React.FC<HolidayCardProps> = ({
         })}
         onClick={() => onToggle(card.id)}
       >
-        {/* Background texture overlay */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-white opacity-20 pointer-events-none"></div>
           <div className="absolute top-8 right-6 w-4 h-4 rounded-full bg-white opacity-15 pointer-events-none"></div>

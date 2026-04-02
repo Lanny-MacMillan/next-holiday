@@ -13,7 +13,6 @@ import {
 } from '@/store/slices/invitesSlice';
 import { addShare, fetchShares, refreshShares } from '@/store/slices/sharesSlice';
 import { Invite } from '@/store/slices/invitesSlice';
-import { migrateHolidayDataToShare } from '@/utils/shareMigration';
 import { selectHolidayPreferences } from '@/store/selectors/home';
 import { setHomeData } from '@/store/slices/homeSlice';
 import { setMany as setBudgets } from '@/store/slices/budgetsSlice';
@@ -145,7 +144,7 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
         // await dispatch(fetchShares(user.sub));
       }
     } catch (error) {
-      console.log('Failed to refresh home data:', error);
+      console.error('Failed to refresh home data:', error);
       throw error;
     }
   };
@@ -163,13 +162,6 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
 
       // Add the share to our state
       dispatch(addShare(result.share));
-
-      // Migrate existing holiday data to the share (currently a placeholder)
-      await migrateHolidayDataToShare(
-        result.invite.holidayKey,
-        result.share.shareId,
-        dispatch,
-      );
 
       // THEN, if user chose to delete their existing data, do that after accepting
       if (deleteExisting && confirmInvite.hasExistingHoliday) {
@@ -268,13 +260,6 @@ export default function AlertsBell({ className = '' }: AlertsBellProps) {
 
       // Add the share to our state
       dispatch(addShare(result.share));
-
-      // Migrate existing holiday data to the share
-      await migrateHolidayDataToShare(
-        result.invite.holidayKey,
-        result.share.shareId,
-        dispatch,
-      );
 
       // Refresh shares data to update the UI after accepting
       if (user?.sub) {

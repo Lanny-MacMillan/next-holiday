@@ -91,8 +91,6 @@ export default function ThanksgivingGuestListPage() {
 
   // Transform guest list data to match expected format with proper defaults
   const transformedGuests = useMemo(() => {
-    console.log('🔄 Transforming guests from guestLists:', guestLists);
-
     const guestsMap = new Map();
 
     const transformed = guestLists
@@ -120,7 +118,6 @@ export default function ThanksgivingGuestListPage() {
         return true;
       });
 
-    console.log('✅ Transformed guests:', transformed);
     return transformed;
   }, [guestLists]);
 
@@ -167,12 +164,6 @@ export default function ThanksgivingGuestListPage() {
         notes: formValues.notes || undefined,
       };
 
-      console.log('🔄 Edit guest:', {
-        guestId: editingGuest.id,
-        currentData: editingGuest,
-        updatePayload,
-      });
-
       // Find the original guest list item for Home Slice update
       const originalGuestList = guestLists.find(
         (gl: any) => gl.id === editingGuest.id,
@@ -202,7 +193,6 @@ export default function ThanksgivingGuestListPage() {
             },
           }),
         );
-        console.log('✅ Dispatched Home Slice edit update immediately');
       }
 
       try {
@@ -213,7 +203,6 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        console.log('✅ Edit guest success:', result);
         setEditingGuest(null);
         setShowForm(false);
       } catch (error: any) {
@@ -272,23 +261,6 @@ export default function ThanksgivingGuestListPage() {
     } else {
       // Add new guest
       try {
-        console.log('🚀 Frontend: Creating guest with payload:', {
-          holidayId,
-          payload: {
-            name: formValues.name,
-            email: formValues.email || undefined,
-            phone: formValues.phone || undefined,
-            address: formValues.address || undefined,
-            rsvpStatus: formValues.rsvpStatus as
-              | 'pending'
-              | 'confirmed'
-              | 'declined',
-            numberOfGuests: formValues.numberOfGuests || 1, // Ensure numberOfGuests defaults to 1
-            notes: formValues.notes || undefined,
-          },
-          auth0User,
-        });
-
         const result = await createGuest({
           holidayId,
           payload: {
@@ -305,8 +277,6 @@ export default function ThanksgivingGuestListPage() {
           },
           auth0User,
         }).unwrap();
-
-        console.log('✅ Frontend: Guest created successfully:', result);
 
         // Reset and refresh contacts to ensure the newly created contact appears in the address book dropdown
         dispatch(resetContacts());
@@ -377,13 +347,6 @@ export default function ThanksgivingGuestListPage() {
       const newRsvpStatus =
         guestList.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed';
 
-      console.log('🔄 Toggle guest:', {
-        guestId,
-        currentStatus: guestList.rsvpStatus,
-        newStatus: newRsvpStatus,
-        isCompleted: newRsvpStatus === 'confirmed',
-      });
-
       // Manual optimistic update - update Home Slice immediately
       dispatch(
         updateGuestInHomeData({
@@ -397,7 +360,6 @@ export default function ThanksgivingGuestListPage() {
           },
         }),
       );
-      console.log('✅ Dispatched Home Slice update immediately');
 
       try {
         const result = await updateGuest({
@@ -407,7 +369,6 @@ export default function ThanksgivingGuestListPage() {
           auth0User,
         }).unwrap();
 
-        console.log('✅ Toggle guest success:', result);
       } catch (error) {
         console.error('❌ Failed to toggle guest:', error);
         // Revert optimistic update on error

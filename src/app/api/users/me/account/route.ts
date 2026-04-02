@@ -9,7 +9,6 @@ import { ok, serverError } from '@/lib/http';
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    console.log('Getting account for user:', user.id);
 
     // Find user's first account or create one
     let account = await prisma.account.findFirst({
@@ -33,7 +32,6 @@ export async function GET(request: NextRequest) {
 
     // If no account exists, create one
     if (!account) {
-      console.log('No account found, creating new one');
       // Create account and add member in a single transaction
       account = await prisma.$transaction(async tx => {
         const newAccount = await tx.account.create({
@@ -64,9 +62,8 @@ export async function GET(request: NextRequest) {
 
         return newAccount;
       });
-      console.log('Created new account:', account.id);
     } else {
-      console.log('Found existing account:', account.id);
+      console.error('Found existing account:', account.id);
     }
 
     return ok(toPlain(account));

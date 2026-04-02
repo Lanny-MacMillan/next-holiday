@@ -12,16 +12,12 @@ export function useShareCleanup() {
   const cleanupAfterLeaveShare = async (auth0User: any) => {
     if (!auth0User) return;
 
-    console.log('🧹 Cleaning up local state after leaving share...');
-
     try {
       // Refresh home data to get updated holiday preferences and data
       await dispatch(refreshHomeData(auth0User)).unwrap();
 
       // Refresh shares to get updated share list
       await dispatch(fetchShares(auth0User.sub)).unwrap();
-
-      console.log('✅ Local state cleanup completed');
     } catch (error) {
       console.error('❌ Error during local state cleanup:', error);
     }
@@ -30,13 +26,9 @@ export function useShareCleanup() {
   const cleanupAfterRemoveMember = async (auth0User: any) => {
     if (!auth0User) return;
 
-    console.log('🧹 Cleaning up local state after removing member...');
-
     try {
       // Refresh shares to get updated member list
       await dispatch(fetchShares(auth0User.sub)).unwrap();
-
-      console.log('✅ Local state cleanup after member removal completed');
     } catch (error) {
       console.error('❌ Error during member removal cleanup:', error);
     }

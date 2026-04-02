@@ -229,7 +229,7 @@ class PerformanceMonitor {
       });
     } catch (e) {
       // Fallback for browsers that don't support all metrics
-      console.log('Some Web Vitals not supported:', e);
+      console.error('Some Web Vitals not supported:', e);
     }
 
     // First Contentful Paint
@@ -242,7 +242,7 @@ class PerformanceMonitor {
         }
       }).observe({ entryTypes: ['paint'] });
     } catch (e) {
-      console.log('FCP not supported');
+      console.error('FCP not supported');
     }
   }
 
@@ -330,13 +330,6 @@ class PerformanceMonitor {
     };
 
     this.metrics.push(metric);
-
-    // Log to console for immediate visibility
-    console.log(`🚀 ${name}:`, {
-      value: `${value.toFixed(2)}ms`,
-      location: location?.city || 'Unknown',
-      connection: metric.connection?.effectiveType || 'Unknown',
-    });
 
     // Try to get location info asynchronously after adding the metric
     if (!location) {
@@ -443,7 +436,6 @@ class PerformanceMonitor {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Performance data sent successfully:', result);
       } else {
         console.error('Failed to send performance data:', response.statusText);
       }
@@ -451,18 +443,15 @@ class PerformanceMonitor {
       console.error('Failed to send analytics:', e);
     }
 
-    // Also log to console for debugging
-    console.log('📊 Performance Summary:', data);
-
     return data;
   }
 
-  // Integration with AWS CloudWatch (if you want to use it)
+  // TODO: Integration with AWS CloudWatch
   public async sendToCloudWatch(region: string = 'us-east-1') {
-    // This would require AWS SDK - implement based on your AWS setup
+    // TODO: AWS SDK - implement based on AWS setup
     const summary = this.getSummary();
 
-    console.log('☁️ CloudWatch Metrics Ready:', {
+    console.log('CloudWatch Metrics Ready:', {
       namespace: 'NextHoliday/Performance',
       region,
       metrics: this.metrics.map(m => ({
@@ -484,15 +473,13 @@ let performanceMonitor: PerformanceMonitor | null = null;
 export function initPerformanceMonitor(): PerformanceMonitor {
   if (typeof window !== 'undefined') {
     if (!performanceMonitor) {
-      console.log('🔧 Initializing Performance Monitor...');
       performanceMonitor = new PerformanceMonitor();
-      console.log('✅ Performance Monitor initialized');
     }
     return performanceMonitor;
   }
 
   // Return a dummy monitor for server-side
-  console.warn('⚠️ Performance Monitor cannot be initialized on server-side');
+  console.warn('Performance Monitor cannot be initialized on server-side');
   return null as any;
 }
 

@@ -21,9 +21,6 @@ export default function UserSync() {
       setErrorMessage('');
 
       try {
-        console.log('Syncing user with Auth0 sub:', user.sub);
-
-        // Call our API to create/update the user
         const response = await fetch('/api/users', {
           method: 'POST',
           headers: {
@@ -39,7 +36,6 @@ export default function UserSync() {
 
         if (response.ok) {
           const userData = await response.json();
-          console.log('User synced successfully:', userData);
           setSyncStatus('success');
           hasSynced.current = true;
         } else {
@@ -51,7 +47,6 @@ export default function UserSync() {
             errorData.details &&
             errorData.details.includes('Unique constraint failed')
           ) {
-            console.log('User already exists, this is expected for existing users');
             setSyncStatus('success');
             hasSynced.current = true;
           } else {

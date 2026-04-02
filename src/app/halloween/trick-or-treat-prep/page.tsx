@@ -415,11 +415,6 @@ export default function HalloweenTrickOrTreatPrepPage() {
           description: editingTask?.description || '',
           priority: editingTask?.priority || 'medium',
           assigned_to: (() => {
-            // The form expects UUID as the value since buildAssignToField uses member.uuid
-            console.log('=== EDIT MODAL DEBUG ===');
-            console.log('editingTask?.assignedTo:', editingTask?.assignedTo);
-            console.log('shareMembers:', shareMembers);
-
             // For Enhanced Compatibility Layer, the assigned_to field expects UUID values
             // directly, not userId. The options are built with member.uuid as values.
             return editingTask?.assignedTo || '';
