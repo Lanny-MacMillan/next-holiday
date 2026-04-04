@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || data.userAgent,
     };
 
-    // Log to console (you can redirect this to CloudWatch or other logging service)
-    console.log('🚀 Performance Data Received:', {
+    // Log to console
+    console.log('Performance Data Received:', {
       sessionId: serverData.session.sessionId,
       location: `${serverData.session.location?.city}, ${serverData.session.location?.region}`,
       totalTime: `${serverData.session.totalTime.toFixed(2)}ms`,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (serverData.engagement || serverData.session.engagement) {
       const eng = serverData.engagement || serverData.session.engagement;
       if (eng) {
-        console.log('📈 Engagement:', {
+        console.log('Engagement:', {
           timeOnPage: `${(eng.timeOnPage / 1000).toFixed(2)}s`,
           scrollDepth: `${eng.scrollDepth}%`,
           interactions: eng.interactions,
@@ -112,14 +112,14 @@ export async function POST(request: NextRequest) {
     // Log errors if any
     if (serverData.errors?.length || serverData.session.errors?.length) {
       const errors = serverData.errors || serverData.session.errors || [];
-      console.error('❌ Errors Tracked:', errors.length, errors.slice(0, 3));
+      console.error('Errors Tracked:', errors.length, errors.slice(0, 3));
     }
 
     // Log resource info
     if (serverData.resources || serverData.session.resources) {
       const res = serverData.resources || serverData.session.resources;
       if (res) {
-        console.log('📦 Resources:', {
+        console.log('Resources:', {
           count: res.count,
           totalSize: `${(res.totalSize / 1024).toFixed(2)}KB`,
           cacheHitRate: `${((res.cacheHits / (res.cacheHits + res.cacheMisses)) * 100).toFixed(1)}%`,
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // Log detailed metrics for analysis
     console.log(
-      '📊 Detailed Metrics:',
+      'Detailed Metrics:',
       serverData.metrics.map(m => ({
         name: m.name,
         value: `${m.value.toFixed(2)}ms`,
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
     // Log Web Vitals
     if (serverData.vitals.length > 0) {
       console.log(
-        '💯 Web Vitals:',
+        'Web Vitals:',
         serverData.vitals.map(v => ({
           name: v.name,
           value: `${v.value.toFixed(2)}ms`,
@@ -154,9 +154,9 @@ export async function POST(request: NextRequest) {
     if (process.env.AWS_REGION) {
       try {
         await sendToCloudWatch(serverData);
-        console.log('✅ Sent to CloudWatch');
+        console.log('Sent to CloudWatch');
       } catch (error) {
-        console.error('❌ Failed to send to CloudWatch:', error);
+        console.error('Failed to send to CloudWatch:', error);
       }
     }
 
