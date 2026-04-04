@@ -231,17 +231,21 @@ export async function POST(request: NextRequest) {
 
     // Send to CloudWatch if explicitly enabled
     if (process.env.PERFORMANCE_CLOUDWATCH_ENABLED === 'true') {
+      console.log('CloudWatch publishing is enabled');
       // Validate required AWS credentials are present
       if (!process.env.CLOUDWATCH_REGION || !process.env.CLOUDWATCH_ACCESS_KEY_ID || !process.env.CLOUDWATCH_SECRET_ACCESS_KEY) {
         console.error('CloudWatch enabled but missing required credentials (CLOUDWATCH_REGION, CLOUDWATCH_ACCESS_KEY_ID, CLOUDWATCH_SECRET_ACCESS_KEY)');
       } else {
+        console.log(`Sending ${serverData.metrics.length} metrics to CloudWatch in region ${process.env.CLOUDWATCH_REGION}`);
         try {
-          await sendToCloudWatch(serverData);
-          console.log('Sent to CloudWatch');
+          const results = await sendToCloudWatch(serverData);
+          console.log(`✅ Successfully sent ${results.length} batches to CloudWatch`);
         } catch (error) {
-          console.error('Failed to send to CloudWatch:', error);
+          console.error('❌ Failed to send to CloudWatch:', error);
         }
       }
+    } else {
+      console.log('CloudWatch publishing is disabled (PERFORMANCE_CLOUDWATCH_ENABLED != "true")');
     }
 
     return NextResponse.json({
