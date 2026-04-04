@@ -1,4 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CloudWatchClient, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch';
+
+// Simple in-memory rate limiter (for production, use Redis or Upstash)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute per IP
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  if (!record || now > record.resetTime) {
+    // New window
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  record.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count };
+}
+
+// Clean up old entries periodically
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of rateLimitMap.entries()) {
+      if (now > record.resetTime) {
+        rateLimitMap.delete(ip);
+      }
+    }
+  }, RATE_LIMIT_WINDOW);
+}
+
+interface DeviceInfo {
+  type: 'mobile' | 'tablet' | 'desktop';
+  screenWidth: number;
+  screenHeight: number;
+  browser: string;
+  browserVersion: string;
+  os: string;
+  touchSupport: boolean;
+}
+
+interface EngagementMetrics {
+  timeOnPage: number;
+  scrollDepth: number;
+  interactions: number;
+  clicks: number;
+}
+
+interface ErrorInfo {
+  message: string;
+  stack?: string;
+  timestamp: number;
+  url: string;
+}
+
+interface ResourceInfo {
+  count: number;
+  totalSize: number;
+  cacheHits: number;
+  cacheMisses: number;
+}
 
 interface PerformanceData {
   session: {
@@ -18,43 +85,130 @@ interface PerformanceData {
       rtt?: number;
     };
     url: string;
+    device?: DeviceInfo;
+    engagement?: EngagementMetrics;
+    errors?: ErrorInfo[];
+    resources?: ResourceInfo;
   };
   metrics: any[];
   vitals: any[];
   timestamp: number;
   userAgent: string;
+  device?: DeviceInfo;
+  engagement?: EngagementMetrics;
+  errors?: ErrorInfo[];
+  resources?: ResourceInfo;
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Get client IP for rate limiting
+    const clientIP =
+      request.headers.get('x-forwarded-for')?.split(',')[0] ||
+      request.headers.get('x-real-ip') ||
+      request.headers.get('cf-connecting-ip') ||
+      'unknown';
+
+    // Check rate limit
+    const rateLimit = checkRateLimit(clientIP);
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for IP: ${clientIP}`);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Too many requests. Please try again later.',
+          retryAfter: 60 
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': Math.ceil(Date.now() / 1000 + 60).toString(),
+            'Retry-After': '60',
+          }
+        },
+      );
+    }
+
+    // Validate API key to prevent unauthorized CloudWatch spam
+    const apiKey = request.headers.get('x-api-key');
+    const expectedKey = process.env.PERFORMANCE_API_KEY;
+    
+    if (expectedKey && apiKey !== expectedKey) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 },
+      );
+    }
+
     const data: PerformanceData = await request.json();
 
     // Add server timestamp and IP info
     const serverData = {
       ...data,
       serverTimestamp: new Date().toISOString(),
-      clientIP:
-        request.headers.get('x-forwarded-for') ||
-        request.headers.get('x-real-ip') ||
-        request.headers.get('cf-connecting-ip') ||
-        'unknown',
+      clientIP,
       userAgent: request.headers.get('user-agent') || data.userAgent,
     };
 
-    // Log to console (you can redirect this to CloudWatch or other logging service)
-    console.log('🚀 Performance Data Received:', {
+    // Safely extract page path from URL
+    let pagePath = '/unknown';
+    try {
+      pagePath = new URL(serverData.session.url).pathname;
+    } catch (e) {
+      console.warn('Invalid URL in performance data:', serverData.session.url);
+    }
+
+    // Log to console
+    console.log('Performance Data Received:', {
       sessionId: serverData.session.sessionId,
       location: `${serverData.session.location?.city}, ${serverData.session.location?.region}`,
       totalTime: `${serverData.session.totalTime.toFixed(2)}ms`,
       connection: serverData.session.connection?.effectiveType,
       metricsCount: serverData.session.metricsCount,
       url: serverData.session.url,
+      page: pagePath,
       clientIP: serverData.clientIP,
+      device: serverData.device?.type || serverData.session.device?.type,
+      browser: serverData.device?.browser || serverData.session.device?.browser,
+      os: serverData.device?.os || serverData.session.device?.os,
     });
+
+    // Log engagement metrics
+    if (serverData.engagement || serverData.session.engagement) {
+      const eng = serverData.engagement || serverData.session.engagement;
+      if (eng) {
+        console.log('Engagement:', {
+          timeOnPage: `${(eng.timeOnPage / 1000).toFixed(2)}s`,
+          scrollDepth: `${eng.scrollDepth}%`,
+          interactions: eng.interactions,
+          clicks: eng.clicks,
+        });
+      }
+    }
+
+    // Log errors if any
+    if (serverData.errors?.length || serverData.session.errors?.length) {
+      const errors = serverData.errors || serverData.session.errors || [];
+      console.error('Errors Tracked:', errors.length, errors.slice(0, 3));
+    }
+
+    // Log resource info
+    if (serverData.resources || serverData.session.resources) {
+      const res = serverData.resources || serverData.session.resources;
+      if (res) {
+        console.log('Resources:', {
+          count: res.count,
+          totalSize: `${(res.totalSize / 1024).toFixed(2)}KB`,
+          cacheHitRate: `${((res.cacheHits / (res.cacheHits + res.cacheMisses)) * 100).toFixed(1)}%`,
+        });
+      }
+    }
 
     // Log detailed metrics for analysis
     console.log(
-      '📊 Detailed Metrics:',
+      'Detailed Metrics:',
       serverData.metrics.map(m => ({
         name: m.name,
         value: `${m.value.toFixed(2)}ms`,
@@ -66,7 +220,7 @@ export async function POST(request: NextRequest) {
     // Log Web Vitals
     if (serverData.vitals.length > 0) {
       console.log(
-        '💯 Web Vitals:',
+        'Web Vitals:',
         serverData.vitals.map(v => ({
           name: v.name,
           value: `${v.value.toFixed(2)}ms`,
@@ -75,42 +229,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Here you can:
-    // 1. Store in database
-    // 2. Send to AWS CloudWatch
-    // 3. Send to third-party analytics
-    // 4. Process for real-time dashboards
-
-    // Example: Send to CloudWatch (uncomment if you set up AWS SDK)
-    /*
-    if (process.env.AWS_REGION && process.env.AWS_ACCESS_KEY_ID) {
-      await sendToCloudWatch(serverData);
-    }
-    */
-
-    // Example: Store in database (uncomment if you want to persist)
-    /*
-    await prisma.performanceMetric.create({
-      data: {
-        sessionId: serverData.session.sessionId,
-        location: serverData.session.location?.city,
-        region: serverData.session.location?.region,
-        country: serverData.session.location?.country,
-        connection: serverData.session.connection?.effectiveType,
-        totalTime: serverData.session.totalTime,
-        metricsCount: serverData.session.metricsCount,
-        vitalsCount: serverData.session.vitalsCount,
-        data: JSON.stringify(serverData),
-        clientIP: serverData.clientIP,
-        userAgent: serverData.userAgent,
+    // Send to CloudWatch if explicitly enabled
+    if (process.env.PERFORMANCE_CLOUDWATCH_ENABLED === 'true') {
+      // Validate required AWS credentials are present
+      if (!process.env.CLOUDWATCH_REGION || !process.env.CLOUDWATCH_ACCESS_KEY_ID || !process.env.CLOUDWATCH_SECRET_ACCESS_KEY) {
+        console.error('CloudWatch enabled but missing required credentials (CLOUDWATCH_REGION, CLOUDWATCH_ACCESS_KEY_ID, CLOUDWATCH_SECRET_ACCESS_KEY)');
+      } else {
+        try {
+          await sendToCloudWatch(serverData);
+          console.log('Sent to CloudWatch');
+        } catch (error) {
+          console.error('Failed to send to CloudWatch:', error);
+        }
       }
-    });
-    */
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Performance data received',
       sessionId: serverData.session.sessionId,
+    }, {
+      headers: {
+        'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+        'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+      }
     });
   } catch (error) {
     console.error('Error processing performance data:', error);
@@ -134,29 +276,214 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// Helper function for CloudWatch integration (optional)
-/*
-async function sendToCloudWatch(data: any) {
-  // Implement CloudWatch metrics sending
-  // This would require AWS SDK setup
-  const AWS = require('aws-sdk');
-  const cloudwatch = new AWS.CloudWatch({ region: process.env.AWS_REGION });
-  
-  const params = {
-    Namespace: 'NextHoliday/Performance',
-    MetricData: data.metrics.map((metric: any) => ({
-      MetricName: metric.name,
-      Value: metric.value,
-      Unit: 'Milliseconds',
-      Dimensions: [
-        { Name: 'Location', Value: metric.location?.city || 'Unknown' },
-        { Name: 'Region', Value: metric.location?.region || 'Unknown' },
-        { Name: 'Connection', Value: metric.connection?.effectiveType || 'Unknown' }
-      ],
-      Timestamp: new Date(metric.timestamp)
-    }))
-  };
-  
-  return cloudwatch.putMetricData(params).promise();
+// Reuse CloudWatch client across invocations for better performance in warm runtimes
+let cloudWatchClient: CloudWatchClient | null = null;
+
+function getCloudWatchClient(): CloudWatchClient {
+  if (!cloudWatchClient) {
+    cloudWatchClient = new CloudWatchClient({
+      region: process.env.CLOUDWATCH_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.CLOUDWATCH_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.CLOUDWATCH_SECRET_ACCESS_KEY!,
+      },
+    });
+  }
+  return cloudWatchClient;
 }
-*/
+
+// Helper function for CloudWatch integration
+async function sendToCloudWatch(data: any) {
+  const client = getCloudWatchClient();
+
+  // Extract page path from URL and holiday type
+  let pagePath = '/unknown';
+  try {
+    pagePath = new URL(data.session.url).pathname;
+  } catch (e) {
+    console.warn('Invalid URL in CloudWatch data:', data.session.url);
+  }
+  
+  const holidayMatch = pagePath.match(
+    /\/(christmas|birthday|valentines|halloween|thanksgiving|easter|mothers-day|fathers-day|graduation|anniversary|new-year|fourth-of-july|hanukkah|kwanzaa|baby-shower)/,
+  );
+  const holidayType = holidayMatch ? holidayMatch[1] : 'home';
+
+  // Get device info
+  const device = data.device || data.session.device || {};
+  const engagement = data.engagement || data.session.engagement || {};
+  const resources = data.resources || data.session.resources || {};
+  const errors = data.errors || data.session.errors || [];
+
+  // Send individual metrics with comprehensive dimensions
+  const metricData = data.metrics.map((metric: any) => ({
+    MetricName: metric.name,
+    Value: metric.value,
+    Unit: 'Milliseconds',
+    Dimensions: [
+      { Name: 'Page', Value: pagePath },
+      { Name: 'Holiday', Value: metric.business?.holidayType || holidayType },
+      { Name: 'DeviceType', Value: metric.device?.type || device.type || 'Unknown' },
+      {
+        Name: 'Browser',
+        Value: metric.device?.browser || device.browser || 'Unknown',
+      },
+      { Name: 'OS', Value: metric.device?.os || device.os || 'Unknown' },
+      { Name: 'Location', Value: metric.location?.city || 'Unknown' },
+      { Name: 'Region', Value: metric.location?.region || 'Unknown' },
+      { Name: 'Connection', Value: metric.connection?.effectiveType || 'Unknown' },
+    ],
+    Timestamp: new Date(metric.timestamp),
+  }));
+
+  // Send web vitals with comprehensive dimensions
+  const vitalsData = data.vitals.map((vital: any) => ({
+    MetricName: vital.name,
+    Value: vital.value,
+    Unit: vital.name === 'CLS' ? 'None' : 'Milliseconds',
+    Dimensions: [
+      { Name: 'Page', Value: pagePath },
+      { Name: 'Holiday', Value: holidayType },
+      { Name: 'Rating', Value: vital.rating || 'unknown' },
+      { Name: 'DeviceType', Value: device.type || 'Unknown' },
+      { Name: 'Browser', Value: device.browser || 'Unknown' },
+      { Name: 'Location', Value: data.session.location?.city || 'Unknown' },
+      { Name: 'Region', Value: data.session.location?.region || 'Unknown' },
+    ],
+    Timestamp: new Date(vital.timestamp || Date.now()),
+  }));
+
+  // Send page view count metric
+  const pageViewMetric = [
+    {
+      MetricName: 'PageView',
+      Value: 1,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+        { Name: 'DeviceType', Value: device.type || 'Unknown' },
+        { Name: 'Browser', Value: device.browser || 'Unknown' },
+        { Name: 'OS', Value: device.os || 'Unknown' },
+        { Name: 'Location', Value: data.session.location?.city || 'Unknown' },
+        { Name: 'Region', Value: data.session.location?.region || 'Unknown' },
+      ],
+      Timestamp: new Date(),
+    },
+  ];
+
+  // Send engagement metrics
+  const engagementMetrics = [];
+  if (engagement.timeOnPage > 0) {
+    engagementMetrics.push({
+      MetricName: 'TimeOnPage',
+      Value: engagement.timeOnPage / 1000, // Convert to seconds
+      Unit: 'Seconds',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+        { Name: 'DeviceType', Value: device.type || 'Unknown' },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+  if (engagement.scrollDepth > 0) {
+    engagementMetrics.push({
+      MetricName: 'ScrollDepth',
+      Value: engagement.scrollDepth,
+      Unit: 'Percent',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+  if (engagement.interactions > 0) {
+    engagementMetrics.push({
+      MetricName: 'Interactions',
+      Value: engagement.interactions,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+
+  // Send error metrics
+  const errorMetrics = [];
+  if (errors.length > 0) {
+    errorMetrics.push({
+      MetricName: 'ErrorCount',
+      Value: errors.length,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+        { Name: 'Browser', Value: device.browser || 'Unknown' },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+
+  // Send resource metrics
+  const resourceMetrics = [];
+  if (resources.count > 0) {
+    resourceMetrics.push(
+      {
+        MetricName: 'ResourceCount',
+        Value: resources.count,
+        Unit: 'Count',
+        Dimensions: [{ Name: 'Page', Value: pagePath }],
+        Timestamp: new Date(),
+      },
+      {
+        MetricName: 'PageSize',
+        Value: resources.totalSize / 1024, // Convert to KB
+        Unit: 'Kilobytes',
+        Dimensions: [{ Name: 'Page', Value: pagePath }],
+        Timestamp: new Date(),
+      },
+      {
+        MetricName: 'CacheHitRate',
+        Value:
+          (resources.cacheHits / (resources.cacheHits + resources.cacheMisses)) *
+          100,
+        Unit: 'Percent',
+        Dimensions: [{ Name: 'Page', Value: pagePath }],
+        Timestamp: new Date(),
+      },
+    );
+  }
+
+  // Combine all metrics
+  const allMetrics = [
+    ...metricData,
+    ...vitalsData,
+    ...pageViewMetric,
+    ...engagementMetrics,
+    ...errorMetrics,
+    ...resourceMetrics,
+  ];
+
+  // CloudWatch has a limit of 20 MetricDatum per request
+  const BATCH_SIZE = 20;
+  const batches = [];
+  for (let i = 0; i < allMetrics.length; i += BATCH_SIZE) {
+    batches.push(allMetrics.slice(i, i + BATCH_SIZE));
+  }
+
+  // Send each batch
+  const promises = batches.map(batch => {
+    const params = {
+      Namespace: 'NextHoliday_Performance',
+      MetricData: batch,
+    };
+    const command = new PutMetricDataCommand(params);
+    return client.send(command);
+  });
+
+  return Promise.all(promises);
+}

@@ -22,6 +22,10 @@ frontend:
         - env | grep -e SSE_API_SECRET >> .env.production
         - env | grep -e SSE_SERVICE_URL >> .env.production
         - env | grep -e NEXT_PUBLIC_SSE_SERVICE_URL >> .env.production
+        - env | grep -e CLOUDWATCH_REGION >> .env.production
+        - env | grep -e CLOUDWATCH_ACCESS_KEY_ID >> .env.production
+        - env | grep -e CLOUDWATCH_SECRET_ACCESS_KEY >> .env.production
+        - env | grep -e PERFORMANCE_CLOUDWATCH_ENABLED >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
@@ -31,3 +35,8 @@ frontend:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
+customHeaders:
+  - pattern: '**'
+    headers:
+      - key: 'Timing-Allow-Origin'
+        value: '*'
