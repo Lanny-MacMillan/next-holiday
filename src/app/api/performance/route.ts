@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CloudWatchClient, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch';
 
+// Simple in-memory rate limiter (for production, use Redis or Upstash)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute per IP
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  if (!record || now > record.resetTime) {
+    // New window
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  record.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count };
+}
+
+// Clean up old entries periodically
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of rateLimitMap.entries()) {
+      if (now > record.resetTime) {
+        rateLimitMap.delete(ip);
+      }
+    }
+  }, RATE_LIMIT_WINDOW);
+}
+
 interface DeviceInfo {
   type: 'mobile' | 'tablet' | 'desktop';
   screenWidth: number;
@@ -67,6 +102,35 @@ interface PerformanceData {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get client IP for rate limiting
+    const clientIP =
+      request.headers.get('x-forwarded-for')?.split(',')[0] ||
+      request.headers.get('x-real-ip') ||
+      request.headers.get('cf-connecting-ip') ||
+      'unknown';
+
+    // Check rate limit
+    const rateLimit = checkRateLimit(clientIP);
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for IP: ${clientIP}`);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Too many requests. Please try again later.',
+          retryAfter: 60 
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': Math.ceil(Date.now() / 1000 + 60).toString(),
+            'Retry-After': '60',
+          }
+        },
+      );
+    }
+
     // Validate API key to prevent unauthorized CloudWatch spam
     const apiKey = request.headers.get('x-api-key');
     const expectedKey = process.env.PERFORMANCE_API_KEY;
@@ -84,11 +148,7 @@ export async function POST(request: NextRequest) {
     const serverData = {
       ...data,
       serverTimestamp: new Date().toISOString(),
-      clientIP:
-        request.headers.get('x-forwarded-for') ||
-        request.headers.get('x-real-ip') ||
-        request.headers.get('cf-connecting-ip') ||
-        'unknown',
+      clientIP,
       userAgent: request.headers.get('user-agent') || data.userAgent,
     };
 
@@ -188,6 +248,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Performance data received',
       sessionId: serverData.session.sessionId,
+    }, {
+      headers: {
+        'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+        'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+      }
     });
   } catch (error) {
     console.error('Error processing performance data:', error);
