@@ -4,8 +4,6 @@ import './globals.css';
 import { ReduxProvider } from '@/store/provider';
 import Auth0ProviderWrapper from '@/components/auth/Auth0Provider';
 import AppContent from '@/components/AppContent';
-import { installFetchTracer } from '@/lib/traceFetch';
-import { initPerformanceMonitor } from '@/lib/performance';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,12 +18,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     console.log('Layout render - DB configured:', !!process.env.DATABASE_URL);
   }
 
-  // Install fetch tracer and performance monitoring on client side
-  if (typeof window !== 'undefined') {
-    installFetchTracer();
-    initPerformanceMonitor();
-  }
-
   return (
     <html lang="en">
       <head>
@@ -36,6 +28,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link
           href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap"
           rel="stylesheet"
+        />
+        {/* Umami Analytics */}
+        <script
+          defer
+          src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
+          data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
         />
       </head>
       <body className={inter.className}>
