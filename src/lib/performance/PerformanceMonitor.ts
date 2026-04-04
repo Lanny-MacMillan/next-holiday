@@ -341,9 +341,19 @@ export class PerformanceMonitor {
     const apiEndpoint = endpoint || '/api/performance';
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add API key if configured (for CloudWatch protection)
+      const apiKey = process.env.NEXT_PUBLIC_PERFORMANCE_API_KEY;
+      if (apiKey) {
+        headers['x-api-key'] = apiKey;
+      }
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(data),
       });
 

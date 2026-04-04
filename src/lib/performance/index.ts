@@ -32,7 +32,7 @@ export { PerformanceMonitor };
 // Global instance
 let performanceMonitor: PerformanceMonitor | null = null;
 
-export function initPerformanceMonitor(): PerformanceMonitor {
+export function initPerformanceMonitor(): PerformanceMonitor | null {
   if (typeof window !== 'undefined') {
     if (!performanceMonitor) {
       performanceMonitor = new PerformanceMonitor();
@@ -40,9 +40,9 @@ export function initPerformanceMonitor(): PerformanceMonitor {
     return performanceMonitor;
   }
 
-  // Return a dummy monitor for server-side
+  // Return null for server-side
   console.warn('Performance Monitor cannot be initialized on server-side');
-  return null as any;
+  return null;
 }
 
 export function getPerformanceMonitor(): PerformanceMonitor | null {

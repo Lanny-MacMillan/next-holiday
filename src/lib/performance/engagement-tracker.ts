@@ -41,8 +41,8 @@ export class EngagementTracker {
       this.engagement.clicks = this.clickCount;
 
       // Track business-relevant clicks
-      const target = e.target as HTMLElement;
-      if (target.closest('button, a')) {
+      const target = e.target;
+      if (target instanceof Element && target.closest('button, a')) {
         this.interactionCount++;
         this.engagement.interactions = this.interactionCount;
       }

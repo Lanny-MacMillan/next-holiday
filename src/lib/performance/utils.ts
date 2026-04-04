@@ -2,11 +2,13 @@
  * Utility functions for performance monitoring
  */
 
+import type { ConnectionInfo } from './types';
+
 export function generateSessionId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
-export function getConnectionInfo(): any {
+export function getConnectionInfo(): ConnectionInfo | undefined {
   // Handle experimental network connection API safely
   const nav = navigator as any;
   const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
@@ -19,7 +21,7 @@ export function getConnectionInfo(): any {
       saveData: connection.saveData,
     };
   }
-  return null;
+  return undefined;
 }
 
 export function extractHolidayFromPath(path: string): string {

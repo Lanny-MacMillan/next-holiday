@@ -20,7 +20,10 @@ export function detectDevice(): DeviceInfo {
   // Detect browser
   let browser = 'Unknown';
   let browserVersion = 'Unknown';
-  if (ua.includes('Chrome')) {
+  if (ua.includes('Edg/') || ua.includes('Edge/')) {
+    browser = 'Edge';
+    browserVersion = ua.match(/(?:Edg|Edge)\/(\d+)/)?.[1] || 'Unknown';
+  } else if (ua.includes('Chrome')) {
     browser = 'Chrome';
     browserVersion = ua.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
   } else if (ua.includes('Safari')) {
@@ -29,17 +32,14 @@ export function detectDevice(): DeviceInfo {
   } else if (ua.includes('Firefox')) {
     browser = 'Firefox';
     browserVersion = ua.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
-  } else if (ua.includes('Edge')) {
-    browser = 'Edge';
-    browserVersion = ua.match(/Edge\/(\d+)/)?.[1] || 'Unknown';
   }
 
   // Detect OS
   let os = 'Unknown';
   if (ua.includes('Windows')) os = 'Windows';
   else if (ua.includes('Mac')) os = 'macOS';
-  else if (ua.includes('Linux')) os = 'Linux';
   else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('Linux')) os = 'Linux';
   else if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad'))
     os = 'iOS';
 

@@ -67,6 +67,17 @@ interface PerformanceData {
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate API key to prevent unauthorized CloudWatch spam
+    const apiKey = request.headers.get('x-api-key');
+    const expectedKey = process.env.PERFORMANCE_API_KEY;
+    
+    if (expectedKey && apiKey !== expectedKey) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 },
+      );
+    }
+
     const data: PerformanceData = await request.json();
 
     // Add server timestamp and IP info
@@ -81,6 +92,14 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || data.userAgent,
     };
 
+    // Safely extract page path from URL
+    let pagePath = '/unknown';
+    try {
+      pagePath = new URL(serverData.session.url).pathname;
+    } catch (e) {
+      console.warn('Invalid URL in performance data:', serverData.session.url);
+    }
+
     // Log to console
     console.log('Performance Data Received:', {
       sessionId: serverData.session.sessionId,
@@ -89,7 +108,7 @@ export async function POST(request: NextRequest) {
       connection: serverData.session.connection?.effectiveType,
       metricsCount: serverData.session.metricsCount,
       url: serverData.session.url,
-      page: new URL(serverData.session.url).pathname,
+      page: pagePath,
       clientIP: serverData.clientIP,
       device: serverData.device?.type || serverData.session.device?.type,
       browser: serverData.device?.browser || serverData.session.device?.browser,
@@ -150,13 +169,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send to CloudWatch if enabled
-    if (process.env.AWS_REGION) {
-      try {
-        await sendToCloudWatch(serverData);
-        console.log('Sent to CloudWatch');
-      } catch (error) {
-        console.error('Failed to send to CloudWatch:', error);
+    // Send to CloudWatch if explicitly enabled
+    if (process.env.PERFORMANCE_CLOUDWATCH_ENABLED === 'true') {
+      // Validate required AWS credentials are present
+      if (!process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+        console.error('CloudWatch enabled but missing required AWS credentials (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)');
+      } else {
+        try {
+          await sendToCloudWatch(serverData);
+          console.log('Sent to CloudWatch');
+        } catch (error) {
+          console.error('Failed to send to CloudWatch:', error);
+        }
       }
     }
 
@@ -187,14 +211,30 @@ export async function GET(request: NextRequest) {
   });
 }
 
+// Reuse CloudWatch client across invocations for better performance in warm runtimes
+let cloudWatchClient: CloudWatchClient | null = null;
+
+function getCloudWatchClient(): CloudWatchClient {
+  if (!cloudWatchClient) {
+    cloudWatchClient = new CloudWatchClient({
+      region: process.env.AWS_REGION || 'us-east-1',
+    });
+  }
+  return cloudWatchClient;
+}
+
 // Helper function for CloudWatch integration
 async function sendToCloudWatch(data: any) {
-  const client = new CloudWatchClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-  });
+  const client = getCloudWatchClient();
 
   // Extract page path from URL and holiday type
-  const pagePath = new URL(data.session.url).pathname;
+  let pagePath = '/unknown';
+  try {
+    pagePath = new URL(data.session.url).pathname;
+  } catch (e) {
+    console.warn('Invalid URL in CloudWatch data:', data.session.url);
+  }
+  
   const holidayMatch = pagePath.match(
     /\/(christmas|birthday|valentines|halloween|thanksgiving|easter|mothers-day|fathers-day|graduation|anniversary|new-year|fourth-of-july|hanukkah|kwanzaa|baby-shower)/,
   );
@@ -349,18 +389,32 @@ async function sendToCloudWatch(data: any) {
     );
   }
 
-  const params = {
-    Namespace: 'NextHoliday_Performance',
-    MetricData: [
-      ...metricData,
-      ...vitalsData,
-      ...pageViewMetric,
-      ...engagementMetrics,
-      ...errorMetrics,
-      ...resourceMetrics,
-    ],
-  };
+  // Combine all metrics
+  const allMetrics = [
+    ...metricData,
+    ...vitalsData,
+    ...pageViewMetric,
+    ...engagementMetrics,
+    ...errorMetrics,
+    ...resourceMetrics,
+  ];
 
-  const command = new PutMetricDataCommand(params);
-  return client.send(command);
+  // CloudWatch has a limit of 20 MetricDatum per request
+  const BATCH_SIZE = 20;
+  const batches = [];
+  for (let i = 0; i < allMetrics.length; i += BATCH_SIZE) {
+    batches.push(allMetrics.slice(i, i + BATCH_SIZE));
+  }
+
+  // Send each batch
+  const promises = batches.map(batch => {
+    const params = {
+      Namespace: 'NextHoliday_Performance',
+      MetricData: batch,
+    };
+    const command = new PutMetricDataCommand(params);
+    return client.send(command);
+  });
+
+  return Promise.all(promises);
 }
