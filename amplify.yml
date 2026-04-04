@@ -31,3 +31,8 @@ frontend:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
+customHeaders:
+  - pattern: '**'
+    headers:
+      - key: 'Timing-Allow-Origin'
+        value: '*'

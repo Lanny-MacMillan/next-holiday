@@ -1,4 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CloudWatchClient, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch';
+
+interface DeviceInfo {
+  type: 'mobile' | 'tablet' | 'desktop';
+  screenWidth: number;
+  screenHeight: number;
+  browser: string;
+  browserVersion: string;
+  os: string;
+  touchSupport: boolean;
+}
+
+interface EngagementMetrics {
+  timeOnPage: number;
+  scrollDepth: number;
+  interactions: number;
+  clicks: number;
+}
+
+interface ErrorInfo {
+  message: string;
+  stack?: string;
+  timestamp: number;
+  url: string;
+}
+
+interface ResourceInfo {
+  count: number;
+  totalSize: number;
+  cacheHits: number;
+  cacheMisses: number;
+}
 
 interface PerformanceData {
   session: {
@@ -18,11 +50,19 @@ interface PerformanceData {
       rtt?: number;
     };
     url: string;
+    device?: DeviceInfo;
+    engagement?: EngagementMetrics;
+    errors?: ErrorInfo[];
+    resources?: ResourceInfo;
   };
   metrics: any[];
   vitals: any[];
   timestamp: number;
   userAgent: string;
+  device?: DeviceInfo;
+  engagement?: EngagementMetrics;
+  errors?: ErrorInfo[];
+  resources?: ResourceInfo;
 }
 
 export async function POST(request: NextRequest) {
@@ -49,8 +89,43 @@ export async function POST(request: NextRequest) {
       connection: serverData.session.connection?.effectiveType,
       metricsCount: serverData.session.metricsCount,
       url: serverData.session.url,
+      page: new URL(serverData.session.url).pathname,
       clientIP: serverData.clientIP,
+      device: serverData.device?.type || serverData.session.device?.type,
+      browser: serverData.device?.browser || serverData.session.device?.browser,
+      os: serverData.device?.os || serverData.session.device?.os,
     });
+
+    // Log engagement metrics
+    if (serverData.engagement || serverData.session.engagement) {
+      const eng = serverData.engagement || serverData.session.engagement;
+      if (eng) {
+        console.log('📈 Engagement:', {
+          timeOnPage: `${(eng.timeOnPage / 1000).toFixed(2)}s`,
+          scrollDepth: `${eng.scrollDepth}%`,
+          interactions: eng.interactions,
+          clicks: eng.clicks,
+        });
+      }
+    }
+
+    // Log errors if any
+    if (serverData.errors?.length || serverData.session.errors?.length) {
+      const errors = serverData.errors || serverData.session.errors || [];
+      console.error('❌ Errors Tracked:', errors.length, errors.slice(0, 3));
+    }
+
+    // Log resource info
+    if (serverData.resources || serverData.session.resources) {
+      const res = serverData.resources || serverData.session.resources;
+      if (res) {
+        console.log('📦 Resources:', {
+          count: res.count,
+          totalSize: `${(res.totalSize / 1024).toFixed(2)}KB`,
+          cacheHitRate: `${((res.cacheHits / (res.cacheHits + res.cacheMisses)) * 100).toFixed(1)}%`,
+        });
+      }
+    }
 
     // Log detailed metrics for analysis
     console.log(
@@ -75,37 +150,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Here you can:
-    // 1. Store in database
-    // 2. Send to AWS CloudWatch
-    // 3. Send to third-party analytics
-    // 4. Process for real-time dashboards
-
-    // Example: Send to CloudWatch (uncomment if you set up AWS SDK)
-    /*
-    if (process.env.AWS_REGION && process.env.AWS_ACCESS_KEY_ID) {
-      await sendToCloudWatch(serverData);
-    }
-    */
-
-    // Example: Store in database (uncomment if you want to persist)
-    /*
-    await prisma.performanceMetric.create({
-      data: {
-        sessionId: serverData.session.sessionId,
-        location: serverData.session.location?.city,
-        region: serverData.session.location?.region,
-        country: serverData.session.location?.country,
-        connection: serverData.session.connection?.effectiveType,
-        totalTime: serverData.session.totalTime,
-        metricsCount: serverData.session.metricsCount,
-        vitalsCount: serverData.session.vitalsCount,
-        data: JSON.stringify(serverData),
-        clientIP: serverData.clientIP,
-        userAgent: serverData.userAgent,
+    // Send to CloudWatch if enabled
+    if (process.env.AWS_REGION) {
+      try {
+        await sendToCloudWatch(serverData);
+        console.log('✅ Sent to CloudWatch');
+      } catch (error) {
+        console.error('❌ Failed to send to CloudWatch:', error);
       }
-    });
-    */
+    }
 
     return NextResponse.json({
       success: true,
@@ -134,29 +187,180 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// Helper function for CloudWatch integration (optional)
-/*
+// Helper function for CloudWatch integration
 async function sendToCloudWatch(data: any) {
-  // Implement CloudWatch metrics sending
-  // This would require AWS SDK setup
-  const AWS = require('aws-sdk');
-  const cloudwatch = new AWS.CloudWatch({ region: process.env.AWS_REGION });
-  
-  const params = {
-    Namespace: 'NextHoliday/Performance',
-    MetricData: data.metrics.map((metric: any) => ({
-      MetricName: metric.name,
-      Value: metric.value,
-      Unit: 'Milliseconds',
+  const client = new CloudWatchClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+  });
+
+  // Extract page path from URL and holiday type
+  const pagePath = new URL(data.session.url).pathname;
+  const holidayMatch = pagePath.match(
+    /\/(christmas|birthday|valentines|halloween|thanksgiving|easter|mothers-day|fathers-day|graduation|anniversary|new-year|fourth-of-july|hanukkah|kwanzaa|baby-shower)/,
+  );
+  const holidayType = holidayMatch ? holidayMatch[1] : 'home';
+
+  // Get device info
+  const device = data.device || data.session.device || {};
+  const engagement = data.engagement || data.session.engagement || {};
+  const resources = data.resources || data.session.resources || {};
+  const errors = data.errors || data.session.errors || [];
+
+  // Send individual metrics with comprehensive dimensions
+  const metricData = data.metrics.map((metric: any) => ({
+    MetricName: metric.name,
+    Value: metric.value,
+    Unit: 'Milliseconds',
+    Dimensions: [
+      { Name: 'Page', Value: pagePath },
+      { Name: 'Holiday', Value: metric.business?.holidayType || holidayType },
+      { Name: 'DeviceType', Value: metric.device?.type || device.type || 'Unknown' },
+      {
+        Name: 'Browser',
+        Value: metric.device?.browser || device.browser || 'Unknown',
+      },
+      { Name: 'OS', Value: metric.device?.os || device.os || 'Unknown' },
+      { Name: 'Location', Value: metric.location?.city || 'Unknown' },
+      { Name: 'Region', Value: metric.location?.region || 'Unknown' },
+      { Name: 'Connection', Value: metric.connection?.effectiveType || 'Unknown' },
+    ],
+    Timestamp: new Date(metric.timestamp),
+  }));
+
+  // Send web vitals with comprehensive dimensions
+  const vitalsData = data.vitals.map((vital: any) => ({
+    MetricName: vital.name,
+    Value: vital.value,
+    Unit: vital.name === 'CLS' ? 'None' : 'Milliseconds',
+    Dimensions: [
+      { Name: 'Page', Value: pagePath },
+      { Name: 'Holiday', Value: holidayType },
+      { Name: 'Rating', Value: vital.rating || 'unknown' },
+      { Name: 'DeviceType', Value: device.type || 'Unknown' },
+      { Name: 'Browser', Value: device.browser || 'Unknown' },
+      { Name: 'Location', Value: data.session.location?.city || 'Unknown' },
+      { Name: 'Region', Value: data.session.location?.region || 'Unknown' },
+    ],
+    Timestamp: new Date(vital.timestamp || Date.now()),
+  }));
+
+  // Send page view count metric
+  const pageViewMetric = [
+    {
+      MetricName: 'PageView',
+      Value: 1,
+      Unit: 'Count',
       Dimensions: [
-        { Name: 'Location', Value: metric.location?.city || 'Unknown' },
-        { Name: 'Region', Value: metric.location?.region || 'Unknown' },
-        { Name: 'Connection', Value: metric.connection?.effectiveType || 'Unknown' }
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+        { Name: 'DeviceType', Value: device.type || 'Unknown' },
+        { Name: 'Browser', Value: device.browser || 'Unknown' },
+        { Name: 'OS', Value: device.os || 'Unknown' },
+        { Name: 'Location', Value: data.session.location?.city || 'Unknown' },
+        { Name: 'Region', Value: data.session.location?.region || 'Unknown' },
       ],
-      Timestamp: new Date(metric.timestamp)
-    }))
+      Timestamp: new Date(),
+    },
+  ];
+
+  // Send engagement metrics
+  const engagementMetrics = [];
+  if (engagement.timeOnPage > 0) {
+    engagementMetrics.push({
+      MetricName: 'TimeOnPage',
+      Value: engagement.timeOnPage / 1000, // Convert to seconds
+      Unit: 'Seconds',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+        { Name: 'DeviceType', Value: device.type || 'Unknown' },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+  if (engagement.scrollDepth > 0) {
+    engagementMetrics.push({
+      MetricName: 'ScrollDepth',
+      Value: engagement.scrollDepth,
+      Unit: 'Percent',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+  if (engagement.interactions > 0) {
+    engagementMetrics.push({
+      MetricName: 'Interactions',
+      Value: engagement.interactions,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+
+  // Send error metrics
+  const errorMetrics = [];
+  if (errors.length > 0) {
+    errorMetrics.push({
+      MetricName: 'ErrorCount',
+      Value: errors.length,
+      Unit: 'Count',
+      Dimensions: [
+        { Name: 'Page', Value: pagePath },
+        { Name: 'Holiday', Value: holidayType },
+        { Name: 'Browser', Value: device.browser || 'Unknown' },
+      ],
+      Timestamp: new Date(),
+    });
+  }
+
+  // Send resource metrics
+  const resourceMetrics = [];
+  if (resources.count > 0) {
+    resourceMetrics.push(
+      {
+        MetricName: 'ResourceCount',
+        Value: resources.count,
+        Unit: 'Count',
+        Dimensions: [{ Name: 'Page', Value: pagePath }],
+        Timestamp: new Date(),
+      },
+      {
+        MetricName: 'PageSize',
+        Value: resources.totalSize / 1024, // Convert to KB
+        Unit: 'Kilobytes',
+        Dimensions: [{ Name: 'Page', Value: pagePath }],
+        Timestamp: new Date(),
+      },
+      {
+        MetricName: 'CacheHitRate',
+        Value:
+          (resources.cacheHits / (resources.cacheHits + resources.cacheMisses)) *
+          100,
+        Unit: 'Percent',
+        Dimensions: [{ Name: 'Page', Value: pagePath }],
+        Timestamp: new Date(),
+      },
+    );
+  }
+
+  const params = {
+    Namespace: 'NextHoliday_Performance',
+    MetricData: [
+      ...metricData,
+      ...vitalsData,
+      ...pageViewMetric,
+      ...engagementMetrics,
+      ...errorMetrics,
+      ...resourceMetrics,
+    ],
   };
-  
-  return cloudwatch.putMetricData(params).promise();
+
+  const command = new PutMetricDataCommand(params);
+  return client.send(command);
 }
-*/
