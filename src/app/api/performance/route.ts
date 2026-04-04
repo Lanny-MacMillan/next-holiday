@@ -172,8 +172,8 @@ export async function POST(request: NextRequest) {
     // Send to CloudWatch if explicitly enabled
     if (process.env.PERFORMANCE_CLOUDWATCH_ENABLED === 'true') {
       // Validate required AWS credentials are present
-      if (!process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-        console.error('CloudWatch enabled but missing required AWS credentials (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)');
+      if (!process.env.CLOUDWATCH_REGION || !process.env.CLOUDWATCH_ACCESS_KEY_ID || !process.env.CLOUDWATCH_SECRET_ACCESS_KEY) {
+        console.error('CloudWatch enabled but missing required credentials (CLOUDWATCH_REGION, CLOUDWATCH_ACCESS_KEY_ID, CLOUDWATCH_SECRET_ACCESS_KEY)');
       } else {
         try {
           await sendToCloudWatch(serverData);
@@ -217,7 +217,11 @@ let cloudWatchClient: CloudWatchClient | null = null;
 function getCloudWatchClient(): CloudWatchClient {
   if (!cloudWatchClient) {
     cloudWatchClient = new CloudWatchClient({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.CLOUDWATCH_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.CLOUDWATCH_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.CLOUDWATCH_SECRET_ACCESS_KEY!,
+      },
     });
   }
   return cloudWatchClient;
