@@ -26,6 +26,8 @@ frontend:
         - env | grep -e CLOUDWATCH_ACCESS_KEY_ID >> .env.production
         - env | grep -e CLOUDWATCH_SECRET_ACCESS_KEY >> .env.production
         - env | grep -e PERFORMANCE_CLOUDWATCH_ENABLED >> .env.production
+        - env | grep -e NEXT_PUBLIC_UMAMI_WEBSITE_ID >> .env.production
+        - env | grep -e NEXT_PUBLIC_UMAMI_SCRIPT_URL >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
