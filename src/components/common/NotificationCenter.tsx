@@ -343,7 +343,7 @@ export default function NotificationCenter({
             }
 
             // Optional: Show browser notification if permission granted
-            if (Notification.permission === 'granted') {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               new Notification(notification.title, {
                 body: notification.message,
                 icon: '/favicon.ico',
@@ -437,7 +437,7 @@ export default function NotificationCenter({
 
   // Request browser notification permission on mount
   useEffect(() => {
-    if (Notification.permission === 'default') {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
   }, []);
