@@ -37,8 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
         />
         {/* Eruda mobile console - for debugging */}
-        <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-        <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
+        {/* <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+        <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} /> */}
       </head>
       <body className={inter.className}>
         <Auth0ProviderWrapper>
