@@ -22,6 +22,9 @@ export default function Auth0ProviderWrapper({
       authorizationParams={{
         redirect_uri: redirectUri,
       }}
+      cacheLocation="localstorage"
+      useRefreshTokens={true}
+      useRefreshTokensFallback={true}
     >
       {children}
     </Auth0Provider>
