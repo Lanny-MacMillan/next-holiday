@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
           href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap"
           rel="stylesheet"
@@ -35,6 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
           data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
         />
+        {/* Eruda mobile console - for debugging */}
+        <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+        <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
       </head>
       <body className={inter.className}>
         <Auth0ProviderWrapper>
