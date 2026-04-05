@@ -33,8 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Umami Analytics */}
         <script
           defer
-          src="https://cloud.umami.is/script.js"
-          data-website-id="63d194ee-c90f-46cc-aa28-58fce7f3570a"
+          src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
+          data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
         />
         {/* Eruda mobile console - for debugging */}
         <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
