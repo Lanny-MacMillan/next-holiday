@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
           href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap"
           rel="stylesheet"
@@ -32,9 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Umami Analytics */}
         <script
           defer
-          src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
-          data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+          src="https://cloud.umami.is/script.js"
+          data-website-id="63d194ee-c90f-46cc-aa28-58fce7f3570a"
         />
+        {/* Eruda mobile console - for debugging */}
+        <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+        <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
       </head>
       <body className={inter.className}>
         <Auth0ProviderWrapper>
