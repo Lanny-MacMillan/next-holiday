@@ -760,11 +760,22 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Dark Mode
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                    Theme
+                  </label>
+                  <span
+                    className={`px-2 py-0.4 text-xs font-semibold rounded ${
+                      currentTheme === 'dark'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}
+                  >
+                    {currentTheme === 'dark' ? 'Dark' : 'Light'}
+                  </span>
+                </div>
                 <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Switch between light and dark themes
+                  Light and dark themes
                 </p>
               </div>
               <button
@@ -788,11 +799,22 @@ export default function SettingsPage() {
             {isUserPlusMember && (
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                    Display Mode
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                      Experience
+                    </label>
+                    <span
+                      className={`px-2 py-0.4 text-xs font-semibold rounded ${
+                        currentDisplayMode === 'gamified'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}
+                    >
+                      {currentDisplayMode === 'gamified' ? 'Gamified' : 'Focused'}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-800 dark:text-gray-400">
-                    Choose between professional and gamified card styles
+                    Focused and Gamified card styles
                   </p>
                 </div>
                 <button

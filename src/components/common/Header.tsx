@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSubscription } from '@/hooks/useSubscription';
 import ThemeToggle from '../ThemeToggle';
 import DisplayModeToggle from '../DisplayModeToggle';
@@ -66,9 +67,11 @@ export default function Header() {
           <div className="flex justify-between items-center h-16">
             {/* Left side - App title */}
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-                Next Holiday
-              </h1>
+              <Link href="/">
+                <h1 className="text-xl font-bold text-gray-800 dark:text-white cursor-pointer hover:opacity-80 transition-opacity">
+                  Next Holiday
+                </h1>
+              </Link>
             </div>
 
             {/* Right side - Notifications, Display mode toggle, Theme toggle and burger menu */}
