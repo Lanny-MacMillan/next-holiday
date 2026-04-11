@@ -3,7 +3,7 @@ import { FormField, FormConfig } from '../types/form';
 export const ASSIGNTO_FIELD: FormField = {
   id: 'assigned_to', // Changed from 'assignedTo' to match API
   type: 'select',
-  placeholder: 'Assign to (optional)',
+  placeholder: 'Assign to',
   options: [], // Populated dynamically with share members
 };
 
@@ -33,15 +33,15 @@ export const BASE_FORM_CONFIGS = {
       {
         id: 'recipient',
         type: 'text',
-        placeholder: 'Recipient',
-        showAddressBook: true, // Only recipient field should have address book
+        placeholder: 'Recipient*',
+        showAddressBook: true,
       },
       { id: 'name', type: 'text', placeholder: 'Gift Name*', required: true },
       { id: 'description', type: 'textarea', placeholder: 'Description', rows: 2 },
       { id: 'price', type: 'number', placeholder: 'Price', step: '0.01' },
       { id: 'store', type: 'text', placeholder: 'Store' },
-      { id: 'product_link', type: 'url', placeholder: 'Product Link (optional)' },
-      ASSIGNTO_FIELD, // NEW
+      { id: 'product_link', type: 'url', placeholder: 'Product Link' },
+      ASSIGNTO_FIELD,
       { id: 'notes', type: 'textarea', placeholder: 'Notes', rows: 2 },
     ],
     submitText: 'Add Gift',
@@ -54,9 +54,9 @@ export const BASE_FORM_CONFIGS = {
         type: 'text',
         placeholder: 'Recipient*',
         required: true,
-        showAddressBook: true, // Only recipient field should have address book
+        showAddressBook: true,
       },
-      { id: 'address', type: 'text', placeholder: 'Address (optional)' },
+      { id: 'address', type: 'text', placeholder: 'Address' },
       {
         id: 'message',
         type: 'textarea',
@@ -64,7 +64,7 @@ export const BASE_FORM_CONFIGS = {
         required: true,
         rows: 3,
       },
-      ASSIGNTO_FIELD, // NEW
+      ASSIGNTO_FIELD,
     ],
     submitText: 'Add Card',
     cardClassName: 'card card-cards',
@@ -158,14 +158,14 @@ export const BASE_FORM_CONFIGS = {
         id: 'recipient',
         type: 'text',
         placeholder: 'Recipient',
-        showAddressBook: true, // Only recipient field should have address book
+        showAddressBook: true,
       },
       { id: 'name', type: 'text', placeholder: 'Item Name*', required: true },
       { id: 'description', type: 'textarea', placeholder: 'Description', rows: 2 },
       { id: 'price', type: 'number', placeholder: 'Price', step: '0.01' },
       { id: 'store', type: 'text', placeholder: 'Store' },
-      { id: 'product_link', type: 'url', placeholder: 'Product Link (optional)' },
-      ASSIGNTO_FIELD, // NEW
+      { id: 'product_link', type: 'url', placeholder: 'Product Link' },
+      ASSIGNTO_FIELD,
       { id: 'notes', type: 'textarea', placeholder: 'Notes', rows: 2 },
     ],
     submitText: 'Add Item',
@@ -177,8 +177,8 @@ export const BASE_FORM_CONFIGS = {
       { id: 'description', type: 'textarea', placeholder: 'Description', rows: 2 },
       { id: 'price', type: 'number', placeholder: 'Price', step: '0.01' },
       { id: 'store', type: 'text', placeholder: 'Store' },
-      { id: 'product_link', type: 'url', placeholder: 'Product Link (optional)' },
-      ASSIGNTO_FIELD, // NEW
+      { id: 'product_link', type: 'url', placeholder: 'Product Link' },
+      ASSIGNTO_FIELD,
       { id: 'notes', type: 'textarea', placeholder: 'Notes', rows: 2 },
     ],
     submitText: 'Add Supply Item',

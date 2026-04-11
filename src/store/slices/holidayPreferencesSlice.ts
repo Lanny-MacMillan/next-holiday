@@ -135,12 +135,28 @@ export const saveHolidayPreferences = createAsyncThunk(
           status: response.status,
           statusText: response.statusText,
           errorData,
-          requestData: request,
+          requestData: {
+            accountId: request.accountId,
+            preferencesCount: request.preferences.length,
+            hasAuth: !!request.auth0User,
+          },
         });
       } catch (parseError) {
         console.error('Failed to parse error response:', parseError);
         errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       }
+
+      // Provide more user-friendly error messages
+      if (response.status === 401) {
+        throw new Error(
+          'Authentication required. Please refresh the page and try again.',
+        );
+      } else if (response.status === 403) {
+        throw new Error('You do not have permission to perform this action.');
+      } else if (response.status === 500 && errorMessage.includes('Transaction')) {
+        throw new Error('Database error. Please try again in a moment.');
+      }
+
       throw new Error(errorMessage);
     }
 

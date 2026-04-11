@@ -12,7 +12,7 @@ import { updateSettings } from '@/store/slices/themeSlice';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
 import { saveHolidayPreferences } from '@/store/slices/holidayPreferencesSlice';
 import { setHomeData, refreshHomeData } from '@/store/slices/homeSlice';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import HolidayDeleteConfirmationModal from '@/components/modals/HolidayDeleteConfirmationModal';
 import CancelSubscriptionModal from '@/components/modals/CancelSubscriptionModal';
@@ -49,6 +49,16 @@ export default function SettingsPage() {
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
+  // Error state for user feedback
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Loading state for holiday operations
+  const [isSavingHoliday, setIsSavingHoliday] = useState(false);
+  const [pendingHoliday, setPendingHoliday] = useState<string | null>(null);
+
+  // Ref to track budget change timeout
+  const budgetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Get user subscription status from Redux using selectors
   const currentUser = useAppSelector(selectUser);
   const subscriptionPlan = useAppSelector(selectUserSubscriptionPlan);
@@ -81,6 +91,29 @@ export default function SettingsPage() {
       });
     }
   }, [preferences]);
+
+  // Prevent navigation while saving
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSavingHoliday) {
+        e.preventDefault();
+        e.returnValue = 'A holiday is being saved. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isSavingHoliday]);
+
+  // Cleanup budget timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (budgetTimeoutRef.current) {
+        clearTimeout(budgetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Fetch home data if not already loaded
   useEffect(() => {
@@ -367,6 +400,12 @@ export default function SettingsPage() {
     isSelected: boolean,
     budget: number = 500,
   ) => {
+    // Prevent multiple simultaneous operations
+    if (isSavingHoliday) {
+      console.log('Holiday save already in progress, ignoring request');
+      return;
+    }
+
     // If deselecting a holiday, show cascade delete confirmation
     if (!isSelected) {
       // Find the holiday ID from the existing preferences
@@ -407,6 +446,9 @@ export default function SettingsPage() {
 
     // Save to database
     if (user?.sub && homeData?.account?.id) {
+      setIsSavingHoliday(true);
+      setPendingHoliday(holiday);
+
       try {
         // Send only essential data - holiday type and budget
         const cleanPreferences = newPreferences.map(pref => ({
@@ -421,39 +463,88 @@ export default function SettingsPage() {
             auth0User: user,
           }),
         ).unwrap();
+
+        // Clear any previous errors on success
+        setErrorMessage(null);
       } catch (error) {
         console.error('Failed to save holiday preferences:', error);
+        const errorMsg =
+          error instanceof Error
+            ? error.message
+            : 'Failed to save holiday preferences';
+        setErrorMessage(errorMsg);
+
+        // Revert the local state on error
+        if (isSelected) {
+          setLocalHolidayPreferences(prev =>
+            prev.filter(p => p.holiday !== holiday),
+          );
+        } else {
+          setLocalHolidayPreferences(prev => [...prev, { holiday, budget }]);
+        }
+
+        // Clear error after 8 seconds
+        setTimeout(() => setErrorMessage(null), 8000);
+      } finally {
+        setIsSavingHoliday(false);
+        setPendingHoliday(null);
       }
     }
   };
 
   const handleBudgetChange = async (holiday: string, newBudget: number) => {
+    // Prevent changes while holiday operation is in progress
+    if (isSavingHoliday) {
+      return;
+    }
+
+    // Update local state immediately for responsive UI
     const newPreferences = localHolidayPreferences.map(pref =>
       pref.holiday === holiday ? { ...pref, budget: newBudget } : pref,
     );
-
     setLocalHolidayPreferences(newPreferences);
 
-    // Save to database
-    if (user?.sub && homeData?.account?.id) {
-      try {
-        // Send only essential data - holiday type and budget
-        const cleanPreferences = newPreferences.map(pref => ({
-          holiday: pref.holiday,
-          budget: pref.budget || 500,
-        }));
-
-        await dispatch(
-          saveHolidayPreferences({
-            accountId: homeData.account.id,
-            preferences: cleanPreferences,
-            auth0User: user,
-          }),
-        ).unwrap();
-      } catch (error) {
-        console.error('Failed to save holiday preferences:', error);
-      }
+    // Clear any existing timeout
+    if (budgetTimeoutRef.current) {
+      clearTimeout(budgetTimeoutRef.current);
     }
+
+    // Debounce the save operation (wait 1 second after last change)
+    budgetTimeoutRef.current = setTimeout(async () => {
+      const oldPreferences = [...localHolidayPreferences];
+
+      // Save to database
+      if (user?.sub && homeData?.account?.id) {
+        try {
+          // Send only essential data - holiday type and budget
+          const cleanPreferences = newPreferences.map(pref => ({
+            holiday: pref.holiday,
+            budget: pref.budget || 500,
+          }));
+
+          await dispatch(
+            saveHolidayPreferences({
+              accountId: homeData.account.id,
+              preferences: cleanPreferences,
+              auth0User: user,
+            }),
+          ).unwrap();
+
+          setErrorMessage(null);
+        } catch (error) {
+          console.error('Failed to save holiday preferences:', error);
+          const errorMsg =
+            error instanceof Error ? error.message : 'Failed to save budget';
+          setErrorMessage(errorMsg);
+
+          // Revert to old state on error
+          setLocalHolidayPreferences(oldPreferences);
+
+          // Clear error after 8 seconds
+          setTimeout(() => setErrorMessage(null), 8000);
+        }
+      }
+    }, 1000);
   };
 
   const handleSave = () => {
@@ -522,6 +613,30 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen christmas-settings-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
+      {/* Loading Overlay */}
+      {isSavingHoliday && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl max-w-sm mx-4">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
+                  Saving Holiday
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {pendingHoliday
+                    ? `Processing ${pendingHoliday}...`
+                    : 'Please wait...'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                  Please don't navigate away or add more holidays
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="w-full max-w-2xl py-6 flex flex-col items-center relative">
         <Link
           href="/"
@@ -548,6 +663,30 @@ export default function SettingsPage() {
           Manage your account and preferences
         </p>
       </header>
+
+      {/* Error Message Display */}
+      {errorMessage && (
+        <div className="w-full max-w-2xl mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{errorMessage}</span>
+            <button
+              className="absolute top-0 bottom-0 right-0 px-4 py-3"
+              onClick={() => setErrorMessage(null)}
+            >
+              <svg
+                className="fill-current h-6 w-6 text-red-500 dark:text-red-400"
+                role="button"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+              >
+                <title>Close</title>
+                <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="w-full max-w-2xl flex flex-col gap-8">
         {/* User Information */}
@@ -760,11 +899,22 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Dark Mode
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                    Theme
+                  </label>
+                  <span
+                    className={`px-2 py-0.4 text-xs font-semibold rounded ${
+                      currentTheme === 'dark'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}
+                  >
+                    {currentTheme === 'dark' ? 'Dark' : 'Light'}
+                  </span>
+                </div>
                 <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Switch between light and dark themes
+                  Light and dark themes
                 </p>
               </div>
               <button
@@ -788,11 +938,22 @@ export default function SettingsPage() {
             {isUserPlusMember && (
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                    Display Mode
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                      Experience
+                    </label>
+                    <span
+                      className={`px-2 py-0.4 text-xs font-semibold rounded ${
+                        currentDisplayMode === 'gamified'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}
+                    >
+                      {currentDisplayMode === 'gamified' ? 'Gamified' : 'Focused'}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-800 dark:text-gray-400">
-                    Choose between professional and gamified card styles
+                    Focused and Gamified card styles
                   </p>
                 </div>
                 <button
@@ -876,6 +1037,7 @@ export default function SettingsPage() {
                           <input
                             type="checkbox"
                             checked={isSelected}
+                            disabled={isSavingHoliday}
                             onChange={e => {
                               handleHolidayPreferenceChange(
                                 holiday,
@@ -883,10 +1045,21 @@ export default function SettingsPage() {
                                 budget,
                               );
                             }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           />
-                          <span className="text-sm font-medium text-gray-800 dark:text-white">
+                          <span
+                            className={`text-sm font-medium text-gray-800 dark:text-white ${
+                              isSavingHoliday && pendingHoliday === holiday
+                                ? 'opacity-50'
+                                : ''
+                            }`}
+                          >
                             {holiday}
+                            {isSavingHoliday && pendingHoliday === holiday && (
+                              <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                (Saving...)
+                              </span>
+                            )}
                           </span>
                         </div>
                         {isUserPlusMember && isSelected && (
@@ -897,6 +1070,7 @@ export default function SettingsPage() {
                             <input
                               type="number"
                               value={budget}
+                              disabled={isSavingHoliday}
                               onChange={e => {
                                 const newBudget = parseInt(e.target.value) || 0;
                                 handleBudgetChange(holiday, newBudget);

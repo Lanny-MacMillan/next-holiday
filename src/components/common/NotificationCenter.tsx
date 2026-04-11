@@ -343,7 +343,11 @@ export default function NotificationCenter({
             }
 
             // Optional: Show browser notification if permission granted
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            if (
+              typeof window !== 'undefined' &&
+              'Notification' in window &&
+              Notification.permission === 'granted'
+            ) {
               new Notification(notification.title, {
                 body: notification.message,
                 icon: '/favicon.ico',
@@ -437,7 +441,11 @@ export default function NotificationCenter({
 
   // Request browser notification permission on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'default'
+    ) {
       Notification.requestPermission();
     }
   }, []);
@@ -805,7 +813,7 @@ export default function NotificationCenter({
       {/* Bell Icon with Badge */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+        className="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors rounded-md"
         aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
       >
         <BellIcon size={20} />
@@ -814,23 +822,6 @@ export default function NotificationCenter({
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
-        {/* Connection status indicator */}
-        <div
-          className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
-            isConnected
-              ? usePolling
-                ? 'bg-blue-500'
-                : 'bg-green-500'
-              : 'bg-gray-400'
-          }`}
-          title={
-            isConnected
-              ? usePolling
-                ? 'Connected via polling (10s intervals)'
-                : 'Connected via real-time stream'
-              : 'Reconnecting...'
-          }
-        />
       </button>
 
       {/* Notifications Dropdown */}
@@ -872,22 +863,25 @@ export default function NotificationCenter({
                       Mark all read
                     </button>
                   )}
-                  {/* Connection type indicator */}
-                  <div className="text-xs font-medium">
+                  {/* Connection status indicator */}
+                  <div className="flex items-center">
                     {isConnected ? (
                       usePolling ? (
-                        <span className="text-blue-600 dark:text-blue-400">
-                          Polling
-                        </span>
+                        <div
+                          className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"
+                          title="Polling"
+                        />
                       ) : (
-                        <span className="text-green-600 dark:text-green-400">
-                          Live
-                        </span>
+                        <div
+                          className="w-2 h-2 rounded-full bg-green-600 dark:bg-green-400"
+                          title="Live"
+                        />
                       )
                     ) : (
-                      <span className="text-gray-500 dark:text-gray-400">
-                        Offline
-                      </span>
+                      <div
+                        className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400"
+                        title="Offline"
+                      />
                     )}
                   </div>
                   {/* Debug control for development */}

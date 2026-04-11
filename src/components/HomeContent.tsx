@@ -54,6 +54,41 @@ export default function HomeContent({ homeData }: HomeContentProps) {
 
   const filteredHolidays = getSelectedHolidays();
 
+  // Sort holidays by countdown time (closest date first)
+  const sortedHolidays = [...filteredHolidays].sort((a, b) => {
+    const aPreference = holidayPreferences?.find(
+      (pref: any) => pref.holiday === a.name,
+    );
+    const bPreference = holidayPreferences?.find(
+      (pref: any) => pref.holiday === b.name,
+    );
+
+    // Get countdown timer dates from preferences (these are ISO date strings)
+    const aCountdownDate = aPreference?.countdownTimer;
+    const bCountdownDate = bPreference?.countdownTimer;
+
+    // Calculate time remaining for each holiday
+    const now = new Date().getTime();
+
+    let aTime = Infinity;
+    if (aCountdownDate) {
+      const target = new Date(aCountdownDate).getTime();
+      const diff = target - now;
+      aTime = diff > 0 ? diff : 0;
+    }
+
+    let bTime = Infinity;
+    if (bCountdownDate) {
+      const target = new Date(bCountdownDate).getTime();
+      const diff = target - now;
+      bTime = diff > 0 ? diff : 0;
+    }
+
+    // Sort by time remaining (ascending - closest first)
+    // Holidays without countdowns (Infinity) will be sorted to the bottom
+    return aTime - bTime;
+  });
+
   // Show loading state while fetching data
   if (isLoading) {
     return (
@@ -92,7 +127,7 @@ export default function HomeContent({ homeData }: HomeContentProps) {
           </div>
         ) : (
           <ul className="flex flex-col gap-4">
-            {filteredHolidays.map(holiday => {
+            {sortedHolidays.map(holiday => {
               const holidayPreference = holidayPreferences?.find(
                 (pref: any) => pref.holiday === holiday.name,
               );

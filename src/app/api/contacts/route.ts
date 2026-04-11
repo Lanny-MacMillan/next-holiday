@@ -17,7 +17,7 @@ import {
 const CreateContactSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().min(1).max(20),
+  phone: z.string().max(20).optional().or(z.literal('')),
   streetAddress: z.string().optional().or(z.literal('')),
   city: z.string().optional().or(z.literal('')),
   state: z.string().optional().or(z.literal('')),
@@ -29,7 +29,7 @@ const CreateContactSchema = z.object({
 const UpdateContactSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().min(1).max(20).optional(),
+  phone: z.string().max(20).optional().or(z.literal('')),
   streetAddress: z.string().optional().or(z.literal('')),
   city: z.string().optional().or(z.literal('')),
   state: z.string().optional().or(z.literal('')),

@@ -264,11 +264,11 @@ export default function HolidayCard({
                       }}
                     />
                   </div>
-                  <div className="flex justify-between items-center text-xs text-white opacity-80">
-                    <span>{Math.round(progress * 100)}% complete</span>
+                  <div className="flex flex-col gap-0.5 text-xs text-white opacity-80">
                     <span>
                       {completedItems}/{totalItems} items
                     </span>
+                    <span>{Math.round(progress * 100)}% complete</span>
                   </div>
                 </div>
               </div>

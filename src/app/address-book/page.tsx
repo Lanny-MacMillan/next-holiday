@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -10,7 +10,11 @@ import {
   Contact,
   fetchContacts,
 } from '@/store/slices/addressBookSlice';
-import { selectHomeData, setHomeData } from '@/store/slices/homeSlice';
+import {
+  selectHomeData,
+  selectContacts,
+  refreshHomeData,
+} from '@/store/slices/homeSlice';
 
 import SortModal from '@/components/modals/SortModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
@@ -27,9 +31,8 @@ export default function AddressBookPage() {
   const { user: auth0User } = useAuth0();
   const dispatch = useAppDispatch();
 
-  // Get contacts directly from home data like the settings page does
-  const homeData = useAppSelector(selectHomeData);
-  const contacts = homeData?.contacts || [];
+  // Get contacts directly from home data using the selector
+  const contacts = useAppSelector(selectContacts);
   const loading = false; // No loading state needed since data comes from home
   const error = null; // No error state needed since data comes from home
 
@@ -37,6 +40,7 @@ export default function AddressBookPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -60,12 +64,21 @@ export default function AddressBookPage() {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
+  // Capitalize first and last name
+  function capitalizeName(name: string): string {
+    return name
+      .trim()
+      .split(/\s+/) // Split by any whitespace
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   async function handleAddContact(formValues: Record<string, any>) {
-    if (!formValues.name?.trim() || !formValues.phone?.trim()) return;
+    if (!formValues.name?.trim()) return;
     if (!auth0User) return;
 
     const contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: formValues.name,
+      name: capitalizeName(formValues.name),
       email: formValues.email || undefined,
       phone: formValues.phone || undefined,
       streetAddress: formValues.streetAddress || undefined,
@@ -76,34 +89,30 @@ export default function AddressBookPage() {
       notes: formValues.notes || undefined,
     };
 
+    setIsSubmitting(true);
     try {
       if (editingContact) {
-        const result = await dispatch(
+        await dispatch(
           updateContact({ ...editingContact, ...contactData, auth0User }),
         ).unwrap();
+
+        // Refresh home data to get updated contacts
+        await dispatch(refreshHomeData(auth0User));
+
+        setEditingContact(null);
         setToastMessage('Contact updated successfully!');
         setToastType('success');
-        setEditingContact(null);
-
-        // Update home data with the updated contact
-        if (homeData) {
-          const updatedContacts = contacts.map(contact =>
-            contact.id === editingContact.id ? result : contact,
-          );
-          dispatch(setHomeData({ ...homeData, contacts: updatedContacts }));
-        }
       } else {
-        const result = await dispatch(
-          addContact({ ...contactData, auth0User }),
-        ).unwrap();
+        await dispatch(addContact({ ...contactData, auth0User })).unwrap();
+
+        // Refresh home data to get new contact
+        await dispatch(refreshHomeData(auth0User));
+
         setToastMessage('Contact added successfully!');
         setToastType('success');
-
-        // Update home data with the new contact
-        if (homeData) {
-          dispatch(setHomeData({ ...homeData, contacts: [...contacts, result] }));
-        }
       }
+
+      setShowForm(false);
       setShowToast(true);
     } catch (error) {
       console.error('Failed to save contact:', error);
@@ -114,9 +123,9 @@ export default function AddressBookPage() {
       );
       setToastType('error');
       setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setShowForm(false);
   }
 
   function openForm() {
@@ -145,17 +154,12 @@ export default function AddressBookPage() {
         await dispatch(
           deleteContact({ contactId: deleteConfirm.contactId, auth0User }),
         ).unwrap();
+
+        // Refresh home data to get updated contacts list
+        await dispatch(refreshHomeData(auth0User));
+
         setToastMessage('Contact deleted successfully!');
         setToastType('success');
-
-        // Update home data by removing the deleted contact
-        if (homeData) {
-          const updatedContacts = contacts.filter(
-            contact => contact.id !== deleteConfirm.contactId,
-          );
-          dispatch(setHomeData({ ...homeData, contacts: updatedContacts }));
-        }
-
         setShowToast(true);
       } catch (error) {
         console.error('Failed to delete contact:', error);
@@ -343,7 +347,7 @@ export default function AddressBookPage() {
         initialValues={initialValues}
         onSubmit={handleAddContact}
         onClose={closeForm}
-        loading={loading}
+        loading={isSubmitting}
         submitText={formConfig.submitText}
         cancelText={formConfig.cancelText}
         cardClassName={formConfig.cardClassName}

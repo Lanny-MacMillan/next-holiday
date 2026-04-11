@@ -27,7 +27,7 @@ export const cardsFormConfig: FormConfig = {
     {
       id: 'address',
       type: 'text',
-      placeholder: 'Address (optional)',
+      placeholder: 'Address',
     },
     {
       id: 'message',
@@ -159,7 +159,7 @@ export const giftsFormConfig: FormConfig = {
     {
       id: 'productLink',
       type: 'url',
-      placeholder: 'Product Link (optional)',
+      placeholder: 'Product Link',
     },
     {
       id: 'notes',
@@ -188,7 +188,7 @@ export const shoppingListFormConfig: FormConfig = {
     {
       id: 'description',
       type: 'text',
-      placeholder: 'Description (optional)',
+      placeholder: 'Description',
     },
     {
       id: 'price',
@@ -199,7 +199,7 @@ export const shoppingListFormConfig: FormConfig = {
     {
       id: 'actual_price',
       type: 'number',
-      placeholder: 'Actual Price (optional)',
+      placeholder: 'Actual Price',
       step: '0.01',
     },
     {
@@ -210,7 +210,7 @@ export const shoppingListFormConfig: FormConfig = {
     {
       id: 'product_link',
       type: 'url',
-      placeholder: 'Product Link (optional)',
+      placeholder: 'Product Link',
     },
     {
       id: 'notes',
@@ -239,7 +239,7 @@ export const suppliesFormConfig: FormConfig = {
     {
       id: 'description',
       type: 'text',
-      placeholder: 'Description (optional)',
+      placeholder: 'Description',
     },
     {
       id: 'price',
@@ -250,7 +250,7 @@ export const suppliesFormConfig: FormConfig = {
     {
       id: 'actual_price',
       type: 'number',
-      placeholder: 'Actual Price (optional)',
+      placeholder: 'Actual Price',
       step: '0.01',
     },
     {
@@ -261,7 +261,7 @@ export const suppliesFormConfig: FormConfig = {
     {
       id: 'product_link',
       type: 'url',
-      placeholder: 'Product Link (optional)',
+      placeholder: 'Product Link',
     },
     {
       id: 'notes',
@@ -327,17 +327,17 @@ export const guestsFormConfig: FormConfig = {
     {
       id: 'email',
       type: 'email',
-      placeholder: 'Email (optional)',
+      placeholder: 'Email',
     },
     {
       id: 'phone',
       type: 'tel',
-      placeholder: 'Phone (optional)',
+      placeholder: 'Phone',
     },
     {
       id: 'address',
       type: 'text',
-      placeholder: 'Address (optional)',
+      placeholder: 'Address',
     },
     {
       id: 'rsvpStatus',
@@ -352,7 +352,7 @@ export const guestsFormConfig: FormConfig = {
     {
       id: 'notes',
       type: 'textarea',
-      placeholder: 'Notes (optional)',
+      placeholder: 'Notes',
       rows: 2,
     },
   ],
@@ -387,32 +387,29 @@ export const addressBookFormConfig: FormConfig = {
     {
       id: 'email',
       type: 'email',
-      placeholder: 'Email (optional)',
+      placeholder: 'Email',
     },
     {
       id: 'phone',
       type: 'tel',
-      placeholder: 'Phone*',
-      required: true,
+      placeholder: 'Phone',
     },
     {
       id: 'streetAddress',
       type: 'text',
-      placeholder: 'Street Address*',
-      required: true,
+      placeholder: 'Street Address',
     },
     {
       id: 'city',
       type: 'text',
-      placeholder: 'City*',
-      required: true,
+      placeholder: 'City',
     },
     {
       id: 'state',
       type: 'select',
-      placeholder: 'State*',
-      required: true,
+      placeholder: 'State',
       options: [
+        { value: '', label: 'State' },
         { value: 'AL', label: 'Alabama' },
         { value: 'AK', label: 'Alaska' },
         { value: 'AZ', label: 'Arizona' },
@@ -468,14 +465,14 @@ export const addressBookFormConfig: FormConfig = {
     {
       id: 'zipCode',
       type: 'text',
-      placeholder: 'Zip Code*',
-      required: true,
+      placeholder: 'Zip Code',
     },
     {
       id: 'relationship',
       type: 'select',
-      placeholder: 'Relationship (Optional)',
+      placeholder: 'Relationship',
       options: [
+        { value: '', label: 'Relationship' },
         { value: 'Spouse / Partner', label: 'Spouse / Partner' },
         { value: 'Child', label: 'Child' },
         { value: 'Parent', label: 'Parent' },

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensurePrismaConnection } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
@@ -65,8 +65,7 @@ export async function GET(request: NextRequest) {
 // POST /api/holidays/preferences - Save holiday preferences
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
-    // Parse and validate request body
+    // Parse and validate request body first
     const body = await request.json();
     const validation = SaveHolidayPreferencesSchema.safeParse(body);
 
@@ -75,6 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { accountId, preferences } = validation.data;
+
+    // Get authenticated user
+    const user = await requireAuth(request);
 
     // Check account access
     await requireAccountAccess(accountId, user.id);
@@ -103,33 +105,39 @@ export async function POST(request: NextRequest) {
       [] as typeof validPreferences,
     );
 
+    // Ensure database connection is alive before running operations
+    const isConnected = await ensurePrismaConnection();
+    if (!isConnected) {
+      return serverError('Database connection error. Please try again in a moment.');
+    }
+
+    // Get current holidays outside of transaction to reduce transaction time
+    const currentHolidays = await prisma.holiday.findMany({
+      where: { accountId },
+      include: {
+        budgets: true,
+      },
+    });
+
+    // Create sets of current and new holiday types for comparison
+    const currentHolidayTypes = new Set(currentHolidays.map(h => h.holidayType));
+    const newHolidayTypes = new Set(deduplicatedPreferences.map(p => p.holiday));
+
+    // Find holidays to remove (in current but not in new preferences)
+    const holidaysToRemove = currentHolidays.filter(
+      h => !newHolidayTypes.has(h.holidayType),
+    );
+
+    // Remove holidays that are no longer selected (outside transaction)
+    for (const holiday of holidaysToRemove) {
+      await prisma.holiday.delete({
+        where: { id: holiday.id },
+      });
+    }
+
     // Process preferences in a transaction with increased timeout
     const results = await prisma.$transaction(
       async tx => {
-        // Get current holidays for this account
-        const currentHolidays = await tx.holiday.findMany({
-          where: { accountId },
-          include: {
-            budgets: true,
-          },
-        });
-
-        // Create sets of current and new holiday types for comparison
-        const currentHolidayTypes = new Set(currentHolidays.map(h => h.holidayType));
-        const newHolidayTypes = new Set(deduplicatedPreferences.map(p => p.holiday));
-
-        // Find holidays to remove (in current but not in new preferences)
-        const holidaysToRemove = currentHolidays.filter(
-          h => !newHolidayTypes.has(h.holidayType),
-        );
-
-        // Remove holidays that are no longer selected (this will cascade delete budgets, tasks, etc.)
-        for (const holiday of holidaysToRemove) {
-          await tx.holiday.delete({
-            where: { id: holiday.id },
-          });
-        }
-
         const holidayResults = [];
 
         for (const preference of deduplicatedPreferences) {
@@ -242,17 +250,40 @@ export async function POST(request: NextRequest) {
         return holidayResults;
       },
       {
-        timeout: 15000, // Increase timeout to 15 seconds for complex operations
-        maxWait: 20000, // Maximum wait time for transaction to start
+        timeout: 30000, // Increase timeout to 30 seconds for complex operations
+        maxWait: 35000, // Maximum wait time for transaction to start
+        isolationLevel: 'ReadCommitted', // Use read committed to reduce lock contention
       },
     );
 
     return ok(toPlain(results));
   } catch (error) {
     console.error('Error saving holiday preferences:', error);
+
+    // Enhanced error logging
     if (error instanceof Error) {
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+
+      // Check for specific Prisma errors
+      if (error.message.includes('Transaction')) {
+        return serverError(
+          'Database transaction error. Please try again. If the issue persists, try refreshing the page.',
+        );
+      }
+
+      if (error.message.includes('Authentication required')) {
+        return serverError(
+          'Authentication required. Please refresh the page and try again.',
+        );
+      }
+
       return serverError(error.message);
     }
+
     return serverError('Failed to save holiday preferences');
   }
 }
