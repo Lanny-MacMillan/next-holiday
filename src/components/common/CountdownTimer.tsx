@@ -610,7 +610,7 @@ export default function CountdownTimer({
           title="Update Countdown Date"
           currentDate={currentTargetDate || ''}
           defaultDate={
-            isNationalHoliday(holiday) ? getDefaultHolidayDate(holiday) : ''
+            isNationalHoliday(holiday) ? getDefaultHolidayDate(holiday) || '' : ''
           }
           onDelete={handleClearCountdown}
         />
@@ -643,7 +643,7 @@ export default function CountdownTimer({
         title="Update Countdown Date"
         currentDate={currentTargetDate || ''}
         defaultDate={
-          isNationalHoliday(holiday) ? getDefaultHolidayDate(holiday) : ''
+          isNationalHoliday(holiday) ? getDefaultHolidayDate(holiday) || '' : ''
         }
         onDelete={handleClearCountdown}
       />
