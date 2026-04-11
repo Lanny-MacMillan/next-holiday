@@ -64,12 +64,21 @@ export default function AddressBookPage() {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
+  // Capitalize first and last name
+  function capitalizeName(name: string): string {
+    return name
+      .trim()
+      .split(/\s+/) // Split by any whitespace
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   async function handleAddContact(formValues: Record<string, any>) {
     if (!formValues.name?.trim()) return;
     if (!auth0User) return;
 
     const contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: formValues.name,
+      name: capitalizeName(formValues.name),
       email: formValues.email || undefined,
       phone: formValues.phone || undefined,
       streetAddress: formValues.streetAddress || undefined,

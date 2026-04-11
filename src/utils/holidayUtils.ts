@@ -364,7 +364,7 @@ export const getHolidayCountdownTime = (holidayName: string, state: any): number
   }
 
   // If no countdown is set or not active, return Infinity (will be sorted last)
-  if (!countdownState.targetDate || !countdownState.isActive) {
+  if (!countdownState || !countdownState.targetDate || !countdownState.isActive) {
     return Infinity;
   }
 
