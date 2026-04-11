@@ -281,7 +281,9 @@ export default function CountdownTimerWithAPI({
           title="Update Countdown Date"
           currentDate={countdownTimer || ''}
           defaultDate={
-            isNationalHoliday(holidayName) ? getDefaultHolidayDate(holidayName) : ''
+            isNationalHoliday(holidayName)
+              ? getDefaultHolidayDate(holidayName) || ''
+              : ''
           }
           onDelete={handleClearCountdown}
         />
@@ -315,7 +317,9 @@ export default function CountdownTimerWithAPI({
         title="Update Countdown Date"
         currentDate={countdownTimer || ''}
         defaultDate={
-          isNationalHoliday(holidayName) ? getDefaultHolidayDate(holidayName) : ''
+          isNationalHoliday(holidayName)
+            ? getDefaultHolidayDate(holidayName) || ''
+            : ''
         }
         onDelete={handleClearCountdown}
       />
