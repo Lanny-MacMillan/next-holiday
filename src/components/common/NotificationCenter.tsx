@@ -863,22 +863,25 @@ export default function NotificationCenter({
                       Mark all read
                     </button>
                   )}
-                  {/* Connection type indicator */}
-                  <div className="text-xs font-medium">
+                  {/* Connection status indicator */}
+                  <div className="flex items-center">
                     {isConnected ? (
                       usePolling ? (
-                        <span className="text-blue-600 dark:text-blue-400">
-                          Polling
-                        </span>
+                        <div
+                          className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"
+                          title="Polling"
+                        />
                       ) : (
-                        <span className="text-green-600 dark:text-green-400">
-                          Live
-                        </span>
+                        <div
+                          className="w-2 h-2 rounded-full bg-green-600 dark:bg-green-400"
+                          title="Live"
+                        />
                       )
                     ) : (
-                      <span className="text-gray-500 dark:text-gray-400">
-                        Offline
-                      </span>
+                      <div
+                        className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400"
+                        title="Offline"
+                      />
                     )}
                   </div>
                   {/* Debug control for development */}

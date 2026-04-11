@@ -10,7 +10,28 @@ interface DatePickerModalProps {
   title?: string;
   currentDate?: string;
   onDelete?: () => void;
+  defaultDate?: string; // Default date for pre-populating (e.g., for national holidays)
 }
+
+// Helper function to convert ISO date to datetime-local format
+const toDateTimeLocalFormat = (isoString: string): string => {
+  if (!isoString) return '';
+
+  try {
+    const date = new Date(isoString);
+    // Format: YYYY-MM-DDTHH:MM (datetime-local format)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '';
+  }
+};
 
 export default function DatePickerModal({
   isOpen,
@@ -19,8 +40,15 @@ export default function DatePickerModal({
   title = 'Set Countdown Date',
   currentDate = '',
   onDelete,
+  defaultDate = '',
 }: DatePickerModalProps) {
-  const [selectedDate, setSelectedDate] = useState(currentDate);
+  // Convert dates to datetime-local format
+  const formattedCurrentDate = toDateTimeLocalFormat(currentDate);
+  const formattedDefaultDate = toDateTimeLocalFormat(defaultDate);
+
+  const [selectedDate, setSelectedDate] = useState(
+    formattedCurrentDate || formattedDefaultDate,
+  );
   const [mounted, setMounted] = useState(false);
 
   // Ensure component is mounted (for SSR)
@@ -28,12 +56,14 @@ export default function DatePickerModal({
     setMounted(true);
   }, []);
 
-  // Reset selected date when modal opens
+  // Reset selected date when modal opens or when current/default dates change
   useEffect(() => {
     if (isOpen) {
-      setSelectedDate(currentDate);
+      const formattedCurrent = toDateTimeLocalFormat(currentDate);
+      const formattedDefault = toDateTimeLocalFormat(defaultDate);
+      setSelectedDate(formattedCurrent || formattedDefault);
     }
-  }, [isOpen, currentDate]);
+  }, [isOpen, currentDate, defaultDate]);
 
   if (!isOpen || !mounted) return null;
 
@@ -45,7 +75,9 @@ export default function DatePickerModal({
   };
 
   const handleCancel = () => {
-    setSelectedDate(currentDate);
+    const formattedCurrent = toDateTimeLocalFormat(currentDate);
+    const formattedDefault = toDateTimeLocalFormat(defaultDate);
+    setSelectedDate(formattedCurrent || formattedDefault);
     onClose();
   };
 
@@ -57,6 +89,11 @@ export default function DatePickerModal({
   };
 
   const isEditing = currentDate !== '';
+  const buttonText = isEditing
+    ? 'Update Countdown'
+    : title.includes('Enable')
+      ? 'Enable Countdown'
+      : 'Set Countdown';
 
   const modalContent = (
     <div
@@ -105,7 +142,7 @@ export default function DatePickerModal({
               disabled={!selectedDate}
               className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
             >
-              {isEditing ? 'Update Countdown' : 'Set Countdown'}
+              {buttonText}
             </button>
             <button
               onClick={handleCancel}

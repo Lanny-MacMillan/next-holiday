@@ -82,6 +82,7 @@ import {
   clearChristmasCountdown,
   updateChristmasCountdown,
 } from '@/store/slices/christmas/christmasCountdownSlice';
+import { isNationalHoliday, getDefaultHolidayDate } from '@/utils/holidayUtils';
 import DatePickerModal from '../modals/DatePickerModal';
 import InviteButton from './InviteButton';
 
@@ -529,6 +530,11 @@ export default function CountdownTimer({
   }
 
   if (!currentIsActive) {
+    // Check if this is a national holiday
+    const isNational = isNationalHoliday(holiday);
+    const buttonText = isNational ? 'Enable Countdown' : 'Set Countdown';
+    const defaultDate = isNational ? getDefaultHolidayDate(holiday) : '';
+
     return (
       <div
         className={`${className} relative z-20 min-h-[20px] flex items-center justify-end`}
@@ -553,13 +559,14 @@ export default function CountdownTimer({
               : {}
           }
         >
-          Set Countdown
+          {buttonText}
         </button>
         <DatePickerModal
           isOpen={showDatePicker}
           onClose={() => setShowDatePicker(false)}
           onDateSelect={handleSetCountdown}
-          title="Set Countdown Date"
+          title={isNational ? 'Enable Countdown' : 'Set Countdown Date'}
+          defaultDate={defaultDate || ''}
         />
       </div>
     );
@@ -602,6 +609,9 @@ export default function CountdownTimer({
           onDateSelect={handleUpdateCountdown}
           title="Update Countdown Date"
           currentDate={currentTargetDate || ''}
+          defaultDate={
+            isNationalHoliday(holiday) ? getDefaultHolidayDate(holiday) : ''
+          }
           onDelete={handleClearCountdown}
         />
       </div>
@@ -632,6 +642,9 @@ export default function CountdownTimer({
         onDateSelect={handleUpdateCountdown}
         title="Update Countdown Date"
         currentDate={currentTargetDate || ''}
+        defaultDate={
+          isNationalHoliday(holiday) ? getDefaultHolidayDate(holiday) : ''
+        }
         onDelete={handleClearCountdown}
       />
     </div>
