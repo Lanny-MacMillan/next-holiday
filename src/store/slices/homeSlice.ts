@@ -473,6 +473,51 @@ const homeSlice = createSlice({
         pref => pref.holidayId !== holidayId,
       );
     },
+    addContactToHomeData: (state, action: PayloadAction<any>) => {
+      if (!state.data) return;
+
+      const contact = action.payload;
+      const newContacts = state.data.contacts
+        ? [...state.data.contacts, contact]
+        : [contact];
+
+      state.data = {
+        ...state.data,
+        contacts: newContacts,
+      };
+    },
+    updateContactInHomeData: (
+      state,
+      action: PayloadAction<{
+        contactId: string;
+        updates: any;
+      }>,
+    ) => {
+      if (!state.data?.contacts) return;
+
+      const { contactId, updates } = action.payload;
+      const newContacts = state.data.contacts.map((contact: any) =>
+        contact.id === contactId ? { ...contact, ...updates } : contact,
+      );
+
+      state.data = {
+        ...state.data,
+        contacts: newContacts,
+      };
+    },
+    removeContactFromHomeData: (state, action: PayloadAction<string>) => {
+      if (!state.data?.contacts) return;
+
+      const contactId = action.payload;
+      const newContacts = state.data.contacts.filter(
+        (contact: any) => contact.id !== contactId,
+      );
+
+      state.data = {
+        ...state.data,
+        contacts: newContacts,
+      };
+    },
   },
   extraReducers: builder => {
     builder
@@ -553,5 +598,8 @@ export const {
   removeGuestFromHomeData,
   updateGuestInHomeData,
   removeSharedHolidayData,
+  addContactToHomeData,
+  updateContactInHomeData,
+  removeContactFromHomeData,
 } = homeSlice.actions;
 export default homeSlice.reducer;

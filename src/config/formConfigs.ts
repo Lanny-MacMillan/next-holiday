@@ -392,27 +392,24 @@ export const addressBookFormConfig: FormConfig = {
     {
       id: 'phone',
       type: 'tel',
-      placeholder: 'Phone*',
-      required: true,
+      placeholder: 'Phone',
     },
     {
       id: 'streetAddress',
       type: 'text',
-      placeholder: 'Street Address*',
-      required: true,
+      placeholder: 'Street Address',
     },
     {
       id: 'city',
       type: 'text',
-      placeholder: 'City*',
-      required: true,
+      placeholder: 'City',
     },
     {
       id: 'state',
       type: 'select',
-      placeholder: 'State*',
-      required: true,
+      placeholder: 'State',
       options: [
+        { value: '', label: 'State' },
         { value: 'AL', label: 'Alabama' },
         { value: 'AK', label: 'Alaska' },
         { value: 'AZ', label: 'Arizona' },
@@ -468,14 +465,14 @@ export const addressBookFormConfig: FormConfig = {
     {
       id: 'zipCode',
       type: 'text',
-      placeholder: 'Zip Code*',
-      required: true,
+      placeholder: 'Zip Code',
     },
     {
       id: 'relationship',
       type: 'select',
-      placeholder: 'Relationship (Optional)',
+      placeholder: 'Relationship',
       options: [
+        { value: '', label: 'Relationship' },
         { value: 'Spouse / Partner', label: 'Spouse / Partner' },
         { value: 'Child', label: 'Child' },
         { value: 'Parent', label: 'Parent' },
