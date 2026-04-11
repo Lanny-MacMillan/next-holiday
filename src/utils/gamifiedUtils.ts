@@ -18,7 +18,7 @@ export const getGamifiedBackgroundColor = (holiday?: string) => {
     "father's day": 'bg-gradient-to-br from-blue-300 to-blue-500',
     'fourth-of-july': 'bg-gradient-to-br from-red-400 to-red-600',
     'fourth of july': 'bg-gradient-to-br from-red-400 to-red-600',
-    birthday: 'bg-gradient-to-br from-yellow-300 to-yellow-500',
+    birthday: 'bg-gradient-to-br from-yellow-400 to-yellow-600',
     anniversary: 'bg-gradient-to-br from-pink-300 to-pink-500',
     graduation: 'bg-gradient-to-br from-purple-300 to-purple-500',
     'baby-shower': 'bg-gradient-to-br from-cyan-300 to-cyan-500',
