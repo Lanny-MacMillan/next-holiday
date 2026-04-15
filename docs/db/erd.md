@@ -132,6 +132,7 @@ erDiagram
         text notes
         boolean isCompleted
         datetime3 completedDate
+        char36 assignedTo FK
         char36 createdBy FK
         char36 shareId FK
         datetime3 createdAt
@@ -147,6 +148,7 @@ erDiagram
         text message
         boolean isCompleted
         datetime3 sentDate
+        char36 assignedTo FK
         char36 createdBy FK
         char36 shareId FK
         datetime3 createdAt
@@ -249,11 +251,44 @@ erDiagram
         datetime3 createdAt
     }
 
+    notifications {
+        char36 id PK
+        char36 userId FK
+        varchar50 type
+        varchar255 title
+        text message
+        varchar50 entityType
+        char36 entityId
+        char36 holidayId FK
+        char36 fromUserId FK
+        char36 inviteId FK
+        boolean isRead
+        boolean isDismissed
+        datetime3 readAt
+        datetime3 dismissedAt
+        datetime3 createdAt
+    }
+
+    notification_preferences {
+        char36 id PK
+        char36 userId FK,UK
+        boolean assignmentNotifications
+        boolean completionNotifications
+        boolean inviteNotifications
+        boolean emailNotifications
+        varchar20 digestFrequency
+        datetime3 createdAt
+        datetime3 updatedAt
+    }
+
     %% Core User Relationships
     users ||--o| user_preferences : "has_preferences"
+    users ||--o| notification_preferences : "has_notification_prefs"
     users ||--o{ accounts : "owns"
     users ||--o{ account_members : "member_of"
     users ||--o{ account_members : "invites"
+    users ||--o{ notifications : "receives"
+    users ||--o{ notifications : "sends"
 
     %% Account Structure
     accounts ||--o{ account_members : "has_members"
@@ -269,6 +304,7 @@ erDiagram
     holidays ||--o| shares : "shared_via"
     holidays ||--o{ kwanzaa_principles : "has_principles"
     holidays ||--o{ guest_lists : "has_guests"
+    holidays ||--o{ notifications : "triggers"
 
     %% Contact Management
     contacts ||--o{ gifts : "recipient_of"
@@ -298,6 +334,11 @@ erDiagram
     users ||--o{ share_members : "invited_members"
     users ||--o{ invites : "sends_invites"
     users ||--o{ invites : "receives_invites"
+    invites ||--o{ notifications : "notifies"
+
+    %% Gift & Card Assignments
+    users ||--o{ gifts : "assigned_gifts"
+    users ||--o{ cards : "assigned_cards"
 
     %% Creation Tracking
     users ||--o{ holidays : "creates"
@@ -315,6 +356,7 @@ erDiagram
 - **Accounts**: Top-level organizational unit (families, households, friend groups)
 - **Account Members**: Flexible role-based membership system
 - **Data Isolation**: All planning data scoped to accounts for privacy
+- **Unique Holiday Types**: Each account can have only one holiday of each type (enforced by unique constraint)
 
 ### Holiday Planning Ecosystem
 
@@ -328,9 +370,12 @@ erDiagram
 ### User Experience Features
 
 - **User Preferences**: Comprehensive customization for themes, display modes, and accessibility
+- **Notification System**: Real-time notifications with read/dismiss status and notification preferences
+- **Notification Preferences**: Granular control over notification types and email digest frequency
 - **Subscription Management**: Built-in support for free and premium tiers
 - **Countdown Timers**: Configurable countdown functionality for holidays
 - **Progress Tracking**: Visual completion indicators across all planning entities
+- **Assignment Tracking**: Gifts and cards can be assigned to specific users
 
 ### Collaboration System
 
@@ -354,6 +399,9 @@ erDiagram
 4. **Contacts → Recipients**: Many-to-many linking contacts to gifts, cards, and guest lists
 5. **Shares → Collaboration**: One-to-one with holidays enabling multi-user planning
 6. **Tasks → Assignments**: Supports both individual assignment and multi-user assignment
+7. **Gifts & Cards → Assignments**: Individual assignment support with assignedTo field
+8. **Notifications → Users**: Users receive notifications and can also be the sender
+9. **Notifications → Entities**: Linked to holidays, invites, and other entities for context
 
 ## Database Characteristics
 

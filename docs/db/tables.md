@@ -63,6 +63,9 @@ This document outlines the current MySQL schema for the Next Holiday application
 - has_many: TaskAssignee (as user)
 - has_many: Task (as assignee)
 - has_many: Task (as creator)
+- has_many: Notification (as recipient)
+- has_many: Notification (as sender)
+- has_one: NotificationPreferences
 
 ### user_preferences
 
@@ -190,6 +193,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 **Constraints**:
 
 - Primary Key: `id`
+- Unique Constraints: `(accountId, holidayType)`
 - Foreign Keys:
   - `accountId` → `accounts(id)` ON DELETE CASCADE
   - `createdBy` → `users(id)` ON DELETE CASCADE
@@ -206,6 +210,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 - has_many: KwanzaaPrinciple
 - has_one: Share
 - has_many: Task
+- has_many: Notification
 
 ### contacts
 
@@ -340,6 +345,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 | notes | TEXT | Yes | - | Additional notes |
 | isCompleted | BOOLEAN | No | false | Whether gift is purchased |
 | completedDate | DATETIME(3) | Yes | - | Purchase completion timestamp |
+| assignedTo | CHAR(36) | Yes | - | User assigned to this gift |
 | createdBy | CHAR(36) | No | - | User who created this gift |
 | shareId | CHAR(36) | Yes | - | Share context if shared |
 | createdAt | DATETIME(3) | No | now() | Record creation timestamp |
@@ -351,9 +357,10 @@ This document outlines the current MySQL schema for the Next Holiday application
 - Foreign Keys:
   - `holidayId` → `holidays(id)` ON DELETE CASCADE
   - `contactId` → `contacts(id)`
+  - `assignedTo` → `users(id)`
   - `createdBy` → `users(id)` ON DELETE CASCADE
   - `shareId` → `shares(id)`
-- Indexes: `holidayId`, `contactId`, `isCompleted`, `price`, `createdBy`, `shareId`
+- Indexes: `holidayId`, `contactId`, `isCompleted`, `assignedTo`, `price`, `createdBy`, `shareId`
 
 **Relationships**:
 
@@ -379,6 +386,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 | message | TEXT | No | - | Card message content |
 | isCompleted | BOOLEAN | No | false | Whether card is sent |
 | sentDate | DATETIME(3) | Yes | - | Date card was sent |
+| assignedTo | CHAR(36) | Yes | - | User assigned to this card |
 | createdBy | CHAR(36) | No | - | User who created this card |
 | shareId | CHAR(36) | Yes | - | Share context if shared |
 | createdAt | DATETIME(3) | No | now() | Record creation timestamp |
@@ -390,9 +398,10 @@ This document outlines the current MySQL schema for the Next Holiday application
 - Foreign Keys:
   - `holidayId` → `holidays(id)` ON DELETE CASCADE
   - `contactId` → `contacts(id)`
+  - `assignedTo` → `users(id)`
   - `createdBy` → `users(id)` ON DELETE CASCADE
   - `shareId` → `shares(id)`
-- Indexes: `holidayId`, `contactId`, `isCompleted`, `createdBy`, `shareId`
+- Indexes: `holidayId`, `contactId`, `isCompleted`, `assignedTo`, `createdBy`, `shareId`
 
 **Relationships**:
 
@@ -569,6 +578,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 - belongs_to: Share
 - belongs_to: User (as sender)
 - belongs_to: User (as receiver)
+- has_many: Notification
 
 ### kwanzaa_principles
 
@@ -635,6 +645,78 @@ This document outlines the current MySQL schema for the Next Holiday application
 - belongs_to: Holiday
 - belongs_to: Contact
 - belongs_to: User (as creator)
+
+### notifications
+
+**Purpose**: Real-time notification system for user activity and events
+
+**Description**: Tracks all notifications sent to users with read/dismiss status, supporting various notification types including task assignments, invitations, and completions.
+
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| userId | CHAR(36) | No | - | User receiving the notification |
+| type | VARCHAR(50) | No | - | Notification type identifier |
+| title | VARCHAR(255) | No | - | Notification title |
+| message | TEXT | Yes | - | Notification message content |
+| entityType | VARCHAR(50) | Yes | - | Related entity type |
+| entityId | CHAR(36) | Yes | - | Related entity ID |
+| holidayId | CHAR(36) | Yes | - | Related holiday |
+| fromUserId | CHAR(36) | Yes | - | User who triggered notification |
+| inviteId | CHAR(36) | Yes | - | Related invite |
+| isRead | BOOLEAN | No | false | Whether notification is read |
+| isDismissed | BOOLEAN | No | false | Whether notification is dismissed |
+| readAt | DATETIME(3) | Yes | - | Read timestamp |
+| dismissedAt | DATETIME(3) | Yes | - | Dismissed timestamp |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+
+**Constraints**:
+
+- Primary Key: `id`
+- Foreign Keys:
+  - `userId` → `users(id)` ON DELETE CASCADE
+  - `holidayId` → `holidays(id)` ON DELETE CASCADE
+  - `fromUserId` → `users(id)` ON DELETE SET NULL
+  - `inviteId` → `invites(id)` ON DELETE CASCADE
+- Indexes: `(userId, isRead)`, `(userId, type)`, `createdAt`
+
+**Relationships**:
+
+- belongs_to: User (as recipient)
+- belongs_to: User (as sender)
+- belongs_to: Holiday
+- belongs_to: Invite
+
+### notification_preferences
+
+**Purpose**: User-specific notification preferences and settings
+
+**Description**: Granular control over notification types, delivery methods, and digest frequency.
+
+**Columns**:
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | CHAR(36) | No | uuid() | Primary key UUID |
+| userId | CHAR(36) | No | - | Foreign key to users table |
+| assignmentNotifications | BOOLEAN | No | true | Enable task/gift/card assignment notifications |
+| completionNotifications | BOOLEAN | No | true | Enable completion notifications |
+| inviteNotifications | BOOLEAN | No | true | Enable invitation notifications |
+| emailNotifications | BOOLEAN | No | false | Enable email delivery |
+| digestFrequency | VARCHAR(20) | No | 'immediate' | Email digest frequency |
+| createdAt | DATETIME(3) | No | now() | Record creation timestamp |
+| updatedAt | DATETIME(3) | No | now() | Last update timestamp |
+
+**Constraints**:
+
+- Primary Key: `id`
+- Unique Constraints: `userId`
+- Foreign Keys: `userId` → `users(id)` ON DELETE CASCADE
+- Indexes: `userId`
+
+**Relationships**:
+
+- belongs_to: User
 
 ### audit_log
 
@@ -712,11 +794,13 @@ This document outlines the current MySQL schema for the Next Holiday application
 
 **Multi-Tenant Design**: All data is scoped to accounts, enabling secure multi-family usage
 
-**Comprehensive Holiday Support**: Supports 15+ holiday types with extensible custom holidays
+**Comprehensive Holiday Support**: Supports 15+ holiday types with extensible custom holidays (one per account per type)
 
 **Advanced Collaboration**: Holiday sharing with invitation system and role management
 
-**Complete Planning Suite**: Tasks, gifts, cards, budgets, and guest lists with full tracking
+**Real-Time Notifications**: In-app notification system with read/dismiss status and customizable preferences
+
+**Complete Planning Suite**: Tasks, gifts, cards, budgets, and guest lists with full tracking and assignment support
 
 **Subscription Management**: Built-in support for free and premium tiers
 
@@ -730,6 +814,8 @@ This document outlines the current MySQL schema for the Next Holiday application
 
 - **Auth0 Integration**: Secure OAuth with profile management
 - **Real-time Collaboration**: Share holidays with family and friends
+- **Notification System**: Real-time in-app notifications with granular preferences
+- **Assignment Tracking**: Tasks, gifts, and cards can be assigned to specific users
 - **Budget Tracking**: Comprehensive expense management with categories
 - **Contact Management**: Centralized address book for all planning needs
 - **Task Management**: Priority-based task system with assignments
