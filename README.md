@@ -1164,3 +1164,7 @@ _Built with ❤️ using Next.js 15, React 19, MySQL, Prisma, Auth0, and deploye
 **Live Demo**: [Coming Soon]  
 **SSE Service**: [https://github.com/Lanny-MacMillan/sse-notifications](https://github.com/Lanny-MacMillan/sse-notifications)  
 **Database ERD**: [View Interactive Diagram](https://mermaid.ai/app/projects/5a13959b-bcd3-4844-834d-1f664ae6f043/diagrams/3605b52a-9a41-4a09-a764-2c6ee2d62a92/version/v0.1/edit)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
