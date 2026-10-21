@@ -2,7 +2,7 @@
 
 A comprehensive, enterprise-grade holiday planning platform built with Next.js, MySQL, Prisma, and modern web technologies. Create, organize, and collaborate on holiday celebrations with your family and friends through a beautiful, multi-tenant architecture with real-time notifications.
 
-## Overview
+## Overview 
 
 Next Holiday is a production-ready, full-stack holiday planning application that transforms the chaos of holiday preparation into an organized, collaborative experience. Built on a robust MySQL database with Prisma ORM, the platform features a sophisticated multi-tenant architecture, real-time Server-Sent Events (SSE) notifications, and comprehensive account and sharing system.
 
