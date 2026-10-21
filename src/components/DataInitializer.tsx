@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchCards } from '@/store/slices/cardsSlice';
 import { fetchGifts } from '@/store/slices/giftListSlice';
@@ -27,29 +27,48 @@ export default function DataInitializer() {
     useAppSelector(state => state.invites);
   const homeData = useAppSelector((state: any) => state.home.data);
 
+  // One attempt per resource per user. A failed fetch leaves `initialized` false,
+  // so without this every state change (e.g. `invitesLoading` toggling) would
+  // re-dispatch all fetches and hammer the API while it is down.
+  const attempted = useRef<Record<string, boolean>>({});
+  const attemptedFor = useRef<string | undefined>(undefined);
+
   useEffect(() => {
+    if (attemptedFor.current !== user?.sub) {
+      attempted.current = {};
+      attemptedFor.current = user?.sub;
+    }
+
+    const fetchOnce = (key: string, initialized: boolean, run: () => void) => {
+      if (initialized) {
+        // Allow a fresh attempt if the slice is reset later
+        attempted.current[key] = false;
+        return;
+      }
+      if (attempted.current[key]) return;
+      attempted.current[key] = true;
+      run();
+    };
+
     // Fetch all data if not already initialized
-    if (!cardsInitialized) {
-      dispatch(fetchCards());
-    }
-    if (!giftsInitialized) {
-      dispatch(fetchGifts());
-    }
-    if (!tasksInitialized) {
-      dispatch(fetchTasks());
-    }
+    fetchOnce('cards', cardsInitialized, () => dispatch(fetchCards()));
+    fetchOnce('gifts', giftsInitialized, () => dispatch(fetchGifts()));
+    fetchOnce('tasks', tasksInitialized, () => dispatch(fetchTasks()));
     // Only fetch contacts if not initialized AND not available in home data
-    if (!contactsInitialized && !homeData?.contacts?.length) {
-      dispatch(fetchContacts());
-    }
-    // Fetch shares if not initialized
-    if (!sharesInitialized && user?.sub) {
-      dispatch(fetchShares(user.sub));
-    }
-    // Fetch invites if not initialized, not loading, and user is authenticated
-    if (!invitesInitialized && !invitesLoading && user?.sub) {
-      dispatch(fetchInboxInvites(user.sub));
-      dispatch(fetchOutgoingInvites(user.sub));
+    fetchOnce('contacts', contactsInitialized || !!homeData?.contacts?.length, () =>
+      dispatch(fetchContacts()),
+    );
+    // Fetch shares if not initialized and user is authenticated
+    if (user?.sub) {
+      const sub = user.sub;
+      fetchOnce('shares', sharesInitialized, () => dispatch(fetchShares(sub)));
+      // Invites: also wait for any in-flight invite request
+      if (!invitesLoading) {
+        fetchOnce('invites', invitesInitialized, () => {
+          dispatch(fetchInboxInvites(sub));
+          dispatch(fetchOutgoingInvites(sub));
+        });
+      }
     }
   }, [
     cardsInitialized,
