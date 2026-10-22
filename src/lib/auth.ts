@@ -151,7 +151,6 @@ export async function getCurrentUser(
             email: session.user.email || 'test@example.com',
             name: session.user.name || 'Test User',
             picture: session.user.picture,
-            subscriptionPlan: 'plus', // Give test users premium access
           },
           select: {
             id: true,
