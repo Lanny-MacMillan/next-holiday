@@ -500,6 +500,8 @@ All API responses follow a consistent format:
 Do not simply remove the header check: the whole app currently depends on it.
 
 ### Other items
+- Prisma migration history is incomplete: `users.subscription_plan` and related columns, the `notifications` / `notification_preferences` tables, and unique constraints on `contacts(account_id, email)` and `holidays(account_id, holiday_type)` exist only in `schema.prisma`. A fresh `prisma migrate deploy` produces an out-of-date database (the live DB was brought in sync with `prisma db push`). Add a catch-up migration
+- `getCurrentUser()` in `src/lib/auth.ts` still auto-creates a missing user for any `test` / `google-oauth2` sub, racing `/api/users/setup`. It no longer grants the Plus plan (see PR #45), but existing rows created this way with `is_in_db = false` and `subscription_plan = 'plus'` need a one-time cleanup. Remove the auto-create as part of the auth rework above
 - Jest suites that render `.tsx` fail with `Unexpected token '<'` (transform config); 9 of 12 suites are affected
 - Remove or protect the debug/test routes (`/api/debug/*`, `/api/test*`, `/api/upgrade-user`)
 - SSE notifications run in a separate service ([sse-notifications](https://github.com/Lanny-MacMillan/sse-notifications)); the app falls back to polling when it is unavailable
