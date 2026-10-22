@@ -279,7 +279,9 @@ export default function NotificationCenter({
               return;
             }
 
-            const notification: Notification = data;
+            // The SSE service wraps notifications in an envelope: { type: 'notification', data, ... }
+            const notification: Notification =
+              data.type === 'notification' && data.data ? data.data : data;
 
             // Validate notification structure before processing
             if (!notification || typeof notification !== 'object') {
