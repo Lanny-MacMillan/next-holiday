@@ -485,6 +485,25 @@ All API responses follow a consistent format:
 - **Share Validation**: Secure sharing with proper permission validation
 - **Invite Security**: Secure invitation tokens with expiration
 
+## 🧭 Known Issues & Roadmap
+
+### TODO: Replace header-based API auth with verified Auth0 JWTs
+
+**Current state:** API routes identify the caller from a client-supplied `x-test-user` header (a JSON blob containing the Auth0 `sub`, email, and name), read in `src/lib/auth.ts` and sent by the frontend (`src/store/api.ts` and ~17 other files). The server does not verify it, so anyone who knows another user's Auth0 `sub` could impersonate them. Auth0 handles login in the browser, but the API does not validate a token.
+
+**Planned fix:**
+- Send the Auth0 access token as `Authorization: Bearer <token>` from the frontend
+- Verify the token server-side against the tenant's JWKS (e.g. with `jose`), checking issuer, audience, and expiry
+- Derive the user from the verified token's `sub` in `getCurrentUser()`, and stop reading `x-test-user` and the `testUser` query param
+- Roll out behind a feature flag so it can be reverted, and update the tests that rely on the header
+
+Do not simply remove the header check: the whole app currently depends on it.
+
+### Other items
+- Jest suites that render `.tsx` fail with `Unexpected token '<'` (transform config); 9 of 12 suites are affected
+- Remove or protect the debug/test routes (`/api/debug/*`, `/api/test*`, `/api/upgrade-user`)
+- SSE notifications run in a separate service ([sse-notifications](https://github.com/Lanny-MacMillan/sse-notifications)); the app falls back to polling when it is unavailable
+
 ## 🚨 Troubleshooting
 
 ### Common Issues
