@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAppDispatch } from '@/store/hooks';
 import { upgradeUser, updateSubscription, setUser } from '@/store/slices/userSlice';
 import { fetchShares } from '@/store/slices/sharesSlice';
+import { updateSettings } from '@/store/slices/themeSlice';
+import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 
 export interface CancelSubscriptionModalProps {
@@ -85,6 +87,20 @@ export default function CancelSubscriptionModal({
         }),
       );
 
+      // Gamified mode is a Plus feature: reset it everywhere so open pages
+      // don't keep the gamified UI until the next refresh
+      dispatch(updateSettings({ displayMode: 'professional' }));
+      try {
+        await dispatch(
+          updateUserPreferences({
+            preferencesData: { displayMode: 'professional' },
+            auth0Sub: auth0User.sub,
+          }),
+        ).unwrap();
+      } catch (prefError) {
+        console.error('Failed to reset display mode after cancellation:', prefError);
+      }
+
       // 4. Refresh shares data to update the UI
       if (auth0User?.sub) {
         await dispatch(fetchShares(auth0User.sub));
@@ -117,7 +133,7 @@ export default function CancelSubscriptionModal({
                 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
             }}
           >
-            💔 Cancel Subscription
+            Cancel Subscription
           </div>
           <button
             onClick={onClose}
@@ -144,7 +160,7 @@ export default function CancelSubscriptionModal({
           {/* Sharing Impact Info */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
             <div className="text-blue-800 dark:text-blue-200 font-medium mb-2">
-              📤 Sharing cleanup will occur
+              Sharing cleanup will occur
             </div>
             <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
               <li>• You'll be removed from shared holidays you don't own</li>
@@ -197,11 +213,6 @@ export default function CancelSubscriptionModal({
             >
               {isLoading ? loadingMessage : 'Yes, Cancel Subscription'}
             </button>
-          </div>
-
-          {/* TODO Note */}
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center border-t pt-4">
-            TODO: Implement automatic charge stop with payment processor
           </div>
         </div>
       </div>
