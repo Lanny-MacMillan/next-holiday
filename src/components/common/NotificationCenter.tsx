@@ -161,6 +161,7 @@ interface Notification {
   fromUser?: { name: string; picture?: string };
   holiday?: { name: string; holidayType: string };
   isInvite?: boolean; // Special flag for invites
+  inviteMessage?: string | null; // Optional note from the inviter
 }
 
 // Shared utility function
@@ -612,7 +613,7 @@ export default function NotificationCenter({
 
         // Remove the notification from local state
         setNotifications(prev => {
-          const filtered = prev.filter(n => n.id === notificationId);
+          const filtered = prev.filter(n => n.id !== notificationId);
           const removedNotification = prev.find(n => n.id === notificationId);
           if (removedNotification && !removedNotification.isRead) {
             setUnreadCount(curr => Math.max(0, curr - 1));
@@ -1159,6 +1160,12 @@ function NotificationItem({
               {notification.message}
             </p>
 
+            {notification.isInvite && notification.inviteMessage && (
+              <p className="text-sm italic text-gray-500 dark:text-gray-400 mt-1">
+                &ldquo;{notification.inviteMessage}&rdquo;
+              </p>
+            )}
+
             {notification.holiday && (
               <span className="inline-block mt-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
                 {notification.holiday.name}
@@ -1274,6 +1281,12 @@ function NotificationItem({
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             {notification.message}
           </p>
+
+          {notification.isInvite && notification.inviteMessage && (
+            <p className="text-sm italic text-gray-500 dark:text-gray-400 mt-1">
+              &ldquo;{notification.inviteMessage}&rdquo;
+            </p>
+          )}
 
           {notification.holiday && (
             <span className="inline-block mt-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
