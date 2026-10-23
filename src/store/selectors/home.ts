@@ -78,13 +78,20 @@ export const selectNeedsHolidaySelection = createSelector(
 );
 
 // Utility selectors for common patterns (memoized)
+// Holiday keys whose normalized form differs from the normalized display name
+// ("valentines" vs "Valentine's Day" -> "valentinesday")
+const HOLIDAY_KEY_ALIASES: Record<string, string> = {
+  valentines: "Valentine's Day",
+};
+
 export const selectHolidayIdByKey = createSelector(
   [selectHolidayPreferences, (_: RootState, holidayKey: string) => holidayKey],
   (holidayPreferences, holidayKey) => {
     if (!holidayPreferences.length || !holidayKey) return null;
 
     // Try to find by exact holiday type match first
-    const preference = holidayPreferences.find(pref => pref.holiday === holidayKey);
+    const aliasedName = HOLIDAY_KEY_ALIASES[holidayKey] ?? holidayKey;
+    const preference = holidayPreferences.find(pref => pref.holiday === aliasedName);
     if (preference?.holidayId) {
       return preference.holidayId;
     }

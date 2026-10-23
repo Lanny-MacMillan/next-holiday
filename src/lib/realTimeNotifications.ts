@@ -63,6 +63,7 @@ interface NotificationPayload {
   isInvite?: boolean;
   fromUser?: { name: string; picture?: string };
   holiday?: { name: string; holidayType: string };
+  inviteMessage?: string;
 }
 
 /**
@@ -151,6 +152,7 @@ export async function broadcastNotification(payload: NotificationPayload) {
       fromUser: payload.fromUser,
       holiday: payload.holiday,
       isInvite: payload.isInvite || false,
+      inviteMessage: payload.inviteMessage,
     };
 
     // Validate the notification has valid data before sending
@@ -208,6 +210,7 @@ export async function broadcastInvite(
   holidayName: string,
   inviteId: string,
   shareId: string,
+  inviteMessage?: string,
 ) {
   return broadcastNotification({
     userId: inviteeUserId,
@@ -220,6 +223,7 @@ export async function broadcastInvite(
     isInvite: true,
     fromUser: { name: inviterName },
     holiday: { name: holidayName, holidayType: 'unknown' },
+    inviteMessage,
   });
 }
 

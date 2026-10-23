@@ -85,6 +85,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (finalToUserId === fromUser.id) {
+      return NextResponse.json(
+        { error: 'You cannot invite yourself' },
+        { status: 400 },
+      );
+    }
+
     // Create invite using the internal user ID
     const invite = await prisma.invite.create({
       data: {
@@ -108,31 +115,32 @@ export async function POST(request: NextRequest) {
 
     // Send real-time invitation notification if inviting a registered user
     if (finalToUserId) {
-      // Run invitation notifications asynchronously to never block the API response
-      setTimeout(async () => {
-        try {
-          // Get holiday name from holidayKey (assuming it's a readable name)
-          // For now, use holidayKey as the name, but this could be enhanced
-          // to look up proper holiday names from a mapping or database
-          const holidayName = holidayKey
-            .replace('-', ' ')
-            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+      // Await the broadcast: on serverless hosts the function can be frozen once the
+      // response is sent, which dropped the real-time notification. Failures are caught
+      // below so they never fail invite creation.
+      try {
+        // Get holiday name from holidayKey (assuming it's a readable name)
+        // For now, use holidayKey as the name, but this could be enhanced
+        // to look up proper holiday names from a mapping or database
+        const holidayName = holidayKey
+          .replace('-', ' ')
+          .replace(/\b\w/g, (l: string) => l.toUpperCase());
 
-          await broadcastInvite(
-            finalToUserId, // inviteeUserId
-            fromUser.name || fromUser.email || 'Someone', // inviterName
-            holidayName, // holidayName
-            invite.id, // inviteId
-            shareId, // shareId
-          );
-        } catch (inviteError) {
-          // Silently log invitation notification failures
-          console.warn(
-            'Invite notification failed (invite creation succeeded):',
-            inviteError,
-          );
-        }
-      }, 0); // Run in next tick
+        await broadcastInvite(
+          finalToUserId, // inviteeUserId
+          fromUser.name || fromUser.email || 'Someone', // inviterName
+          holidayName, // holidayName
+          invite.id, // inviteId
+          shareId, // shareId
+          message, // inviteMessage
+        );
+      } catch (inviteError) {
+        // Silently log invitation notification failures
+        console.warn(
+          'Invite notification failed (invite creation succeeded):',
+          inviteError,
+        );
+      }
     } else {
       console.error('[INVITE] No finalToUserId, skipping real-time notification', {
         originalToUserId: toUserId,

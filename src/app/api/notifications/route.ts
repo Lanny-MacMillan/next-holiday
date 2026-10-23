@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
       fromUser: invite.fromUser,
       holiday: invite.share.holiday,
       isInvite: true, // Special flag for UI handling
+      inviteMessage: invite.message,
     }));
 
     // Combine and sort all notifications

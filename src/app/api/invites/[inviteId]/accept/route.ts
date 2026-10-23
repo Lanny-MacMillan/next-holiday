@@ -26,6 +26,13 @@ export async function POST(
       return NextResponse.json({ error: 'Invite is not pending' }, { status: 400 });
     }
 
+    if (invite.fromUserId === currentUser.id) {
+      return NextResponse.json(
+        { error: 'You cannot accept your own invite' },
+        { status: 400 },
+      );
+    }
+
     // Update invite status to accepted
     const updatedInvite = await prisma.invite.update({
       where: { id: inviteId },
@@ -55,6 +62,7 @@ export async function POST(
         include: {
           holiday: {
             select: {
+              id: true,
               holidayType: true,
             },
           },
@@ -79,8 +87,9 @@ export async function POST(
           },
         });
 
-        // If user has existing holiday of same type, delete it (cascade will handle related data)
-        if (existingHoliday) {
+        // If user has existing holiday of same type, delete it (cascade will handle related data).
+        // Never delete the holiday that is being shared itself.
+        if (existingHoliday && existingHoliday.id !== shareWithHoliday.holiday.id) {
           await prisma.holiday.delete({
             where: { id: existingHoliday.id },
           });
