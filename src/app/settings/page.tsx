@@ -692,7 +692,7 @@ export default function SettingsPage() {
         {/* User Information */}
         <div className="card card-settings rounded-lg p-6">
           {/* <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-            👤 User Information
+            User Information
           </h2> */}
           {/* Profile Header */}
           <div className="flex items-center space-x-6 mb-6">
@@ -893,7 +893,7 @@ export default function SettingsPage() {
         {/* Theme Settings */}
         <div className="card card-settings rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
-            🎨 Appearance
+            Appearance
           </h2>
 
           <div className="space-y-4">
@@ -985,7 +985,7 @@ export default function SettingsPage() {
         {/* Holiday Settings */}
         <div className="card card-settings rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
-            🎄 Holidays
+            Holidays
           </h2>
           <div className="space-y-4">
             <div>
@@ -1096,7 +1096,7 @@ export default function SettingsPage() {
         {/* Notification Settings */}
         <div className="card card-settings rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
-            🔔 Notifications
+            Notifications
           </h2>
           <div className="space-y-4">
             {/* REMINDERS */}
@@ -1258,7 +1258,7 @@ export default function SettingsPage() {
         {/* Subscription Management */}
         <div className="card card-settings rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
-            💎 Subscription
+            Subscription
           </h2>
           <div className="space-y-4">
             {isUserPlusMember ? (
@@ -1269,7 +1269,7 @@ export default function SettingsPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-purple-600 dark:text-purple-400 font-semibold">
-                          ✨ Plus Member
+                          Plus Member
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
