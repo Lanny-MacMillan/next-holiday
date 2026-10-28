@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface FathersDayGift {
+interface FathersDayGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: FathersDayGiftListState = {
 };
 
 // Async thunks
-export const fetchFathersDayGifts = createAsyncThunk(
+const fetchFathersDayGifts = createAsyncThunk(
   'fathersDayGiftList/fetchFathersDayGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -68,7 +68,7 @@ export const fetchFathersDayGifts = createAsyncThunk(
   },
 );
 
-export const addFathersDayGift = createAsyncThunk(
+const addFathersDayGift = createAsyncThunk(
   'fathersDayGiftList/addFathersDayGift',
   async (gift: Omit<FathersDayGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -84,7 +84,7 @@ export const addFathersDayGift = createAsyncThunk(
   },
 );
 
-export const updateFathersDayGift = createAsyncThunk(
+const updateFathersDayGift = createAsyncThunk(
   'fathersDayGiftList/updateFathersDayGift',
   async (gift: FathersDayGift) => {
     // Simulate API call
@@ -98,7 +98,7 @@ export const updateFathersDayGift = createAsyncThunk(
   },
 );
 
-export const deleteFathersDayGift = createAsyncThunk(
+const deleteFathersDayGift = createAsyncThunk(
   'fathersDayGiftList/deleteFathersDayGift',
   async (giftId: string) => {
     // Simulate API call
@@ -107,7 +107,7 @@ export const deleteFathersDayGift = createAsyncThunk(
   },
 );
 
-export const toggleFathersDayGiftCompletion = createAsyncThunk(
+const toggleFathersDayGiftCompletion = createAsyncThunk(
   'fathersDayGiftList/toggleFathersDayGiftCompletion',
   async (giftId: string, { getState }) => {
     // Simulate API call
@@ -215,5 +215,4 @@ const fathersDayGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = fathersDayGiftListSlice.actions;
 export default fathersDayGiftListSlice.reducer;

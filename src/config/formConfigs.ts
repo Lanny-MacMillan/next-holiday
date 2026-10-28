@@ -15,7 +15,7 @@ export interface FormConfig {
 }
 
 // Cards form configuration
-export const cardsFormConfig: FormConfig = {
+const cardsFormConfig: FormConfig = {
   title: 'Add New Card',
   fields: [
     {
@@ -45,7 +45,7 @@ export const cardsFormConfig: FormConfig = {
 };
 
 // Tasks form configuration
-export const tasksFormConfig: FormConfig = {
+const tasksFormConfig: FormConfig = {
   title: 'Add New Task',
   fields: [
     {
@@ -88,7 +88,7 @@ export const tasksFormConfig: FormConfig = {
 };
 
 // Events form configuration
-export const eventsFormConfig: FormConfig = {
+const eventsFormConfig: FormConfig = {
   title: 'Add New Event Task',
   fields: [
     {
@@ -131,7 +131,7 @@ export const eventsFormConfig: FormConfig = {
 };
 
 // Gifts form configuration
-export const giftsFormConfig: FormConfig = {
+const giftsFormConfig: FormConfig = {
   title: 'Add New Gift',
   fields: [
     {
@@ -176,7 +176,7 @@ export const giftsFormConfig: FormConfig = {
 };
 
 // Shopping list form configuration (for shopping-list pages like Thanksgiving)
-export const shoppingListFormConfig: FormConfig = {
+const shoppingListFormConfig: FormConfig = {
   title: 'Add New Shopping Item',
   fields: [
     {
@@ -227,7 +227,7 @@ export const shoppingListFormConfig: FormConfig = {
 };
 
 // Supplies form configuration (for supplies-list and shopping-list pages)
-export const suppliesFormConfig: FormConfig = {
+const suppliesFormConfig: FormConfig = {
   title: 'Add New Supply Item',
   fields: [
     {
@@ -278,37 +278,37 @@ export const suppliesFormConfig: FormConfig = {
 };
 
 // Edit configurations (for editing existing items)
-export const editCardsFormConfig: FormConfig = {
+const editCardsFormConfig: FormConfig = {
   ...cardsFormConfig,
   title: 'Edit Card',
   submitText: 'Update Card',
 };
 
-export const editTasksFormConfig: FormConfig = {
+const editTasksFormConfig: FormConfig = {
   ...tasksFormConfig,
   title: 'Edit Task',
   submitText: 'Update Task',
 };
 
-export const editEventsFormConfig: FormConfig = {
+const editEventsFormConfig: FormConfig = {
   ...eventsFormConfig,
   title: 'Edit Event Task',
   submitText: 'Update Event Task',
 };
 
-export const editGiftsFormConfig: FormConfig = {
+const editGiftsFormConfig: FormConfig = {
   ...giftsFormConfig,
   title: 'Edit Gift',
   submitText: 'Update Gift',
 };
 
-export const editSuppliesFormConfig: FormConfig = {
+const editSuppliesFormConfig: FormConfig = {
   ...suppliesFormConfig,
   title: 'Edit Supply Item',
   submitText: 'Update Supply Item',
 };
 
-export const editShoppingListFormConfig: FormConfig = {
+const editShoppingListFormConfig: FormConfig = {
   ...shoppingListFormConfig,
   title: 'Edit Item',
   submitText: 'Update Item',
@@ -375,7 +375,7 @@ export const editGuestsFormConfig: FormConfig = {
 // - customFieldLabel: Override the title field placeholder (e.g., "Date Idea Title*" instead of "Task Title*")
 // - customSubmitText: Override the submit button text (e.g., "Update Date" instead of "Update Task")
 // Address book form configuration
-export const addressBookFormConfig: FormConfig = {
+const addressBookFormConfig: FormConfig = {
   title: 'Add New Contact',
   fields: [
     {
@@ -505,7 +505,7 @@ export const addressBookFormConfig: FormConfig = {
   submitButtonColor: '#ec4899', // Pink
 };
 
-export const editAddressBookFormConfig: FormConfig = {
+const editAddressBookFormConfig: FormConfig = {
   ...addressBookFormConfig,
   title: 'Edit Contact',
   submitText: 'Update Contact',

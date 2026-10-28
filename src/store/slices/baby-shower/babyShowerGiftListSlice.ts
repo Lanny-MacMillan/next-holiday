@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface BabyShowerGift {
+interface BabyShowerGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: BabyShowerGiftListState = {
 };
 
 // Async thunks
-export const fetchBabyShowerGifts = createAsyncThunk(
+const fetchBabyShowerGifts = createAsyncThunk(
   'babyShowerGiftList/fetchBabyShowerGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -68,7 +68,7 @@ export const fetchBabyShowerGifts = createAsyncThunk(
   },
 );
 
-export const addBabyShowerGift = createAsyncThunk(
+const addBabyShowerGift = createAsyncThunk(
   'babyShowerGiftList/addBabyShowerGift',
   async (gift: Omit<BabyShowerGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -84,7 +84,7 @@ export const addBabyShowerGift = createAsyncThunk(
   },
 );
 
-export const updateBabyShowerGift = createAsyncThunk(
+const updateBabyShowerGift = createAsyncThunk(
   'babyShowerGiftList/updateBabyShowerGift',
   async (gift: BabyShowerGift) => {
     // Simulate API call
@@ -98,7 +98,7 @@ export const updateBabyShowerGift = createAsyncThunk(
   },
 );
 
-export const deleteBabyShowerGift = createAsyncThunk(
+const deleteBabyShowerGift = createAsyncThunk(
   'babyShowerGiftList/deleteBabyShowerGift',
   async (giftId: string) => {
     // Simulate API call
@@ -107,7 +107,7 @@ export const deleteBabyShowerGift = createAsyncThunk(
   },
 );
 
-export const toggleBabyShowerGiftCompletion = createAsyncThunk(
+const toggleBabyShowerGiftCompletion = createAsyncThunk(
   'babyShowerGiftList/toggleBabyShowerGiftCompletion',
   async (giftId: string, { getState }) => {
     const state = getState() as any;
@@ -219,5 +219,4 @@ const babyShowerGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = babyShowerGiftListSlice.actions;
 export default babyShowerGiftListSlice.reducer;

@@ -13,7 +13,7 @@ export interface ShadowOptions {
 /**
  * Get the appropriate drop shadow filter for cards
  */
-export const getCardDropShadow = (options: ShadowOptions = {}): string => {
+const getCardDropShadow = (options: ShadowOptions = {}): string => {
   const { isDarkMode = false, isGamified = false, intensity = 'medium' } = options;
 
   if (isDarkMode) {
@@ -43,15 +43,6 @@ export const getCardDropShadow = (options: ShadowOptions = {}): string => {
         return 'drop-shadow(2px 4px 8px rgba(0, 0, 0, 0.15)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.08))';
     }
   }
-};
-
-/**
- * Get the appropriate CSS filter string for a card component
- */
-export const getCardFilter = (options: ShadowOptions = {}): { filter: string } => {
-  return {
-    filter: getCardDropShadow(options),
-  };
 };
 
 /**
@@ -121,35 +112,4 @@ export const getCardStyling = (options: ShadowOptions = {}): React.CSSProperties
   }
 
   return baseStyles;
-};
-
-/**
- * Get Tailwind CSS classes for card shadows (fallback for components that prefer classes)
- */
-export const getCardShadowClasses = (options: ShadowOptions = {}): string => {
-  const { isDarkMode = false, intensity = 'medium' } = options;
-
-  if (isDarkMode) {
-    switch (intensity) {
-      case 'light':
-        return 'shadow-sm shadow-white/10';
-      case 'medium':
-        return 'shadow-md shadow-white/20';
-      case 'heavy':
-        return 'shadow-lg shadow-white/30';
-      default:
-        return 'shadow-md shadow-white/20';
-    }
-  } else {
-    switch (intensity) {
-      case 'light':
-        return 'shadow-sm';
-      case 'medium':
-        return 'shadow-md';
-      case 'heavy':
-        return 'shadow-lg';
-      default:
-        return 'shadow-md';
-    }
-  }
 };

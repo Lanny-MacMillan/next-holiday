@@ -71,7 +71,7 @@ export const fetchGifts = createAsyncThunk(
   },
 );
 
-export const addGift = createAsyncThunk(
+const addGift = createAsyncThunk(
   'giftList/addGift',
   async (gift: Omit<Gift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -87,21 +87,18 @@ export const addGift = createAsyncThunk(
   },
 );
 
-export const updateGift = createAsyncThunk(
-  'giftList/updateGift',
-  async (gift: Gift) => {
-    // Simulate API call
-    const updatedGift: Gift = {
-      ...gift,
-      updatedAt: new Date().toISOString(),
-    };
+const updateGift = createAsyncThunk('giftList/updateGift', async (gift: Gift) => {
+  // Simulate API call
+  const updatedGift: Gift = {
+    ...gift,
+    updatedAt: new Date().toISOString(),
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return updatedGift;
-  },
-);
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return updatedGift;
+});
 
-export const deleteGift = createAsyncThunk(
+const deleteGift = createAsyncThunk(
   'giftList/deleteGift',
   async (giftId: string) => {
     // Simulate API call
@@ -110,7 +107,7 @@ export const deleteGift = createAsyncThunk(
   },
 );
 
-export const toggleGiftCompletion = createAsyncThunk(
+const toggleGiftCompletion = createAsyncThunk(
   'giftList/toggleGiftCompletion',
   async (giftId: string) => {
     // Simulate API call
@@ -212,30 +209,4 @@ const giftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = giftListSlice.actions;
 export default giftListSlice.reducer;
-
-// Selectors for shared gifts
-export const selectGiftsByHolidayAndShare = (
-  state: any,
-  holidayKey: string,
-  shareId?: string,
-) => {
-  const gifts = state.giftList.gifts;
-
-  // If shareId is provided, return gifts with that shareId
-  if (shareId) {
-    return gifts.filter((gift: Gift) => gift.shareId === shareId);
-  }
-
-  // If no shareId, return gifts without shareId (private gifts)
-  return gifts.filter((gift: Gift) => !gift.shareId);
-};
-
-export const selectGiftsForHoliday = (
-  state: any,
-  holidayKey: string,
-  shareId?: string,
-) => {
-  return selectGiftsByHolidayAndShare(state, holidayKey, shareId);
-};

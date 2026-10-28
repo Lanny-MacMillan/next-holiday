@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export type SortOption = string;
+type SortOption = string;
 
 interface SortModalProps {
   isOpen: boolean;

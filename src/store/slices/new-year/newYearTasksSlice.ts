@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface NewYearTask {
+interface NewYearTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: NewYearTasksState = {
 };
 
 // Async thunks
-export const fetchNewYearTasks = createAsyncThunk(
+const fetchNewYearTasks = createAsyncThunk(
   'newYearTasks/fetchNewYearTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -99,7 +99,7 @@ export const fetchNewYearTasks = createAsyncThunk(
   },
 );
 
-export const addNewYearTask = createAsyncThunk(
+const addNewYearTask = createAsyncThunk(
   'newYearTasks/addNewYearTask',
   async (task: Omit<NewYearTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -115,7 +115,7 @@ export const addNewYearTask = createAsyncThunk(
   },
 );
 
-export const updateNewYearTask = createAsyncThunk(
+const updateNewYearTask = createAsyncThunk(
   'newYearTasks/updateNewYearTask',
   async (task: NewYearTask) => {
     // Simulate API call
@@ -129,7 +129,7 @@ export const updateNewYearTask = createAsyncThunk(
   },
 );
 
-export const deleteNewYearTask = createAsyncThunk(
+const deleteNewYearTask = createAsyncThunk(
   'newYearTasks/deleteNewYearTask',
   async (id: string) => {
     // Simulate API call
@@ -138,7 +138,7 @@ export const deleteNewYearTask = createAsyncThunk(
   },
 );
 
-export const toggleNewYearTaskCompletion = createAsyncThunk(
+const toggleNewYearTaskCompletion = createAsyncThunk(
   'newYearTasks/toggleNewYearTaskCompletion',
   async (id: string) => {
     // Simulate API call
@@ -238,5 +238,4 @@ const newYearTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = newYearTasksSlice.actions;
 export default newYearTasksSlice.reducer;

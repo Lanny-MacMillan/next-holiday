@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface GraduationTask {
+interface GraduationTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: GraduationTasksState = {
 };
 
 // Async thunks
-export const fetchGraduationTasks = createAsyncThunk(
+const fetchGraduationTasks = createAsyncThunk(
   'graduationTasks/fetchGraduationTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -66,7 +66,7 @@ export const fetchGraduationTasks = createAsyncThunk(
   },
 );
 
-export const addGraduationTask = createAsyncThunk(
+const addGraduationTask = createAsyncThunk(
   'graduationTasks/addGraduationTask',
   async (task: Omit<GraduationTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -82,7 +82,7 @@ export const addGraduationTask = createAsyncThunk(
   },
 );
 
-export const updateGraduationTask = createAsyncThunk(
+const updateGraduationTask = createAsyncThunk(
   'graduationTasks/updateGraduationTask',
   async (task: GraduationTask) => {
     // Simulate API call
@@ -96,7 +96,7 @@ export const updateGraduationTask = createAsyncThunk(
   },
 );
 
-export const deleteGraduationTask = createAsyncThunk(
+const deleteGraduationTask = createAsyncThunk(
   'graduationTasks/deleteGraduationTask',
   async (taskId: string) => {
     // Simulate API call
@@ -173,5 +173,4 @@ const graduationTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = graduationTasksSlice.actions;
 export default graduationTasksSlice.reducer;

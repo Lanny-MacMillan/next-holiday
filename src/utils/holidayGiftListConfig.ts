@@ -4,7 +4,7 @@ export interface HolidayGiftListConfig {
   displayText: string;
 }
 
-export const HOLIDAY_GIFT_LIST_CONFIG: Record<string, HolidayGiftListConfig> = {
+const HOLIDAY_GIFT_LIST_CONFIG: Record<string, HolidayGiftListConfig> = {
   Christmas: {
     sliceName: 'giftList',
     displayText: 'Gift List',

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface KwanzaaGift {
+interface KwanzaaGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: KwanzaaGiftListState = {
 };
 
 // Async thunks
-export const fetchKwanzaaGifts = createAsyncThunk(
+const fetchKwanzaaGifts = createAsyncThunk(
   'kwanzaaGiftList/fetchKwanzaaGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -80,7 +80,7 @@ export const fetchKwanzaaGifts = createAsyncThunk(
   },
 );
 
-export const addKwanzaaGift = createAsyncThunk(
+const addKwanzaaGift = createAsyncThunk(
   'kwanzaaGiftList/addKwanzaaGift',
   async (gift: Omit<KwanzaaGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -96,7 +96,7 @@ export const addKwanzaaGift = createAsyncThunk(
   },
 );
 
-export const updateKwanzaaGift = createAsyncThunk(
+const updateKwanzaaGift = createAsyncThunk(
   'kwanzaaGiftList/updateKwanzaaGift',
   async (gift: KwanzaaGift) => {
     // Simulate API call
@@ -110,7 +110,7 @@ export const updateKwanzaaGift = createAsyncThunk(
   },
 );
 
-export const deleteKwanzaaGift = createAsyncThunk(
+const deleteKwanzaaGift = createAsyncThunk(
   'kwanzaaGiftList/deleteKwanzaaGift',
   async (giftId: string) => {
     // Simulate API call
@@ -119,7 +119,7 @@ export const deleteKwanzaaGift = createAsyncThunk(
   },
 );
 
-export const toggleKwanzaaGiftCompletion = createAsyncThunk(
+const toggleKwanzaaGiftCompletion = createAsyncThunk(
   'kwanzaaGiftList/toggleKwanzaaGiftCompletion',
   async (giftId: string) => {
     // Simulate API call
@@ -222,6 +222,5 @@ const kwanzaaGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedKwanzaaGift, clearKwanzaaError } =
-  kwanzaaGiftListSlice.actions;
+export const {} = kwanzaaGiftListSlice.actions;
 export default kwanzaaGiftListSlice.reducer;

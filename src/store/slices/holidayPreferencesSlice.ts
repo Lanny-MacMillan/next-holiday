@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface HolidayPreference {
+interface HolidayPreference {
   holiday: string;
   holidayId?: string; // Holiday ID from database (optional when saving new preferences)
   budget?: number;
@@ -12,11 +12,11 @@ export interface SaveHolidayPreferencesRequest {
   preferences: HolidayPreference[];
 }
 
-export interface FetchHolidayPreferencesRequest {
+interface FetchHolidayPreferencesRequest {
   accountId: string;
 }
 
-export interface HolidayPreferencesResponse {
+interface HolidayPreferencesResponse {
   holiday: {
     id: string;
     accountId: string;
@@ -66,7 +66,7 @@ const initialState: HolidayPreferencesState = {
 };
 
 // Async thunk to fetch holiday preferences
-export const fetchHolidayPreferences = createAsyncThunk(
+const fetchHolidayPreferences = createAsyncThunk(
   'holidayPreferences/fetchHolidayPreferences',
   async (request: FetchHolidayPreferencesRequest & { auth0User?: any }) => {
     const headers: Record<string, string> = {
@@ -219,5 +219,4 @@ const holidayPreferencesSlice = createSlice({
   },
 });
 
-export const { clearError, clearLastSaved } = holidayPreferencesSlice.actions;
 export default holidayPreferencesSlice.reducer;

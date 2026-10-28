@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface FourthOfJulyTask {
+interface FourthOfJulyTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: FourthOfJulyTasksState = {
 };
 
 // Async thunks
-export const fetchFourthOfJulyTasks = createAsyncThunk(
+const fetchFourthOfJulyTasks = createAsyncThunk(
   'fourthOfJulyTasks/fetchFourthOfJulyTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -67,7 +67,7 @@ export const fetchFourthOfJulyTasks = createAsyncThunk(
   },
 );
 
-export const addFourthOfJulyTask = createAsyncThunk(
+const addFourthOfJulyTask = createAsyncThunk(
   'fourthOfJulyTasks/addFourthOfJulyTask',
   async (task: Omit<FourthOfJulyTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -83,7 +83,7 @@ export const addFourthOfJulyTask = createAsyncThunk(
   },
 );
 
-export const updateFourthOfJulyTask = createAsyncThunk(
+const updateFourthOfJulyTask = createAsyncThunk(
   'fourthOfJulyTasks/updateFourthOfJulyTask',
   async (task: FourthOfJulyTask) => {
     // Simulate API call
@@ -97,7 +97,7 @@ export const updateFourthOfJulyTask = createAsyncThunk(
   },
 );
 
-export const deleteFourthOfJulyTask = createAsyncThunk(
+const deleteFourthOfJulyTask = createAsyncThunk(
   'fourthOfJulyTasks/deleteFourthOfJulyTask',
   async (taskId: string) => {
     // Simulate API call
@@ -106,7 +106,7 @@ export const deleteFourthOfJulyTask = createAsyncThunk(
   },
 );
 
-export const toggleFourthOfJulyTaskCompletion = createAsyncThunk(
+const toggleFourthOfJulyTaskCompletion = createAsyncThunk(
   'fourthOfJulyTasks/toggleFourthOfJulyTaskCompletion',
   async (taskId: string, { getState }) => {
     const state = getState() as any;
@@ -218,5 +218,4 @@ const fourthOfJulyTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = fourthOfJulyTasksSlice.actions;
 export default fourthOfJulyTasksSlice.reducer;

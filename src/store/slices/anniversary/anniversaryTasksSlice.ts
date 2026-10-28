@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface AnniversaryTask {
+interface AnniversaryTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: AnniversaryTasksState = {
 };
 
 // Async thunks
-export const fetchAnniversaryTasks = createAsyncThunk(
+const fetchAnniversaryTasks = createAsyncThunk(
   'anniversaryTasks/fetchAnniversaryTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -66,7 +66,7 @@ export const fetchAnniversaryTasks = createAsyncThunk(
   },
 );
 
-export const addAnniversaryTask = createAsyncThunk(
+const addAnniversaryTask = createAsyncThunk(
   'anniversaryTasks/addAnniversaryTask',
   async (task: Omit<AnniversaryTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -82,7 +82,7 @@ export const addAnniversaryTask = createAsyncThunk(
   },
 );
 
-export const updateAnniversaryTask = createAsyncThunk(
+const updateAnniversaryTask = createAsyncThunk(
   'anniversaryTasks/updateAnniversaryTask',
   async (task: AnniversaryTask) => {
     // Simulate API call
@@ -96,7 +96,7 @@ export const updateAnniversaryTask = createAsyncThunk(
   },
 );
 
-export const deleteAnniversaryTask = createAsyncThunk(
+const deleteAnniversaryTask = createAsyncThunk(
   'anniversaryTasks/deleteAnniversaryTask',
   async (taskId: string) => {
     // Simulate API call
@@ -105,7 +105,7 @@ export const deleteAnniversaryTask = createAsyncThunk(
   },
 );
 
-export const toggleAnniversaryTaskCompletion = createAsyncThunk(
+const toggleAnniversaryTaskCompletion = createAsyncThunk(
   'anniversaryTasks/toggleAnniversaryTaskCompletion',
   async (taskId: string, { getState }) => {
     // Simulate API call
@@ -216,6 +216,4 @@ const anniversaryTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = anniversaryTasksSlice.actions;
-export const clearAnniversaryTaskError = clearError;
 export default anniversaryTasksSlice.reducer;

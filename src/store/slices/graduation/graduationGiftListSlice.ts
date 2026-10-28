@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface GraduationGift {
+interface GraduationGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: GraduationGiftListState = {
 };
 
 // Async thunks
-export const fetchGraduationGifts = createAsyncThunk(
+const fetchGraduationGifts = createAsyncThunk(
   'graduationGiftList/fetchGraduationGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -68,7 +68,7 @@ export const fetchGraduationGifts = createAsyncThunk(
   },
 );
 
-export const addGraduationGift = createAsyncThunk(
+const addGraduationGift = createAsyncThunk(
   'graduationGiftList/addGraduationGift',
   async (gift: Omit<GraduationGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -84,7 +84,7 @@ export const addGraduationGift = createAsyncThunk(
   },
 );
 
-export const updateGraduationGift = createAsyncThunk(
+const updateGraduationGift = createAsyncThunk(
   'graduationGiftList/updateGraduationGift',
   async (gift: GraduationGift) => {
     // Simulate API call
@@ -98,7 +98,7 @@ export const updateGraduationGift = createAsyncThunk(
   },
 );
 
-export const deleteGraduationGift = createAsyncThunk(
+const deleteGraduationGift = createAsyncThunk(
   'graduationGiftList/deleteGraduationGift',
   async (giftId: string) => {
     // Simulate API call
@@ -175,5 +175,4 @@ const graduationGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = graduationGiftListSlice.actions;
 export default graduationGiftListSlice.reducer;

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface BirthdayCard {
+interface BirthdayCard {
   id: string;
   recipient: string;
   message: string;
@@ -30,7 +30,7 @@ const initialState: BirthdayCardsState = {
 };
 
 // Async thunks
-export const fetchBirthdayCards = createAsyncThunk(
+const fetchBirthdayCards = createAsyncThunk(
   'birthdayCards/fetchBirthdayCards',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -65,7 +65,7 @@ export const fetchBirthdayCards = createAsyncThunk(
   },
 );
 
-export const addBirthdayCard = createAsyncThunk(
+const addBirthdayCard = createAsyncThunk(
   'birthdayCards/addBirthdayCard',
   async (card: Omit<BirthdayCard, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -81,7 +81,7 @@ export const addBirthdayCard = createAsyncThunk(
   },
 );
 
-export const updateBirthdayCard = createAsyncThunk(
+const updateBirthdayCard = createAsyncThunk(
   'birthdayCards/updateBirthdayCard',
   async (card: BirthdayCard) => {
     // Simulate API call
@@ -95,7 +95,7 @@ export const updateBirthdayCard = createAsyncThunk(
   },
 );
 
-export const deleteBirthdayCard = createAsyncThunk(
+const deleteBirthdayCard = createAsyncThunk(
   'birthdayCards/deleteBirthdayCard',
   async (cardId: string) => {
     // Simulate API call
@@ -104,7 +104,7 @@ export const deleteBirthdayCard = createAsyncThunk(
   },
 );
 
-export const toggleBirthdayCardCompletion = createAsyncThunk(
+const toggleBirthdayCardCompletion = createAsyncThunk(
   'birthdayCards/toggleBirthdayCardCompletion',
   async (cardId: string, { getState }) => {
     const state = getState() as any;
@@ -216,5 +216,4 @@ const birthdayCardsSlice = createSlice({
   },
 });
 
-export const { setSelectedCard, clearError } = birthdayCardsSlice.actions;
 export default birthdayCardsSlice.reducer;
