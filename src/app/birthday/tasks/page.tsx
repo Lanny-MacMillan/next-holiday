@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -27,6 +27,8 @@ import {
 import { RootState } from '@/store';
 
 type SortOption = 'priority' | 'title' | 'dueDate' | 'assignedTo' | 'none';
+
+const NO_TASKS: any[] = [];
 
 export default function BirthdayTasksPage() {
   // Hook implementations
@@ -109,8 +111,7 @@ export default function BirthdayTasksPage() {
 
   // Task data processing
   const tasks =
-    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') ||
-    useMemo(() => [], []);
+    holidayData?.tasks?.filter((task: any) => task.category === 'Tasks') || NO_TASKS;
 
   // Sort function following working pattern
   function getSortedTasks() {

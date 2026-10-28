@@ -332,18 +332,6 @@ export default function BabyShowerGuestListPage() {
     }
   }
 
-  // Show loading only if home data is not initialized
-  if (!homeInitialized) {
-    return (
-      <div className="min-h-screen baby-shower-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading guests...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Wrap filtered sections in useMemo to ensure proper re-rendering
   const sortedGuests = useMemo(() => {
     return sortGuests(guests);
@@ -388,6 +376,18 @@ export default function BabyShowerGuestListPage() {
     }),
     [contacts, shareMembers],
   );
+
+  // Show loading only if home data is not initialized
+  if (!homeInitialized) {
+    return (
+      <div className="min-h-screen baby-shower-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading guests...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen baby-shower-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
