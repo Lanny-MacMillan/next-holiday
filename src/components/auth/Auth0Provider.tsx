@@ -1,7 +1,32 @@
 'use client';
 
-import { Auth0Provider } from '@auth0/auth0-react';
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { ReactNode } from 'react';
+import { installAuthFetch, setAuthTokenProvider } from '@/lib/authFetch';
+
+installAuthFetch();
+
+// Registers the current user's ID token so same-origin /api calls are
+// authenticated. Runs during render so it is in place before child effects
+// start fetching.
+function AuthTokenBridge({ children }: { children: ReactNode }) {
+  const { isAuthenticated, getAccessTokenSilently, getIdTokenClaims } = useAuth0();
+
+  setAuthTokenProvider(
+    isAuthenticated
+      ? async () => {
+          try {
+            const result = await getAccessTokenSilently({ detailedResponse: true });
+            return result.id_token;
+          } catch {
+            return (await getIdTokenClaims())?.__raw;
+          }
+        }
+      : null,
+  );
+
+  return <>{children}</>;
+}
 
 interface Auth0ProviderWrapperProps {
   children: ReactNode;
@@ -26,7 +51,7 @@ export default function Auth0ProviderWrapper({
       useRefreshTokens={true}
       useRefreshTokensFallback={true}
     >
-      {children}
+      <AuthTokenBridge>{children}</AuthTokenBridge>
     </Auth0Provider>
   );
 }

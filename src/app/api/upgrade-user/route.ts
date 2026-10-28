@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * POST /api/upgrade-user
@@ -7,15 +8,18 @@ import { prisma } from '@/lib/prisma';
  */
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getCurrentUser(request);
+
+    if (!authUser) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userId, plan, auth0Sub } = body;
 
     // Validate required fields
-    if ((!userId && !auth0Sub) || !plan) {
-      return Response.json(
-        { error: 'User identifier (userId or auth0Sub) and plan are required' },
-        { status: 400 },
-      );
+    if (!plan) {
+      return Response.json({ error: 'plan is required' }, { status: 400 });
     }
 
     // Validate plan value
@@ -26,21 +30,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by userId or auth0Sub
-    let whereClause: any;
-    if (userId) {
-      whereClause = { id: userId };
-    } else {
-      whereClause = { auth0Sub: auth0Sub };
+    // Users may only change their own plan
+    if (
+      (auth0Sub && auth0Sub !== authUser.auth0Sub) ||
+      (userId && userId !== authUser.id)
+    ) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: whereClause,
-    });
-
-    if (!user) {
-      return Response.json({ error: 'User not found' }, { status: 404 });
-    }
+    const user = authUser;
 
     // Calculate subscription dates for plus plan
     let subscriptionStartDate: Date | null = null;

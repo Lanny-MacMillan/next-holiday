@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from './prisma';
+import { verifyIdToken } from './verifyAuth0Token';
 
 // Auth0 session interface
 interface Auth0Session {
@@ -11,75 +12,74 @@ interface Auth0Session {
   };
 }
 
+// The legacy path trusts an identity header the client controls, so it is
+// off unless explicitly enabled (temporary, for rolling out token auth).
+function isLegacyTestAuthAllowed(): boolean {
+  return process.env.ALLOW_LEGACY_TEST_USER_AUTH === 'true';
+}
+
+function getLegacyTestSession(request: NextRequest): Auth0Session | null {
+  const timestamp = new Date().toISOString();
+  const toSession = (raw: string): Auth0Session => {
+    const userData = JSON.parse(raw);
+    return {
+      user: {
+        sub: userData.sub || 'test-auth0-sub',
+        email: userData.email || 'test@example.com',
+        name: userData.name || 'Test User',
+        picture: userData.picture || null,
+      },
+    };
+  };
+
+  const testUser = request.headers.get('x-test-user');
+  if (testUser) {
+    try {
+      return toSession(testUser);
+    } catch (parseError) {
+      console.error(`[${timestamp}] Error parsing x-test-user header:`, parseError);
+      return null;
+    }
+  }
+
+  // SSE endpoints cannot set headers, so they pass the user as a query param
+  const queryTestUser = new URL(request.url).searchParams.get('testUser');
+  if (queryTestUser) {
+    try {
+      return toSession(decodeURIComponent(queryTestUser));
+    } catch (parseError) {
+      console.error(
+        `[${timestamp}] Error parsing testUser query param:`,
+        parseError,
+      );
+    }
+  }
+
+  return null;
+}
+
 // Helper function to get session from NextRequest
 async function getAuth0Session(request: NextRequest): Promise<Auth0Session | null> {
-  const timestamp = new Date().toISOString();
+  const authorization = request.headers.get('authorization');
 
-  try {
-    // TODO: Implement proper Auth0 session reading for Next.js 15 App Router
-    // For now, use the fallback method that works
+  if (authorization) {
+    // A presented token must verify; never fall back to the legacy path
+    const match = /^Bearer\s+(.+)$/i.exec(authorization);
+    if (!match) return null;
 
-    // For testing purposes, we'll check for a test user header
-    // In production, this would use proper Auth0 session handling
-    const testUser = request.headers.get('x-test-user');
-
-    if (testUser) {
-      // Parse test user data from header
-      const userData = JSON.parse(testUser);
-      return {
-        user: {
-          sub: userData.sub || 'test-auth0-sub',
-          email: userData.email || 'test@example.com',
-          name: userData.name || 'Test User',
-          picture: userData.picture || null,
-        },
-      };
+    try {
+      const claims = await verifyIdToken(match[1]);
+      return { user: claims };
+    } catch (error) {
+      console.warn(
+        'Auth0 token verification failed:',
+        error instanceof Error ? error.message : 'unknown error',
+      );
+      return null;
     }
-
-    // Also check for test user data in query parameters (for SSE endpoints)
-    const url = new URL(request.url);
-    const queryTestUser = url.searchParams.get('testUser');
-
-    if (queryTestUser) {
-      try {
-        const decoded = decodeURIComponent(queryTestUser);
-
-        const userData = JSON.parse(decoded);
-
-        return {
-          user: {
-            sub: userData.sub || 'test-auth0-sub',
-            email: userData.email || 'test@example.com',
-            name: userData.name || 'Test User',
-            picture: userData.picture || null,
-          },
-        };
-      } catch (parseError) {
-        console.error(
-          `[${timestamp}] ❌ Error parsing test user from query params:`,
-          parseError,
-        );
-        console.error(`[${timestamp}] ❌ Parse error details:`, {
-          message:
-            parseError instanceof Error ? parseError.message : 'Unknown error',
-          stack: parseError instanceof Error ? parseError.stack : undefined,
-          rawParam: queryTestUser.substring(0, 200),
-        });
-      }
-    }
-
-    // For now, return null (no session)
-    // TODO: Implement proper Auth0 session handling for Next.js 15
-    // This will be handled by the frontend calling the API with user data
-    return null;
-  } catch (error) {
-    console.error(`[${timestamp}] 💥 Error getting Auth0 session:`, error);
-    console.error(
-      `[${timestamp}] 💥 Auth session error stack:`,
-      error instanceof Error ? error.stack : 'No stack trace',
-    );
-    return null;
   }
+
+  return isLegacyTestAuthAllowed() ? getLegacyTestSession(request) : null;
 }
 
 export interface AuthUser {
