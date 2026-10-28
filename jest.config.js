@@ -15,7 +15,15 @@ const customJestConfig = {
   },
   // Transform TypeScript files
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      // Transpile only: type safety is checked by `tsc`, not the test runner
+      {
+        tsconfig: '<rootDir>/tsconfig.jest.json',
+        isolatedModules: true,
+        diagnostics: false,
+      },
+    ],
   },
   // Disable Next.js auto-loading for tests
   transformIgnorePatterns: ['node_modules/(?!(next)/)'],

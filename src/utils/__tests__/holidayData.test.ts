@@ -35,6 +35,7 @@ const createMockState = (overrides: Partial<RootState> = {}): RootState =>
       loading: false,
       error: null,
     },
+    ...overrides,
   }) as RootState;
 
 describe('holidayData utilities', () => {
