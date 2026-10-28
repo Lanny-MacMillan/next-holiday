@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint src",
-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "typecheck": "tsc --noEmit",
     "knip": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

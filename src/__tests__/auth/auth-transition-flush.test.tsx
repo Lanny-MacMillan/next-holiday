@@ -48,21 +48,24 @@ const mockHomeData = {
   needsHolidaySelection: false,
 };
 
+const makeStore = () =>
+  configureStore({
+    reducer: {
+      home: homeSlice,
+      user: userSlice,
+      theme: themeSlice,
+      userPreferences: userPreferencesSlice,
+      api: api.reducer,
+    },
+    middleware: getDefaultMiddleware =>
+      getDefaultMiddleware().concat(api.middleware),
+  });
+
 describe('Auth Transition Cache Flush', () => {
-  let store: ReturnType<typeof configureStore>;
+  let store: ReturnType<typeof makeStore>;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        home: homeSlice,
-        user: userSlice,
-        theme: themeSlice,
-        userPreferences: userPreferencesSlice,
-        api: api.reducer,
-      },
-      middleware: getDefaultMiddleware =>
-        getDefaultMiddleware().concat(api.middleware),
-    });
+    store = makeStore();
   });
 
   it('should clear all caches when user logs out', async () => {
@@ -112,7 +115,7 @@ describe('Auth Transition Cache Flush', () => {
       buildAuthorizeUrl: jest.fn(),
       buildLogoutUrl: jest.fn(),
       handleRedirectCallback: jest.fn(),
-    });
+    } as unknown as ReturnType<typeof useAuth0>);
 
     // Render AuthWrapper
     render(
@@ -177,7 +180,7 @@ describe('Auth Transition Cache Flush', () => {
       buildAuthorizeUrl: jest.fn(),
       buildLogoutUrl: jest.fn(),
       handleRedirectCallback: jest.fn(),
-    });
+    } as unknown as ReturnType<typeof useAuth0>);
 
     // Render AuthWrapper
     render(
@@ -239,7 +242,7 @@ describe('Auth Transition Cache Flush', () => {
       buildAuthorizeUrl: jest.fn(),
       buildLogoutUrl: jest.fn(),
       handleRedirectCallback: jest.fn(),
-    });
+    } as unknown as ReturnType<typeof useAuth0>);
 
     // Render AuthWrapper
     render(
@@ -300,7 +303,7 @@ describe('Auth Transition Cache Flush', () => {
       buildAuthorizeUrl: jest.fn(),
       buildLogoutUrl: jest.fn(),
       handleRedirectCallback: jest.fn(),
-    });
+    } as unknown as ReturnType<typeof useAuth0>);
 
     // Render AuthWrapper
     render(

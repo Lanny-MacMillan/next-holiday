@@ -16,9 +16,10 @@ import {
 } from '@/store/selectors/home';
 import homeSlice from '@/store/slices/homeSlice';
 import { HomeData } from '@/types/home';
+import type { RootState } from '@/store';
 
 // Mock data
-const mockHomeData: HomeData = {
+const mockHomeData = {
   holidayPreferences: [
     {
       holiday: 'Christmas',
@@ -54,17 +55,16 @@ const mockHomeData: HomeData = {
   },
   needsUserSetup: false,
   needsHolidaySelection: false,
-};
+} as unknown as HomeData;
 
 describe('Selector Memoization', () => {
-  let store: ReturnType<typeof configureStore>;
+  const makeStore = () => configureStore({ reducer: { home: homeSlice } });
+  let store: ReturnType<typeof makeStore>;
+  // Only the home slice is registered here; selectors are typed against the full state
+  const getState = () => store.getState() as unknown as RootState;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        home: homeSlice,
-      },
-    });
+    store = makeStore();
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -79,7 +79,7 @@ describe('Selector Memoization', () => {
     });
 
     const { result, rerender } = renderHook(
-      () => selectHolidayPreferences(store.getState()),
+      () => selectHolidayPreferences(getState()),
       { wrapper },
     );
 
@@ -102,7 +102,7 @@ describe('Selector Memoization', () => {
     });
 
     const { result, rerender } = renderHook(
-      () => selectHolidayPreferences(store.getState()),
+      () => selectHolidayPreferences(getState()),
       { wrapper },
     );
 
@@ -112,7 +112,7 @@ describe('Selector Memoization', () => {
     const updatedData = {
       ...mockHomeData,
       holidayPreferences: [
-        ...mockHomeData.holidayPreferences,
+        ...(mockHomeData.holidayPreferences ?? []),
         {
           holiday: 'Easter',
           holidayId: 'easter-789',
@@ -142,7 +142,7 @@ describe('Selector Memoization', () => {
     });
 
     const { result, rerender } = renderHook(
-      () => selectHolidayPrefById(store.getState(), 'christmas-123'),
+      () => selectHolidayPrefById(getState(), 'christmas-123'),
       { wrapper },
     );
 
@@ -158,7 +158,7 @@ describe('Selector Memoization', () => {
 
     // Test with different holidayId
     const { result: result2 } = renderHook(
-      () => selectHolidayPrefById(store.getState(), 'hanukkah-456'),
+      () => selectHolidayPrefById(getState(), 'hanukkah-456'),
       { wrapper },
     );
 
@@ -173,7 +173,7 @@ describe('Selector Memoization', () => {
     });
 
     const { result, rerender } = renderHook(
-      () => selectHolidayBudgetById(store.getState(), 'christmas-123'),
+      () => selectHolidayBudgetById(getState(), 'christmas-123'),
       { wrapper },
     );
 
@@ -194,7 +194,7 @@ describe('Selector Memoization', () => {
       payload: mockHomeData,
     });
 
-    const { result, rerender } = renderHook(() => selectContacts(store.getState()), {
+    const { result, rerender } = renderHook(() => selectContacts(getState()), {
       wrapper,
     });
 
@@ -216,7 +216,7 @@ describe('Selector Memoization', () => {
     });
 
     const { result, rerender } = renderHook(
-      () => selectContactById(store.getState(), 'contact-1'),
+      () => selectContactById(getState(), 'contact-1'),
       { wrapper },
     );
 
@@ -238,7 +238,7 @@ describe('Selector Memoization', () => {
     });
 
     const { result, rerender } = renderHook(
-      () => selectHolidayIdByRoute(store.getState(), '/christmas'),
+      () => selectHolidayIdByRoute(getState(), '/christmas'),
       { wrapper },
     );
 
@@ -254,7 +254,7 @@ describe('Selector Memoization', () => {
 
     // Test with different route
     const { result: result2 } = renderHook(
-      () => selectHolidayIdByRoute(store.getState(), '/hanukkah'),
+      () => selectHolidayIdByRoute(getState(), '/hanukkah'),
       { wrapper },
     );
 
@@ -268,15 +268,14 @@ describe('Selector Memoization', () => {
       payload: mockHomeData,
     });
 
-    const { result } = renderHook(
-      () => selectHolidayPrefById(store.getState(), null),
-      { wrapper },
-    );
+    const { result } = renderHook(() => selectHolidayPrefById(getState(), null), {
+      wrapper,
+    });
 
     expect(result.current).toBeNull();
 
     const { result: result2 } = renderHook(
-      () => selectHolidayPrefById(store.getState(), undefined),
+      () => selectHolidayPrefById(getState(), undefined),
       { wrapper },
     );
 
