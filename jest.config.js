@@ -12,7 +12,7 @@ const customJestConfig = {
   ],
   // Floor, just under today's numbers; raise it as coverage grows
   coverageThreshold: {
-    global: { statements: 29, branches: 16, functions: 13, lines: 30 },
+    global: { statements: 32, branches: 19, functions: 16, lines: 33 },
   },
   // Mock Next.js modules that cause issues in tests
   moduleNameMapper: {
