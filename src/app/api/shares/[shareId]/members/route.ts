@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { authenticate, forbiddenResponse } from '@/lib/routeAuth';
+import { cleanupUserShareData } from '@/lib/server/shareCleanup';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ shareId: string }> },
 ) {
   try {
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
+
     const { shareId } = await params;
     const body = await request.json();
     const { userId: userIdParam } = body;
@@ -37,6 +40,11 @@ export async function POST(
 
     if (!share) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
+    }
+
+    // Only the share owner may add members directly (others join via invites)
+    if (share.ownerUserId !== auth.user.id) {
+      return forbiddenResponse();
     }
 
     // Check if user is already a member
@@ -119,6 +127,9 @@ export async function DELETE(
   { params }: { params: Promise<{ shareId: string }> },
 ) {
   try {
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
+
     const { shareId } = await params;
     const { searchParams } = new URL(request.url);
     const userIdParam = searchParams.get('userId');
@@ -165,6 +176,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
 
+    // The share owner may remove anyone; any other member may only remove themselves
+    if (share.ownerUserId !== auth.user.id && userId !== auth.user.id) {
+      return forbiddenResponse();
+    }
+
     // Check if user is a member of this share
     const memberToRemove = await prisma.shareMember.findUnique({
       where: {
@@ -203,25 +219,9 @@ export async function DELETE(
 
     // Clean up all shared holiday data for the removed user
     try {
-      // Call the cleanup API internally
-      const cleanupResponse = await fetch(
-        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/shares/${shareId}/cleanup-user-data`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: userIdParam }),
-        },
-      );
-
-      if (cleanupResponse.ok) {
-        const cleanupResult = await cleanupResponse.json();
-      } else {
-        console.error(`❌ Failed to cleanup shared data: ${cleanupResponse.status}`);
-      }
+      await cleanupUserShareData(shareId, userId);
     } catch (cleanupError) {
-      console.error('❌ Error during cleanup:', cleanupError);
+      console.error('Error during cleanup:', cleanupError);
       // Don't fail the member removal if cleanup fails
     }
 

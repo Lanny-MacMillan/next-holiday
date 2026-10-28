@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { holidayKey, ownerUserId } = body;
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
 
-    if (!holidayKey || !ownerUserId) {
+    const body = await request.json();
+    const { holidayKey, ownerUserId: ownerUserIdParam } = body;
+
+    if (!holidayKey) {
       return NextResponse.json(
-        { error: 'Missing required fields: holidayKey, ownerUserId' },
+        { error: 'Missing required field: holidayKey' },
         { status: 400 },
       );
     }
+
+    // Shares are always created for the authenticated user
+    if (claimsOtherUser(auth.user, ownerUserIdParam)) {
+      return forbiddenResponse();
+    }
+    const ownerUserId = auth.user.auth0Sub;
 
     // Convert holidayKey to display name for database lookup
     const holidayKeyToDisplayName: Record<string, string> = {
@@ -152,9 +160,17 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const holidayKey = searchParams.get('holidayKey');
-    const userId = searchParams.get('userId');
+
+    // Only the caller's own shares are ever returned
+    if (claimsOtherUser(auth.user, searchParams.get('userId'))) {
+      return forbiddenResponse();
+    }
+    const userId = auth.user.auth0Sub;
 
     if (holidayKey) {
       if (!userId) {

@@ -1,31 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
+import { prisma } from '@/lib/prisma';
+import {
+  authenticate,
+  claimsOtherUser,
+  forbiddenResponse,
+  isShareParticipant,
+} from '@/lib/routeAuth';
 import { broadcastInvite } from '@/lib/realTimeNotifications';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
+    const fromUser = auth.user;
+
     const body = await request.json();
     const { shareId, fromUserId, toUserId, toEmail, holidayKey, message } = body;
 
-    if (!shareId || !fromUserId || !holidayKey || (!toUserId && !toEmail)) {
+    if (!shareId || !holidayKey || (!toUserId && !toEmail)) {
       return NextResponse.json(
         {
           error:
-            'Missing required fields: shareId, fromUserId, holidayKey, and either toUserId or toEmail',
+            'Missing required fields: shareId, holidayKey, and either toUserId or toEmail',
         },
         { status: 400 },
       );
     }
 
-    // Look up the actual user ID from the Auth0 sub
-    const fromUser = await prisma.user.findUnique({
-      where: { auth0Sub: fromUserId },
-    });
-
-    if (!fromUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // The sender is always the authenticated user, never a value from the body
+    if (claimsOtherUser(fromUser, fromUserId)) {
+      return forbiddenResponse();
     }
 
     // Verify share exists
@@ -34,6 +38,11 @@ export async function POST(request: NextRequest) {
     });
     if (!share) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
+    }
+
+    // Only the owner or a member of a share may invite others to it
+    if (!(await isShareParticipant(shareId, fromUser.id))) {
+      return forbiddenResponse();
     }
 
     // Check for existing pending invite to prevent duplicates
@@ -172,10 +181,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const inbox = searchParams.get('inbox');
     const outgoing = searchParams.get('outgoing');
-    const userId = searchParams.get('userId');
+
+    // Only the caller's own invites are ever returned
+    if (claimsOtherUser(auth.user, searchParams.get('userId'))) {
+      return forbiddenResponse();
+    }
+    const userId = auth.user.auth0Sub;
 
     if (inbox === '1' && userId) {
       // First, try to find the user by Auth0 sub to get their internal user ID

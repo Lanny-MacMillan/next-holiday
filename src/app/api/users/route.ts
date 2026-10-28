@@ -1,52 +1,30 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { authenticateClaims, forbiddenResponse } from '@/lib/routeAuth';
 import { DEFAULT_USER_PREFERENCES } from '@/lib/constants/userPreferences';
-
-/**
- * GET /api/users
- * Get all users (for admin purposes or user listing)
- */
-export async function GET(request: NextRequest) {
-  try {
-    const currentUser = await requireAuth(request);
-
-    // For now, return all users (in production, you might want to restrict this)
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        picture: true,
-        isInDb: true,
-        isFirstLogin: true,
-        createdAt: true,
-        updatedAt: true,
-        // Don't include auth0Sub for security
-      },
-    });
-
-    return Response.json(users);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    return Response.json({ error: 'Failed to fetch users' }, { status: 500 });
-  }
-}
 
 /**
  * POST /api/users
  * Create or update a user (called during Auth0 login)
  */
 export async function POST(request: NextRequest) {
+  const auth = await authenticateClaims(request);
+  if (auth.response) return auth.response;
+  const { claims } = auth;
+
   const body = await request.json();
 
-  const { auth0Sub, email, name, picture } = body;
+  // The record is always the caller's own. Identity, email and picture come
+  // from the verified token; only the display name may come from the body.
+  if (body.auth0Sub && body.auth0Sub !== claims.sub) {
+    return forbiddenResponse();
+  }
+  const auth0Sub = claims.sub;
+  const email = claims.email;
+  const picture = claims.picture;
+  const name = body.name ?? claims.name;
 
   try {
-    if (!auth0Sub) {
-      return Response.json({ error: 'Auth0 sub is required' }, { status: 400 });
-    }
-
     // Use upsert to handle create/update atomically and avoid race conditions
     const user = await prisma.user.upsert({
       where: { auth0Sub },

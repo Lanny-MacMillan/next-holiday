@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { authenticate, forbiddenResponse, isInviteRecipient } from '@/lib/routeAuth';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ inviteId: string }> },
 ) {
   try {
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
+
     const { inviteId } = await params;
 
     // Find the invite
@@ -25,6 +27,11 @@ export async function POST(
 
     if (!invite) {
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+    }
+
+    // Only the person the invite was sent to may decline it
+    if (!isInviteRecipient(invite, auth.user)) {
+      return forbiddenResponse();
     }
 
     if (invite.status !== 'pending') {
