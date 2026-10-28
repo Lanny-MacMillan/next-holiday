@@ -5,10 +5,10 @@ Next.js 15 (App Router) + React 19, Redux Toolkit / RTK Query, Prisma + MySQL, A
 ## Commands
 
 - `npm run dev` / `npm run build`
-- `npm test`, `npm run test:coverage`
+- `npm test`, `npm run test:ci` (coverage, as CI runs it)
 - `npm run lint -- --quiet` (errors only), `npm run typecheck`, `npm run format:check`
 
-CI runs lint, format, typecheck, tests and a production build on every PR.
+CI runs four parallel jobs on every PR: `lint`, `typecheck`, `test` and `build`.
 
 ## Data flow
 
@@ -29,6 +29,7 @@ CI runs lint, format, typecheck, tests and a production build on every PR.
 - Jest + Testing Library. Tests are transpile-only; types are checked by `npm run typecheck`.
 - `src/__tests__/smoke/pages.smoke.test.tsx` renders every page under `src/app`. Keep it passing when moving or deleting code.
 - Write tests against current behaviour. Do not change application code just to satisfy a test.
+- CI requires at least 70% coverage of the lines a PR changes (`diff-cover`), plus a global coverage floor in `jest.config.js`. New or changed code needs tests; run `npm run test:ci` to check locally.
 
 ## Style
 

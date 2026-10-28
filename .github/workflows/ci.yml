@@ -9,38 +9,76 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DATABASE_URL: mysql://ci:ci@localhost:3306/ci
+  NEXT_PUBLIC_AUTH0_DOMAIN: ci.example.auth0.com
+  NEXT_PUBLIC_AUTH0_CLIENT_ID: ci-client-id
+  NEXT_PUBLIC_AUTH0_CALLBACK_URL: http://localhost:3000/
+  AUTH0_SECRET: ci-secret
+  AUTH0_BASE_URL: http://localhost:3000
+  AUTH0_ISSUER_BASE_URL: https://ci.example.auth0.com
+  AUTH0_CLIENT_ID: ci-client-id
+  AUTH0_CLIENT_SECRET: ci-client-secret
+
 jobs:
-  check:
+  lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      DATABASE_URL: mysql://ci:ci@localhost:3306/ci
-      NEXT_PUBLIC_AUTH0_DOMAIN: ci.example.auth0.com
-      NEXT_PUBLIC_AUTH0_CLIENT_ID: ci-client-id
-      NEXT_PUBLIC_AUTH0_CALLBACK_URL: http://localhost:3000/
-      AUTH0_SECRET: ci-secret
-      AUTH0_BASE_URL: http://localhost:3000
-      AUTH0_ISSUER_BASE_URL: https://ci.example.auth0.com
-      AUTH0_CLIENT_ID: ci-client-id
-      AUTH0_CLIENT_SECRET: ci-client-secret
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
+      - run: npm ci
+      - run: npm run lint -- --quiet
+      - run: npm run format:check
 
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
       - run: npm ci
       - run: npx prisma generate
+      - run: npm run typecheck
 
-      - name: Lint
-        run: npm run lint -- --quiet
-      - name: Format
-        run: npm run format:check
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Test
-        run: npm test -- --ci
-      - name: Build
-        run: npm run build
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Tests with coverage
+        run: npm run test:ci
+      - name: Coverage of changed lines
+        if: github.event_name == 'pull_request'
+        run: |
+          pip install diff-cover==10.0.0
+          diff-cover coverage/cobertura-coverage.xml \
+            --compare-branch=origin/${{ github.base_ref }} \
+            --fail-under=70
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build
