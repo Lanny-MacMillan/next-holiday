@@ -191,8 +191,6 @@ describe('CancelSubscriptionModal', () => {
       await waitFor(() => expect(props.onCancel).toHaveBeenCalledTimes(1));
     });
 
-    // KNOWN ISSUE: unwrap() rejects with a plain object, not an Error, so the real
-    // reason is lost and the alert says "Unknown error".
     it('alerts and does not close when the downgrade fails', async () => {
       respond({ '/api/upgrade-user': () => reply({ error: 'Forbidden' }, false) });
       renderModal();
@@ -200,7 +198,7 @@ describe('CancelSubscriptionModal', () => {
 
       await waitFor(() =>
         expect(window.alert).toHaveBeenCalledWith(
-          'Cancellation failed: Unknown error. Please try again or contact support.',
+          'Cancellation failed: Forbidden. Please try again or contact support.',
         ),
       );
       expect(props.onCancel).not.toHaveBeenCalled();

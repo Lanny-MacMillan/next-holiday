@@ -241,29 +241,68 @@ describe('HomePageWrapper', () => {
       expect(store.getState().budgets.entities['h3']).toBeUndefined();
     });
 
-    // KNOWN ISSUE: RTK Query passes upserted values through the endpoint's
-    // transformResponse, which expects { data: [...] }. The pre-fill sends bare
-    // arrays, so these caches end up empty. Turn this into a plain `it` once fixed.
-    it.failing(
-      "pre-fills the gifts and tasks caches so holiday pages don't fetch them again",
-      async () => {
-        serve(homeData());
+    describe('pre-filling the RTK Query caches so holiday pages do not fetch again', () => {
+      const args = (holidayId: string) => ({ holidayId, auth0User: signedIn.user });
+      const state = () => store.getState() as never;
+      const event = { id: 't2', title: 'Party', category: 'Events' };
+      const withData = homeData({
+        holidayPreferences: [
+          holiday({
+            cards: [{ id: 'c1', name: 'Card' }],
+            tasks: [{ id: 't1', title: 'Wrap', category: 'Tasks' }, event],
+            events: [event],
+          }),
+          holiday({
+            holiday: 'Hanukkah',
+            holidayId: 'h2',
+            gifts: [{ id: 'g2', name: 'Menorah' }],
+            tasks: [],
+          }),
+        ],
+      });
+
+      beforeEach(async () => {
+        serve(withData);
         mount();
         await screen.findByTestId('home-content');
+      });
 
+      it('fills the gifts, cards and tasks of each holiday', async () => {
         await waitFor(() => {
-          const args = { holidayId: 'h1', auth0User: signedIn.user };
-          const gifts = api.endpoints.getGifts.select(args)(
-            store.getState() as never,
-          );
-          const tasks = api.endpoints.getTasks.select(args)(
-            store.getState() as never,
-          );
-          expect(gifts.data).toEqual([{ id: 'g1', name: 'Scarf' }]);
-          expect(tasks.data).toEqual([{ id: 't1', title: 'Wrap' }]);
+          expect(api.endpoints.getGifts.select(args('h1'))(state()).data).toEqual([
+            { id: 'g1', name: 'Scarf' },
+          ]);
         });
-      },
-    );
+        expect(api.endpoints.getCards.select(args('h1'))(state()).data).toEqual([
+          { id: 'c1', name: 'Card' },
+        ]);
+        expect(api.endpoints.getTasks.select(args('h1'))(state()).data).toHaveLength(
+          2,
+        );
+        expect(api.endpoints.getGifts.select(args('h2'))(state()).data).toEqual([
+          { id: 'g2', name: 'Menorah' },
+        ]);
+      });
+
+      it('fills the category lists the server already filtered', async () => {
+        await waitFor(() => {
+          expect(api.endpoints.getEvents.select(args('h1'))(state()).data).toEqual([
+            event,
+          ]);
+        });
+      });
+
+      it('fills the all-holidays lists with everything', async () => {
+        const user = { auth0User: signedIn.user };
+        await waitFor(() => {
+          expect(api.endpoints.getAllGifts.select(user)(state()).data).toEqual([
+            { id: 'g1', name: 'Scarf' },
+            { id: 'g2', name: 'Menorah' },
+          ]);
+        });
+        expect(api.endpoints.getAllTasks.select(user)(state()).data).toHaveLength(2);
+      });
+    });
   });
 
   describe('failures', () => {

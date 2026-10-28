@@ -10,6 +10,10 @@ import HomeContent from '@/components/HomeContent';
 import UserSetupHandler from '@/components/UserSetupHandler';
 import { HomeData } from '@/types/home';
 
+// Upserted values go through each endpoint's transformResponse, which expects
+// the API envelope, so wrap them the way the server would.
+const asApiResponse = (data: unknown[]) => ({ success: true, data }) as never;
+
 export default function HomePageWrapper() {
   const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
   const dispatch = useAppDispatch();
@@ -128,9 +132,27 @@ export default function HomePageWrapper() {
           );
 
           // Upsert into RTK Query cache for each endpoint
-          dispatch(api.util.upsertQueryData('getAllGifts', { auth0User }, allGifts));
-          dispatch(api.util.upsertQueryData('getAllCards', { auth0User }, allCards));
-          dispatch(api.util.upsertQueryData('getAllTasks', { auth0User }, allTasks));
+          dispatch(
+            api.util.upsertQueryData(
+              'getAllGifts',
+              { auth0User },
+              asApiResponse(allGifts),
+            ),
+          );
+          dispatch(
+            api.util.upsertQueryData(
+              'getAllCards',
+              { auth0User },
+              asApiResponse(allCards),
+            ),
+          );
+          dispatch(
+            api.util.upsertQueryData(
+              'getAllTasks',
+              { auth0User },
+              asApiResponse(allTasks),
+            ),
+          );
 
           // Also upsert per-holiday data to prevent individual holiday page fetches
           data.holidayPreferences.forEach((pref: any) => {
@@ -139,21 +161,21 @@ export default function HomePageWrapper() {
                 api.util.upsertQueryData(
                   'getGifts',
                   { holidayId: pref.holidayId, auth0User },
-                  pref.gifts || [],
+                  asApiResponse(pref.gifts || []),
                 ),
               );
               dispatch(
                 api.util.upsertQueryData(
                   'getCards',
                   { holidayId: pref.holidayId, auth0User },
-                  pref.cards || [],
+                  asApiResponse(pref.cards || []),
                 ),
               );
               dispatch(
                 api.util.upsertQueryData(
                   'getTasks',
                   { holidayId: pref.holidayId, auth0User },
-                  pref.tasks || [],
+                  asApiResponse(pref.tasks || []),
                 ),
               );
 
@@ -163,7 +185,7 @@ export default function HomePageWrapper() {
                   api.util.upsertQueryData(
                     'getEvents',
                     { holidayId: pref.holidayId, auth0User },
-                    pref.events,
+                    asApiResponse(pref.events),
                   ),
                 );
               }
@@ -172,7 +194,7 @@ export default function HomePageWrapper() {
                   api.util.upsertQueryData(
                     'getDecorations',
                     { holidayId: pref.holidayId, auth0User },
-                    pref.decorations,
+                    asApiResponse(pref.decorations),
                   ),
                 );
               }
@@ -181,7 +203,7 @@ export default function HomePageWrapper() {
                   api.util.upsertQueryData(
                     'getKwanzaaPrinciples',
                     { holidayId: pref.holidayId, auth0User },
-                    pref.kwanzaaPrinciples,
+                    asApiResponse(pref.kwanzaaPrinciples),
                   ),
                 );
               }

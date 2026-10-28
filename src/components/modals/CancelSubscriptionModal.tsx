@@ -5,6 +5,7 @@ import { fetchShares } from '@/store/slices/sharesSlice';
 import { updateSettings } from '@/store/slices/themeSlice';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
+import { errorMessage } from '@/utils/errorMessage';
 
 export interface CancelSubscriptionModalProps {
   isOpen: boolean;
@@ -111,9 +112,7 @@ export default function CancelSubscriptionModal({
     } catch (error) {
       console.error('Cancellation error:', error);
       alert(
-        `Cancellation failed: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }. Please try again or contact support.`,
+        `Cancellation failed: ${errorMessage(error)}. Please try again or contact support.`,
       );
     } finally {
       setIsLoading(false);

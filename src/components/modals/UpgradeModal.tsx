@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { upgradeUser } from '@/store/slices/userSlice';
 import { useAuth0 } from '@auth0/auth0-react';
+import { errorMessage } from '@/utils/errorMessage';
 
 export interface UpgradeModalProps {
   isOpen: boolean;
@@ -147,6 +148,7 @@ export default function UpgradeModal({
 
   const handleSubmitPayment = async () => {
     setIsLoading(true);
+    let paymentAccepted = false;
     try {
       if (!auth0User?.sub) {
         throw new Error('User not authenticated');
@@ -172,6 +174,7 @@ export default function UpgradeModal({
       const paymentResult = await paymentResponse.json();
 
       if (paymentResponse.ok && paymentResult.success) {
+        paymentAccepted = true;
         // Step 2: Update user subscription in database via Redux
         const upgradeResult = await dispatch(
           upgradeUser({
@@ -188,9 +191,9 @@ export default function UpgradeModal({
     } catch (error) {
       console.error('Payment error:', error);
       alert(
-        `Payment failed: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }. Please try again.`,
+        paymentAccepted
+          ? `Your payment went through, but we couldn't upgrade your plan: ${errorMessage(error)}. Please contact support.`
+          : `Payment failed: ${errorMessage(error)}. Please try again.`,
       );
     } finally {
       setIsLoading(false);
