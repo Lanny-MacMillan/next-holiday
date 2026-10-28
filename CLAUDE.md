@@ -6,7 +6,7 @@ Next.js 15 (App Router) + React 19, Redux Toolkit / RTK Query, Prisma + MySQL, A
 
 - `npm run dev` / `npm run build`
 - `npm test`, `npm run test:ci` (coverage, as CI runs it)
-- `npm run lint -- --quiet` (errors only), `npm run typecheck`, `npm run format:check`, `npm run knip` (unused files and dependencies)
+- `npm run lint -- --quiet` (errors only), `npm run typecheck`, `npm run format:check`, `npm run knip` (unused files, exports, types and dependencies)
 
 CI runs four parallel jobs on every PR: `lint` (also checks formatting and dead code), `typecheck`, `test` and `build`.
 

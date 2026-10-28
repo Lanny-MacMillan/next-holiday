@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface HalloweenGift {
+interface HalloweenGift {
   id: string;
   name: string;
   description?: string;
@@ -30,7 +30,7 @@ const initialState: HalloweenGiftListState = {
 };
 
 // Async thunks
-export const fetchHalloweenGifts = createAsyncThunk(
+const fetchHalloweenGifts = createAsyncThunk(
   'halloweenGiftList/fetchHalloweenGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -85,7 +85,7 @@ export const fetchHalloweenGifts = createAsyncThunk(
   },
 );
 
-export const addHalloweenGift = createAsyncThunk(
+const addHalloweenGift = createAsyncThunk(
   'halloweenGiftList/addHalloweenGift',
   async (gift: Omit<HalloweenGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -105,7 +105,7 @@ export const addHalloweenGift = createAsyncThunk(
   },
 );
 
-export const updateHalloweenGift = createAsyncThunk(
+const updateHalloweenGift = createAsyncThunk(
   'halloweenGiftList/updateHalloweenGift',
   async (gift: HalloweenGift) => {
     // Simulate API call
@@ -123,7 +123,7 @@ export const updateHalloweenGift = createAsyncThunk(
   },
 );
 
-export const deleteHalloweenGift = createAsyncThunk(
+const deleteHalloweenGift = createAsyncThunk(
   'halloweenGiftList/deleteHalloweenGift',
   async (giftId: string) => {
     // Simulate API call
@@ -137,7 +137,7 @@ export const deleteHalloweenGift = createAsyncThunk(
   },
 );
 
-export const toggleHalloweenGiftCompletion = createAsyncThunk(
+const toggleHalloweenGiftCompletion = createAsyncThunk(
   'halloweenGiftList/toggleHalloweenGiftCompletion',
   async (giftId: string) => {
     // Simulate API call
@@ -238,5 +238,4 @@ const halloweenGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = halloweenGiftListSlice.actions;
 export default halloweenGiftListSlice.reducer;

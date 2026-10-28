@@ -37,30 +37,9 @@ export function notFound(
   return NextResponse.json({ success: false, error }, { status: 404, headers });
 }
 
-export function conflict(
-  error: string = 'Conflict',
-  headers?: Record<string, string>,
-) {
-  return NextResponse.json({ success: false, error }, { status: 409, headers });
-}
-
-export function unprocessableEntity(
-  error: string | z.ZodIssue[],
-  headers?: Record<string, string>,
-) {
-  return NextResponse.json({ success: false, error }, { status: 422, headers });
-}
-
 export function serverError(
   error: string = 'Internal server error',
   headers?: Record<string, string>,
 ) {
   return NextResponse.json({ success: false, error }, { status: 500, headers });
-}
-
-export function serviceUnavailable(
-  error: string = 'Service unavailable',
-  headers?: Record<string, string>,
-) {
-  return NextResponse.json({ success: false, error }, { status: 503, headers });
 }

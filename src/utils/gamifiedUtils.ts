@@ -54,8 +54,3 @@ export const getGiftGamifiedBackgroundColor = (price: number) => {
   if (price >= 25) return gradientMap.affordable;
   return gradientMap.budget;
 };
-
-// Card mail-themed background color
-export const getCardGamifiedBackgroundColor = () => {
-  return 'bg-gradient-to-br from-green-400 to-green-600';
-};

@@ -1,4 +1,4 @@
-import { FormConfig, FormField } from '../types/form';
+import { FormConfig } from '../types/form';
 import {
   BASE_FORM_CONFIGS,
   HOLIDAY_CUSTOMIZATIONS,
@@ -119,24 +119,6 @@ export function buildFormConfig(
 }
 
 /**
- * Creates a standalone assignTo field for legacy compatibility
- */
-export function buildAssignToField(shareMembers: ShareMember[]): FormField {
-  return {
-    id: 'assigned_to', // Changed from 'assignedTo' to match API
-    type: 'select',
-    placeholder: 'Assign to (optional)',
-    options: [
-      { value: '', label: 'Unassigned' },
-      ...shareMembers.map(member => ({
-        value: member.uuid, // Use UUID for API compatibility
-        label: member.name || member.email || 'Unknown',
-      })),
-    ],
-  };
-}
-
-/**
  * Utility function to check if a holiday should show assignTo fields
  */
 export function shouldShowAssignTo(shareMembers: ShareMember[]): boolean {
@@ -145,30 +127,4 @@ export function shouldShowAssignTo(shareMembers: ShareMember[]): boolean {
     member => member.uuid && member.uuid.trim() !== '',
   );
   return validMembers.length > 1; // Only show when there are multiple valid members for assignment
-}
-
-/**
- * Get available content types for a specific holiday
- */
-export function getAvailableContentTypes(holidayKey?: HolidayKey): ContentType[] {
-  // Most holidays support all content types
-  const allTypes: ContentType[] = ['task', 'gift', 'card'];
-
-  // Some holidays might not support certain content types
-  // Add logic here if needed in the future
-  return allTypes;
-}
-
-/**
- * Helper to get holiday-specific field customizations
- */
-export function getHolidayFieldCustomizations(
-  holidayKey: HolidayKey,
-  contentType: ContentType,
-): Partial<FormConfig> | undefined {
-  const holidayConfig = HOLIDAY_CUSTOMIZATIONS[holidayKey];
-  if (holidayConfig && contentType in holidayConfig) {
-    return holidayConfig[contentType as keyof typeof holidayConfig];
-  }
-  return undefined;
 }

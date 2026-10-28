@@ -216,31 +216,6 @@ export async function requireAuth(request: NextRequest): Promise<AuthUser> {
 }
 
 /**
- * Get user by Auth0 sub
- */
-export async function getUserByAuth0Sub(auth0Sub: string): Promise<AuthUser | null> {
-  try {
-    return await prisma.user.findUnique({
-      where: { auth0Sub },
-      select: {
-        id: true,
-        auth0Sub: true,
-        email: true,
-        name: true,
-        picture: true,
-        subscriptionPlan: true,
-        subscriptionStartDate: true,
-        subscriptionEndDate: true,
-        createdAt: true,
-      },
-    });
-  } catch (error) {
-    console.error('Error getting user by Auth0 sub:', error);
-    return null;
-  }
-}
-
-/**
  * Assert that a user has access to a holiday through their account membership OR share membership
  * Returns a 403 response if access is denied, null if access is granted
  */

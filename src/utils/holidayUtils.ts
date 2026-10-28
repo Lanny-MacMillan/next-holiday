@@ -1,4 +1,4 @@
-export type HolidayTheme =
+type HolidayTheme =
   | 'christmas'
   | 'valentines'
   | 'easter'
@@ -8,7 +8,7 @@ export type HolidayTheme =
   | 'kwanzaa'
   | 'new-year';
 
-export interface HolidayColors {
+interface HolidayColors {
   primary: string;
   secondary: string;
   accent: string;
@@ -66,7 +66,7 @@ const holidayColorMap: Record<HolidayTheme, HolidayColors> = {
   },
 };
 
-export function detectHolidayTheme(pathname: string): HolidayTheme {
+function detectHolidayTheme(pathname: string): HolidayTheme {
   if (pathname.includes('/christmas')) return 'christmas';
   if (pathname.includes('/valentines')) return 'valentines';
   if (pathname.includes('/easter')) return 'easter';
@@ -80,7 +80,7 @@ export function detectHolidayTheme(pathname: string): HolidayTheme {
   return 'christmas';
 }
 
-export function getHolidayColors(pathname: string): HolidayColors {
+function getHolidayColors(pathname: string): HolidayColors {
   const theme = detectHolidayTheme(pathname);
   return holidayColorMap[theme];
 }

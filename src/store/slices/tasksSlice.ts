@@ -78,7 +78,7 @@ export const fetchTasks = createAsyncThunk(
   },
 );
 
-export const addTask = createAsyncThunk(
+const addTask = createAsyncThunk(
   'tasks/addTask',
   async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -94,30 +94,24 @@ export const addTask = createAsyncThunk(
   },
 );
 
-export const updateTask = createAsyncThunk(
-  'tasks/updateTask',
-  async (task: Task) => {
-    // Simulate API call
-    const updatedTask: Task = {
-      ...task,
-      updatedAt: new Date().toISOString(),
-    };
+const updateTask = createAsyncThunk('tasks/updateTask', async (task: Task) => {
+  // Simulate API call
+  const updatedTask: Task = {
+    ...task,
+    updatedAt: new Date().toISOString(),
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return updatedTask;
-  },
-);
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return updatedTask;
+});
 
-export const deleteTask = createAsyncThunk(
-  'tasks/deleteTask',
-  async (taskId: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return taskId;
-  },
-);
+const deleteTask = createAsyncThunk('tasks/deleteTask', async (taskId: string) => {
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return taskId;
+});
 
-export const toggleTaskCompletion = createAsyncThunk(
+const toggleTaskCompletion = createAsyncThunk(
   'tasks/toggleTaskCompletion',
   async (taskId: string) => {
     // Simulate API call
@@ -219,30 +213,4 @@ const tasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = tasksSlice.actions;
 export default tasksSlice.reducer;
-
-// Selectors for shared tasks
-export const selectTasksByHolidayAndShare = (
-  state: any,
-  holidayKey: string,
-  shareId?: string,
-) => {
-  const tasks = state.tasks.tasks;
-
-  // If shareId is provided, return tasks with that shareId
-  if (shareId) {
-    return tasks.filter((task: Task) => task.shareId === shareId);
-  }
-
-  // If no shareId, return tasks without shareId (private tasks)
-  return tasks.filter((task: Task) => !task.shareId);
-};
-
-export const selectTasksForHoliday = (
-  state: any,
-  holidayKey: string,
-  shareId?: string,
-) => {
-  return selectTasksByHolidayAndShare(state, holidayKey, shareId);
-};

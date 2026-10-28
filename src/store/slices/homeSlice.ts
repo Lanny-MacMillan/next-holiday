@@ -556,14 +556,8 @@ const homeSlice = createSlice({
 
 // Selectors
 export const selectHomeData = (state: { home: HomeState }) => state.home.data;
-export const selectHolidayPreferences = (state: { home: HomeState }) =>
-  state.home.data?.holidayPreferences || [];
 export const selectContacts = (state: { home: HomeState }) =>
   state.home.data?.contacts || [];
-export const selectHomeLoading = (state: { home: HomeState }) => state.home.loading;
-export const selectHomeError = (state: { home: HomeState }) => state.home.error;
-export const selectHomeInitialized = (state: { home: HomeState }) =>
-  state.home.initialized;
 
 // Selector for guest lists by holiday ID
 export const selectGuestListsByHoliday =
@@ -576,8 +570,7 @@ export const selectGuestListsByHoliday =
 
 export const {
   setHomeData,
-  setLoading,
-  setError,
+
   clearHomeData,
   updateGiftInHomeData,
   updateCardInHomeData,
@@ -598,8 +591,5 @@ export const {
   removeGuestFromHomeData,
   updateGuestInHomeData,
   removeSharedHolidayData,
-  addContactToHomeData,
-  updateContactInHomeData,
-  removeContactFromHomeData,
 } = homeSlice.actions;
 export default homeSlice.reducer;

@@ -8,7 +8,7 @@ export interface DeleteModalConfig {
 }
 
 // Cards delete configuration
-export const cardsDeleteConfig: DeleteModalConfig = {
+const cardsDeleteConfig: DeleteModalConfig = {
   title: 'Confirm Delete',
   message:
     'Are you sure you want to delete this card? This action cannot be undone.',
@@ -19,7 +19,7 @@ export const cardsDeleteConfig: DeleteModalConfig = {
 };
 
 // Tasks delete configuration
-export const tasksDeleteConfig: DeleteModalConfig = {
+const tasksDeleteConfig: DeleteModalConfig = {
   title: 'Delete Task?',
   message:
     'Are you sure you want to delete this task? This action cannot be undone.',
@@ -30,7 +30,7 @@ export const tasksDeleteConfig: DeleteModalConfig = {
 };
 
 // Gifts delete configuration
-export const giftsDeleteConfig: DeleteModalConfig = {
+const giftsDeleteConfig: DeleteModalConfig = {
   title: 'Confirm Delete',
   message:
     'Are you sure you want to delete this gift? This action cannot be undone.',
@@ -41,7 +41,7 @@ export const giftsDeleteConfig: DeleteModalConfig = {
 };
 
 // Guests delete configuration
-export const guestsDeleteConfig: DeleteModalConfig = {
+const guestsDeleteConfig: DeleteModalConfig = {
   title: 'Confirm Delete',
   message:
     'Are you sure you want to delete this guest? This action cannot be undone.',
@@ -52,7 +52,7 @@ export const guestsDeleteConfig: DeleteModalConfig = {
 };
 
 // Recipes delete configuration
-export const recipesDeleteConfig: DeleteModalConfig = {
+const recipesDeleteConfig: DeleteModalConfig = {
   title: 'Confirm Delete',
   message:
     'Are you sure you want to delete this recipe? This action cannot be undone.',
@@ -63,7 +63,7 @@ export const recipesDeleteConfig: DeleteModalConfig = {
 };
 
 // Address book delete configuration
-export const addressBookDeleteConfig: DeleteModalConfig = {
+const addressBookDeleteConfig: DeleteModalConfig = {
   title: 'Confirm Delete',
   message:
     'Are you sure you want to delete this contact? This action cannot be undone.',

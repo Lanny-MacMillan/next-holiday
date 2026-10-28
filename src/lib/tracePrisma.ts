@@ -115,10 +115,3 @@ export function installPrismaTracer(prisma: PrismaClient): void {
   isTracingEnabled = true;
   console.info('[trace] Prisma tracer installed');
 }
-
-/**
- * Check if Prisma tracing is currently enabled
- */
-export function isPrismaTracingEnabled(): boolean {
-  return isTracingEnabled;
-}

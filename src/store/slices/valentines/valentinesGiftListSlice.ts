@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface ValentinesGift {
+interface ValentinesGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: ValentinesGiftListState = {
 };
 
 // Async thunks
-export const fetchValentinesGifts = createAsyncThunk(
+const fetchValentinesGifts = createAsyncThunk(
   'valentinesGiftList/fetchValentinesGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -68,7 +68,7 @@ export const fetchValentinesGifts = createAsyncThunk(
   },
 );
 
-export const addValentinesGift = createAsyncThunk(
+const addValentinesGift = createAsyncThunk(
   'valentinesGiftList/addValentinesGift',
   async (gift: Omit<ValentinesGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -84,7 +84,7 @@ export const addValentinesGift = createAsyncThunk(
   },
 );
 
-export const updateValentinesGift = createAsyncThunk(
+const updateValentinesGift = createAsyncThunk(
   'valentinesGiftList/updateValentinesGift',
   async (gift: ValentinesGift) => {
     // Simulate API call
@@ -98,7 +98,7 @@ export const updateValentinesGift = createAsyncThunk(
   },
 );
 
-export const deleteValentinesGift = createAsyncThunk(
+const deleteValentinesGift = createAsyncThunk(
   'valentinesGiftList/deleteValentinesGift',
   async (giftId: string) => {
     // Simulate API call
@@ -107,7 +107,7 @@ export const deleteValentinesGift = createAsyncThunk(
   },
 );
 
-export const toggleValentinesGiftCompletion = createAsyncThunk(
+const toggleValentinesGiftCompletion = createAsyncThunk(
   'valentinesGiftList/toggleValentinesGiftCompletion',
   async (giftId: string) => {
     // Simulate API call
@@ -213,6 +213,5 @@ const valentinesGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedValentinesGift, clearValentinesError } =
-  valentinesGiftListSlice.actions;
+export const {} = valentinesGiftListSlice.actions;
 export default valentinesGiftListSlice.reducer;

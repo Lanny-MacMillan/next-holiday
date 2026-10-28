@@ -67,5 +67,3 @@ export async function ensurePrismaConnection() {
     }
   }
 }
-
-export default prisma;

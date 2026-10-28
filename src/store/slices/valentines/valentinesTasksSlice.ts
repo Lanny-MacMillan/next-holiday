@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface ValentinesTask {
+interface ValentinesTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: ValentinesTasksState = {
 };
 
 // Async thunks
-export const fetchValentinesTasks = createAsyncThunk(
+const fetchValentinesTasks = createAsyncThunk(
   'valentinesTasks/fetchValentinesTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -79,7 +79,7 @@ export const fetchValentinesTasks = createAsyncThunk(
   },
 );
 
-export const addValentinesTask = createAsyncThunk(
+const addValentinesTask = createAsyncThunk(
   'valentinesTasks/addValentinesTask',
   async (task: Omit<ValentinesTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -95,7 +95,7 @@ export const addValentinesTask = createAsyncThunk(
   },
 );
 
-export const updateValentinesTask = createAsyncThunk(
+const updateValentinesTask = createAsyncThunk(
   'valentinesTasks/updateValentinesTask',
   async (task: ValentinesTask) => {
     // Simulate API call
@@ -109,7 +109,7 @@ export const updateValentinesTask = createAsyncThunk(
   },
 );
 
-export const deleteValentinesTask = createAsyncThunk(
+const deleteValentinesTask = createAsyncThunk(
   'valentinesTasks/deleteValentinesTask',
   async (taskId: string) => {
     // Simulate API call
@@ -118,7 +118,7 @@ export const deleteValentinesTask = createAsyncThunk(
   },
 );
 
-export const toggleValentinesTaskCompletion = createAsyncThunk(
+const toggleValentinesTaskCompletion = createAsyncThunk(
   'valentinesTasks/toggleValentinesTaskCompletion',
   async (taskId: string) => {
     // Simulate API call
@@ -224,6 +224,5 @@ const valentinesTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedValentinesTask, clearValentinesError } =
-  valentinesTasksSlice.actions;
+export const {} = valentinesTasksSlice.actions;
 export default valentinesTasksSlice.reducer;

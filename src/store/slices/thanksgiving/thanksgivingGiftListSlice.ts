@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface ThanksgivingGift {
+interface ThanksgivingGift {
   id: string;
   name: string;
   description?: string;
@@ -30,7 +30,7 @@ const initialState: ThanksgivingGiftListState = {
 };
 
 // Async thunks
-export const fetchThanksgivingGifts = createAsyncThunk(
+const fetchThanksgivingGifts = createAsyncThunk(
   'thanksgivingGiftList/fetchThanksgivingGifts',
   async (_, { getState }) => {
     const state = getState() as any;
@@ -122,7 +122,7 @@ export const fetchThanksgivingGifts = createAsyncThunk(
   },
 );
 
-export const addThanksgivingGift = createAsyncThunk(
+const addThanksgivingGift = createAsyncThunk(
   'thanksgivingGiftList/addThanksgivingGift',
   async (gift: Omit<ThanksgivingGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     const response = await new Promise<ThanksgivingGift>(resolve => {
@@ -141,7 +141,7 @@ export const addThanksgivingGift = createAsyncThunk(
   },
 );
 
-export const updateThanksgivingGift = createAsyncThunk(
+const updateThanksgivingGift = createAsyncThunk(
   'thanksgivingGiftList/updateThanksgivingGift',
   async (gift: ThanksgivingGift) => {
     const response = await new Promise<ThanksgivingGift>(resolve => {
@@ -158,7 +158,7 @@ export const updateThanksgivingGift = createAsyncThunk(
   },
 );
 
-export const deleteThanksgivingGift = createAsyncThunk(
+const deleteThanksgivingGift = createAsyncThunk(
   'thanksgivingGiftList/deleteThanksgivingGift',
   async (giftId: string) => {
     await new Promise<void>(resolve => {
@@ -171,7 +171,7 @@ export const deleteThanksgivingGift = createAsyncThunk(
   },
 );
 
-export const toggleThanksgivingGiftCompletion = createAsyncThunk(
+const toggleThanksgivingGiftCompletion = createAsyncThunk(
   'thanksgivingGiftList/toggleThanksgivingGiftCompletion',
   async (giftId: string) => {
     await new Promise<void>(resolve => {
@@ -271,5 +271,4 @@ const thanksgivingGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = thanksgivingGiftListSlice.actions;
 export default thanksgivingGiftListSlice.reducer;

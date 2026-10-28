@@ -49,7 +49,7 @@ function getHolidayRoute(holiday: string): string {
   return holidayToRouteMap[holiday] || holiday.toLowerCase();
 }
 
-export function useGiftListCardData(
+function useGiftListCardData(
   holiday?: string,
   providedHolidayId?: string,
   enabled = true,

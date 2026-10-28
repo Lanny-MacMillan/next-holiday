@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface HanukkahTask {
+interface HanukkahTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: HanukkahTasksState = {
 };
 
 // Async thunks
-export const fetchHanukkahTasks = createAsyncThunk(
+const fetchHanukkahTasks = createAsyncThunk(
   'hanukkahTasks/fetchHanukkahTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -156,7 +156,7 @@ export const fetchHanukkahTasks = createAsyncThunk(
   },
 );
 
-export const addHanukkahTask = createAsyncThunk(
+const addHanukkahTask = createAsyncThunk(
   'hanukkahTasks/addHanukkahTask',
   async (task: Omit<HanukkahTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -172,7 +172,7 @@ export const addHanukkahTask = createAsyncThunk(
   },
 );
 
-export const updateHanukkahTask = createAsyncThunk(
+const updateHanukkahTask = createAsyncThunk(
   'hanukkahTasks/updateHanukkahTask',
   async (task: HanukkahTask) => {
     // Simulate API call
@@ -186,7 +186,7 @@ export const updateHanukkahTask = createAsyncThunk(
   },
 );
 
-export const deleteHanukkahTask = createAsyncThunk(
+const deleteHanukkahTask = createAsyncThunk(
   'hanukkahTasks/deleteHanukkahTask',
   async (taskId: string) => {
     // Simulate API call
@@ -195,7 +195,7 @@ export const deleteHanukkahTask = createAsyncThunk(
   },
 );
 
-export const toggleHanukkahTaskCompletion = createAsyncThunk(
+const toggleHanukkahTaskCompletion = createAsyncThunk(
   'hanukkahTasks/toggleHanukkahTaskCompletion',
   async (taskId: string) => {
     // Simulate API call
@@ -298,6 +298,5 @@ const hanukkahTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedHanukkahTask, clearHanukkahTaskError } =
-  hanukkahTasksSlice.actions;
+export const {} = hanukkahTasksSlice.actions;
 export default hanukkahTasksSlice.reducer;
