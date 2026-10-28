@@ -105,16 +105,16 @@ const userPreferencesSlice = createSlice({
         state.loading = false;
         state.preferences = action.payload;
         state.initialized = true;
-        
+
         // Update localStorage with fetched preferences to keep them in sync
         if (typeof window !== 'undefined' && action.payload) {
           const { theme, displayMode } = action.payload;
-          
+
           // Update theme in localStorage if present in preferences
           if (theme) {
             localStorage.setItem('theme', theme);
           }
-          
+
           // Update userSettings in localStorage if display mode is present
           if (displayMode) {
             try {
@@ -142,16 +142,16 @@ const userPreferencesSlice = createSlice({
         if (state.preferences) {
           state.preferences = { ...state.preferences, ...action.payload };
         }
-        
+
         // Update localStorage with updated preferences to keep them in sync
         if (typeof window !== 'undefined' && action.payload) {
           const { theme, displayMode } = action.payload;
-          
+
           // Update theme in localStorage if present in updated preferences
           if (theme) {
             localStorage.setItem('theme', theme);
           }
-          
+
           // Update userSettings in localStorage if display mode is present
           if (displayMode) {
             try {

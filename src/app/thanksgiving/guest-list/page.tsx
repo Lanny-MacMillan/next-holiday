@@ -368,7 +368,6 @@ export default function ThanksgivingGuestListPage() {
           isCompleted: newRsvpStatus === 'confirmed',
           auth0User,
         }).unwrap();
-
       } catch (error) {
         console.error('❌ Failed to toggle guest:', error);
         // Revert optimistic update on error

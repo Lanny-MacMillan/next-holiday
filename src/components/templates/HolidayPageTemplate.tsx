@@ -65,9 +65,10 @@ export function HolidayPageTemplate({
         <ul className="flex flex-col gap-4">
           {subsections.map(section => {
             // Only apply category formatting for tasks sliceKey to avoid breaking existing holidays
-            const progressKey = (section.sliceKey === 'tasks' && section.category) 
-              ? `${section.sliceKey}:${section.category}` 
-              : section.sliceKey;
+            const progressKey =
+              section.sliceKey === 'tasks' && section.category
+                ? `${section.sliceKey}:${section.category}`
+                : section.sliceKey;
             const { total, completed } = getProgressData(progressKey);
 
             // Render appropriate card based on section type
