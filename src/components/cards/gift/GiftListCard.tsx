@@ -49,7 +49,11 @@ function getHolidayRoute(holiday: string): string {
   return holidayToRouteMap[holiday] || holiday.toLowerCase();
 }
 
-export function useGiftListCardData(holiday?: string, providedHolidayId?: string) {
+export function useGiftListCardData(
+  holiday?: string,
+  providedHolidayId?: string,
+  enabled = true,
+) {
   // Get holiday configuration
   const config = getHolidayGiftListConfig(holiday);
 
@@ -72,7 +76,7 @@ export function useGiftListCardData(holiday?: string, providedHolidayId?: string
   // Use RTK Query to fetch gifts data
   const { data: gifts = [] } = useGetGiftsQuery(
     { holidayId: holidayId || '', auth0User },
-    { skip: !holidayId || !auth0User },
+    { skip: !enabled || !holidayId || !auth0User },
   );
 
   // Map holiday name -> holidayId via home data, then pull budget entity from Redux (DB-backed)
@@ -199,13 +203,10 @@ export default function GiftListCard({
   const isFourthOfJuly =
     holiday === 'Fourth of July' || holiday?.includes('Fourth of July');
 
-  // Use holiday-specific data if holiday prop is provided, otherwise use passed props
-  // Prioritize props over hook data to avoid API calls
-  // Only call the hook if we don't have the required props
-  const holidayData =
-    holiday && (!budget || !giftList)
-      ? useGiftListCardData(holiday, holidayId)
-      : null;
+  // Prefer the passed props; only fetch holiday data when they're missing
+  const needsHolidayData = Boolean(holiday && (!budget || !giftList));
+  const hookData = useGiftListCardData(holiday, holidayId, needsHolidayData);
+  const holidayData = needsHolidayData ? hookData : null;
 
   const finalBudget = budget || holidayData?.budget;
   const finalGiftList = giftList || holidayData?.giftList;

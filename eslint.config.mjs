@@ -23,16 +23,6 @@ const eslintConfig = [
     },
   },
   {
-    // Hooks called after an early return. Fix, then delete this block.
-    files: [
-      'src/app/baby-shower/guest-list/page.tsx',
-      'src/app/birthday/tasks/page.tsx',
-      'src/components/cards/gift/GiftListCard.tsx',
-      'src/hooks/useHolidayBudget.ts',
-    ],
-    rules: { 'react-hooks/rules-of-hooks': 'warn' },
-  },
-  {
     // Client code gets its data from RTK Query and the store, not ad-hoc requests
     files: [
       'src/components/**/*.{ts,tsx}',

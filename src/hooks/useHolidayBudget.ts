@@ -26,6 +26,12 @@ export function useHolidayBudget(
 ): UseHolidayBudgetReturn {
   const { holidayId, slug } = args;
 
+  const budget = useAppSelector(state =>
+    holidayId ? selectBudgetByHolidayId(state, holidayId) : null,
+  );
+  const loading = useAppSelector(selectBudgetsLoading);
+  const error = useAppSelector(selectBudgetsError);
+
   // For now, we require holidayId since we don't have a holidays slice yet
   // TODO: Update this when we have a holidays slice to resolve slug -> holidayId
   if (!holidayId) {
@@ -38,10 +44,6 @@ export function useHolidayBudget(
       error: 'holidayId is required',
     };
   }
-
-  const budget = useAppSelector(state => selectBudgetByHolidayId(state, holidayId));
-  const loading = useAppSelector(selectBudgetsLoading);
-  const error = useAppSelector(selectBudgetsError);
 
   return {
     budget,
