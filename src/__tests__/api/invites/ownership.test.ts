@@ -28,7 +28,13 @@ import { POST as acceptInvite } from '@/app/api/invites/[inviteId]/accept/route'
 import { POST as declineInvite } from '@/app/api/invites/[inviteId]/decline/route';
 import { POST as dismissInvite } from '@/app/api/invites/[inviteId]/dismiss/route';
 
-const me = { id: 'me-id', auth0Sub: 'auth0|me', email: 'me@x.com', name: 'Me' };
+const me = {
+  id: 'me-id',
+  auth0Sub: 'auth0|me',
+  email: 'me@x.com',
+  verifiedEmail: 'me@x.com',
+  name: 'Me',
+};
 const other = { id: 'other-id', auth0Sub: 'auth0|other', email: 'o@x.com' };
 
 const req = (url: string, body?: unknown) =>
@@ -99,6 +105,35 @@ describe('GET /api/invites', () => {
     expect(db.invite.findMany).not.toHaveBeenCalled();
   });
 
+  describe('email-addressed invites in the inbox', () => {
+    const emailClauses = () =>
+      db.invite.findMany.mock.calls[0][0].where.OR.filter(
+        (c: Record<string, unknown>) => c.toEmail === 'me@x.com',
+      );
+
+    beforeEach(() => {
+      db.user.findUnique.mockResolvedValue(me);
+      db.invite.findMany.mockResolvedValue([]);
+    });
+
+    it('are included for a verified email', async () => {
+      await GET(req(`/api/invites?inbox=1&userId=${me.auth0Sub}`));
+      expect(emailClauses()).toHaveLength(1);
+    });
+
+    it('are left out for an unverified email', async () => {
+      getCurrentUser.mockResolvedValue({ ...me, verifiedEmail: null });
+      await GET(req(`/api/invites?inbox=1&userId=${me.auth0Sub}`));
+      expect(emailClauses()).toHaveLength(0);
+    });
+
+    it('are left out of the combined list for an unverified email', async () => {
+      getCurrentUser.mockResolvedValue({ ...me, verifiedEmail: null });
+      await GET(req(`/api/invites?userId=${me.auth0Sub}`));
+      expect(emailClauses()).toHaveLength(0);
+    });
+  });
+
   it("always queries the authenticated user's own invites", async () => {
     db.user.findUnique.mockResolvedValue(me);
     db.invite.findMany.mockResolvedValue([]);
@@ -153,6 +188,37 @@ describe('invite actions', () => {
       const res = await declineInvite(req('/x', {}), params('i1'));
       expect(res.status).toBe(403);
       expect(db.invite.update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['accept', acceptInvite],
+      ['decline', declineInvite],
+    ])(
+      '%s: an unverified email cannot claim an email-addressed invite',
+      async (_, act) => {
+        getCurrentUser.mockResolvedValue({ ...me, verifiedEmail: null });
+        db.invite.findUnique.mockResolvedValue({
+          ...pending,
+          toUserId: null,
+          toEmail: 'me@x.com',
+          share: null,
+        });
+        const res = await act(req('/x', {}), params('i1'));
+        expect(res.status).toBe(403);
+        expect(db.invite.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('an unverified account can still act on an invite addressed to its user id', async () => {
+      getCurrentUser.mockResolvedValue({ ...me, verifiedEmail: null });
+      db.invite.findUnique.mockResolvedValue({
+        ...pending,
+        toUserId: me.id,
+        toEmail: null,
+        share: null,
+      });
+      db.invite.update.mockResolvedValue({ id: 'i1', status: 'declined' });
+      expect((await declineInvite(req('/x', {}), params('i1'))).status).toBe(200);
     });
 
     it('lets the recipient (matched by email, case-insensitive) decline', async () => {

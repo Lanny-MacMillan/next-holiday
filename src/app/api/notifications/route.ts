@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
     // Get invite notifications (bridge pattern)
     const inviteNotifications = await prisma.invite.findMany({
       where: {
-        OR: [{ toUserId: user.id }, { toEmail: user.email }],
+        OR: [
+          { toUserId: user.id },
+          ...(user.verifiedEmail ? [{ toEmail: user.verifiedEmail }] : []),
+        ],
         status: 'pending',
       },
       include: {

@@ -197,13 +197,11 @@ export async function GET(request: NextRequest) {
     if (inbox === '1' && userId) {
       // First, try to find the user by Auth0 sub to get their internal user ID
       let internalUserId: string | null = null;
-      let userEmail: string | null = null;
       try {
         const user = await prisma.user.findUnique({
           where: { auth0Sub: userId },
         });
         internalUserId = user?.id || null;
-        userEmail = user?.email || null;
       } catch (error) {
         console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
@@ -216,7 +214,9 @@ export async function GET(request: NextRequest) {
           OR: [
             ...(internalUserId ? [{ toUserId: internalUserId }] : []),
             { toEmail: userId },
-            ...(userEmail ? [{ toEmail: userEmail }] : []),
+            ...(auth.user.verifiedEmail
+              ? [{ toEmail: auth.user.verifiedEmail }]
+              : []),
           ],
           status: 'pending',
         },
@@ -271,13 +271,11 @@ export async function GET(request: NextRequest) {
     if (userId) {
       // First, try to find the user by Auth0 sub to get their internal user ID
       let internalUserId: string | null = null;
-      let userEmail: string | null = null;
       try {
         const user = await prisma.user.findUnique({
           where: { auth0Sub: userId },
         });
         internalUserId = user?.id || null;
-        userEmail = user?.email || null;
       } catch (error) {
         console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
@@ -291,7 +289,9 @@ export async function GET(request: NextRequest) {
             ...(internalUserId ? [{ fromUserId: internalUserId }] : []),
             ...(internalUserId ? [{ toUserId: internalUserId }] : []),
             { toEmail: userId },
-            ...(userEmail ? [{ toEmail: userEmail }] : []),
+            ...(auth.user.verifiedEmail
+              ? [{ toEmail: auth.user.verifiedEmail }]
+              : []),
           ],
         },
         include: {

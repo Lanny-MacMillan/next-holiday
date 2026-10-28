@@ -20,9 +20,16 @@ function sign(
     aud?: string;
     exp?: string | number;
     key?: KeyLike;
+    emailVerified?: boolean;
   } = {},
 ) {
-  return new SignJWT({ email: 'a@b.com', name: 'A B' })
+  return new SignJWT({
+    email: 'a@b.com',
+    name: 'A B',
+    ...(overrides.emailVerified === undefined
+      ? {}
+      : { email_verified: overrides.emailVerified }),
+  })
     .setProtectedHeader({ alg: 'RS256' })
     .setSubject('google-oauth2|123')
     .setIssuer(overrides.iss ?? `https://${DOMAIN}/`)
@@ -46,6 +53,15 @@ describe('verifyIdToken', () => {
       email: 'a@b.com',
       name: 'A B',
     });
+  });
+
+  it.each([
+    [true, true],
+    [false, false],
+    [undefined, false],
+  ])('email_verified %s gives emailVerified %s', async (claim, expected) => {
+    const claims = await verifyIdToken(await sign({ emailVerified: claim }), opts());
+    expect(claims.emailVerified).toBe(expected);
   });
 
   it('accepts a domain given with a protocol and trailing slash', async () => {
