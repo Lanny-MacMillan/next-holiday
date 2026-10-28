@@ -4,7 +4,7 @@ A comprehensive, enterprise-grade holiday planning platform built with Next.js, 
 
 **Live site**: [https://www.next-holiday.com](https://www.next-holiday.com)
 
-## Overview 
+## Overview
 
 Next Holiday is a production-ready, full-stack holiday planning application that transforms the chaos of holiday preparation into an organized, collaborative experience. Built on a robust MySQL database with Prisma ORM, the platform features a sophisticated multi-tenant architecture, real-time Server-Sent Events (SSE) notifications, and comprehensive account and sharing system.
 
@@ -494,6 +494,7 @@ All API responses follow a consistent format:
 **Current state:** API routes identify the caller from a client-supplied `x-test-user` header (a JSON blob containing the Auth0 `sub`, email, and name), read in `src/lib/auth.ts` and sent by the frontend (`src/store/api.ts` and ~17 other files). The server does not verify it, so anyone who knows another user's Auth0 `sub` could impersonate them. Auth0 handles login in the browser, but the API does not validate a token.
 
 **Planned fix:**
+
 - Send the Auth0 access token as `Authorization: Bearer <token>` from the frontend
 - Verify the token server-side against the tenant's JWKS (e.g. with `jose`), checking issuer, audience, and expiry
 - Derive the user from the verified token's `sub` in `getCurrentUser()`, and stop reading `x-test-user` and the `testUser` query param
@@ -502,6 +503,7 @@ All API responses follow a consistent format:
 Do not simply remove the header check: the whole app currently depends on it.
 
 ### Other items
+
 - Prisma migration history is incomplete: `users.subscription_plan` and related columns, the `notifications` / `notification_preferences` tables, and unique constraints on `contacts(account_id, email)` and `holidays(account_id, holiday_type)` exist only in `schema.prisma`. A fresh `prisma migrate deploy` produces an out-of-date database (the live DB was brought in sync with `prisma db push`). Add a catch-up migration
 - `getCurrentUser()` in `src/lib/auth.ts` still auto-creates a missing user for any `test` / `google-oauth2` sub, racing `/api/users/setup`. It no longer grants the Plus plan (see PR #45), but existing rows created this way with `is_in_db = false` and `subscription_plan = 'plus'` need a one-time cleanup. Remove the auto-create as part of the auth rework above
 - Jest suites that render `.tsx` fail with `Unexpected token '<'` (transform config); 9 of 12 suites are affected

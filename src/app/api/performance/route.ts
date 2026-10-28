@@ -113,19 +113,19 @@ export async function POST(request: NextRequest) {
     if (!rateLimit.allowed) {
       console.warn(`Rate limit exceeded for IP: ${clientIP}`);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: 'Too many requests. Please try again later.',
-          retryAfter: 60 
+          retryAfter: 60,
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
             'X-RateLimit-Remaining': '0',
             'X-RateLimit-Reset': Math.ceil(Date.now() / 1000 + 60).toString(),
             'Retry-After': '60',
-          }
+          },
         },
       );
     }
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     // Validate API key to prevent unauthorized CloudWatch spam
     const apiKey = request.headers.get('x-api-key');
     const expectedKey = process.env.PERFORMANCE_API_KEY;
-    
+
     if (expectedKey && apiKey !== expectedKey) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
@@ -228,16 +228,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Performance data received',
-      sessionId: serverData.session.sessionId,
-    }, {
-      headers: {
-        'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
-        'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-      }
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Performance data received',
+        sessionId: serverData.session.sessionId,
+      },
+      {
+        headers: {
+          'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+        },
+      },
+    );
   } catch (error) {
     console.error('Error processing performance data:', error);
     return NextResponse.json(
