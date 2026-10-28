@@ -40,7 +40,7 @@ const initialState: InvitesState = {
 };
 
 // Async thunks
-export const fetchInvites = createAsyncThunk(
+const fetchInvites = createAsyncThunk(
   'invites/fetchInvites',
   async (_, { getState }) => {
     const state = getState() as any;
@@ -174,7 +174,7 @@ export const declineInvite = createAsyncThunk(
   },
 );
 
-export const dismissInvite = createAsyncThunk(
+const dismissInvite = createAsyncThunk(
   'invites/dismissInvite',
   async ({ inviteId, auth0User }: { inviteId: string; auth0User?: any }) => {
     const headers: Record<string, string> = {
@@ -348,8 +348,7 @@ const invitesSlice = createSlice({
   },
 });
 
-export const { clearError, addInvite, updateInviteInState, removeInvite } =
-  invitesSlice.actions;
+export const {} = invitesSlice.actions;
 export default invitesSlice.reducer;
 
 // Selectors
@@ -375,28 +374,4 @@ export const selectOutgoingInvites = createSelector(
   (state: any, userId: string) => userId,
   (invites, userId) =>
     invites.filter((invite: Invite) => invite.fromUserId === userId),
-);
-
-export const selectInviteById = createSelector(
-  (state: any) => state.invites.invites,
-  (state: any, inviteId: string) => inviteId,
-  (invites, inviteId) => invites.find((invite: Invite) => invite.id === inviteId),
-);
-
-export const selectInvitesByShareId = createSelector(
-  (state: any) => state.invites.invites,
-  (state: any, shareId: string) => shareId,
-  (invites, shareId) =>
-    invites.filter((invite: Invite) => invite.shareId === shareId),
-);
-
-export const selectPendingInvitesCount = createSelector(
-  (state: any) => state.invites.invites,
-  (state: any, userId: string) => userId,
-  (invites, userId) =>
-    invites.filter(
-      (invite: Invite) =>
-        (invite.toUserId === userId || invite.toEmail === userId) &&
-        invite.status === 'pending',
-    ).length,
 );

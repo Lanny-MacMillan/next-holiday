@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface ThanksgivingTask {
+interface ThanksgivingTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: ThanksgivingTasksState = {
 };
 
 // Async thunks
-export const fetchThanksgivingTasks = createAsyncThunk(
+const fetchThanksgivingTasks = createAsyncThunk(
   'thanksgivingTasks/fetchThanksgivingTasks',
   async (_, { getState }) => {
     const state = getState() as any;
@@ -103,7 +103,7 @@ export const fetchThanksgivingTasks = createAsyncThunk(
   },
 );
 
-export const addThanksgivingTask = createAsyncThunk(
+const addThanksgivingTask = createAsyncThunk(
   'thanksgivingTasks/addThanksgivingTask',
   async (task: Omit<ThanksgivingTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     const response = await new Promise<ThanksgivingTask>(resolve => {
@@ -122,7 +122,7 @@ export const addThanksgivingTask = createAsyncThunk(
   },
 );
 
-export const updateThanksgivingTask = createAsyncThunk(
+const updateThanksgivingTask = createAsyncThunk(
   'thanksgivingTasks/updateThanksgivingTask',
   async (task: ThanksgivingTask) => {
     const response = await new Promise<ThanksgivingTask>(resolve => {
@@ -139,7 +139,7 @@ export const updateThanksgivingTask = createAsyncThunk(
   },
 );
 
-export const deleteThanksgivingTask = createAsyncThunk(
+const deleteThanksgivingTask = createAsyncThunk(
   'thanksgivingTasks/deleteThanksgivingTask',
   async (taskId: string) => {
     await new Promise<void>(resolve => {
@@ -152,7 +152,7 @@ export const deleteThanksgivingTask = createAsyncThunk(
   },
 );
 
-export const toggleThanksgivingTaskCompletion = createAsyncThunk(
+const toggleThanksgivingTaskCompletion = createAsyncThunk(
   'thanksgivingTasks/toggleThanksgivingTaskCompletion',
   async (taskId: string) => {
     await new Promise<void>(resolve => {
@@ -252,5 +252,4 @@ const thanksgivingTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = thanksgivingTasksSlice.actions;
 export default thanksgivingTasksSlice.reducer;

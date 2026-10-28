@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface Budget {
+interface Budget {
   holidayId: string;
   targetAmount: number | null;
   spentAmount?: number;
@@ -22,7 +22,7 @@ const initialState: BudgetsState = {
 };
 
 // Async thunks
-export const fetchBudgets = createAsyncThunk(
+const fetchBudgets = createAsyncThunk(
   'budgets/fetchBudgets',
   async (request: { holidayIds: string[]; auth0User?: any }) => {
     const { holidayIds, auth0User } = request;
@@ -60,7 +60,7 @@ export const fetchBudgets = createAsyncThunk(
   },
 );
 
-export const updateBudget = createAsyncThunk(
+const updateBudget = createAsyncThunk(
   'budgets/updateBudget',
   async (request: { holidayId: string; targetAmount: number; auth0User?: any }) => {
     const { holidayId, targetAmount, auth0User } = request;
@@ -155,15 +155,6 @@ export const selectBudgetByHolidayId = (
   holidayId: string,
 ) => state.budgets.entities[holidayId] ?? null;
 
-export const selectBudgetByHolidaySlug = (
-  state: { budgets: BudgetsState; holidays: any },
-  slug: string,
-) => {
-  // This will need to be updated when we have a holidays slice
-  // For now, we'll need to pass holidayId directly
-  return null;
-};
-
 export const selectAllBudgets = (state: { budgets: BudgetsState }) =>
   Object.values(state.budgets.entities);
 
@@ -176,5 +167,5 @@ export const selectBudgetsError = (state: { budgets: BudgetsState }) =>
 export const selectBudgetsInitialized = (state: { budgets: BudgetsState }) =>
   state.budgets.initialized;
 
-export const { setMany, setOne, removeOne, clearError } = budgetsSlice.actions;
+export const { setMany, setOne, removeOne } = budgetsSlice.actions;
 export default budgetsSlice.reducer;

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface GraduationCard {
+interface GraduationCard {
   id: string;
   recipient: string;
   address?: string;
@@ -31,7 +31,7 @@ const initialState: GraduationCardsState = {
 };
 
 // Async thunks
-export const fetchGraduationCards = createAsyncThunk(
+const fetchGraduationCards = createAsyncThunk(
   'graduationCards/fetchGraduationCards',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -67,7 +67,7 @@ export const fetchGraduationCards = createAsyncThunk(
   },
 );
 
-export const addGraduationCard = createAsyncThunk(
+const addGraduationCard = createAsyncThunk(
   'graduationCards/addGraduationCard',
   async (card: Omit<GraduationCard, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -83,7 +83,7 @@ export const addGraduationCard = createAsyncThunk(
   },
 );
 
-export const updateGraduationCard = createAsyncThunk(
+const updateGraduationCard = createAsyncThunk(
   'graduationCards/updateGraduationCard',
   async (card: GraduationCard) => {
     // Simulate API call
@@ -97,7 +97,7 @@ export const updateGraduationCard = createAsyncThunk(
   },
 );
 
-export const deleteGraduationCard = createAsyncThunk(
+const deleteGraduationCard = createAsyncThunk(
   'graduationCards/deleteGraduationCard',
   async (cardId: string) => {
     // Simulate API call
@@ -174,5 +174,4 @@ const graduationCardsSlice = createSlice({
   },
 });
 
-export const { setSelectedCard, clearError } = graduationCardsSlice.actions;
 export default graduationCardsSlice.reducer;

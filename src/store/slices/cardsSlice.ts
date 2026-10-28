@@ -63,7 +63,7 @@ export const fetchCards = createAsyncThunk(
   },
 );
 
-export const addCard = createAsyncThunk(
+const addCard = createAsyncThunk(
   'cards/addCard',
   async (card: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -79,30 +79,24 @@ export const addCard = createAsyncThunk(
   },
 );
 
-export const updateCard = createAsyncThunk(
-  'cards/updateCard',
-  async (card: Card) => {
-    // Simulate API call
-    const updatedCard: Card = {
-      ...card,
-      updatedAt: new Date().toISOString(),
-    };
+const updateCard = createAsyncThunk('cards/updateCard', async (card: Card) => {
+  // Simulate API call
+  const updatedCard: Card = {
+    ...card,
+    updatedAt: new Date().toISOString(),
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return updatedCard;
-  },
-);
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return updatedCard;
+});
 
-export const deleteCard = createAsyncThunk(
-  'cards/deleteCard',
-  async (cardId: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return cardId;
-  },
-);
+const deleteCard = createAsyncThunk('cards/deleteCard', async (cardId: string) => {
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return cardId;
+});
 
-export const toggleCardCompletion = createAsyncThunk(
+const toggleCardCompletion = createAsyncThunk(
   'cards/toggleCardCompletion',
   async (cardId: string) => {
     // Simulate API call
@@ -204,30 +198,4 @@ const cardsSlice = createSlice({
   },
 });
 
-export const { setSelectedCard, clearError } = cardsSlice.actions;
 export default cardsSlice.reducer;
-
-// Selectors for shared cards
-export const selectCardsByHolidayAndShare = (
-  state: any,
-  holidayKey: string,
-  shareId?: string,
-) => {
-  const cards = state.cards.cards;
-
-  // If shareId is provided, return cards with that shareId
-  if (shareId) {
-    return cards.filter((card: Card) => card.shareId === shareId);
-  }
-
-  // If no shareId, return cards without shareId (private cards)
-  return cards.filter((card: Card) => !card.shareId);
-};
-
-export const selectCardsForHoliday = (
-  state: any,
-  holidayKey: string,
-  shareId?: string,
-) => {
-  return selectCardsByHolidayAndShare(state, holidayKey, shareId);
-};

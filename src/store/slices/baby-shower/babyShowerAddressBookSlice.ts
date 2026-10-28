@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface BabyShowerContact {
+interface BabyShowerContact {
   id: string;
   name: string;
   email?: string;
@@ -29,7 +29,7 @@ const initialState: BabyShowerAddressBookState = {
 };
 
 // Async thunks
-export const fetchBabyShowerContacts = createAsyncThunk(
+const fetchBabyShowerContacts = createAsyncThunk(
   'babyShowerAddressBook/fetchBabyShowerContacts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -63,7 +63,7 @@ export const fetchBabyShowerContacts = createAsyncThunk(
   },
 );
 
-export const addBabyShowerContact = createAsyncThunk(
+const addBabyShowerContact = createAsyncThunk(
   'babyShowerAddressBook/addBabyShowerContact',
   async (contact: Omit<BabyShowerContact, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -79,7 +79,7 @@ export const addBabyShowerContact = createAsyncThunk(
   },
 );
 
-export const updateBabyShowerContact = createAsyncThunk(
+const updateBabyShowerContact = createAsyncThunk(
   'babyShowerAddressBook/updateBabyShowerContact',
   async (contact: BabyShowerContact) => {
     // Simulate API call
@@ -93,7 +93,7 @@ export const updateBabyShowerContact = createAsyncThunk(
   },
 );
 
-export const deleteBabyShowerContact = createAsyncThunk(
+const deleteBabyShowerContact = createAsyncThunk(
   'babyShowerAddressBook/deleteBabyShowerContact',
   async (contactId: string) => {
     // Simulate API call
@@ -174,5 +174,4 @@ const babyShowerAddressBookSlice = createSlice({
   },
 });
 
-export const { setSelectedContact, clearError } = babyShowerAddressBookSlice.actions;
 export default babyShowerAddressBookSlice.reducer;

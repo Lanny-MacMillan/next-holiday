@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface FathersDayCard {
+interface FathersDayCard {
   id: string;
   recipient: string;
   message: string;
@@ -30,7 +30,7 @@ const initialState: FathersDayCardsState = {
 };
 
 // Async thunks
-export const fetchFathersDayCards = createAsyncThunk(
+const fetchFathersDayCards = createAsyncThunk(
   'fathersDayCards/fetchFathersDayCards',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -65,7 +65,7 @@ export const fetchFathersDayCards = createAsyncThunk(
   },
 );
 
-export const addFathersDayCard = createAsyncThunk(
+const addFathersDayCard = createAsyncThunk(
   'fathersDayCards/addFathersDayCard',
   async (card: Omit<FathersDayCard, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -81,7 +81,7 @@ export const addFathersDayCard = createAsyncThunk(
   },
 );
 
-export const updateFathersDayCard = createAsyncThunk(
+const updateFathersDayCard = createAsyncThunk(
   'fathersDayCards/updateFathersDayCard',
   async (card: FathersDayCard) => {
     // Simulate API call
@@ -95,7 +95,7 @@ export const updateFathersDayCard = createAsyncThunk(
   },
 );
 
-export const deleteFathersDayCard = createAsyncThunk(
+const deleteFathersDayCard = createAsyncThunk(
   'fathersDayCards/deleteFathersDayCard',
   async (cardId: string) => {
     // Simulate API call
@@ -172,5 +172,4 @@ const fathersDayCardsSlice = createSlice({
   },
 });
 
-export const { setSelectedCard, clearError } = fathersDayCardsSlice.actions;
 export default fathersDayCardsSlice.reducer;

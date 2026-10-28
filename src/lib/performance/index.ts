@@ -13,19 +13,6 @@
 import { PerformanceMonitor } from './PerformanceMonitor';
 
 // Export types
-export type {
-  PerformanceMetric,
-  WebVitalsMetric,
-  DeviceInfo,
-  EngagementMetrics,
-  ErrorInfo,
-  ResourceInfo,
-  BusinessMetrics,
-  LocationInfo,
-  ConnectionInfo,
-  SessionSummary,
-} from './types';
-
 // Export the main class
 export { PerformanceMonitor };
 
@@ -55,21 +42,4 @@ if (typeof window !== 'undefined') {
   setTimeout(() => {
     initPerformanceMonitor();
   }, 100);
-}
-
-// Utility functions for easy use
-export function measureAsync<T>(name: string, fn: () => Promise<T>): Promise<T> {
-  const monitor = getPerformanceMonitor();
-  if (monitor) {
-    return monitor.measureCustom(name, fn) as Promise<T>;
-  }
-  return fn();
-}
-
-export function measureSync<T>(name: string, fn: () => T): T {
-  const monitor = getPerformanceMonitor();
-  if (monitor) {
-    return monitor.measureCustom(name, fn) as T;
-  }
-  return fn();
 }

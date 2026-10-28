@@ -35,24 +35,5 @@ export function sendNotificationToUser(userId: string, notification: any) {
   return successCount > 0;
 }
 
-// Utility function to get connection count (for debugging)
-export function getConnectionStats() {
-  const stats = {
-    totalUsers: connections.size,
-    totalConnections: Array.from(connections.values()).reduce(
-      (sum, conns) => sum + conns.size,
-      0,
-    ),
-    userConnections: Object.fromEntries(
-      Array.from(connections.entries()).map(([userId, conns]) => [
-        userId,
-        conns.size,
-      ]),
-    ),
-  };
-
-  return stats;
-}
-
 // Export connections map for use in route handler
 export { connections };

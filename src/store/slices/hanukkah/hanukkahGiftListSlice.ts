@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface HanukkahGift {
+interface HanukkahGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: HanukkahGiftListState = {
 };
 
 // Async thunks
-export const fetchHanukkahGifts = createAsyncThunk(
+const fetchHanukkahGifts = createAsyncThunk(
   'hanukkahGiftList/fetchHanukkahGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -68,7 +68,7 @@ export const fetchHanukkahGifts = createAsyncThunk(
   },
 );
 
-export const addHanukkahGift = createAsyncThunk(
+const addHanukkahGift = createAsyncThunk(
   'hanukkahGiftList/addHanukkahGift',
   async (gift: Omit<HanukkahGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -84,7 +84,7 @@ export const addHanukkahGift = createAsyncThunk(
   },
 );
 
-export const updateHanukkahGift = createAsyncThunk(
+const updateHanukkahGift = createAsyncThunk(
   'hanukkahGiftList/updateHanukkahGift',
   async (gift: HanukkahGift) => {
     // Simulate API call
@@ -98,7 +98,7 @@ export const updateHanukkahGift = createAsyncThunk(
   },
 );
 
-export const deleteHanukkahGift = createAsyncThunk(
+const deleteHanukkahGift = createAsyncThunk(
   'hanukkahGiftList/deleteHanukkahGift',
   async (giftId: string) => {
     // Simulate API call
@@ -107,7 +107,7 @@ export const deleteHanukkahGift = createAsyncThunk(
   },
 );
 
-export const toggleHanukkahGiftCompletion = createAsyncThunk(
+const toggleHanukkahGiftCompletion = createAsyncThunk(
   'hanukkahGiftList/toggleHanukkahGiftCompletion',
   async (giftId: string) => {
     // Simulate API call
@@ -210,6 +210,5 @@ const hanukkahGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedHanukkahGift, clearHanukkahError } =
-  hanukkahGiftListSlice.actions;
+export const {} = hanukkahGiftListSlice.actions;
 export default hanukkahGiftListSlice.reducer;

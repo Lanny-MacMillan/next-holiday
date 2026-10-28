@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface HalloweenTask {
+interface HalloweenTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: HalloweenTasksState = {
 };
 
 // Async thunks
-export const fetchHalloweenTasks = createAsyncThunk(
+const fetchHalloweenTasks = createAsyncThunk(
   'halloweenTasks/fetchHalloweenTasks',
   async (_, { getState }) => {
     const state = getState() as any;
@@ -83,7 +83,7 @@ export const fetchHalloweenTasks = createAsyncThunk(
   },
 );
 
-export const addHalloweenTask = createAsyncThunk(
+const addHalloweenTask = createAsyncThunk(
   'halloweenTasks/addHalloweenTask',
   async (task: Omit<HalloweenTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     const response = await new Promise<HalloweenTask>(resolve => {
@@ -102,7 +102,7 @@ export const addHalloweenTask = createAsyncThunk(
   },
 );
 
-export const updateHalloweenTask = createAsyncThunk(
+const updateHalloweenTask = createAsyncThunk(
   'halloweenTasks/updateHalloweenTask',
   async (task: HalloweenTask) => {
     const response = await new Promise<HalloweenTask>(resolve => {
@@ -119,7 +119,7 @@ export const updateHalloweenTask = createAsyncThunk(
   },
 );
 
-export const deleteHalloweenTask = createAsyncThunk(
+const deleteHalloweenTask = createAsyncThunk(
   'halloweenTasks/deleteHalloweenTask',
   async (taskId: string) => {
     await new Promise<void>(resolve => {
@@ -132,7 +132,7 @@ export const deleteHalloweenTask = createAsyncThunk(
   },
 );
 
-export const toggleHalloweenTaskCompletion = createAsyncThunk(
+const toggleHalloweenTaskCompletion = createAsyncThunk(
   'halloweenTasks/toggleHalloweenTaskCompletion',
   async (taskId: string) => {
     await new Promise<void>(resolve => {
@@ -232,5 +232,4 @@ const halloweenTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = halloweenTasksSlice.actions;
 export default halloweenTasksSlice.reducer;

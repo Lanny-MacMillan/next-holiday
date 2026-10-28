@@ -255,6 +255,5 @@ const addressBookSlice = createSlice({
   },
 });
 
-export const { setSelectedContact, clearError, resetContacts } =
-  addressBookSlice.actions;
+export const { resetContacts } = addressBookSlice.actions;
 export default addressBookSlice.reducer;

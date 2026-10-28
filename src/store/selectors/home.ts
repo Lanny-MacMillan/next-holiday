@@ -13,10 +13,6 @@ export const selectHomeData = (state: RootState): HomeData | null => state.home.
 export const selectHomeInitialized = (state: RootState): boolean =>
   state.home.initialized;
 
-export const selectHomeLoading = (state: RootState): boolean => state.home.loading;
-
-export const selectHomeError = (state: RootState): string | null => state.home.error;
-
 // Holiday-specific selectors (memoized)
 export const selectHolidayPreferences = createSelector(
   [selectHomeData],
@@ -39,11 +35,6 @@ export const selectHolidayBudgetById = createSelector(
   holidayPref => holidayPref?.budget,
 );
 
-export const selectHolidayCountdownById = createSelector(
-  [selectHolidayPrefById],
-  holidayPref => holidayPref?.countdownTimer,
-);
-
 // Contact selectors (memoized)
 export const selectContacts = createSelector(
   [selectHomeData],
@@ -53,28 +44,6 @@ export const selectContacts = createSelector(
 export const selectContactById = createSelector(
   [selectContacts, (_: RootState, contactId: string) => contactId],
   (contacts, contactId) => contacts.find(c => c.id === contactId) || null,
-);
-
-// User and account selectors (memoized)
-export const selectUser = createSelector(
-  [selectHomeData],
-  homeData => homeData?.user || null,
-);
-
-export const selectAccount = createSelector(
-  [selectHomeData],
-  homeData => homeData?.account || null,
-);
-
-// Setup state selectors (memoized)
-export const selectNeedsUserSetup = createSelector(
-  [selectHomeData],
-  homeData => homeData?.needsUserSetup || false,
-);
-
-export const selectNeedsHolidaySelection = createSelector(
-  [selectHomeData],
-  homeData => homeData?.needsHolidaySelection || false,
 );
 
 // Utility selectors for common patterns (memoized)

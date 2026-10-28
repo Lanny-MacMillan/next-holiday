@@ -172,6 +172,5 @@ const userPreferencesSlice = createSlice({
   },
 });
 
-export const { setPreferences, clearPreferences, clearError } =
-  userPreferencesSlice.actions;
+export const { clearPreferences } = userPreferencesSlice.actions;
 export default userPreferencesSlice.reducer;

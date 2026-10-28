@@ -3,7 +3,7 @@
  * Creates completely unpredictable, chaotic animations for each shape instance
  */
 
-export interface RandomAnimationConfig {
+interface RandomAnimationConfig {
   duration: number;
   delay: number;
   timingFunction: string;
@@ -86,7 +86,7 @@ function generateRandomKeyframes(animationName: string, baseScale: number): stri
 /**
  * Generate a random animation configuration with original-like timing
  */
-export function generateRandomAnimation(
+function generateRandomAnimation(
   instanceId: string,
   baseScale: number = 1,
 ): RandomAnimationConfig {
@@ -124,7 +124,7 @@ export function generateRandomAnimation(
 /**
  * Inject random keyframes into the document's stylesheet
  */
-export function injectRandomKeyframes(keyframes: string): void {
+function injectRandomKeyframes(keyframes: string): void {
   // Find or create a style element for random animations
   let styleElement = document.getElementById(
     'random-animations-style',

@@ -5,39 +5,6 @@ export interface CountdownTimerRequest {
   countdownTimer: string | null; // ISO datetime string or null
 }
 
-export interface CountdownTimerResponse {
-  holiday: {
-    id: string;
-    accountId: string;
-    holidayType: string;
-    name: string;
-    description?: string;
-    startDate: string;
-    endDate?: string;
-    countdownTimer?: string;
-    colorLight: string;
-    colorDark: string;
-    isCustom: boolean;
-    createdBy: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-  budget?: {
-    id: string;
-    holidayId: string;
-    name: string;
-    totalBudget: number;
-    spentAmount: number;
-    remainingAmount: number;
-    currency: string;
-    startDate: string;
-    endDate: string;
-    createdBy: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
-
 interface CountdownTimerState {
   loading: boolean;
   error: string | null;
@@ -160,5 +127,4 @@ const countdownTimerSlice = createSlice({
   },
 });
 
-export const { clearError } = countdownTimerSlice.actions;
 export default countdownTimerSlice.reducer;

@@ -212,8 +212,7 @@ const userSlice = createSlice({
   },
 });
 
-export const { setUser, clearUser, clearError, updateSubscription } =
-  userSlice.actions;
+export const { setUser, clearUser, updateSubscription } = userSlice.actions;
 
 // Selectors
 export const selectUser = (state: { user: UserState }) => state.user.user;
@@ -240,7 +239,6 @@ export const selectUserSubscriptionData = createSelector(
 );
 
 export const selectUserLoading = (state: { user: UserState }) => state.user.loading;
-export const selectUserError = (state: { user: UserState }) => state.user.error;
 export const selectUserInitialized = (state: { user: UserState }) =>
   state.user.initialized;
 

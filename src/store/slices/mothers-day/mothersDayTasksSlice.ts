@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface MothersDayTask {
+interface MothersDayTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: MothersDayTasksState = {
 };
 
 // Async thunks
-export const fetchMothersDayTasks = createAsyncThunk(
+const fetchMothersDayTasks = createAsyncThunk(
   'mothersDayTasks/fetchMothersDayTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -67,7 +67,7 @@ export const fetchMothersDayTasks = createAsyncThunk(
   },
 );
 
-export const addMothersDayTask = createAsyncThunk(
+const addMothersDayTask = createAsyncThunk(
   'mothersDayTasks/addMothersDayTask',
   async (task: Omit<MothersDayTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -83,7 +83,7 @@ export const addMothersDayTask = createAsyncThunk(
   },
 );
 
-export const updateMothersDayTask = createAsyncThunk(
+const updateMothersDayTask = createAsyncThunk(
   'mothersDayTasks/updateMothersDayTask',
   async (task: MothersDayTask) => {
     // Simulate API call
@@ -97,7 +97,7 @@ export const updateMothersDayTask = createAsyncThunk(
   },
 );
 
-export const deleteMothersDayTask = createAsyncThunk(
+const deleteMothersDayTask = createAsyncThunk(
   'mothersDayTasks/deleteMothersDayTask',
   async (taskId: string) => {
     // Simulate API call
@@ -106,7 +106,7 @@ export const deleteMothersDayTask = createAsyncThunk(
   },
 );
 
-export const toggleMothersDayTaskCompletion = createAsyncThunk(
+const toggleMothersDayTaskCompletion = createAsyncThunk(
   'mothersDayTasks/toggleMothersDayTaskCompletion',
   async (taskId: string) => {
     // Simulate API call
@@ -202,5 +202,4 @@ const mothersDayTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedTask, clearError } = mothersDayTasksSlice.actions;
 export default mothersDayTasksSlice.reducer;

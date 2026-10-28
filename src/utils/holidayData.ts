@@ -89,31 +89,3 @@ export function getBudgetFromRedux(
   const holidayData = getHolidayDataFromRedux(holidayId, state);
   return holidayData?.budget;
 }
-
-/**
- * Creates a skip condition for RTK Query hooks that handles cold entry scenarios
- * This should be used when you need to fetch data even if home data is not initialized
- * @param holidayId - The holiday ID to check
- * @param auth0User - The authenticated user
- * @param state - The Redux store state
- * @param allowColdEntry - Whether to allow fetching when home data is not initialized
- * @returns true if the query should be skipped
- */
-export function shouldSkipHolidayQueryWithColdEntry(
-  holidayId: string | null | undefined,
-  auth0User: any,
-  state: RootState,
-  allowColdEntry: boolean = false,
-): boolean {
-  // Skip if no auth
-  if (!auth0User) return true;
-
-  // Skip if no holidayId
-  if (!holidayId) return true;
-
-  // If cold entry is allowed and home is not initialized, don't skip
-  if (allowColdEntry && !state.home.initialized) return false;
-
-  // Otherwise use the normal logic
-  return !shouldFetchHolidayData(holidayId, state);
-}

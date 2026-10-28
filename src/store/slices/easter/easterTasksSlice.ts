@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface EasterTask {
+interface EasterTask {
   id: string;
   title: string;
   description?: string;
@@ -31,7 +31,7 @@ const initialState: EasterTasksState = {
 };
 
 // Async thunks
-export const fetchEasterTasks = createAsyncThunk(
+const fetchEasterTasks = createAsyncThunk(
   'easterTasks/fetchEasterTasks',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -91,7 +91,7 @@ export const fetchEasterTasks = createAsyncThunk(
   },
 );
 
-export const addEasterTask = createAsyncThunk(
+const addEasterTask = createAsyncThunk(
   'easterTasks/addEasterTask',
   async (task: Omit<EasterTask, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -107,7 +107,7 @@ export const addEasterTask = createAsyncThunk(
   },
 );
 
-export const updateEasterTask = createAsyncThunk(
+const updateEasterTask = createAsyncThunk(
   'easterTasks/updateEasterTask',
   async (task: EasterTask) => {
     // Simulate API call
@@ -121,7 +121,7 @@ export const updateEasterTask = createAsyncThunk(
   },
 );
 
-export const deleteEasterTask = createAsyncThunk(
+const deleteEasterTask = createAsyncThunk(
   'easterTasks/deleteEasterTask',
   async (taskId: string) => {
     // Simulate API call
@@ -130,7 +130,7 @@ export const deleteEasterTask = createAsyncThunk(
   },
 );
 
-export const toggleEasterTaskCompletion = createAsyncThunk(
+const toggleEasterTaskCompletion = createAsyncThunk(
   'easterTasks/toggleEasterTaskCompletion',
   async (taskId: string) => {
     // Simulate API call
@@ -233,6 +233,5 @@ const easterTasksSlice = createSlice({
   },
 });
 
-export const { setSelectedEasterTask, clearEasterTaskError } =
-  easterTasksSlice.actions;
+export const {} = easterTasksSlice.actions;
 export default easterTasksSlice.reducer;

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
-export interface AnniversaryGift {
+interface AnniversaryGift {
   id: string;
   name: string;
   description?: string;
@@ -32,7 +32,7 @@ const initialState: AnniversaryGiftListState = {
 };
 
 // Async thunks
-export const fetchAnniversaryGifts = createAsyncThunk(
+const fetchAnniversaryGifts = createAsyncThunk(
   'anniversaryGiftList/fetchAnniversaryGifts',
   async (_, { getState }) => {
     // Get current state to check if we already have data
@@ -68,7 +68,7 @@ export const fetchAnniversaryGifts = createAsyncThunk(
   },
 );
 
-export const addAnniversaryGift = createAsyncThunk(
+const addAnniversaryGift = createAsyncThunk(
   'anniversaryGiftList/addAnniversaryGift',
   async (gift: Omit<AnniversaryGift, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Simulate API call
@@ -84,7 +84,7 @@ export const addAnniversaryGift = createAsyncThunk(
   },
 );
 
-export const updateAnniversaryGift = createAsyncThunk(
+const updateAnniversaryGift = createAsyncThunk(
   'anniversaryGiftList/updateAnniversaryGift',
   async (gift: AnniversaryGift) => {
     // Simulate API call
@@ -98,7 +98,7 @@ export const updateAnniversaryGift = createAsyncThunk(
   },
 );
 
-export const deleteAnniversaryGift = createAsyncThunk(
+const deleteAnniversaryGift = createAsyncThunk(
   'anniversaryGiftList/deleteAnniversaryGift',
   async (giftId: string) => {
     // Simulate API call
@@ -107,7 +107,7 @@ export const deleteAnniversaryGift = createAsyncThunk(
   },
 );
 
-export const toggleAnniversaryGiftCompletion = createAsyncThunk(
+const toggleAnniversaryGiftCompletion = createAsyncThunk(
   'anniversaryGiftList/toggleAnniversaryGiftCompletion',
   async (giftId: string, { getState }) => {
     // Simulate API call
@@ -218,5 +218,4 @@ const anniversaryGiftListSlice = createSlice({
   },
 });
 
-export const { setSelectedGift, clearError } = anniversaryGiftListSlice.actions;
 export default anniversaryGiftListSlice.reducer;

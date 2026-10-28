@@ -1,6 +1,6 @@
 import { FormField, FormConfig } from '../types/form';
 
-export const ASSIGNTO_FIELD: FormField = {
+const ASSIGNTO_FIELD: FormField = {
   id: 'assigned_to', // Changed from 'assignedTo' to match API
   type: 'select',
   placeholder: 'Assign to',
