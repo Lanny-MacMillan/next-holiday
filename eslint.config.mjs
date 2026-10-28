@@ -9,6 +9,19 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
+const dataLoadingRules = [
+  {
+    selector:
+      "CallExpression[callee.name='useEffect'] CallExpression[callee.name='fetch']",
+    message:
+      'Load data with RTK Query or a store thunk, not fetch inside useEffect.',
+  },
+  {
+    selector: "CallExpression[callee.object.name='axios']",
+    message: 'Use RTK Query or a store thunk instead of axios.',
+  },
+];
+
 const eslintConfig = [
   { ignores: ['src/generated/**', '.next/**', 'coverage/**', 'node_modules/**'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
@@ -31,17 +44,7 @@ const eslintConfig = [
     ],
     ignores: ['src/app/api/**'],
     rules: {
-      'no-restricted-syntax': [
-        'warn',
-        {
-          selector: "CallExpression[callee.name='fetch']",
-          message: 'Use RTK Query or a store thunk instead of calling fetch here.',
-        },
-        {
-          selector: "CallExpression[callee.object.name='axios']",
-          message: 'Use RTK Query or a store thunk instead of axios.',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...dataLoadingRules],
       'no-restricted-properties': [
         'error',
         {
@@ -51,6 +54,17 @@ const eslintConfig = [
         },
       ],
     },
+  },
+  {
+    // Existing loads that fetch inside useEffect. Move each to RTK Query or a
+    // store thunk, then remove it from this list.
+    files: [
+      'src/app/settings/page.tsx',
+      'src/components/HomePageWrapper.tsx',
+      'src/components/UserSetupHandler.tsx',
+      'src/hooks/useFormModalMutation.ts',
+    ],
+    rules: { 'no-restricted-syntax': ['warn', ...dataLoadingRules] },
   },
   {
     files: [
