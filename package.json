@@ -48,7 +48,10 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/jest": "^29.5.12",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -60,6 +63,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.8.1",
     "ts-jest": "^29.1.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "whatwg-fetch": "^3.6.20"
   }
 }

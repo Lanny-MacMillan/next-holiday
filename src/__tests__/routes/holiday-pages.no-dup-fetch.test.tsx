@@ -1,12 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import { api } from '@/store/api';
-import homeReducer from '@/store/slices/homeSlice';
+import { store } from '@/store';
 import ChristmasPage from '@/app/christmas/page';
 
-// Mock Auth0
 jest.mock('@auth0/auth0-react', () => ({
   useAuth0: () => ({
     user: { sub: 'test-user-123', email: 'test@example.com' },
@@ -15,42 +12,16 @@ jest.mock('@auth0/auth0-react', () => ({
   }),
 }));
 
-// Mock RTK Query hooks
-const mockUseGetGiftsQuery = jest.fn();
-const mockUseGetCardsQuery = jest.fn();
-const mockUseGetTasksQuery = jest.fn();
+const mockFetch = jest.fn();
 
-jest.mock('@/store/api', () => ({
-  ...jest.requireActual('@/store/api'),
-  useGetGiftsQuery: (params: any, options: any) =>
-    mockUseGetGiftsQuery(params, options),
-  useGetCardsQuery: (params: any, options: any) =>
-    mockUseGetCardsQuery(params, options),
-  useGetTasksQuery: (params: any, options: any) =>
-    mockUseGetTasksQuery(params, options),
-}));
-
-describe('Holiday Pages - No Duplicate Fetch', () => {
-  let store: ReturnType<typeof configureStore>;
-
+describe('Holiday pages - no duplicate fetch', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    store = configureStore({
-      reducer: {
-        [api.reducerPath]: api.reducer,
-        home: homeReducer,
-      },
-      middleware: getDefaultMiddleware =>
-        getDefaultMiddleware().concat(api.middleware),
-    });
-
-    mockUseGetGiftsQuery.mockReturnValue({ data: [], isLoading: false });
-    mockUseGetCardsQuery.mockReturnValue({ data: [], isLoading: false });
-    mockUseGetTasksQuery.mockReturnValue({ data: [], isLoading: false });
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+    global.fetch = mockFetch as unknown as typeof fetch;
   });
 
-  it('should NOT make RTK Query calls when home data is available', async () => {
-    // Seed Redux with home data
+  it('renders from home data already in Redux without re-fetching its data', async () => {
     store.dispatch({
       type: 'home/setHomeData',
       payload: {
@@ -72,16 +43,11 @@ describe('Holiday Pages - No Duplicate Fetch', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Christmas')).toBeTruthy();
+      expect(screen.getAllByText('Christmas').length).toBeGreaterThan(0);
     });
 
-    // Verify RTK Query hooks were called with skip: true
-    expect(mockUseGetGiftsQuery).toHaveBeenCalledWith(
-      {
-        holidayId: 'christmas-123',
-        auth0User: { sub: 'test-user-123', email: 'test@example.com' },
-      },
-      { skip: true },
-    );
+    // Only the user-id lookup is expected.
+    const urls = mockFetch.mock.calls.map(c => String(c[0]));
+    expect(urls.filter(u => !u.startsWith('/api/users/by-auth0-sub'))).toEqual([]);
   });
 });
