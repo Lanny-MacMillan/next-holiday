@@ -7,6 +7,8 @@ const customJestConfig = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.stories.{ts,tsx}',
+    '!src/generated/**',
+    '!src/**/__tests__/**',
   ],
   // Mock Next.js modules that cause issues in tests
   moduleNameMapper: {
