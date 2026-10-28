@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.next-holiday.com'),
   title: 'Next Holiday',
   description: 'Plan your holidays with ease',
+  authors: [{ name: 'Lanny MacMillan' }],
+  other: {
+    'article:author': 'Lanny MacMillan',
+    'article:published_time': '2026-10-28T00:00:00Z',
+  },
   openGraph: {
     title: 'Next Holiday',
     description: 'Plan your holidays with ease',
