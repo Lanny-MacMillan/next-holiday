@@ -23,6 +23,7 @@ CI runs four parallel jobs on every PR: `lint`, `typecheck`, `test` and `build`.
 - A user id from a request body, query string or header is never trusted. Use `authenticate()` from `src/lib/routeAuth.ts` and act as the verified user.
 - Every route that touches a resource must check the caller owns it or belongs to it (`assertHolidayAccess`, `isShareParticipant`, `src/lib/rbac.ts`). Look records up scoped to the authorised parent, not by id alone.
 - New API routes need tests covering the unauthenticated and wrong-user cases.
+- Files named `route.ts` may only export HTTP handlers (and Next route config). Exporting anything else breaks `next build`, which `typecheck` does not catch; keep shared constants in `src/lib`.
 
 ## Tests
 

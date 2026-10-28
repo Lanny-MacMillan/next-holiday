@@ -7,6 +7,7 @@ import { acceptInvite, declineInvite } from '@/store/slices/invitesSlice';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { selectHolidayPreferences } from '@/store/selectors/home';
 import { addShare, refreshShares } from '@/store/slices/sharesSlice';
+import { fetchSseTicket } from '@/lib/sseTicket';
 
 // Simple SVG icons to avoid external dependencies
 const BellIcon = ({
@@ -237,14 +238,18 @@ export default function NotificationCenter({
     // Try SSE first
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
+    let cancelled = false;
 
-    const connectSSE = () => {
+    const connectSSE = async () => {
       try {
         // Connect to external SSE service instead of internal API
         const sseServiceUrl =
           process.env.NEXT_PUBLIC_SSE_SERVICE_URL || 'http://localhost:4000';
         const sseUrl = new URL('/stream', sseServiceUrl);
+        sseUrl.searchParams.set('ticket', await fetchSseTicket());
+        // Still sent so a service that has not been updated yet keeps working
         sseUrl.searchParams.set('auth0Sub', auth0User.sub || 'auth0|test-user-123');
+        if (cancelled) return;
 
         eventSource = new EventSource(sseUrl.toString());
 
@@ -420,6 +425,7 @@ export default function NotificationCenter({
       } catch (err) {
         console.error('Failed to establish SSE connection:', err);
         setIsConnected(false);
+        setUsePolling(true);
       }
     };
 
@@ -428,6 +434,7 @@ export default function NotificationCenter({
 
     // Cleanup function
     return () => {
+      cancelled = true;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
