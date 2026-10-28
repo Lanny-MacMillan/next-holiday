@@ -2,6 +2,8 @@
 
 A comprehensive, enterprise-grade holiday planning platform built with Next.js, MySQL, Prisma, and modern web technologies. Create, organize, and collaborate on holiday celebrations with your family and friends through a beautiful, multi-tenant architecture with real-time notifications.
 
+**Live site**: [https://www.next-holiday.com](https://www.next-holiday.com)
+
 ## Overview 
 
 Next Holiday is a production-ready, full-stack holiday planning application that transforms the chaos of holiday preparation into an organized, collaborative experience. Built on a robust MySQL database with Prisma ORM, the platform features a sophisticated multi-tenant architecture, real-time Server-Sent Events (SSE) notifications, and comprehensive account and sharing system.
@@ -533,9 +535,12 @@ npm run db:generate
 - Ensure **Allowed Web Origins**: `http://localhost:3000`
 - Verify environment variables are set correctly in `.env.local`
 - Check Auth0 application type is "Single Page Application"
+- Production: `NEXT_PUBLIC_AUTH0_CALLBACK_URL` is `https://www.next-holiday.com/`; add both `https://www.next-holiday.com` and `https://next-holiday.com` (callback URLs with a trailing `/`) to the Allowed Callback, Logout, and Web Origins lists
 - Ensure user profile includes name and picture fields
 
 **SSE Notification Issues**
+
+- CORS errors / 403 on `/stream` from a new domain: add the origin to `CORS_ORIGINS` in the SSE service's `.env` on EC2, then run `pm2 restart sse-notifications --update-env`
 
 ```bash
 # Check if SSE service is running
@@ -665,7 +670,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 _Built with ❤️ using Next.js 15, React 19, MySQL, Prisma, Auth0, and deployed on AWS_
 
-**Live Demo**: [Coming Soon]  
+**Live Site**: [https://www.next-holiday.com](https://www.next-holiday.com)  
 **SSE Service**: [https://github.com/Lanny-MacMillan/sse-notifications](https://github.com/Lanny-MacMillan/sse-notifications)  
 **Database ERD**: [View Interactive Diagram](https://mermaid.ai/app/projects/5a13959b-bcd3-4844-834d-1f664ae6f043/diagrams/3605b52a-9a41-4a09-a764-2c6ee2d62a92/version/v0.1/edit)
 
