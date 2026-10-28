@@ -82,6 +82,7 @@ describe('NotificationCenter SSE connection', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/sse-ticket', { method: 'POST' });
     expect(streamUrl(0).pathname).toBe('/stream');
     expect(streamUrl(0).searchParams.get('ticket')).toBe('T1');
+    expect(streamUrl(0).searchParams.has('auth0Sub')).toBe(false);
   });
 
   it('falls back to polling when a ticket cannot be obtained', async () => {

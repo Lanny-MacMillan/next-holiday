@@ -247,8 +247,6 @@ export default function NotificationCenter({
           process.env.NEXT_PUBLIC_SSE_SERVICE_URL || 'http://localhost:4000';
         const sseUrl = new URL('/stream', sseServiceUrl);
         sseUrl.searchParams.set('ticket', await fetchSseTicket());
-        // Still sent so a service that has not been updated yet keeps working
-        sseUrl.searchParams.set('auth0Sub', auth0User.sub || 'auth0|test-user-123');
         if (cancelled) return;
 
         eventSource = new EventSource(sseUrl.toString());
