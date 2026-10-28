@@ -32,42 +32,25 @@ import easterCountdownReducer from './slices/easter/easterCountdownSlice';
 import halloweenGiftListReducer from './slices/halloween/halloweenGiftListSlice';
 import halloweenTasksReducer from './slices/halloween/halloweenTasksSlice';
 import halloweenCountdownReducer from './slices/halloween/halloweenCountdownSlice';
-import halloweenBudgetReducer from './slices/halloween/halloweenBudgetSlice';
-import halloweenGuestListReducer from './slices/halloween/halloweenGuestListSlice';
 import thanksgivingGiftListReducer from './slices/thanksgiving/thanksgivingGiftListSlice';
 import thanksgivingTasksReducer from './slices/thanksgiving/thanksgivingTasksSlice';
 import thanksgivingCountdownReducer from './slices/thanksgiving/thanksgivingCountdownSlice';
-import thanksgivingGuestListReducer from './slices/thanksgiving/thanksgivingGuestListSlice';
-import thanksgivingMealPlanningReducer from './slices/thanksgiving/thanksgivingMealPlanningSlice';
-import thanksgivingBudgetReducer from './slices/thanksgiving/thanksgivingBudgetSlice';
 import mothersDayGiftListReducer from './slices/mothers-day/mothersDayGiftListSlice';
 import mothersDayTasksReducer from './slices/mothers-day/mothersDayTasksSlice';
 import fathersDayGiftListReducer from './slices/fathers-day/fathersDayGiftListSlice';
 import fathersDayTasksReducer from './slices/fathers-day/fathersDayTasksSlice';
 import fathersDayCardsReducer from './slices/fathers-day/fathersDayCardsSlice';
 import fourthOfJulyTasksReducer from './slices/fourth-of-july/fourthOfJulyTasksSlice';
-import fourthOfJulyGuestListReducer from './slices/fourth-of-july/fourthOfJulyGuestListSlice';
 import birthdayGiftListReducer from './slices/birthday/birthdayGiftListSlice';
 import birthdayTasksReducer from './slices/birthday/birthdayTasksSlice';
 import birthdayCardsReducer from './slices/birthday/birthdayCardsSlice';
-import birthdayAddressBookReducer from './slices/birthday/birthdayAddressBookSlice';
-import birthdayGuestListReducer from './slices/birthday/birthdayGuestListSlice';
 import anniversaryGiftListReducer from './slices/anniversary/anniversaryGiftListSlice';
 import anniversaryTasksReducer from './slices/anniversary/anniversaryTasksSlice';
 import graduationGiftListReducer from './slices/graduation/graduationGiftListSlice';
 import graduationTasksReducer from './slices/graduation/graduationTasksSlice';
 import graduationCardsReducer from './slices/graduation/graduationCardsSlice';
-import graduationAddressBookReducer from './slices/graduation/graduationAddressBookSlice';
-import graduationGuestListReducer from './slices/graduation/graduationGuestListSlice';
 import babyShowerGiftListReducer from './slices/baby-shower/babyShowerGiftListSlice';
 import babyShowerAddressBookReducer from './slices/baby-shower/babyShowerAddressBookSlice';
-import babyShowerGuestListReducer from './slices/baby-shower/babyShowerGuestListSlice';
-import christmasGuestListReducer from './slices/christmas/christmasGuestListSlice';
-import easterGuestListReducer from './slices/easter/easterGuestListSlice';
-import hanukkahGuestListReducer from './slices/hanukkah/hanukkahGuestListSlice';
-import kwanzaaGuestListReducer from './slices/kwanzaa/kwanzaaGuestListSlice';
-import newYearGuestListReducer from './slices/new-year/newYearGuestListSlice';
-import valentinesGuestListReducer from './slices/valentines/valentinesGuestListSlice';
 import graduationCountdownReducer from './slices/graduation/graduationCountdownSlice';
 import anniversaryCountdownReducer from './slices/anniversary/anniversaryCountdownSlice';
 import birthdayCountdownReducer from './slices/birthday/birthdayCountdownSlice';
@@ -132,42 +115,25 @@ const rootReducer = combineReducers({
   halloweenGiftList: halloweenGiftListReducer,
   halloweenTasks: halloweenTasksReducer,
   halloweenCountdown: halloweenCountdownReducer,
-  halloweenBudget: halloweenBudgetReducer,
-  halloweenGuestList: halloweenGuestListReducer,
   thanksgivingGiftList: thanksgivingGiftListReducer,
   thanksgivingTasks: thanksgivingTasksReducer,
   thanksgivingCountdown: thanksgivingCountdownReducer,
-  thanksgivingGuestList: thanksgivingGuestListReducer,
-  thanksgivingMealPlanning: thanksgivingMealPlanningReducer,
-  thanksgivingBudget: thanksgivingBudgetReducer,
   mothersDayGiftList: mothersDayGiftListReducer,
   mothersDayTasks: mothersDayTasksReducer,
   fathersDayGiftList: fathersDayGiftListReducer,
   fathersDayTasks: fathersDayTasksReducer,
   fathersDayCards: fathersDayCardsReducer,
   fourthOfJulyTasks: fourthOfJulyTasksReducer,
-  fourthOfJulyGuestList: fourthOfJulyGuestListReducer,
   birthdayGiftList: birthdayGiftListReducer,
   birthdayTasks: birthdayTasksReducer,
   birthdayCards: birthdayCardsReducer,
-  birthdayAddressBook: birthdayAddressBookReducer,
-  birthdayGuestList: birthdayGuestListReducer,
   anniversaryGiftList: anniversaryGiftListReducer,
   anniversaryTasks: anniversaryTasksReducer,
   graduationGiftList: graduationGiftListReducer,
   graduationTasks: graduationTasksReducer,
   graduationCards: graduationCardsReducer,
-  graduationAddressBook: graduationAddressBookReducer,
-  graduationGuestList: graduationGuestListReducer,
   babyShowerGiftList: babyShowerGiftListReducer,
   babyShowerAddressBook: babyShowerAddressBookReducer,
-  babyShowerGuestList: babyShowerGuestListReducer,
-  christmasGuestList: christmasGuestListReducer,
-  easterGuestList: easterGuestListReducer,
-  hanukkahGuestList: hanukkahGuestListReducer,
-  kwanzaaGuestList: kwanzaaGuestListReducer,
-  newYearGuestList: newYearGuestListReducer,
-  valentinesGuestList: valentinesGuestListReducer,
   graduationCountdown: graduationCountdownReducer,
   anniversaryCountdown: anniversaryCountdownReducer,
   birthdayCountdown: birthdayCountdownReducer,
