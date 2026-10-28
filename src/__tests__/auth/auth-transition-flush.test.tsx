@@ -269,6 +269,18 @@ describe('Auth Transition Cache Flush', () => {
       },
     });
 
+    // A signed-in user must exist for logging out to count as a transition
+    store.dispatch({
+      type: 'user/setUser',
+      payload: {
+        sub: mockUser1.sub,
+        email: mockUser1.email,
+        name: mockUser1.name,
+        picture: mockUser1.picture,
+        isInDb: true,
+      },
+    });
+
     // Verify theme data is present
     expect(store.getState().theme.settings.holidayChoices).toHaveLength(1);
     expect(store.getState().theme.settings.giftBudgetLimit).toBe(1000);
