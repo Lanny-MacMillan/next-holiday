@@ -1,18 +1,13 @@
 /**
  * @jest-environment jsdom
  *
- * Smoke test: every page under src/app renders without throwing, for a
- * signed-in user with an empty store. Pages are discovered from the file system
- * so a new page is covered automatically and a deleted one drops out.
- *
- * This is a safety net for refactors and dead-code removal; it asserts only
- * that the page renders something. Behaviour is covered by focused tests.
+ * Every page under src/app should render for a signed-in user with an empty
+ * store. Pages are found on disk, so new and deleted pages are picked up.
  */
 import fs from 'fs';
 import path from 'path';
 
-// Testing Library is re-required per page (see below); skip its auto-cleanup
-// hooks, which can't be registered inside a running test. We clean up manually.
+// Testing Library is re-required per page, so its auto-cleanup hooks can't be used.
 process.env.RTL_SKIP_AUTO_CLEANUP = 'true';
 
 let currentPath = '/';
@@ -66,9 +61,7 @@ describe('page smoke tests', () => {
   beforeEach(() => {
     fetchCalls = 0;
     global.fetch = jest.fn(async (input: RequestInfo | URL) => {
-      // Mimic the real API's shapes so reducers receive what they expect
       const url = String(input);
-      // A page that re-requests endlessly is a bug worth failing fast on
       if (++fetchCalls > 200) throw new Error(`runaway fetch loop: ${url}`);
       const body =
         url.includes('/api/shares') || url.includes('/api/invites')
@@ -96,8 +89,7 @@ describe('page smoke tests', () => {
     (route, file) => {
       currentPath = route;
 
-      // A fresh module registry per page gives each its own Redux store, so one
-      // page's state or timers can never leak into the next (order independence).
+      // Fresh modules per page: sharing one store across pages hung the run.
       jest.resetModules();
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { render, cleanup } = require('@testing-library/react');

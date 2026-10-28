@@ -2,7 +2,6 @@ import React from 'react';
 import { render, renderHook, screen } from '@testing-library/react';
 import { BudgetDisplay, useBudgetInfo } from '../BudgetDisplay';
 
-// ---- Controllable fake Redux state; useAppSelector just runs the selector on it
 let state: any;
 jest.mock('@/store/hooks', () => ({
   useAppSelector: (selector: (s: any) => unknown) => selector(state),
@@ -207,7 +206,6 @@ describe('<BudgetDisplay />', () => {
         { displayMode: 'gamified' },
       );
       renderIt({ holidayColor: 'bg-red-500' });
-      // Gamified layout is the one with white-on-colour text and a decorative overlay
       expect(screen.getByText('Christmas Budget')).toHaveClass('text-white');
     });
 

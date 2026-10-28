@@ -46,8 +46,7 @@ describe('Holiday pages - no duplicate fetch', () => {
       expect(screen.getAllByText('Christmas').length).toBeGreaterThan(0);
     });
 
-    // The only request is the user-id lookup; no gifts/cards/tasks/budget/home
-    // data is re-fetched because home data is already in Redux.
+    // Only the user-id lookup is expected.
     const urls = mockFetch.mock.calls.map(c => String(c[0]));
     expect(urls.filter(u => !u.startsWith('/api/users/by-auth0-sub'))).toEqual([]);
   });
