@@ -8,8 +8,30 @@ import AppContent from '@/components/AppContent';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.next-holiday.com'),
   title: 'Next Holiday',
   description: 'Plan your holidays with ease',
+  openGraph: {
+    title: 'Next Holiday',
+    description: 'Plan your holidays with ease',
+    url: '/',
+    siteName: 'Next Holiday',
+    type: 'website',
+    images: [
+      {
+        url: '/nextHolidayHero.png',
+        width: 2400,
+        height: 1200,
+        alt: 'Next Holiday - collaborative holiday planning',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Next Holiday',
+    description: 'Plan your holidays with ease',
+    images: ['/nextHolidayHero.png'],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
