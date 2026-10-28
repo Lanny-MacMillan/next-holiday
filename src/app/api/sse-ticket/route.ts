@@ -3,7 +3,7 @@ import { SignJWT } from 'jose';
 import { authenticateClaims } from '@/lib/routeAuth';
 
 const TICKET_TTL_SECONDS = 60;
-export const SSE_TICKET_AUDIENCE = 'sse-stream';
+const SSE_TICKET_AUDIENCE = 'sse-stream';
 
 export async function POST(request: NextRequest) {
   const secret = process.env.SSE_API_SECRET;
