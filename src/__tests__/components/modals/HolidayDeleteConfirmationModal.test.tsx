@@ -1,26 +1,27 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import HolidayDeleteConfirmationModal from '@/components/modals/HolidayDeleteConfirmationModal';
 
-// Mock Auth0
 jest.mock('@auth0/auth0-react', () => ({
   useAuth0: () => ({
-    user: {
-      sub: 'auth0|123',
-      email: 'test@example.com',
-      name: 'Test User',
-      picture: 'https://example.com/avatar.jpg',
-    },
+    user: { sub: 'auth0|123', email: 'test@example.com', name: 'Test User' },
   }),
 }));
 
-// Mock fetch
-global.fetch = jest.fn();
+const mockFetch = jest.fn();
+global.fetch = mockFetch as unknown as typeof fetch;
 
-const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+const jsonResponse = (
+  body: unknown,
+  init: { ok?: boolean; statusText?: string } = {},
+) =>
+  ({
+    ok: init.ok ?? true,
+    statusText: init.statusText ?? 'OK',
+    json: () => Promise.resolve(body),
+  }) as Response;
 
 describe('HolidayDeleteConfirmationModal', () => {
-  const defaultProps = {
+  const props = {
     isOpen: true,
     onClose: jest.fn(),
     onConfirm: jest.fn(),
@@ -29,347 +30,212 @@ describe('HolidayDeleteConfirmationModal', () => {
     accountId: 'account-456',
   };
 
+  const input = () => screen.getByPlaceholderText('Type the holiday name here...');
+  const deleteButton = () =>
+    screen.getByRole('button', { name: /Delete Holiday|Deleting/ });
+  const typeName = (value = 'Christmas') =>
+    fireEvent.change(input(), { target: { value } });
+
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('should not render when isOpen is false', () => {
-    const props = { ...defaultProps, isOpen: false };
-    render(<HolidayDeleteConfirmationModal {...props} />);
+  describe('rendering', () => {
+    it('renders nothing when closed', () => {
+      const { container } = render(
+        <HolidayDeleteConfirmationModal {...props} isOpen={false} />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
 
-    expect(screen.queryByText('Delete Holiday')).not.toBeInTheDocument();
+    it('shows the warning and the exact name the user must type', () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      expect(
+        screen.getByRole('heading', { name: /Delete Holiday/ }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('This action cannot be undone')).toBeInTheDocument();
+      expect(
+        screen.getByText('Christmas', { selector: 'strong' }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('"Christmas"')).toBeInTheDocument();
+    });
+
+    it('does not call the API just by opening', () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 
-  it('should render modal when isOpen is true', () => {
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
+  describe('confirmation gate', () => {
+    it('keeps Delete disabled until the name matches exactly', () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      expect(deleteButton()).toBeDisabled();
 
-    expect(screen.getByText('Delete Holiday')).toBeInTheDocument();
-    expect(screen.getByText('Christmas')).toBeInTheDocument();
+      typeName('Christma');
+      expect(deleteButton()).toBeDisabled();
+
+      typeName('christmas'); // case-sensitive
+      expect(deleteButton()).toBeDisabled();
+
+      typeName('Christmas ');
+      expect(deleteButton()).toBeDisabled();
+
+      typeName('Christmas');
+      expect(deleteButton()).toBeEnabled();
+    });
+
+    it('does not send a request while the name does not match', () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      typeName('wrong');
+      fireEvent.click(deleteButton());
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 
-  it('should show loading state while fetching impact data', async () => {
-    // Mock a delayed fetch response
-    mockFetch.mockImplementation(
-      () =>
-        new Promise(resolve =>
-          setTimeout(
-            () =>
-              resolve({
-                ok: true,
-                json: () =>
-                  Promise.resolve({
-                    success: true,
-                    data: {
-                      dryRun: true,
-                      totals: { Holiday: 1, Task: 5, Gift: 3 },
-                      holidayName: 'Christmas',
-                    },
-                  }),
-              } as Response),
-            100,
-          ),
-        ),
-    );
+  describe('closing', () => {
+    it('Cancel calls onClose', () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+      expect(props.onConfirm).not.toHaveBeenCalled();
+    });
 
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    expect(screen.getByText('Loading impact data...')).toBeInTheDocument();
+    it('the X button calls onClose', () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      const buttons = screen.getAllByRole('button');
+      fireEvent.click(buttons[0]); // header close icon is the first button
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it('should display impact data after successful fetch', async () => {
-    const mockImpactData = {
-      success: true,
-      data: {
-        dryRun: true,
-        totals: {
-          Holiday: 1,
-          Task: 5,
-          Gift: 3,
-          Card: 2,
-          Budget: 1,
-          Share: 1,
-          GuestList: 4,
-        },
-        holidayName: 'Christmas',
-      },
+  describe('deleting', () => {
+    it('posts a real (non-dry-run) cascade delete for the holiday', async () => {
+      mockFetch.mockResolvedValue(jsonResponse({ success: true }));
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      typeName();
+      fireEvent.click(deleteButton());
+
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(url).toBe('/api/holidays/holiday-123/delete-cascade');
+      expect(init.method).toBe('POST');
+      expect(init.headers['Content-Type']).toBe('application/json');
+      expect(JSON.parse(init.body)).toEqual({ dryRun: false, force: false });
+    });
+
+    it('calls onConfirm then onClose on success', async () => {
+      mockFetch.mockResolvedValue(jsonResponse({ success: true }));
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      typeName();
+      fireEvent.click(deleteButton());
+
+      await waitFor(() => expect(props.onConfirm).toHaveBeenCalledTimes(1));
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows "Deleting..." and locks the form while the request is in flight', async () => {
+      let resolve!: (r: Response) => void;
+      mockFetch.mockReturnValue(new Promise<Response>(r => (resolve = r)));
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      typeName();
+      fireEvent.click(deleteButton());
+
+      await screen.findByText('Deleting...');
+      expect(deleteButton()).toBeDisabled();
+      expect(input()).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+      resolve(jsonResponse({ success: true }));
+      await waitFor(() => expect(props.onConfirm).toHaveBeenCalled());
+    });
+  });
+
+  describe('failures', () => {
+    const attemptDelete = async () => {
+      render(<HolidayDeleteConfirmationModal {...props} />);
+      typeName();
+      fireEvent.click(deleteButton());
     };
 
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockImpactData),
-    } as Response);
-
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Data to be deleted:')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Tasks:')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.getByText('Gifts:')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('Total Records:')).toBeInTheDocument();
-    expect(screen.getByText('17')).toBeInTheDocument(); // Sum of all counts
-  });
-
-  it('should show error message when fetch fails', async () => {
-    mockFetch.mockRejectedValue(new Error('Network error'));
-
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Retry')).toBeInTheDocument();
-  });
-
-  it('should show error message when API returns error', async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      statusText: 'Not Found',
-    } as Response);
-
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch impact data/)).toBeInTheDocument();
-    });
-  });
-
-  it('should require exact holiday name confirmation', () => {
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    const confirmInput = screen.getByPlaceholderText(
-      'Type the holiday name here...',
-    );
-    const deleteButton = screen.getByText('Delete Holiday');
-
-    expect(deleteButton).toBeDisabled();
-
-    // Type wrong name
-    fireEvent.change(confirmInput, { target: { value: 'christmas' } });
-    expect(deleteButton).toBeDisabled();
-
-    // Type correct name
-    fireEvent.change(confirmInput, { target: { value: 'Christmas' } });
-    expect(deleteButton).toBeEnabled();
-  });
-
-  it('should call onClose when cancel button is clicked', () => {
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    const cancelButton = screen.getByText('Cancel');
-    fireEvent.click(cancelButton);
-
-    expect(defaultProps.onClose).toHaveBeenCalled();
-  });
-
-  it('should call onClose when X button is clicked', () => {
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    const closeButton = screen.getByRole('button', { name: '' }); // X button
-    fireEvent.click(closeButton);
-
-    expect(defaultProps.onClose).toHaveBeenCalled();
-  });
-
-  it('should handle successful deletion', async () => {
-    // Mock successful impact data fetch
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            success: true,
-            data: {
-              dryRun: true,
-              totals: { Holiday: 1, Task: 5 },
-              holidayName: 'Christmas',
-            },
-          }),
-      } as Response)
-      // Mock successful deletion
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            success: true,
-            data: {
-              dryRun: false,
-              totals: { Holiday: 1, Task: 5 },
-              holidayName: 'Christmas',
-            },
-          }),
-      } as Response);
-
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    // Wait for impact data to load
-    await waitFor(() => {
-      expect(screen.getByText('Data to be deleted:')).toBeInTheDocument();
-    });
-
-    // Type confirmation
-    const confirmInput = screen.getByPlaceholderText(
-      'Type the holiday name here...',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'Christmas' } });
-
-    // Click delete button
-    const deleteButton = screen.getByText('Delete Holiday');
-    fireEvent.click(deleteButton);
-
-    // Should show loading state
-    expect(screen.getByText('Deleting...')).toBeInTheDocument();
-
-    // Wait for completion
-    await waitFor(() => {
-      expect(defaultProps.onConfirm).toHaveBeenCalled();
-      expect(defaultProps.onClose).toHaveBeenCalled();
-    });
-  });
-
-  it('should handle deletion error', async () => {
-    // Mock successful impact data fetch
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            success: true,
-            data: {
-              dryRun: true,
-              totals: { Holiday: 1, Task: 5 },
-              holidayName: 'Christmas',
-            },
-          }),
-      } as Response)
-      // Mock deletion error
-      .mockRejectedValueOnce(new Error('Deletion failed'));
-
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    // Wait for impact data to load
-    await waitFor(() => {
-      expect(screen.getByText('Data to be deleted:')).toBeInTheDocument();
-    });
-
-    // Type confirmation
-    const confirmInput = screen.getByPlaceholderText(
-      'Type the holiday name here...',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'Christmas' } });
-
-    // Click delete button
-    const deleteButton = screen.getByText('Delete Holiday');
-    fireEvent.click(deleteButton);
-
-    // Wait for error to appear
-    await waitFor(() => {
-      expect(screen.getByText('Deletion failed')).toBeInTheDocument();
-    });
-
-    // Should not call onConfirm or onClose
-    expect(defaultProps.onConfirm).not.toHaveBeenCalled();
-    expect(defaultProps.onClose).not.toHaveBeenCalled();
-  });
-
-  it('should disable buttons during deletion', async () => {
-    // Mock successful impact data fetch
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            success: true,
-            data: {
-              dryRun: true,
-              totals: { Holiday: 1, Task: 5 },
-              holidayName: 'Christmas',
-            },
-          }),
-      } as Response)
-      // Mock delayed deletion response
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve =>
-            setTimeout(
-              () =>
-                resolve({
-                  ok: true,
-                  json: () =>
-                    Promise.resolve({
-                      success: true,
-                      data: {
-                        dryRun: false,
-                        totals: { Holiday: 1, Task: 5 },
-                        holidayName: 'Christmas',
-                      },
-                    }),
-                } as Response),
-              100,
-            ),
-          ),
+    it("shows the server's error message on a non-OK response", async () => {
+      mockFetch.mockResolvedValue(
+        jsonResponse(
+          { error: 'Access denied' },
+          { ok: false, statusText: 'Forbidden' },
+        ),
       );
+      await attemptDelete();
 
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    // Wait for impact data to load
-    await waitFor(() => {
-      expect(screen.getByText('Data to be deleted:')).toBeInTheDocument();
+      expect(await screen.findByText('Access denied')).toBeInTheDocument();
+      expect(props.onConfirm).not.toHaveBeenCalled();
+      expect(props.onClose).not.toHaveBeenCalled();
     });
 
-    // Type confirmation
-    const confirmInput = screen.getByPlaceholderText(
-      'Type the holiday name here...',
-    );
-    fireEvent.change(confirmInput, { target: { value: 'Christmas' } });
-
-    // Click delete button
-    const deleteButton = screen.getByText('Delete Holiday');
-    fireEvent.click(deleteButton);
-
-    // Buttons should be disabled during deletion
-    expect(deleteButton).toBeDisabled();
-    expect(screen.getByText('Cancel')).toBeDisabled();
-  });
-
-  it('should show retry button when fetch fails and allow retry', async () => {
-    mockFetch.mockRejectedValue(new Error('Network error'));
-
-    render(<HolidayDeleteConfirmationModal {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+    it('falls back to the status text when the error body has no message', async () => {
+      mockFetch.mockResolvedValue(
+        jsonResponse({}, { ok: false, statusText: 'Bad Gateway' }),
+      );
+      await attemptDelete();
+      expect(
+        await screen.findByText('Failed to delete holiday: Bad Gateway'),
+      ).toBeInTheDocument();
     });
 
-    const retryButton = screen.getByText('Retry');
-    expect(retryButton).toBeInTheDocument();
+    it('shows an error when the API replies OK but success is false', async () => {
+      mockFetch.mockResolvedValue(jsonResponse({ success: false, error: 'Nope' }));
+      await attemptDelete();
+      expect(await screen.findByText('Nope')).toBeInTheDocument();
+      expect(props.onConfirm).not.toHaveBeenCalled();
+    });
 
-    // Mock successful retry
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          success: true,
-          data: {
-            dryRun: true,
-            totals: { Holiday: 1, Task: 5 },
-            holidayName: 'Christmas',
-          },
-        }),
-    } as Response);
+    it('uses a generic message when success is false with no error text', async () => {
+      mockFetch.mockResolvedValue(jsonResponse({ success: false }));
+      await attemptDelete();
+      expect(
+        await screen.findByText('Failed to delete holiday'),
+      ).toBeInTheDocument();
+    });
 
-    fireEvent.click(retryButton);
+    it('shows the message when the network request itself fails', async () => {
+      mockFetch.mockRejectedValue(new Error('Network down'));
+      await attemptDelete();
+      expect(await screen.findByText('Network down')).toBeInTheDocument();
+    });
 
-    await waitFor(() => {
-      expect(screen.getByText('Data to be deleted:')).toBeInTheDocument();
+    it('re-enables the form after a failure so the user can retry', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ error: 'Boom' }, { ok: false }),
+      );
+      await attemptDelete();
+      await screen.findByText('Boom');
+
+      expect(deleteButton()).toBeEnabled();
+      expect(input()).toBeEnabled();
+
+      mockFetch.mockResolvedValueOnce(jsonResponse({ success: true }));
+      fireEvent.click(deleteButton());
+      await waitFor(() => expect(props.onConfirm).toHaveBeenCalledTimes(1));
+    });
+
+    it('clears a previous error when retrying', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ error: 'Boom' }, { ok: false }),
+      );
+      await attemptDelete();
+      await screen.findByText('Boom');
+
+      let resolve!: (r: Response) => void;
+      mockFetch.mockReturnValueOnce(new Promise<Response>(r => (resolve = r)));
+      fireEvent.click(deleteButton());
+      await waitFor(() =>
+        expect(screen.queryByText('Boom')).not.toBeInTheDocument(),
+      );
+      resolve(jsonResponse({ success: true }));
     });
   });
 });
