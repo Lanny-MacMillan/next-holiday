@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from test header (Auth0)
-    const testUserHeader = request.headers.get('x-test-user');
+    // Get the verified Auth0 user from the request
+    const authUser = await getCurrentUser(request);
 
-    if (!testUserHeader) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 },
       );
     }
 
-    const user = JSON.parse(testUserHeader);
-
     // Get user from database
     const dbUser = await prisma.user.findUnique({
-      where: { auth0Sub: user.sub },
+      where: { auth0Sub: authUser.auth0Sub },
     });
 
     if (!dbUser) {
