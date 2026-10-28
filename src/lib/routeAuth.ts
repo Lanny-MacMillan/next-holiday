@@ -57,7 +57,7 @@ export function isInviteRecipient(
   if (invite.toUserId && invite.toUserId === user.id) return true;
   return (
     !!invite.toEmail &&
-    !!user.email &&
-    invite.toEmail.toLowerCase() === user.email.toLowerCase()
+    !!user.verifiedEmail &&
+    invite.toEmail.toLowerCase() === user.verifiedEmail.toLowerCase()
   );
 }
