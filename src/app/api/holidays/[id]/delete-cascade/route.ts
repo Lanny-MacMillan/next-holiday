@@ -71,7 +71,7 @@ export async function POST(
       if (result.error.includes('Feature flag')) {
         return serverError('Cascade delete feature is not enabled');
       }
-      if (result.error.includes('threshold')) {
+      if (result.code === 'LIMIT_EXCEEDED') {
         return badRequest(result.error);
       }
       return serverError(result.error);
@@ -126,6 +126,9 @@ export async function GET(
     if (result.error) {
       if (result.error.includes('Feature flag')) {
         return serverError('Cascade delete feature is not enabled');
+      }
+      if (result.code === 'LIMIT_EXCEEDED') {
+        return badRequest(result.error);
       }
       return serverError(result.error);
     }

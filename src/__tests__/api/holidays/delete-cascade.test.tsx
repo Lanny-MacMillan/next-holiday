@@ -172,11 +172,7 @@ describe('/api/holidays/[id]/delete-cascade', () => {
       expect(data.error).toBe('Cascade delete feature is not enabled');
     });
 
-    // KNOWN ISSUE: the route maps errors containing the word "threshold" to a 400,
-    // but the real message from deleteHolidayData is "Delete would affect N rows
-    // (> LIMIT). Re-run with force=true if intended." (no such word), so an
-    // over-limit delete currently surfaces as a 500 with that message.
-    it('returns the over-limit message as a 500 (see KNOWN ISSUE above)', async () => {
+    it('returns 400 with the explanation when the row limit is exceeded', async () => {
       mockValidateHolidayDeletePermission.mockResolvedValue({
         canDelete: true,
         holiday: mockHoliday,
@@ -189,6 +185,7 @@ describe('/api/holidays/[id]/delete-cascade', () => {
         finishedAt: new Date().toISOString(),
         error:
           'Delete would affect 2000 rows (> 1000). Re-run with force=true if intended.',
+        code: 'LIMIT_EXCEEDED',
       });
 
       const request = new NextRequest(
@@ -204,9 +201,35 @@ describe('/api/holidays/[id]/delete-cascade', () => {
       });
       const data = await response.json();
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
       expect(data.success).toBe(false);
       expect(data.error).toContain('force=true');
+    });
+
+    it('still returns 500 for other deletion errors', async () => {
+      mockValidateHolidayDeletePermission.mockResolvedValue({
+        canDelete: true,
+        holiday: mockHoliday,
+      });
+
+      mockDeleteHolidayData.mockResolvedValue({
+        dryRun: false,
+        totals: {},
+        startedAt: '',
+        finishedAt: '',
+        error: 'connection reset',
+      });
+
+      const request = new NextRequest(
+        'http://localhost:3000/api/holidays/123/delete-cascade',
+        { method: 'POST', body: JSON.stringify({}) },
+      );
+      const response = await POST(request, {
+        params: Promise.resolve({ id: mockHolidayId }),
+      });
+
+      expect(response.status).toBe(500);
+      expect((await response.json()).error).toBe('connection reset');
     });
 
     it('should successfully delete holiday when all conditions are met', async () => {
@@ -378,6 +401,34 @@ describe('/api/holidays/[id]/delete-cascade', () => {
         holidayId: mockHolidayId,
         dryRun: true,
       });
+    });
+
+    it('returns 400 for a dry run when the row limit is exceeded', async () => {
+      mockValidateHolidayDeletePermission.mockResolvedValue({
+        canDelete: true,
+        holiday: mockHoliday,
+      });
+
+      mockDeleteHolidayData.mockResolvedValue({
+        dryRun: true,
+        totals: {},
+        startedAt: '',
+        finishedAt: '',
+        error:
+          'Delete would affect 2000 rows (> 1000). Re-run with force=true if intended.',
+        code: 'LIMIT_EXCEEDED',
+      });
+
+      const request = new NextRequest(
+        'http://localhost:3000/api/holidays/123/delete-cascade',
+        { method: 'GET' },
+      );
+      const response = await GET(request, {
+        params: Promise.resolve({ id: mockHolidayId }),
+      });
+
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toContain('force=true');
     });
 
     it('should return 500 when feature flag is not enabled', async () => {

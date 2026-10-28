@@ -121,6 +121,7 @@ describe('deleteHolidayData', () => {
       });
 
       expect(result.error).toBe('Holiday not found or access denied');
+      expect(result.code).toBeUndefined();
     });
 
     it('should throw error when holiday belongs to different account', async () => {
@@ -219,6 +220,7 @@ describe('deleteHolidayData', () => {
 
       expect(result.error).toContain('Delete would affect');
       expect(result.error).toContain('Re-run with force=true');
+      expect(result.code).toBe('LIMIT_EXCEEDED');
     });
 
     it('should allow deletion when force is true', async () => {

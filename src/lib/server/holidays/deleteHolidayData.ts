@@ -14,6 +14,11 @@ export interface DeleteHolidayDataResult {
   finishedAt: string;
   holidayName?: string;
   error?: string;
+  code?: 'LIMIT_EXCEEDED';
+}
+
+class DeleteLimitExceededError extends Error {
+  readonly code = 'LIMIT_EXCEEDED' as const;
 }
 
 /**
@@ -66,7 +71,7 @@ export async function deleteHolidayData(
     const THRESHOLD = Number(process.env.DELETE_HOLIDAY_ROW_THRESHOLD ?? 50000);
 
     if (totalRows > THRESHOLD && !force) {
-      throw new Error(
+      throw new DeleteLimitExceededError(
         `Delete would affect ${totalRows} rows (> ${THRESHOLD}). Re-run with force=true if intended.`,
       );
     }
@@ -109,6 +114,7 @@ export async function deleteHolidayData(
       startedAt,
       finishedAt: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'Unknown error occurred',
+      ...(error instanceof DeleteLimitExceededError && { code: error.code }),
     };
   }
 }
