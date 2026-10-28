@@ -10,6 +10,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  NPM_CONFIG_FETCH_RETRIES: 5
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 5000
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 60000
   DATABASE_URL: mysql://ci:ci@localhost:3306/ci
   NEXT_PUBLIC_AUTH0_DOMAIN: ci.example.auth0.com
   NEXT_PUBLIC_AUTH0_CLIENT_ID: ci-client-id
@@ -33,6 +36,8 @@ jobs:
       - run: npm ci
       - run: npm run lint -- --quiet
       - run: npm run format:check
+      - name: Dead code
+        run: npm run knip
 
   typecheck:
     runs-on: ubuntu-latest

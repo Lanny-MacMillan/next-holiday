@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "knip": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@jest/globals": "^29.7.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^16.3.3",
@@ -56,6 +58,7 @@
     "eslint-config-next": "15.4.11",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "knip": "^6.43.0",
     "prettier": "^3.8.1",
     "ts-jest": "^29.1.2",
     "typescript": "^5",
