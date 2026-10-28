@@ -10,6 +10,10 @@ class MockNextResponse {
     return new MockNextResponse(JSON.stringify(data), init);
   }
 
+  static next() {
+    return new MockNextResponse(null, { status: 200 });
+  }
+
   async json() {
     return JSON.parse(this.body);
   }
@@ -23,6 +27,7 @@ class MockNextRequest {
     this.headers = new Map(Object.entries(options.headers || {}));
     this.body = options.body;
     this.nextUrl = {
+      pathname: new URL(url).pathname,
       searchParams: new URLSearchParams(new URL(url).search),
     };
   }
