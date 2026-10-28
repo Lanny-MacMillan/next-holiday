@@ -13,6 +13,7 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
+    "smoke": "scripts/smoke-prod.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest",
