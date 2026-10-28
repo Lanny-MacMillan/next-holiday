@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * Server action to add a user to the database and create their account
- * This replaces the client-side UserSync functionality for the home page
+ * Used by /api/users/setup for first-time users
  */
 export async function addUserToDb(auth0User: {
   sub: string;

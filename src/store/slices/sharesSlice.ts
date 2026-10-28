@@ -115,25 +115,6 @@ export const createShare = createAsyncThunk(
   },
 );
 
-const updateShare = createAsyncThunk(
-  'shares/updateShare',
-  async (share: HolidayShare) => {
-    const response = await fetch(`/api/shares/${share.shareId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(share),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update share');
-    }
-
-    return await response.json();
-  },
-);
-
 const addMemberToShare = createAsyncThunk(
   'shares/addMemberToShare',
   async ({ shareId, userId }: { shareId: string; userId: string }) => {
@@ -280,24 +261,6 @@ const sharesSlice = createSlice({
       .addCase(createShare.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to create share';
-      })
-      // Update share
-      .addCase(updateShare.pending, state => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(updateShare.fulfilled, (state, action) => {
-        state.loading = false;
-        const index = state.shares.findIndex(
-          share => share.shareId === action.payload.shareId,
-        );
-        if (index !== -1) {
-          state.shares[index] = action.payload;
-        }
-      })
-      .addCase(updateShare.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Failed to update share';
       })
       // Add member to share
       .addCase(addMemberToShare.pending, state => {

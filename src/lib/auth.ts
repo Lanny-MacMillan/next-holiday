@@ -117,7 +117,7 @@ export interface AuthUser {
 
 /**
  * Get the current authenticated user from Auth0 session
- * Note: User creation/update is handled by UserSync component to avoid race conditions
+ * Note: User creation/update is handled by UserSetupHandler to avoid race conditions
  */
 export async function getCurrentUser(
   request: NextRequest,

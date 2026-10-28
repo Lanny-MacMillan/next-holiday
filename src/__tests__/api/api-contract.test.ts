@@ -89,7 +89,7 @@ function matchingRoutes(url: string): Route[] {
 }
 
 // Calls to a route that does not exist. Remove an entry when its call is deleted.
-const KNOWN_DEAD_CALLS = ['PUT /api/shares/*'];
+const KNOWN_DEAD_CALLS: string[] = [];
 
 // Route handlers with no literal call in the client code. A caller built from a
 // variable would not be found here, so this is an inventory, not a list of dead code.
@@ -118,6 +118,7 @@ const ROUTES_WITHOUT_LITERAL_CALLER = [
   'POST /api/holidays',
   'POST /api/holidays/[id]/clear-data',
   'POST /api/performance',
+  'POST /api/users',
   'PUT /api/accounts/[id]',
   'PUT /api/holidays/[id]',
 ];

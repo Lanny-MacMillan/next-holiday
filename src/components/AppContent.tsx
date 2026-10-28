@@ -12,7 +12,6 @@ import AuthWrapper from './auth/AuthWrapper';
 import Header from './common/Header';
 import Login from './auth/Login';
 import DataInitializer from './DataInitializer';
-import UserSync from './auth/UserSync';
 import PerformanceDashboard from './common/PerformanceDashboard';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { ReactNode } from 'react';
@@ -111,8 +110,6 @@ export default function AppContent({ children }: AppContentProps) {
 
   return (
     <>
-      {/* UserSync disabled to prevent race condition with UserSetupHandler */}
-      {/* <UserSync /> */}
       <DataInitializer />
       <Header />
       <AuthWrapper>{children}</AuthWrapper>
