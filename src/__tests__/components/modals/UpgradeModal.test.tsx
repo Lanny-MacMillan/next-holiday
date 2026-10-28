@@ -204,9 +204,7 @@ describe('UpgradeModal', () => {
       );
     });
 
-    // KNOWN ISSUE: unwrap() rejects with a plain object, not an Error, so the modal
-    // shows "Unknown error", and says "Payment failed" though the payment succeeded.
-    it('does not report success when the plan update fails after the payment went through', async () => {
+    it('says the payment went through when only the plan update fails', async () => {
       respond({
         '/api/payment': () => reply({ success: true }),
         '/api/upgrade-user': () => reply({ error: 'Forbidden' }, false),
@@ -215,7 +213,7 @@ describe('UpgradeModal', () => {
 
       await waitFor(() =>
         expect(window.alert).toHaveBeenCalledWith(
-          'Payment failed: Unknown error. Please try again.',
+          "Your payment went through, but we couldn't upgrade your plan: Forbidden. Please contact support.",
         ),
       );
       expect(calls('/api/payment')).toHaveLength(1);
