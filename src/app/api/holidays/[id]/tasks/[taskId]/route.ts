@@ -34,8 +34,8 @@ export async function PATCH(
 
     const data = parsed.data;
 
-    const existingTask = await prisma.task.findUnique({
-      where: { id: taskId },
+    const existingTask = await prisma.task.findFirst({
+      where: { id: taskId, holidayId },
       select: {
         id: true,
         title: true,
@@ -136,8 +136,8 @@ export async function DELETE(
     if (forbidden) return forbidden;
 
     // Check if task exists
-    const existingTask = await prisma.task.findUnique({
-      where: { id: taskId },
+    const existingTask = await prisma.task.findFirst({
+      where: { id: taskId, holidayId },
     });
 
     if (!existingTask) {

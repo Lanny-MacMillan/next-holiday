@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { ok, badRequest, serverError, notFound } from '@/lib/http';
 
 // Validation schema
@@ -25,6 +25,8 @@ export async function PUT(
 
     const { targetAmount } = validation.data;
     const { holidayId } = await params;
+    const forbidden = await assertHolidayAccess(holidayId, user.id);
+    if (forbidden) return forbidden;
 
     // Find existing budget
     const existingBudget = await prisma.budget.findFirst({

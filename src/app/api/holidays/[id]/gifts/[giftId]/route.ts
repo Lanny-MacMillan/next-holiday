@@ -38,8 +38,8 @@ export async function PATCH(
     const data = parsed.data;
 
     // Check if gift exists
-    const existingGift = await prisma.gift.findUnique({
-      where: { id: giftId },
+    const existingGift = await prisma.gift.findFirst({
+      where: { id: giftId, holidayId },
     });
 
     if (!existingGift) {
@@ -86,8 +86,8 @@ export async function DELETE(
     if (forbidden) return forbidden;
 
     // Check if gift exists
-    const existingGift = await prisma.gift.findUnique({
-      where: { id: giftId },
+    const existingGift = await prisma.gift.findFirst({
+      where: { id: giftId, holidayId },
     });
 
     if (!existingGift) {
