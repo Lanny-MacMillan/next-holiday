@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyIdToken } from '@/lib/verifyAuth0Token';
 
-// Anonymous by design: browser performance beacons carry no user identity.
+// Performance beacons are anonymous by design.
 const PUBLIC_API_PATHS = ['/api/performance'];
 
-/**
- * Deny-by-default gate for the API: every /api route needs a valid Auth0 ID
- * token unless listed above. Route handlers still resolve the user and check
- * ownership themselves; this only guarantees no route is reachable anonymously.
- */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -18,7 +13,7 @@ export async function middleware(request: NextRequest) {
 
   const authorization = request.headers.get('authorization');
 
-  // Temporary escape hatch for the legacy header auth (see lib/auth.ts)
+  // Temporary escape hatch for legacy header auth (see lib/auth.ts)
   if (!authorization && process.env.ALLOW_LEGACY_TEST_USER_AUTH === 'true') {
     return NextResponse.next();
   }

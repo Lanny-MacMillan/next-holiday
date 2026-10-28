@@ -19,16 +19,11 @@ function isSameOriginApiRequest(input: RequestInfo | URL): boolean {
   }
 }
 
-/** Set (or clear) the function that returns the current Auth0 ID token. */
 export function setAuthTokenProvider(provider: TokenProvider | null): void {
   tokenProvider = provider;
 }
 
-/**
- * Wrap window.fetch once so same-origin /api requests carry the user's
- * Auth0 ID token as a Bearer token. Requests to other origins (e.g. the SSE
- * service) are left untouched.
- */
+// Adds the ID token to same-origin /api requests; other origins (the SSE service) are untouched.
 export function installAuthFetch(): void {
   if (installed || typeof window === 'undefined') return;
   installed = true;
