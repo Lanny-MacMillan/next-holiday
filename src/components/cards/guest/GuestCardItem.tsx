@@ -1,5 +1,5 @@
 import React from 'react';
-import { Guest } from '@/store/slices/thanksgiving/thanksgivingGuestListSlice';
+import { Guest } from '@/types/guest';
 import { useAppSelector } from '@/store/hooks';
 import { getCardStyling } from '@/utils/cardShadows';
 import { getGamifiedBackgroundColor } from '@/utils/gamifiedUtils';
