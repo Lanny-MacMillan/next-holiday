@@ -10,7 +10,6 @@ export interface VerifiedClaims {
 interface VerifyOptions {
   domain?: string;
   clientId?: string;
-  /** Key resolver; defaults to the tenant's remote JWKS. Injectable for tests. */
   getKey?: JWTVerifyGetKey;
 }
 
@@ -29,11 +28,7 @@ function getRemoteJwks(domain: string): JWTVerifyGetKey {
   return jwks;
 }
 
-/**
- * Verify an Auth0 ID token (signature, issuer, audience, expiry).
- * Throws if the token is invalid or the Auth0 env vars are not configured,
- * so callers fail closed.
- */
+// Throws on any invalid token, and if Auth0 isn't configured, so callers fail closed.
 export async function verifyIdToken(
   token: string,
   options: VerifyOptions = {},
