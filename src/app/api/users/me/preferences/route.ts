@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
 import { DEFAULT_USER_PREFERENCES } from '@/lib/constants/userPreferences';
 
 /**
@@ -9,14 +9,15 @@ import { DEFAULT_USER_PREFERENCES } from '@/lib/constants/userPreferences';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth0Sub from query parameters or headers
-    const url = new URL(request.url);
-    const auth0Sub =
-      url.searchParams.get('auth0Sub') || request.headers.get('x-auth0-sub');
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
 
-    if (!auth0Sub) {
-      return Response.json({ error: 'Auth0 sub is required' }, { status: 400 });
-    }
+    // Only the caller's own preferences are ever returned
+    const url = new URL(request.url);
+    const claimed =
+      url.searchParams.get('auth0Sub') || request.headers.get('x-auth0-sub');
+    if (claimsOtherUser(auth.user, claimed)) return forbiddenResponse();
+    const auth0Sub = auth.user.auth0Sub;
 
     // Find user by auth0Sub
     const currentUser = await prisma.user.findUnique({
@@ -58,12 +59,13 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const updateData = await request.json();
-    const { auth0Sub, ...preferencesData } = updateData;
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
 
-    if (!auth0Sub) {
-      return Response.json({ error: 'Auth0 sub is required' }, { status: 400 });
-    }
+    const updateData = await request.json();
+    const { auth0Sub: claimedSub, ...preferencesData } = updateData;
+    if (claimsOtherUser(auth.user, claimedSub)) return forbiddenResponse();
+    const auth0Sub = auth.user.auth0Sub;
 
     // Find user by auth0Sub
     const currentUser = await prisma.user.findUnique({

@@ -82,6 +82,23 @@ async function getAuth0Session(request: NextRequest): Promise<Auth0Session | nul
   return isLegacyTestAuthAllowed() ? getLegacyTestSession(request) : null;
 }
 
+/**
+ * Verified token claims for the caller, without touching the database.
+ * Used by the routes that create the user record on first login.
+ */
+export async function getVerifiedClaims(request: NextRequest) {
+  const session = await getAuth0Session(request);
+  const user = session?.user;
+  return user?.sub
+    ? {
+        sub: user.sub,
+        email: user.email ?? undefined,
+        name: user.name ?? undefined,
+        picture: user.picture ?? undefined,
+      }
+    : null;
+}
+
 export interface AuthUser {
   id: string;
   auth0Sub: string;

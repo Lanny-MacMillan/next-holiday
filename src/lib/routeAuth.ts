@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, type AuthUser } from '@/lib/auth';
+import { getCurrentUser, getVerifiedClaims, type AuthUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 type Authenticated = { user: AuthUser; response?: undefined };
@@ -19,6 +19,17 @@ export async function authenticate(
     };
   }
   return { user };
+}
+
+/** Like authenticate(), but only needs a valid token (user may not be in the DB yet). */
+export async function authenticateClaims(request: NextRequest) {
+  const claims = await getVerifiedClaims(request);
+  if (!claims) {
+    return {
+      response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    } as const;
+  }
+  return { claims } as const;
 }
 
 /**

@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const auth0Sub = searchParams.get('sub');
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
 
-    if (!auth0Sub) {
-      return NextResponse.json(
-        { error: 'Auth0 subject ID is required' },
-        { status: 400 },
-      );
+    // Callers may only look themselves up
+    const { searchParams } = new URL(request.url);
+    if (claimsOtherUser(auth.user, searchParams.get('sub'))) {
+      return forbiddenResponse();
     }
+    const auth0Sub = auth.user.auth0Sub;
 
     // Find user by Auth0 subject ID
     const user = await prisma.user.findUnique({

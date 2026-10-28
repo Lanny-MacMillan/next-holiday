@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
 
 /**
  * POST /api/users/cancel-subscription-cleanup
@@ -9,15 +10,13 @@ import { prisma } from '@/lib/prisma';
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { auth0Sub } = body;
+    const auth = await authenticate(request);
+    if (auth.response) return auth.response;
 
-    if (!auth0Sub) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: auth0Sub' },
-        { status: 400 },
-      );
-    }
+    // A user may only run this cleanup for their own account
+    const body = await request.json();
+    if (claimsOtherUser(auth.user, body.auth0Sub)) return forbiddenResponse();
+    const auth0Sub = auth.user.auth0Sub;
 
     // Find the user by Auth0 sub
     const user = await prisma.user.findUnique({
