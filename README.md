@@ -193,6 +193,7 @@ The SSE service handles:
 - **SSE Microservice**: Dedicated Node.js/Express server for real-time notifications
 - **Separate EC2 Instance**: Isolated infrastructure for notification delivery
 - **EventSource API**: Browser-native SSE connection management
+- **Signed Stream Tickets**: The stream is authenticated with a short-lived ticket from `POST /api/sse-ticket`, never a bare user id
 - **Polling Fallback**: Automatic fallback for environments without SSE support
 - **Connection Management**: Automatic reconnection and heartbeat monitoring
 
@@ -206,13 +207,15 @@ The SSE service handles:
 - **Prettier 3.8.1**: Code formatting with consistent style
 - **TypeScript Strict Mode**: Full type checking across frontend and backend
 - **Turbopack**: Fast development bundler for rapid iteration (Next.js 15+)
-- **Test Suites**: 100+ tests covering components, API routes, and business logic
+- **Test Suites**: 300+ tests covering components, API routes, and business logic; every page is smoke-tested
+- **CI**: GitHub Actions runs lint, typecheck, tests and a production build on every pull request
 
 ### Deployment & Infrastructure
 
 - **AWS Amplify**: Serverless deployment with CI/CD pipeline and automatic builds
 - **SSL/TLS**: HTTPS encryption for all data in transit
-- **Environment Management**: Separate dev, staging, and production environments
+- **Environments**: Local development and production
+- **Merge gate**: `lint`, `typecheck`, `test` and `build` must pass, with 70% test coverage on changed lines
 - **Database Hosting**: Managed MySQL with automated backups and point-in-time recovery
 - **EC2 Instance**: Dedicated virtual machine for SSE notification microservice
 - **AWS CloudWatch**: Monitoring, logging, and alerting for production infrastructure
@@ -339,6 +342,34 @@ The MySQL database consists of 18+ interconnected tables designed for multi-tena
 - **Account Switching**: Seamlessly switch between multiple accounts you belong to
 - **Member Administration**: Account owners can manage members and their roles
 
+## 🚢 Deployment
+
+### The app (AWS Amplify)
+
+Merging to `main` deploys automatically. A pull request can only merge once the required checks pass: `lint`, `typecheck`, `test` and `build`, plus 70% test coverage on the lines it changes. Environment variables are set in the Amplify console and passed to the build by `amplify.yml`.
+
+### The SSE service (manual, on EC2)
+
+The notification service in [sse-notifications](https://github.com/Lanny-MacMillan/sse-notifications) is **not** deployed automatically: merging there does not change production. After merging, SSH to the instance and run:
+
+```bash
+cd ~/sse-notifications
+git pull origin main
+npm install
+npx prisma generate && npm run build
+pm2 restart sse-notifications --update-env
+```
+
+Check it came up with `pm2 list` (status `online`) and `curl localhost:4000/health`.
+
+- `API_SECRET` on the instance must equal the app's `SSE_API_SECRET`. The app uses it to sign stream tickets and to call `/api/notify`.
+- `CORS_ORIGINS` on the instance must list every origin the app is served from.
+- When both repos change, deploy the app first, then the service.
+
+### Auth0
+
+The callback, logout and web-origin URLs must list every domain the app is served from. A post-login Action refuses logins whose email is not verified.
+
 ## 📚 API Documentation
 
 ### REST API Endpoints
@@ -430,16 +461,13 @@ The application provides 50+ REST API endpoints organized by feature. All endpoi
 
 ### API Authentication
 
-All API calls require authentication via Auth0 JWT tokens. The Next.js API routes handle token validation automatically.
+Every `/api/*` request must carry the user's Auth0 ID token as `Authorization: Bearer <token>`; the browser attaches it automatically (`src/lib/authFetch.ts`). `src/middleware.ts` rejects unauthenticated requests with `401`, and `src/lib/auth.ts` verifies the token's signature, issuer, audience and expiry against the tenant's keys. The only public route is `/api/performance`.
+
+A user id in a request body, query string or header is never trusted: routes act as the verified user and check that they own or belong to whatever they touch (`src/lib/routeAuth.ts`, `src/lib/rbac.ts`).
 
 ```typescript
-// Client-side API call example (automatic auth with next-auth)
-const response = await fetch('/api/holidays', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// Client code does not set auth headers itself
+const response = await fetch('/api/holidays');
 const holidays = await response.json();
 ```
 
@@ -489,25 +517,14 @@ All API responses follow a consistent format:
 
 ## 🧭 Known Issues & Roadmap
 
-### TODO: Replace header-based API auth with verified Auth0 JWTs
-
-**Current state:** API routes identify the caller from a client-supplied `x-test-user` header (a JSON blob containing the Auth0 `sub`, email, and name), read in `src/lib/auth.ts` and sent by the frontend (`src/store/api.ts` and ~17 other files). The server does not verify it, so anyone who knows another user's Auth0 `sub` could impersonate them. Auth0 handles login in the browser, but the API does not validate a token.
-
-**Planned fix:**
-
-- Send the Auth0 access token as `Authorization: Bearer <token>` from the frontend
-- Verify the token server-side against the tenant's JWKS (e.g. with `jose`), checking issuer, audience, and expiry
-- Derive the user from the verified token's `sub` in `getCurrentUser()`, and stop reading `x-test-user` and the `testUser` query param
-- Roll out behind a feature flag so it can be reverted, and update the tests that rely on the header
-
-Do not simply remove the header check: the whole app currently depends on it.
-
 ### Other items
 
 - Prisma migration history is incomplete: `users.subscription_plan` and related columns, the `notifications` / `notification_preferences` tables, and unique constraints on `contacts(account_id, email)` and `holidays(account_id, holiday_type)` exist only in `schema.prisma`. A fresh `prisma migrate deploy` produces an out-of-date database (the live DB was brought in sync with `prisma db push`). Add a catch-up migration
-- `getCurrentUser()` in `src/lib/auth.ts` still auto-creates a missing user for any `test` / `google-oauth2` sub, racing `/api/users/setup`. It no longer grants the Plus plan (see PR #45), but existing rows created this way with `is_in_db = false` and `subscription_plan = 'plus'` need a one-time cleanup. Remove the auto-create as part of the auth rework above
-- Jest suites that render `.tsx` fail with `Unexpected token '<'` (transform config); 9 of 12 suites are affected
-- Remove or protect the debug/test routes (`/api/debug/*`, `/api/test*`, `/api/upgrade-user`)
+- `getCurrentUser()` in `src/lib/auth.ts` still auto-creates a missing user for any `test` / `google-oauth2` sub, racing `/api/users/setup`. It no longer grants the Plus plan (see PR #45), but existing rows created this way with `is_in_db = false` and `subscription_plan = 'plus'` need a one-time cleanup. Remove the auto-create
+- `/api/upgrade-user` lets a signed-in user move themselves to Plus, and `/api/payment` runs in test mode. Real billing is not integrated
+- Invite creation looks up an existing account by its stored email, and the database does not record whether that email was verified. The Auth0 Action that refuses unverified logins covers this; storing a verified flag would make it explicit
+- About 18 components still call `fetch` directly instead of RTK Query (flagged as lint warnings), and the tests have type errors that CI's type check skips
+- Unused exports remain in `src/store/api.ts` and a few slices
 - SSE notifications run in a separate service ([sse-notifications](https://github.com/Lanny-MacMillan/sse-notifications)); the app falls back to polling when it is unavailable
 
 ## 🚨 Troubleshooting
