@@ -63,7 +63,7 @@ describe('holidayData utilities', () => {
           data: {
             ...createMockState().home.data,
             holidayPreferences: [],
-          },
+          } as never,
         },
       });
       expect(shouldFetchHolidayData('christmas-123', state)).toBe(true);
@@ -137,7 +137,7 @@ describe('holidayData utilities', () => {
           data: {
             ...createMockState().home.data,
             holidayPreferences: null,
-          },
+          } as never,
         },
       });
       expect(getHolidayDataFromRedux('christmas-123', state)).toBe(null);

@@ -138,7 +138,7 @@ describe('deleteHolidayData', () => {
 
   describe('Dry run functionality', () => {
     beforeEach(() => {
-      mockPrisma.holiday.findFirst.mockResolvedValue(mockHoliday);
+      mockPrisma.holiday.findFirst.mockResolvedValue(mockHoliday as never);
 
       // Mock count functions for dry run
       mockPrisma.holiday.count.mockResolvedValue(1);
@@ -194,7 +194,7 @@ describe('deleteHolidayData', () => {
 
   describe('Threshold validation', () => {
     beforeEach(() => {
-      mockPrisma.holiday.findFirst.mockResolvedValue(mockHoliday);
+      mockPrisma.holiday.findFirst.mockResolvedValue(mockHoliday as never);
     });
 
     it('should throw error when total rows exceed threshold', async () => {
@@ -259,7 +259,7 @@ describe('deleteHolidayData', () => {
 
   describe('Actual deletion', () => {
     beforeEach(() => {
-      mockPrisma.holiday.findFirst.mockResolvedValue(mockHoliday);
+      mockPrisma.holiday.findFirst.mockResolvedValue(mockHoliday as never);
 
       // Mock low counts to pass threshold
       mockPrisma.holiday.count.mockResolvedValue(1);
