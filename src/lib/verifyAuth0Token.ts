@@ -5,6 +5,7 @@ export interface VerifiedClaims {
   email?: string;
   name?: string;
   picture?: string;
+  emailVerified?: boolean;
 }
 
 interface VerifyOptions {
@@ -60,5 +61,6 @@ export async function verifyIdToken(
     email: typeof payload.email === 'string' ? payload.email : undefined,
     name: typeof payload.name === 'string' ? payload.name : undefined,
     picture: typeof payload.picture === 'string' ? payload.picture : undefined,
+    emailVerified: payload.email_verified === true,
   };
 }

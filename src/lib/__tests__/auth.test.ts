@@ -52,6 +52,40 @@ describe('getCurrentUser', () => {
     expect(user?.auth0Sub).toBe('auth0|victim');
   });
 
+  describe('verifiedEmail', () => {
+    const asUser = (claims: Record<string, unknown>) =>
+      verifyIdToken.mockResolvedValue({ sub: 'auth0|victim', ...claims });
+    const bearer = () => req({ authorization: 'Bearer good.token' });
+
+    it('is the token email when the token says it is verified', async () => {
+      asUser({ email: 'real@x.com', emailVerified: true });
+      expect((await getCurrentUser(bearer()))?.verifiedEmail).toBe('real@x.com');
+    });
+
+    it('is null when the email is not verified', async () => {
+      asUser({ email: 'real@x.com', emailVerified: false });
+      expect((await getCurrentUser(bearer()))?.verifiedEmail).toBeNull();
+    });
+
+    it('is null when the token has no email', async () => {
+      asUser({ emailVerified: true });
+      expect((await getCurrentUser(bearer()))?.verifiedEmail).toBeNull();
+    });
+
+    it('ignores the database email, which is not proof of ownership', async () => {
+      asUser({ email: 'real@x.com', emailVerified: false });
+      findUnique.mockResolvedValue({ ...dbUser, email: 'victim@x.com' });
+      expect((await getCurrentUser(bearer()))?.verifiedEmail).toBeNull();
+    });
+
+    it('is null on the legacy header path', async () => {
+      process.env.ALLOW_LEGACY_TEST_USER_AUTH = 'true';
+      const legacy = JSON.stringify({ sub: 'auth0|victim', email: 'v@x.com' });
+      const user = await getCurrentUser(req({ 'x-test-user': legacy }));
+      expect(user?.verifiedEmail).toBeNull();
+    });
+  });
+
   it('rejects an invalid bearer token', async () => {
     verifyIdToken.mockRejectedValue(new Error('bad signature'));
     expect(await getCurrentUser(req({ authorization: 'Bearer bad' }))).toBeNull();

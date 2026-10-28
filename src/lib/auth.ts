@@ -9,6 +9,7 @@ interface Auth0Session {
     email?: string;
     name?: string;
     picture?: string;
+    emailVerified?: boolean;
   };
 }
 
@@ -95,6 +96,7 @@ export async function getVerifiedClaims(request: NextRequest) {
         email: user.email ?? undefined,
         name: user.name ?? undefined,
         picture: user.picture ?? undefined,
+        emailVerified: user.emailVerified === true,
       }
     : null;
 }
@@ -105,6 +107,8 @@ export interface AuthUser {
   email?: string | null;
   name?: string | null;
   picture?: string | null;
+  // Only set when the login token says the email is verified
+  verifiedEmail?: string | null;
   subscriptionPlan?: 'free' | 'plus';
   subscriptionStartDate?: Date | null;
   subscriptionEndDate?: Date | null;
@@ -187,7 +191,11 @@ export async function getCurrentUser(
       }
     }
 
-    return user;
+    if (!user) return user;
+
+    const verifiedEmail =
+      session.user.emailVerified === true ? (session.user.email ?? null) : null;
+    return { ...user, verifiedEmail };
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;
