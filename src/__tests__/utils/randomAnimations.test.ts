@@ -4,7 +4,7 @@
 import {
   cleanupOldAnimations,
   generateRandomBouncingAnimation,
-} from '../randomAnimations';
+} from '@/utils/randomAnimations';
 
 const styleEl = () =>
   document.getElementById('random-animations-style') as HTMLStyleElement | null;

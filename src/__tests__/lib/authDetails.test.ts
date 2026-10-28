@@ -1,11 +1,11 @@
 /** @jest-environment node */
 import { NextRequest } from 'next/server';
 
-jest.mock('../prisma', () => ({
+jest.mock('@/lib/prisma', () => ({
   prisma: require('@/__tests__/support/api').prismaMock,
 }));
 const verifyIdToken = jest.fn();
-jest.mock('../verifyAuth0Token', () => ({
+jest.mock('@/lib/verifyAuth0Token', () => ({
   verifyIdToken: (...a: unknown[]) => verifyIdToken(...a),
 }));
 
@@ -15,7 +15,7 @@ import {
   getCurrentUser,
   getVerifiedClaims,
   requireAuth,
-} from '../auth';
+} from '@/lib/auth';
 
 const bearer = { authorization: 'Bearer good' };
 const req = (

@@ -1,4 +1,4 @@
-import { isEmptyNumber, isEmptyString, isValidEmail } from '../formValidation';
+import { isEmptyNumber, isEmptyString, isValidEmail } from '@/utils/formValidation';
 
 describe('isEmptyString', () => {
   it.each([null, undefined, '', '   ', '\n\t'])('treats %p as empty', value => {

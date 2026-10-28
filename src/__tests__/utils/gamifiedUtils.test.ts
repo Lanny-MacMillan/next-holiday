@@ -2,7 +2,7 @@ import {
   getGamifiedBackgroundColor,
   getGiftGamifiedBackgroundColor,
   getTaskGamifiedBackgroundColor,
-} from '../gamifiedUtils';
+} from '@/utils/gamifiedUtils';
 
 const GRAY = 'bg-gradient-to-br from-gray-400 to-gray-600';
 

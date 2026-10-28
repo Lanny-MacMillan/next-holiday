@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, renderHook, screen } from '@testing-library/react';
-import { BudgetDisplay, useBudgetInfo } from '../BudgetDisplay';
+import { BudgetDisplay, useBudgetInfo } from '@/components/common/BudgetDisplay';
 
 let state: any;
 jest.mock('@/store/hooks', () => ({

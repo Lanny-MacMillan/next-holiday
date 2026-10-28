@@ -1,4 +1,4 @@
-import { getCardStyling } from '../cardShadows';
+import { getCardStyling } from '@/utils/cardShadows';
 
 describe('getCardStyling', () => {
   it('gives a plain light-mode card just a dark drop shadow', () => {

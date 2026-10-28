@@ -1,10 +1,10 @@
 /** @jest-environment node */
 const findFirst = jest.fn();
-jest.mock('../prisma', () => ({
+jest.mock('@/lib/prisma', () => ({
   prisma: { user: { findFirst: (...a: unknown[]) => findFirst(...a) } },
 }));
 
-import { validateAssigneeAccess } from '../assigneeValidation';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 
 beforeEach(() => {
   findFirst.mockReset();

@@ -5,7 +5,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { clearHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { useFormModalMutation } from '../useFormModalMutation';
+import { useFormModalMutation } from '@/hooks/useFormModalMutation';
 
 let authValue: { user?: { sub: string; email?: string } };
 let currentPath = '/christmas/gift-list';

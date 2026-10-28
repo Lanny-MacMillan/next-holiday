@@ -4,7 +4,7 @@ import {
   getHolidayCountdownTime,
   getHolidayIdFromRoute,
   isNationalHoliday,
-} from '../holidayUtils';
+} from '@/utils/holidayUtils';
 
 describe('getHolidayAccentColor', () => {
   it.each([

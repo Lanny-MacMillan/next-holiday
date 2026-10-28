@@ -5,7 +5,7 @@ import { act, renderHook } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { clearUser, setUser } from '@/store/slices/userSlice';
-import { useSubscription } from '../useSubscription';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <Provider store={store}>{children}</Provider>

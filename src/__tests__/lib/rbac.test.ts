@@ -1,6 +1,6 @@
 /** @jest-environment node */
 const findUnique = jest.fn();
-jest.mock('../prisma', () => ({
+jest.mock('@/lib/prisma', () => ({
   prisma: { accountMember: { findUnique: (...a: unknown[]) => findUnique(...a) } },
 }));
 
@@ -8,7 +8,7 @@ import {
   requireAccountAccess,
   requireAccountAdmin,
   requireAccountOwner,
-} from '../rbac';
+} from '@/lib/rbac';
 
 const asRole = (role: string | null) =>
   findUnique.mockResolvedValue(role ? { role } : null);

@@ -1,6 +1,6 @@
 /** @jest-environment node */
 import { SignJWT, generateKeyPair, type KeyLike } from 'jose';
-import { verifyIdToken } from '../verifyAuth0Token';
+import { verifyIdToken } from '@/lib/verifyAuth0Token';
 
 const DOMAIN = 'tenant.auth0.com';
 const CLIENT_ID = 'client-123';

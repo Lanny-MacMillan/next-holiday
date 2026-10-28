@@ -1,4 +1,4 @@
-import { errorMessage } from '../errorMessage';
+import { errorMessage } from '@/utils/errorMessage';
 
 describe('errorMessage', () => {
   it('reads the message of an Error', () => {

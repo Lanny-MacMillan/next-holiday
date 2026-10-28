@@ -5,7 +5,7 @@ import { act, renderHook } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { clearHomeData } from '@/store/slices/homeSlice';
-import { useRefreshHomeData } from '../useRefreshHomeData';
+import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 
 const mockFetch = jest.fn();
 const wrapper = ({ children }: { children: React.ReactNode }) => (

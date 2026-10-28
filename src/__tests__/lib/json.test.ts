@@ -1,4 +1,4 @@
-import { toPlain } from '../json';
+import { toPlain } from '@/lib/json';
 
 describe('toPlain', () => {
   it('turns a bigint into a string', () => {

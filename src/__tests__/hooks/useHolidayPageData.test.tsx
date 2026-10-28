@@ -5,7 +5,7 @@ import { act, renderHook } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { clearHomeData, setHomeData } from '@/store/slices/homeSlice';
-import { useHolidayPageData } from '../useHolidayPageData';
+import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 
 const formMutation = {
   holidayId: 'h-1' as string | null,

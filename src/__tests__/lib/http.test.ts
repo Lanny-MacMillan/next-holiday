@@ -7,7 +7,7 @@ import {
   ok,
   serverError,
   unauthorized,
-} from '../http';
+} from '@/lib/http';
 
 const read = async (res: { status: number; json: () => Promise<unknown> }) => ({
   status: res.status,

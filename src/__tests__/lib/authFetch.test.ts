@@ -3,7 +3,7 @@
  */
 import 'whatwg-fetch';
 
-type AuthFetch = typeof import('../authFetch');
+type AuthFetch = typeof import('@/lib/authFetch');
 
 let lib: AuthFetch;
 let underlying: jest.Mock;
@@ -15,7 +15,7 @@ beforeEach(() => {
   jest.resetModules();
   underlying = jest.fn().mockResolvedValue({ ok: true });
   window.fetch = underlying as unknown as typeof fetch;
-  lib = require('../authFetch');
+  lib = require('@/lib/authFetch');
   lib.installAuthFetch();
   lib.setAuthTokenProvider(async () => 'tok-123');
 });

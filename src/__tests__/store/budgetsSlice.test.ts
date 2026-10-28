@@ -7,7 +7,7 @@ import budgetsReducer, {
   setMany,
   setOne,
   removeOne,
-} from '../budgetsSlice';
+} from '@/store/slices/budgetsSlice';
 
 describe('budgetsSlice', () => {
   const initialState = {

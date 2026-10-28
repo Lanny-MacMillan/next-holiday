@@ -2,16 +2,16 @@
 import { NextRequest } from 'next/server';
 
 const findUnique = jest.fn();
-jest.mock('../prisma', () => ({
+jest.mock('@/lib/prisma', () => ({
   prisma: { user: { findUnique: (...a: unknown[]) => findUnique(...a) } },
 }));
 
 const verifyIdToken = jest.fn();
-jest.mock('../verifyAuth0Token', () => ({
+jest.mock('@/lib/verifyAuth0Token', () => ({
   verifyIdToken: (...a: unknown[]) => verifyIdToken(...a),
 }));
 
-import { getCurrentUser } from '../auth';
+import { getCurrentUser } from '@/lib/auth';
 
 const dbUser = { id: 'u1', auth0Sub: 'auth0|victim', email: 'v@x.com' };
 

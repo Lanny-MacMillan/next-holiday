@@ -3,7 +3,7 @@ import {
   shouldSkipHolidayQuery,
   getHolidayDataFromRedux,
   getBudgetFromRedux,
-} from '../holidayData';
+} from '@/utils/holidayData';
 import { RootState } from '@/store';
 
 // Mock Redux state for testing

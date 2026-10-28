@@ -3,7 +3,7 @@ import {
   createPaginatedResponse,
   createPaginationMeta,
   parsePagination,
-} from '../pagination';
+} from '@/lib/pagination';
 
 const parse = (query = '') =>
   parsePagination(new NextRequest(`http://localhost/api/x${query}`));

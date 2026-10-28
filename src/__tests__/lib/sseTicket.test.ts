@@ -1,4 +1,4 @@
-import { fetchSseTicket } from '../sseTicket';
+import { fetchSseTicket } from '@/lib/sseTicket';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as unknown as typeof fetch;

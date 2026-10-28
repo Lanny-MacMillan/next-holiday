@@ -1,4 +1,4 @@
-import { dateOnlyToUTC, toDateOnlyString } from '../dates';
+import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
 
 describe('dates', () => {
   it('reads a date-only string as midnight UTC', () => {

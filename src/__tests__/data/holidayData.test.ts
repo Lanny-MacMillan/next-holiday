@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import { holidayData } from '../holidayData';
+import { holidayData } from '@/data/holidayData';
 
-const source = fs.readFileSync(path.join(__dirname, '../holidayData.ts'), 'utf8');
+const source = fs.readFileSync(
+  path.join(__dirname, '../../data/holidayData.ts'),
+  'utf8',
+);
 
 // Every list the progress functions read, found from the source: state.<slice>?.<field>
 const reads = [
