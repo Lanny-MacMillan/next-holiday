@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useHolidayPageData } from '@/hooks/useHolidayPageData';
+import { useSharedHoliday } from '@/hooks/useSharedHoliday';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { refreshShares } from '@/store/slices/sharesSlice';
-import { selectHolidayPrefById } from '@/store/selectors/home';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import type { GiftListConfig } from '@/config/giftListConfigs';
@@ -64,24 +63,8 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
-  const {
-    holidayId: baseHolidayId,
-    holidayData: baseHolidayData,
-    auth0User,
-    homeInitialized,
-  } = useHolidayPageData();
-
-  // On a holiday shared with the user, the share carries the owner's holiday id
-  const shareData = useAppSelector(state => {
-    if (!baseHolidayId) return null;
-    return state.shares.shares.find(
-      (share: any) => share?.holidayKey === holidayKey,
-    );
-  });
-  const holidayId = shareData?.holidayId || baseHolidayId;
-  const holidayData =
-    useAppSelector(state => selectHolidayPrefById(state, holidayId)) ||
-    baseHolidayData;
+  const { holidayId, holidayData, auth0User, homeInitialized, shareMembers } =
+    useSharedHoliday(holidayKey);
 
   const {
     createGift,
@@ -92,37 +75,6 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });
-
-  const baseMembers = shareData?.members || [];
-  // The current user is always assignable, listed first as the owner
-  const shareMembers = auth0User
-    ? [
-        ...baseMembers
-          .filter((member: any) => member.userId === auth0User.sub)
-          .map((member: any) => ({
-            ...member,
-            uuid: member.uuid || member.userId,
-            role: 'owner' as const,
-          })),
-        ...(baseMembers.find((member: any) => member.userId === auth0User.sub)
-          ? []
-          : [
-              {
-                userId: auth0User.sub || '',
-                uuid: auth0User.id || '',
-                name: auth0User.name || 'Me',
-                email: auth0User.email || '',
-                role: 'owner' as const,
-              },
-            ]),
-        ...baseMembers
-          .filter((member: any) => member.userId !== auth0User.sub)
-          .map((member: any) => ({
-            ...member,
-            uuid: member.uuid || member.userId,
-          })),
-      ]
-    : baseMembers;
 
   const gifts = useMemo(() => holidayData?.gifts || [], [holidayData?.gifts]);
 
