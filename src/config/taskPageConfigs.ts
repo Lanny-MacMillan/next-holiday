@@ -18,11 +18,14 @@ export interface TaskPageConfig {
     | 'cyan';
   doneEmoji: string;
   // Tasks of one category are shown and created; null shows every task and lets the user pick one
-  taskCategory: 'Tasks' | 'To-Do' | null;
+  taskCategory: 'Tasks' | 'To-Do' | 'Events' | null;
   // Accent for the checkboxes, left borders and buttons, where the holiday sets one
   accent?: string;
   border?: string;
   submitColor?: string;
+  // Events are tasks in their own category, shown with their own wording and a summary
+  variant?: 'tasks' | 'events';
+  modalClassName?: string;
 }
 
 const common = {

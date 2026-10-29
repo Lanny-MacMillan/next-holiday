@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import TasksPage from '@/components/templates/TasksPage';
 import { taskPageConfigs } from '@/config/taskPageConfigs';
+import { eventPageConfigs } from '@/config/eventPageConfigs';
 
 const me = { sub: 'auth0|me', id: 'u1', name: 'Me', email: 'me@x.com' };
 let shared: any;
@@ -47,7 +48,9 @@ jest.mock('@/components/common/HolidayPageHeader', () => ({
 }));
 jest.mock('@/components/common/AddButton', () => ({
   __esModule: true,
-  default: ({ onClick }: any) => <button onClick={onClick}>Add New Task</button>,
+  default: ({ title, onClick }: any) => (
+    <button onClick={onClick}>Add New {title}</button>
+  ),
 }));
 jest.mock('@/components/cards/to-do/ToDoCard', () => ({
   __esModule: true,
@@ -569,5 +572,144 @@ describe('TasksPage', () => {
       await waitFor(() => expect(console.error).toHaveBeenCalled());
       expect(screen.queryByRole('dialog', { name: 'Delete Task' })).toBeNull();
     });
+  });
+});
+
+describe('TasksPage as an events page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    holidayShared = false;
+    shared = {
+      holidayId: 'h1',
+      holidayData: {
+        tasks: [
+          task('a', 'Egg hunt', { category: 'Events', priority: 'low' }),
+          task('b', 'Brunch', {
+            category: 'Events',
+            priority: 'high',
+            isCompleted: true,
+          }),
+          task('c', 'Buy ham', { category: 'Tasks' }),
+        ],
+      },
+      auth0User: me,
+      homeInitialized: true,
+      shareMembers: [{ userId: 'auth0|me', uuid: 'u1', name: 'Me' }],
+    };
+    Object.entries(mutations).forEach(([k, m]) => {
+      if (typeof m === 'function')
+        (m as jest.Mock).mockReset().mockResolvedValue({});
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('shows only events, under its own title and section names', () => {
+    renderPage(eventPageConfigs.easter);
+
+    expect(screen.getByRole('heading', { name: 'Easter Events' })).toBeTruthy();
+    expect(screen.getByText('Plan your Easter celebrations!')).toBeTruthy();
+    expect(screen.getByText('Upcoming Events (1)')).toBeTruthy();
+    expect(screen.getByText('Completed Events (1)')).toBeTruthy();
+    expect(screen.queryByText('Buy ham')).toBeNull();
+  });
+
+  it('summarises the events: total, completed and remaining', () => {
+    renderPage(eventPageConfigs.easter);
+
+    expect(screen.getByText('Event Status')).toBeTruthy();
+    expect(screen.getByText('Total Events').previousSibling?.textContent).toBe('2');
+    expect(screen.getByText('Completed').previousSibling?.textContent).toBe('1');
+    expect(screen.getByText('Remaining').previousSibling?.textContent).toBe('1');
+  });
+
+  it('has no summary when there are no events', () => {
+    shared.holidayData = { tasks: [] };
+    renderPage(eventPageConfigs.easter);
+
+    expect(screen.queryByText('Event Status')).toBeNull();
+    expect(screen.getByText('No events planned yet.')).toBeTruthy();
+    expect(screen.getByText('No completed events yet.')).toBeTruthy();
+  });
+
+  it('has no summary on a tasks page', () => {
+    renderPage(taskPageConfigs.birthday);
+
+    expect(screen.queryByText('Event Status')).toBeNull();
+  });
+
+  it('shows a loading message in event wording', () => {
+    shared.homeInitialized = false;
+    shared.holidayData = undefined;
+    renderPage(eventPageConfigs.easter);
+
+    expect(screen.getByText('Loading events...')).toBeTruthy();
+  });
+
+  it('adds an event in the Events category, with event wording', async () => {
+    renderPage(eventPageConfigs.easter);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add New Event' }));
+    fireEvent.click(screen.getByText('submit Add New Event'));
+
+    await waitFor(() => expect(mutations.createTask).toHaveBeenCalled());
+    expect(mutations.createTask.mock.calls[0][0].category).toBe('Events');
+    expect(await screen.findByText('Event added successfully!')).toBeTruthy();
+  });
+
+  it('says so when adding an event fails', async () => {
+    mutations.createTask.mockRejectedValue(new Error('boom'));
+    renderPage(eventPageConfigs.easter);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add New Event' }));
+    fireEvent.click(screen.getByText('submit Add New Event'));
+
+    expect(
+      await screen.findByText('Error adding event. Please try again.'),
+    ).toBeTruthy();
+  });
+
+  it('edits an event and keeps it in the Events category', async () => {
+    renderPage(eventPageConfigs.easter);
+
+    fireEvent.click(screen.getByText('edit Egg hunt'));
+    fireEvent.click(screen.getByText('submit Edit Event'));
+
+    await waitFor(() => expect(mutations.updateTask).toHaveBeenCalled());
+    expect(mutations.updateTask.mock.calls[0][1].category).toBe('Events');
+    expect(await screen.findByText('Event updated successfully!')).toBeTruthy();
+  });
+
+  it('names the event in the delete question', () => {
+    renderPage(eventPageConfigs.easter);
+
+    fireEvent.click(screen.getByText('delete Egg hunt'));
+
+    expect(screen.getByText(/delete "Egg hunt"\?/)).toBeTruthy();
+  });
+
+  it('offers no Category sort, since every event has the same category', () => {
+    renderPage(eventPageConfigs.easter);
+
+    fireEvent.click(screen.getByText('open sort'));
+
+    expect(optionLabels()).toEqual(['None', 'Priority', 'Date Due', 'Title']);
+  });
+
+  it('ticks an event off with the completion toggle', async () => {
+    renderPage(eventPageConfigs.easter);
+
+    fireEvent.click(screen.getByText('toggle Egg hunt'));
+
+    await waitFor(() =>
+      expect(mutations.toggleTask).toHaveBeenCalledWith('a', true),
+    );
+  });
+
+  it.each(Object.keys(eventPageConfigs))('has a page for %s', key => {
+    const config = (eventPageConfigs as Record<string, any>)[key];
+
+    expect(config.variant).toBe('events');
+    expect(config.taskCategory).toBe('Events');
+    expect(config.holidayKey).toBe(key);
   });
 });

@@ -79,6 +79,9 @@ function sortTasks(tasks: Task[], sortBy: SortOption) {
 // One tasks page for every holiday; the config supplies names, category and colours.
 export default function TasksPage({ config }: { config: TaskPageConfig }) {
   const { holidayKey, taskCategory } = config;
+  const isEvents = config.variant === 'events';
+  const noun = isEvents ? 'Event' : 'Task';
+  const nounLower = noun.toLowerCase();
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const isHolidayShared = useAppSelector((state: any) =>
@@ -148,11 +151,14 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         isCompleted: false,
         holidayId,
       });
-      setToast({ message: 'Task added successfully!', type: 'success' });
+      setToast({ message: `${noun} added successfully!`, type: 'success' });
       setShowForm(false);
     } catch (error) {
       console.error('Failed to add task:', error);
-      setToast({ message: 'Error adding task. Please try again.', type: 'error' });
+      setToast({
+        message: `Error adding ${nounLower}. Please try again.`,
+        type: 'error',
+      });
     }
   }
 
@@ -169,12 +175,15 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         due_date: values.dueDate || null,
         isCompleted: values.isCompleted || false,
       });
-      setToast({ message: 'Task updated successfully!', type: 'success' });
+      setToast({ message: `${noun} updated successfully!`, type: 'success' });
       setEditingTask(null);
       setShowEditModal(false);
     } catch (error) {
       console.error('Failed to update task:', error);
-      setToast({ message: 'Error updating task. Please try again.', type: 'error' });
+      setToast({
+        message: `Error updating ${nounLower}. Please try again.`,
+        type: 'error',
+      });
     }
   }
 
@@ -211,7 +220,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
             className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
             style={{ borderBottomColor: config.accent ?? '#3b82f6' }}
           ></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading tasks...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading {nounLower}s...</p>
         </div>
       </div>
     );
@@ -265,14 +274,14 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         title={config.title}
         backHref={`/${holidayKey}`}
         onSortClick={() => setShowSortModal(true)}
-        sortTitle="Sort tasks"
+        sortTitle={`Sort ${nounLower}s`}
         description={config.description}
         holidayColor={config.headerColor}
         error={undefined}
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
         <AddButton
-          title="Task"
+          title={noun}
           onClick={() => setShowForm(true)}
           color={config.addButton}
         />
@@ -283,35 +292,61 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
           </div>
         )}
 
+        {isEvents && tasks.length > 0 && (
+          <div className="card rounded-lg p-6">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
+              Event Status
+            </h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              {[
+                ['text-blue-600', tasks.length, 'Total Events'],
+                ['text-green-600', completedTasks.length, 'Completed'],
+                ['text-orange-600', incompleteTasks.length, 'Remaining'],
+              ].map(([color, count, label]) => (
+                <div key={label}>
+                  <div className={`text-2xl font-bold ${color}`}>{count}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <TaskSection
-          title="Incomplete"
+          title={isEvents ? 'Upcoming Events' : 'Incomplete'}
           items={incompleteTasks}
           isCompleted={false}
-          emptyMessage={`All tasks completed! ${config.doneEmoji}`}
+          emptyMessage={
+            isEvents
+              ? 'No events planned yet.'
+              : `All tasks completed! ${config.doneEmoji}`
+          }
           completedMessage=""
           renderItem={(task: Task) => renderTask(task, false)}
         />
 
         <TaskSection
-          title="Completed"
+          title={isEvents ? 'Completed Events' : 'Completed'}
           items={completedTasks}
           isCompleted={true}
           emptyMessage=""
-          completedMessage="No completed tasks yet."
+          completedMessage={`No completed ${nounLower}s yet.`}
           renderItem={(task: Task) => renderTask(task, true)}
         />
       </main>
 
       <FormModal
         isOpen={showForm}
-        title="Add New Task"
+        title={`Add New ${noun}`}
         fields={formFields('add')}
         onSubmit={handleAddTask}
         onClose={() => setShowForm(false)}
         loading={loading}
-        submitText={loading ? 'Adding...' : 'Add Task'}
+        submitText={loading ? 'Adding...' : `Add ${noun}`}
         cancelText="Cancel"
-        cardClassName="card"
+        cardClassName={config.modalClassName ?? 'card'}
         submitButtonColor={config.submitColor ?? config.accent}
         contacts={contacts}
         shareMembers={shareMembers}
@@ -319,7 +354,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
 
       <FormModal
         isOpen={showEditModal}
-        title="Edit Task"
+        title={`Edit ${noun}`}
         fields={formFields('edit')}
         onSubmit={handleSaveEdit}
         onClose={() => {
@@ -327,9 +362,9 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
           setShowEditModal(false);
         }}
         loading={loading}
-        submitText={loading ? 'Updating...' : 'Update Task'}
+        submitText={loading ? 'Updating...' : `Update ${noun}`}
         cancelText="Cancel"
-        cardClassName="card"
+        cardClassName={config.modalClassName ?? 'card'}
         submitButtonColor={config.submitColor ?? config.accent}
         contacts={contacts}
         shareMembers={shareMembers}
@@ -355,7 +390,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
           isOpen={true}
           onConfirm={handleConfirmDelete}
           onCancel={() => setTaskToDelete(null)}
-          title="Delete Task"
+          title={`Delete ${noun}`}
           message={`Are you sure you want to delete "${taskToDelete.title}"? This action cannot be undone.`}
           loading={deleteLoading}
         />
@@ -367,7 +402,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         sortBy={sortBy}
         onSortChange={(sortOption: string) => setSortBy(sortOption as SortOption)}
         sortOptions={sortOptions}
-        title="Sort Tasks"
+        title={`Sort ${noun}s`}
       />
 
       <Toast
