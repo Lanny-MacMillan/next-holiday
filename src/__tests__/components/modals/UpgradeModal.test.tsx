@@ -83,6 +83,16 @@ describe('UpgradeModal', () => {
       expect(screen.getByText('What you get with Plus:')).toBeInTheDocument();
     });
 
+    it('says on the payment step that this is a demo and nothing is charged', () => {
+      renderModal();
+      expect(screen.queryByText(/Demo only/)).not.toBeInTheDocument();
+
+      goToPayment();
+      expect(screen.getByRole('note')).toHaveTextContent(
+        'Demo only. No payment is taken and nothing is charged. Please do not enter real card details.',
+      );
+    });
+
     it('Cancel closes the modal', () => {
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

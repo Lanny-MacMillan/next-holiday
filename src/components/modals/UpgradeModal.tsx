@@ -306,6 +306,14 @@ export default function UpgradeModal({
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
+            <div
+              role="note"
+              className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-800 dark:text-red-200"
+            >
+              <strong>Demo only.</strong> No payment is taken and nothing is charged.
+              Please do not enter real card details.
+            </div>
+
             {/* Test Mode Toggle */}
             <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
               <div>
