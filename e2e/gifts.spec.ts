@@ -9,8 +9,26 @@ test('explore the add-gift form', async ({ browser }) => {
   console.log('SETUP', JSON.stringify(ids));
 
   const page = await context.newPage();
+  page.on(
+    'console',
+    m => m.type() === 'error' && console.log('CONSOLE', m.text().slice(0, 300)),
+  );
+  page.on('pageerror', e => console.log('PAGEERROR', String(e).slice(0, 300)));
+  page.on(
+    'response',
+    r =>
+      r.url().includes('/api/') &&
+      console.log(
+        'API',
+        r.status(),
+        r.request().method(),
+        r.url().replace('http://localhost:3000', ''),
+      ),
+  );
   await page.goto('/christmas/gift-list');
-  await page.getByRole('button', { name: /add new gift/i }).click();
+  await page.waitForTimeout(8000);
+  console.log('BODY', (await page.locator('body').innerText()).slice(0, 300));
+  await page.getByRole('button', { name: /add new gift/i }).click({ timeout: 5000 });
 
   const fields = await page
     .locator('input, textarea, select, button')
