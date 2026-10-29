@@ -3,7 +3,11 @@ type Bucket = { count: number; resetAt: number };
 // Per server instance, so with several instances the real ceiling is higher; it is an abuse guard.
 const buckets = new Map<string, Bucket>();
 
-export const RATE_LIMIT = { max: 300, windowMs: 60_000 };
+// The e2e run sends every browser and helper request from one address, so CI raises the ceiling.
+export const RATE_LIMIT = {
+  max: Number(process.env.RATE_LIMIT_PER_MINUTE) || 300,
+  windowMs: 60_000,
+};
 
 export function checkRateLimit(key: string, now = Date.now()) {
   if (buckets.size > 10_000) {

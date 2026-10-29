@@ -109,6 +109,7 @@ jobs:
           --health-timeout=5s
           --health-retries=20
     env:
+      RATE_LIMIT_PER_MINUTE: '100000'
       NEXT_PUBLIC_AUTH0_DOMAIN: ${{ vars.E2E_AUTH0_DOMAIN }}
       AUTH0_ISSUER_BASE_URL: https://${{ vars.E2E_AUTH0_DOMAIN }}
       NEXT_PUBLIC_AUTH0_CLIENT_ID: ${{ vars.E2E_AUTH0_CLIENT_ID }}

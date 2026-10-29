@@ -2,11 +2,8 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { call, setUpHoliday, type Session } from './support/api';
 import { signIn } from './support/auth';
 
-// Holiday pages read what the home page loads, so go through it like a person would.
-async function openGiftList(page: Page) {
-  await page.goto('/');
-  await page.locator('a[href^="/christmas"]').first().click();
-  await page.locator('a[href="/christmas/gift-list"]').first().click();
+async function openGiftList(page: Page, slug = 'christmas') {
+  await page.goto(`/${slug}/gift-list`);
 }
 
 async function giftNames(
@@ -47,6 +44,36 @@ test.describe('gifts', () => {
     await expect(page.getByText(gift)).toBeVisible();
     await context.close();
   });
+
+  // The gift list is one shared page; check it works for more than Christmas
+  for (const [holiday, slug] of [
+    ['Birthday', 'birthday'],
+    ['Halloween', 'halloween'],
+    ["Mother's Day", 'mothers-day'],
+  ]) {
+    test(`the ${holiday} gift list saves a gift across a reload`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext();
+      const session = await signIn(context, 'A');
+      const { holidayId } = await setUpHoliday(context, session, holiday);
+      const gift = `Book ${Date.now()}`;
+
+      const page = await context.newPage();
+      await openGiftList(page, slug);
+      await page.getByRole('button', { name: /add new gift/i }).click();
+      await page.getByPlaceholder('Recipient*').fill('Grandma');
+      await page.getByPlaceholder('Gift Name*').fill(gift);
+      await page.getByRole('button', { name: 'Add Gift', exact: true }).click();
+
+      await expect(page.getByText(gift)).toBeVisible();
+      expect(await giftNames(context, session, holidayId)).toContain(gift);
+
+      await page.reload();
+      await expect(page.getByText(gift)).toBeVisible();
+      await context.close();
+    });
+  }
 
   test("another user cannot read or remove someone else's gift", async ({
     browser,
