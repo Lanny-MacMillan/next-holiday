@@ -33,7 +33,8 @@ test('a Plus user invites someone by email and they get access after accepting',
   await expect(
     pageB.getByText(/invited you to collaborate on Christmas/),
   ).toBeVisible();
-  await pageB.getByRole('button', { name: 'Accept' }).first().click();
+  await pageB.getByRole('button', { name: 'Accept', exact: true }).first().click();
+  await pageB.getByRole('button', { name: /accept & replace my data/i }).click();
 
   await expect
     .poll(async () => (await call(contextB, b, 'GET', giftsUrl)).status)
