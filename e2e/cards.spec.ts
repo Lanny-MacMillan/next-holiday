@@ -24,7 +24,8 @@ test.describe('cards', () => {
     await expect(page.getByText(recipient)).toBeVisible();
 
     await page.getByRole('button', { name: 'Mark Sent' }).first().click();
-    await expect(page.getByText('Sent', { exact: true }).first()).toBeVisible();
+    // The card only moves once the server has saved it, so reloading after this is safe
+    await expect(page.getByText('Sent Cards (1)')).toBeVisible();
 
     await page.reload();
     await expect(page.getByRole('button', { name: 'Mark Sent' })).toHaveCount(0);

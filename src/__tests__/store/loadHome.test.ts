@@ -49,4 +49,47 @@ describe('loadHome', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(store.getState().home.initialized).toBe(true);
   });
+
+  describe('a plan changed on the server', () => {
+    const serverSays = (subscriptionPlan: 'free' | 'plus') =>
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: { ...data, user: { ...data.user, subscriptionPlan } },
+        }),
+      });
+
+    it('shows a plan that has been on the server for a while', async () => {
+      serverSays('free');
+      await store.dispatch(loadHome(profile));
+      store.dispatch({
+        type: 'user/setUser',
+        payload: {
+          ...store.getState().user.user,
+          lastUpdated: new Date(Date.now() - 60_000).toISOString(),
+        },
+      });
+
+      serverSays('plus');
+      await store.dispatch(loadHome(profile));
+
+      expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
+    });
+
+    // KNOWN ISSUE: every load stamps lastUpdated, and a free user updated in the last
+    // 30 seconds is treated as "just downgraded", so a plan that changed on the server
+    // (for example a Stripe upgrade) is ignored until 30 seconds after the last load.
+    it.failing(
+      'shows an upgrade made on the server right after a load',
+      async () => {
+        serverSays('free');
+        await store.dispatch(loadHome(profile));
+
+        serverSays('plus');
+        await store.dispatch(loadHome(profile));
+
+        expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
+      },
+    );
+  });
 });
