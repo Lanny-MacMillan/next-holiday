@@ -47,7 +47,7 @@ export class LocationService {
           };
           return this.cachedLocation;
         }
-      } catch (ipApiError) {
+      } catch {
         // Silently handle CORS and other IP API errors
         console.warn('IP geolocation service unavailable, using timezone only');
       }
@@ -55,7 +55,7 @@ export class LocationService {
       // Cache the basic location info as fallback
       this.cachedLocation = this.getBasicLocationInfo();
       return this.cachedLocation;
-    } catch (error) {
+    } catch {
       // Ultimate fallback
       this.cachedLocation = this.getBasicLocationInfo();
       return this.cachedLocation;

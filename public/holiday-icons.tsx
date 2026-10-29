@@ -207,22 +207,3 @@ export function IconBabyShower({ title = 'Baby Shower', ...props }: IconProps) {
     </IconBase>
   );
 }
-
-/** Optional: registry for dynamic rendering */
-export const HolidayIcons = {
-  christmas: IconChristmas,
-  hanukkah: IconHanukkah,
-  kwanzaa: IconKwanzaa,
-  newYear: IconNewYear,
-  valentines: IconValentines,
-  easter: IconEaster,
-  thanksgiving: IconThanksgiving,
-  halloween: IconHalloween,
-  mothersDay: IconMothersDay,
-  fathersDay: IconFathersDay,
-  birthday: IconBirthday,
-  anniversary: IconAnniversary,
-  fourthOfJuly: IconFourthOfJuly,
-  graduation: IconGraduation,
-  babyShower: IconBabyShower,
-} as const;

@@ -1,4 +1,4 @@
-import { FormField, FormConfig } from '../types/form';
+import { FormField } from '../types/form';
 
 const ASSIGNTO_FIELD: FormField = {
   id: 'assigned_to', // Changed from 'assignedTo' to match API

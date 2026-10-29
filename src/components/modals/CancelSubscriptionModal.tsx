@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppDispatch } from '@/store/hooks';
 import { upgradeUser, updateSubscription, setUser } from '@/store/slices/userSlice';
 import { fetchShares } from '@/store/slices/sharesSlice';

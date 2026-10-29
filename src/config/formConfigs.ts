@@ -581,7 +581,6 @@ export function getFormConfig(
 import {
   buildFormConfig as newBuildFormConfig,
   ShareMember,
-  shouldShowAssignTo,
   enhanceShareMembersWithCurrentUser,
 } from '@/lib/formBuilder';
 import { HolidayKey, ContentType } from '@/config/baseFormConfigs';

@@ -9,7 +9,6 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   updateTaskInHomeData,
-  addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';
 import {

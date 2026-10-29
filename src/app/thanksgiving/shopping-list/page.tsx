@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import Toast from '@/components/common/Toast';
-import { setHomeData } from '@/store/slices/homeSlice';
 import { transformSuppliesPayload } from '@/utils/formTransformers';
 import {
   selectIsHolidayShared,

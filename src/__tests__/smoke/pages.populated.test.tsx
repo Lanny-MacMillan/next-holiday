@@ -247,14 +247,13 @@ describe('holiday pages with data', () => {
     (route, file) => {
       currentPath = route;
       jest.resetModules();
-      /* eslint-disable @typescript-eslint/no-require-imports */
+
       const { render, cleanup, act } = require('@testing-library/react');
       const { Provider } = require('react-redux');
       const { store } = require('@/store');
       const { setHomeData } = require('@/store/slices/homeSlice');
       const { setUser } = require('@/store/slices/userSlice');
       const Page = require(file).default;
-      /* eslint-enable @typescript-eslint/no-require-imports */
 
       act(() => {
         store.dispatch(setHomeData(homeData()));

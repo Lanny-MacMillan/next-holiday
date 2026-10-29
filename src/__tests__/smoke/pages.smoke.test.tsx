@@ -91,12 +91,11 @@ describe('page smoke tests', () => {
 
       // Fresh modules per page: sharing one store across pages hung the run.
       jest.resetModules();
-      /* eslint-disable @typescript-eslint/no-require-imports */
+
       const { render, cleanup } = require('@testing-library/react');
       const { Provider } = require('react-redux');
       const { store } = require('@/store');
       const Page = require(file).default;
-      /* eslint-enable @typescript-eslint/no-require-imports */
 
       try {
         const { container } = render(
