@@ -5,6 +5,7 @@ import {
   claimsOtherUser,
   forbiddenResponse,
   isShareParticipant,
+  plusRequired,
 } from '@/lib/routeAuth';
 import { broadcastInvite } from '@/lib/realTimeNotifications';
 
@@ -13,6 +14,8 @@ export async function POST(request: NextRequest) {
     const auth = await authenticate(request);
     if (auth.response) return auth.response;
     const fromUser = auth.user;
+    const notPlus = plusRequired(fromUser);
+    if (notPlus) return notPlus;
 
     const body = await request.json();
     const { shareId, fromUserId, toUserId, toEmail, holidayKey, message } = body;
