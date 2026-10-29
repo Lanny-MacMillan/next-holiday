@@ -12,6 +12,9 @@ const originOf = (value: string | undefined) => {
 // Location lookup used by the performance monitor (src/lib/performance/location-service.ts).
 const IP_LOOKUP = 'https://ipapi.co';
 
+// Umami Cloud loads its script from cloud.umami.is but reports to this origin.
+const UMAMI_CLOUD_GATEWAY = 'https://gateway.umami.is';
+
 export function contentSecurityPolicy(env: Env = process.env, dev = false) {
   const auth0 = originOf(env.NEXT_PUBLIC_AUTH0_DOMAIN);
   const sse = originOf(env.NEXT_PUBLIC_SSE_SERVICE_URL);
@@ -36,6 +39,7 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
       "'self'",
       IP_LOOKUP,
       ...some(auth0, sse, umami, sentry),
+      ...(umami === 'https://cloud.umami.is' ? [UMAMI_CLOUD_GATEWAY] : []),
       ...(dev ? ['ws:', 'http:'] : []),
     ],
     'frame-src': some(auth0).length ? some(auth0) : ["'none'"],
