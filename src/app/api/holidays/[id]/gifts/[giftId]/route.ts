@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { ok, badRequest, serverError, notFound } from '@/lib/http';
+import { ok, badRequest, notFound, routeError } from '@/lib/http';
 
 const updateGiftSchema = z.object({
   name: z.string().min(1).optional(),
@@ -46,6 +47,13 @@ export async function PATCH(
       return notFound('Gift not found');
     }
 
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assignee = await validateAssigneeAccess(data.assigned_to, holidayId);
+      if (!assignee.valid) {
+        return badRequest(assignee.error || 'Invalid assignee');
+      }
+    }
+
     // Update the gift
     const updatedGift = await prisma.gift.update({
       where: { id: giftId },
@@ -70,8 +78,7 @@ export async function PATCH(
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
-    console.error('Error updating gift:', error);
-    return serverError('Failed to update gift');
+    return routeError(error, 'Error updating gift:', 'Failed to update gift');
   }
 }
 
@@ -101,7 +108,6 @@ export async function DELETE(
 
     return ok({ message: 'Gift deleted successfully' });
   } catch (error) {
-    console.error('Error deleting gift:', error);
-    return serverError('Failed to delete gift');
+    return routeError(error, 'Error deleting gift:', 'Failed to delete gift');
   }
 }

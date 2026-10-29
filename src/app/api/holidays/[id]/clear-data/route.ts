@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
-import { ok, notFound, serverError } from '@/lib/http';
+import { ok, notFound, routeError } from '@/lib/http';
 
 // POST /api/holidays/[id]/clear-data - Clear all data from holiday without deleting the holiday itself
 export async function POST(
@@ -56,7 +56,10 @@ export async function POST(
       holidayId: id,
     });
   } catch (error) {
-    console.error('Error clearing holiday data:', error);
-    return serverError('Failed to clear holiday data');
+    return routeError(
+      error,
+      'Error clearing holiday data:',
+      'Failed to clear holiday data',
+    );
   }
 }

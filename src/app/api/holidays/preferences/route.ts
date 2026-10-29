@@ -6,7 +6,7 @@ import { requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
-import { ok, badRequest, serverError } from '@/lib/http';
+import { ok, badRequest, serverError, routeError } from '@/lib/http';
 
 // Validation schemas
 const HolidayPreferenceSchema = z.object({
@@ -57,8 +57,11 @@ export async function GET(request: NextRequest) {
 
     return ok(toPlain(preferences));
   } catch (error) {
-    console.error('Error fetching holiday preferences:', error);
-    return serverError('Failed to fetch holiday preferences');
+    return routeError(
+      error,
+      'Error fetching holiday preferences:',
+      'Failed to fetch holiday preferences',
+    );
   }
 }
 
@@ -258,6 +261,7 @@ export async function POST(request: NextRequest) {
 
     return ok(toPlain(results));
   } catch (error) {
+    if (error instanceof Response) return error;
     console.error('Error saving holiday preferences:', error);
 
     // Enhanced error logging

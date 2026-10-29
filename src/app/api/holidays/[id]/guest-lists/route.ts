@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { created, badRequest, serverError, ok } from '@/lib/http';
+import { created, badRequest, ok, routeError } from '@/lib/http';
 
 // Schema for new guest information
 const newGuestSchema = z.object({
@@ -177,8 +177,11 @@ export async function POST(
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
-    console.error('Error creating/updating guest list:', error);
-    return serverError('Failed to create/update guest list');
+    return routeError(
+      error,
+      'Error creating/updating guest list:',
+      'Failed to create/update guest list',
+    );
   }
 }
 
@@ -207,7 +210,7 @@ export async function PUT(
 
     // Get current guest list entry to check current RSVP status
     const currentGuestList = await prisma.guestList.findUnique({
-      where: { id: guestId },
+      where: { id: guestId, holidayId: id },
     });
 
     if (!currentGuestList) {
@@ -226,7 +229,7 @@ export async function PUT(
 
     // Update the guest list entry
     const guestList = await prisma.guestList.update({
-      where: { id: guestId },
+      where: { id: guestId, holidayId: id },
       data: {
         rsvpStatus: newRsvpStatus,
       },
@@ -235,8 +238,11 @@ export async function PUT(
 
     return ok(guestList);
   } catch (error) {
-    console.error('Error updating guest list:', error);
-    return serverError('Failed to update guest list');
+    return routeError(
+      error,
+      'Error updating guest list:',
+      'Failed to update guest list',
+    );
   }
 }
 
@@ -265,7 +271,7 @@ export async function PATCH(
 
     // Update the guest list entry
     const guestList = await prisma.guestList.update({
-      where: { id: guestId },
+      where: { id: guestId, holidayId: id },
       data: {
         rsvpStatus: updateData.rsvpStatus ?? undefined,
         notes: updateData.notes ?? undefined,
@@ -293,7 +299,7 @@ export async function PATCH(
 
       // Fetch updated result
       const updatedResult = await prisma.guestList.findUnique({
-        where: { id: guestId },
+        where: { id: guestId, holidayId: id },
         include: { contact: true },
       });
 
@@ -302,8 +308,11 @@ export async function PATCH(
 
     return ok(guestList);
   } catch (error) {
-    console.error('Error updating guest list:', error);
-    return serverError('Failed to update guest list');
+    return routeError(
+      error,
+      'Error updating guest list:',
+      'Failed to update guest list',
+    );
   }
 }
 
@@ -332,13 +341,16 @@ export async function DELETE(
 
     // Delete the guest list entry
     await prisma.guestList.delete({
-      where: { id: guestId },
+      where: { id: guestId, holidayId: id },
     });
 
     return ok({ success: true });
   } catch (error) {
-    console.error('Error deleting guest list:', error);
-    return serverError('Failed to delete guest list');
+    return routeError(
+      error,
+      'Error deleting guest list:',
+      'Failed to delete guest list',
+    );
   }
 }
 
@@ -368,7 +380,10 @@ export async function GET(
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
-    console.error('Error fetching guest list:', error);
-    return serverError('Failed to fetch guest list');
+    return routeError(
+      error,
+      'Error fetching guest list:',
+      'Failed to fetch guest list',
+    );
   }
 }

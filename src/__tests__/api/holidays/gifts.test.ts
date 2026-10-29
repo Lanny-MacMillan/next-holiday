@@ -108,9 +108,9 @@ describe.each([
     expect(db.gift.delete).not.toHaveBeenCalled();
   });
 
-  it('returns 500 when authentication fails (the middleware normally stops this first)', async () => {
+  it('returns 401 when authentication fails', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
-    expect((await readJson(await call())).status).toBe(500);
+    expect((await readJson(await call())).status).toBe(401);
   });
 });
 
@@ -692,8 +692,7 @@ describe('PATCH /gifts', () => {
     await flush();
   });
 
-  // KNOWN ISSUE: unlike POST, an edit never checks the new assignee has access to the holiday.
-  it.failing('refuses an assignee without access, as creating does', async () => {
+  it('refuses an assignee without access, as creating does', async () => {
     validateAssigneeAccess.mockResolvedValue({ valid: false, error: 'No access' });
     db.gift.findUnique.mockResolvedValue({ assignedTo: null, name: 'Scarf' });
     db.gift.update.mockResolvedValue(gift());

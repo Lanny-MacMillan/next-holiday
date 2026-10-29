@@ -77,9 +77,9 @@ describe.each([
     expect(db.guestList.delete).not.toHaveBeenCalled();
   });
 
-  it('returns 500 when authentication fails (the middleware normally stops this first)', async () => {
+  it('returns 401 when authentication fails', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
-    expect((await readJson(await call())).status).toBe(500);
+    expect((await readJson(await call())).status).toBe(401);
   });
 });
 
@@ -267,26 +267,21 @@ describe('PUT /guest-lists, RSVP toggle', () => {
 
     expect(status).toBe(200);
     expect(db.guestList.update).toHaveBeenCalledWith({
-      where: { id: GUEST },
+      where: { id: GUEST, holidayId: HOLIDAY },
       data: { rsvpStatus: to },
       include: { contact: true },
     });
     expect(body.data.rsvpStatus).toBe(to);
   });
 
-  // KNOWN ISSUE: the entry is found by its own id, not tied to this holiday, so someone with access
-  // to one holiday can change a guest in another.
-  it.failing(
-    'only looks up guests that belong to the authorised holiday',
-    async () => {
-      db.guestList.findUnique.mockResolvedValue(entry());
-      db.guestList.update.mockResolvedValue(entry());
-      await put({ guestId: GUEST, isCompleted: true });
-      expect(db.guestList.findUnique.mock.calls[0][0].where).toMatchObject({
-        holidayId: HOLIDAY,
-      });
-    },
-  );
+  it('only looks up guests that belong to the authorised holiday', async () => {
+    db.guestList.findUnique.mockResolvedValue(entry());
+    db.guestList.update.mockResolvedValue(entry());
+    await put({ guestId: GUEST, isCompleted: true });
+    expect(db.guestList.findUnique.mock.calls[0][0].where).toMatchObject({
+      holidayId: HOLIDAY,
+    });
+  });
 
   it('returns 500 when the database fails', async () => {
     db.guestList.findUnique.mockRejectedValue(new Error('db'));
@@ -318,7 +313,7 @@ describe('PATCH /guest-lists', () => {
 
     expect(status).toBe(200);
     expect(db.guestList.update).toHaveBeenCalledWith({
-      where: { id: GUEST },
+      where: { id: GUEST, holidayId: HOLIDAY },
       data: { rsvpStatus: 'declined', notes: 'n' },
       include: { contact: true },
     });
@@ -367,17 +362,13 @@ describe('PATCH /guest-lists', () => {
     });
   });
 
-  // KNOWN ISSUE: same as PUT: the entry is updated by its own id, with no check it belongs to this holiday.
-  it.failing(
-    'only updates guests that belong to the authorised holiday',
-    async () => {
-      db.guestList.update.mockResolvedValue(entry());
-      await patch({ notes: 'n' });
-      expect(db.guestList.update.mock.calls[0][0].where).toMatchObject({
-        holidayId: HOLIDAY,
-      });
-    },
-  );
+  it('only updates guests that belong to the authorised holiday', async () => {
+    db.guestList.update.mockResolvedValue(entry());
+    await patch({ notes: 'n' });
+    expect(db.guestList.update.mock.calls[0][0].where).toMatchObject({
+      holidayId: HOLIDAY,
+    });
+  });
 
   it('returns 500 when the database fails', async () => {
     db.guestList.update.mockRejectedValue(new Error('db'));
@@ -400,19 +391,17 @@ describe('DELETE /guest-lists', () => {
     );
     expect(status).toBe(200);
     expect(body.data).toEqual({ success: true });
-    expect(db.guestList.delete).toHaveBeenCalledWith({ where: { id: GUEST } });
+    expect(db.guestList.delete).toHaveBeenCalledWith({
+      where: { id: GUEST, holidayId: HOLIDAY },
+    });
   });
 
-  // KNOWN ISSUE: same as PUT/PATCH: deletes by id alone.
-  it.failing(
-    'only deletes guests that belong to the authorised holiday',
-    async () => {
-      await DELETE(apiRequest(`/x?guestId=${GUEST}`, 'DELETE'), ctx);
-      expect(db.guestList.delete.mock.calls[0][0].where).toMatchObject({
-        holidayId: HOLIDAY,
-      });
-    },
-  );
+  it('only deletes guests that belong to the authorised holiday', async () => {
+    await DELETE(apiRequest(`/x?guestId=${GUEST}`, 'DELETE'), ctx);
+    expect(db.guestList.delete.mock.calls[0][0].where).toMatchObject({
+      holidayId: HOLIDAY,
+    });
+  });
 
   it('returns 500 when the database fails', async () => {
     db.guestList.delete.mockRejectedValue(new Error('db'));

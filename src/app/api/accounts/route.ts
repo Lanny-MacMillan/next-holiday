@@ -16,7 +16,7 @@ import {
   unauthorized,
   forbidden,
   notFound,
-  serverError,
+  routeError,
 } from '@/lib/http';
 
 // Validation schemas
@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
     // Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
     const queryResult = AccountQuerySchema.safeParse({
-      q: searchParams.get('q'),
-      sortBy: searchParams.get('sortBy'),
-      sortOrder: searchParams.get('sortOrder'),
+      q: searchParams.get('q') ?? undefined,
+      sortBy: searchParams.get('sortBy') ?? undefined,
+      sortOrder: searchParams.get('sortOrder') ?? undefined,
     });
 
     if (!queryResult.success) {
@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
       ...(q && {
         name: {
           contains: q,
-          mode: 'insensitive' as const,
         },
       }),
     };
@@ -116,8 +115,7 @@ export async function GET(request: NextRequest) {
 
     return ok(response);
   } catch (error) {
-    console.error('Error fetching accounts:', error);
-    return serverError('Failed to fetch accounts');
+    return routeError(error, 'Error fetching accounts:', 'Failed to fetch accounts');
   }
 }
 
@@ -173,7 +171,6 @@ export async function POST(request: NextRequest) {
 
     return created(account);
   } catch (error) {
-    console.error('Error creating account:', error);
-    return serverError('Failed to create account');
+    return routeError(error, 'Error creating account:', 'Failed to create account');
   }
 }

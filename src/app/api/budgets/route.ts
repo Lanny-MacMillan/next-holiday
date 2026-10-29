@@ -6,7 +6,7 @@ import { getCurrentUser, requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
-import { ok, created, badRequest, notFound, serverError } from '@/lib/http';
+import { ok, created, badRequest, notFound, routeError } from '@/lib/http';
 
 // Validation schemas
 const CreateBudgetSchema = z.object({
@@ -74,8 +74,7 @@ export async function GET(request: NextRequest) {
 
     return ok(toPlain(transformedBudgets));
   } catch (error) {
-    console.error('Error fetching budgets:', error);
-    return serverError('Failed to fetch budgets');
+    return routeError(error, 'Error fetching budgets:', 'Failed to fetch budgets');
   }
 }
 
@@ -101,6 +100,13 @@ export async function POST(request: NextRequest) {
         where: {
           holidayId: {
             in: holidayIds,
+          },
+          holiday: {
+            OR: [
+              { account: { members: { some: { userId: user.id } } } },
+              { shares: { members: { some: { userId: user.id } } } },
+              { shares: { ownerUserId: user.id } },
+            ],
           },
         },
         include: {
@@ -190,7 +196,10 @@ export async function POST(request: NextRequest) {
       return created(toPlain(transformedBudget));
     }
   } catch (error) {
-    console.error('Error in budgets API:', error);
-    return serverError('Failed to process budget request');
+    return routeError(
+      error,
+      'Error in budgets API:',
+      'Failed to process budget request',
+    );
   }
 }

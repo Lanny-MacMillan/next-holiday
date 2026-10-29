@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { created, badRequest, serverError, ok } from '@/lib/http';
+import { created, badRequest, serverError, ok, routeError } from '@/lib/http';
 import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 import {
   broadcastAssignment,
@@ -290,8 +290,7 @@ export async function POST(
       },
     );
   } catch (error) {
-    console.error('Error creating gift:', error);
-    return serverError('Failed to create gift');
+    return routeError(error, 'Error creating gift:', 'Failed to create gift');
   }
 }
 
@@ -341,8 +340,7 @@ export async function GET(
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
-    console.error('Error fetching gifts:', error);
-    return serverError('Failed to fetch gifts');
+    return routeError(error, 'Error fetching gifts:', 'Failed to fetch gifts');
   }
 }
 
@@ -463,8 +461,7 @@ export async function PUT(
       },
     );
   } catch (error) {
-    console.error('Error updating gift:', error);
-    return serverError('Failed to update gift');
+    return routeError(error, 'Error updating gift:', 'Failed to update gift');
   }
 }
 
@@ -518,6 +515,13 @@ export async function PATCH(
 
     if (!existingGift) {
       return badRequest('Gift not found');
+    }
+
+    if (updateData.assigned_to && updateData.assigned_to !== user.id) {
+      const assignee = await validateAssigneeAccess(updateData.assigned_to, id);
+      if (!assignee.valid) {
+        return badRequest(assignee.error || 'Invalid assignee');
+      }
     }
 
     // Build update data
@@ -643,8 +647,7 @@ export async function PATCH(
       },
     );
   } catch (error) {
-    console.error('Error updating gift:', error);
-    return serverError('Failed to update gift');
+    return routeError(error, 'Error updating gift:', 'Failed to update gift');
   }
 }
 
@@ -680,7 +683,6 @@ export async function DELETE(
       },
     );
   } catch (error) {
-    console.error('Error deleting gift:', error);
-    return serverError('Failed to delete gift');
+    return routeError(error, 'Error deleting gift:', 'Failed to delete gift');
   }
 }

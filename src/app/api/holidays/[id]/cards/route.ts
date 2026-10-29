@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { created, badRequest, serverError, ok } from '@/lib/http';
+import { created, badRequest, ok, routeError } from '@/lib/http';
 import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 import {
   broadcastAssignment,
@@ -140,8 +140,7 @@ export async function POST(
       },
     );
   } catch (error) {
-    console.error('Error creating card:', error);
-    return serverError('Failed to create card');
+    return routeError(error, 'Error creating card:', 'Failed to create card');
   }
 }
 
@@ -164,7 +163,7 @@ export async function PUT(
       const { cardId, isCompleted } = simpleToggleParsed.data;
 
       const existingCard = await prisma.card.findUnique({
-        where: { id: cardId },
+        where: { id: cardId, holidayId: id },
         select: {
           isCompleted: true,
           assignedTo: true,
@@ -179,7 +178,7 @@ export async function PUT(
 
       //  Update with contact include and data transformation
       const card = await prisma.card.update({
-        where: { id: cardId },
+        where: { id: cardId, holidayId: id },
         data: {
           isCompleted,
           sentDate: isCompleted ? new Date() : null, //  Use sentDate instead of completedDate
@@ -248,16 +247,21 @@ export async function PUT(
     // Handle different actions
     if (data.action === 'delete') {
       // Delete the card
+      const found = await prisma.card.findUnique({
+        where: { id: data.id, holidayId: id },
+        select: { id: true },
+      });
+      if (!found) {
+        return badRequest('Card not found');
+      }
       await prisma.card.delete({
-        where: {
-          id: data.id,
-        },
+        where: { id: data.id, holidayId: id },
       });
       return ok({ success: true });
     } else if (data.action === 'update' || data.action === 'toggle') {
       // First check if the card exists and get current state for completion notifications
       const existingCard = await prisma.card.findUnique({
-        where: { id: data.id },
+        where: { id: data.id, holidayId: id },
         select: {
           isCompleted: true,
           assignedTo: true,
@@ -290,9 +294,7 @@ export async function PUT(
 
       // SAME PATTERN AS GIFTS: Update with contact include and data transformation
       const card = await prisma.card.update({
-        where: {
-          id: data.id,
-        },
+        where: { id: data.id, holidayId: id },
         data: updateData,
         include: {
           contact: true,
@@ -419,8 +421,7 @@ export async function PUT(
 
     return badRequest('Invalid action');
   } catch (error) {
-    console.error('Error updating card:', error);
-    return serverError('Failed to update card');
+    return routeError(error, 'Error updating card:', 'Failed to update card');
   }
 }
 
@@ -461,7 +462,7 @@ export async function PATCH(
 
     // Check if card exists
     const existingCard = await prisma.card.findUnique({
-      where: { id: data.cardId },
+      where: { id: data.cardId, holidayId: id },
       select: {
         assignedTo: true,
         createdBy: true,
@@ -488,7 +489,7 @@ export async function PATCH(
 
     // SAME PATTERN AS GIFTS: Update with contact include and data transformation
     const card = await prisma.card.update({
-      where: { id: data.cardId },
+      where: { id: data.cardId, holidayId: id },
       data: updateData,
       include: {
         contact: true,
@@ -544,8 +545,7 @@ export async function PATCH(
       },
     );
   } catch (error) {
-    console.error('Error editing card:', error);
-    return serverError('Failed to edit card');
+    return routeError(error, 'Error editing card:', 'Failed to edit card');
   }
 }
 
@@ -569,7 +569,7 @@ export async function DELETE(
 
     // Check if card exists
     const existingCard = await prisma.card.findUnique({
-      where: { id: cardId },
+      where: { id: cardId, holidayId: id },
     });
 
     if (!existingCard) {
@@ -578,15 +578,12 @@ export async function DELETE(
 
     // Delete the card
     await prisma.card.delete({
-      where: {
-        id: cardId,
-      },
+      where: { id: cardId, holidayId: id },
     });
 
     return ok({ success: true });
   } catch (error) {
-    console.error('Error deleting card:', error);
-    return serverError('Failed to delete card');
+    return routeError(error, 'Error deleting card:', 'Failed to delete card');
   }
 }
 
@@ -613,7 +610,6 @@ export async function GET(
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
-    console.error('Error fetching cards:', error);
-    return serverError('Failed to fetch cards');
+    return routeError(error, 'Error fetching cards:', 'Failed to fetch cards');
   }
 }

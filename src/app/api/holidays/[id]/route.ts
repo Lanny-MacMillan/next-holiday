@@ -11,7 +11,7 @@ import {
   unauthorized,
   forbidden,
   notFound,
-  serverError,
+  routeError,
 } from '@/lib/http';
 
 // Validation schemas
@@ -91,8 +91,7 @@ export async function GET(
 
     return ok(toPlain(transformedHoliday));
   } catch (error) {
-    console.error('Error fetching holiday:', error);
-    return serverError('Failed to fetch holiday');
+    return routeError(error, 'Error fetching holiday:', 'Failed to fetch holiday');
   }
 }
 
@@ -167,8 +166,7 @@ export async function PUT(
 
     return ok(toPlain(transformedHoliday));
   } catch (error) {
-    console.error('Error updating holiday:', error);
-    return serverError('Failed to update holiday');
+    return routeError(error, 'Error updating holiday:', 'Failed to update holiday');
   }
 }
 
@@ -201,7 +199,6 @@ export async function DELETE(
 
     return ok({ success: true });
   } catch (error) {
-    console.error('Error deleting holiday:', error);
-    return serverError('Failed to delete holiday');
+    return routeError(error, 'Error deleting holiday:', 'Failed to delete holiday');
   }
 }

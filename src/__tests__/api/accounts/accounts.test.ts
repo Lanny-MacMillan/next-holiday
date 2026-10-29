@@ -41,9 +41,7 @@ describe('GET /api/accounts', () => {
     db.account.count.mockResolvedValue(45);
   });
 
-  // KNOWN ISSUE: the route passes null for missing params and zod's .optional() rejects null,
-  // so a plain GET /api/accounts is a 400. Turn into a plain `it` once fixed.
-  it.failing('lists accounts when no query params are given', async () => {
+  it('lists accounts when no query params are given', async () => {
     expect(
       (await readJson(await listAccounts(apiRequest('/api/accounts')))).status,
     ).toBe(200);
@@ -77,7 +75,7 @@ describe('GET /api/accounts', () => {
     );
     const query = db.account.findMany.mock.calls[0][0];
     expect(query).toMatchObject({ skip: 10, take: 10, orderBy: { name: 'desc' } });
-    expect(query.where.name).toEqual({ contains: 'fam', mode: 'insensitive' });
+    expect(query.where.name).toEqual({ contains: 'fam' });
     expect(db.account.count).toHaveBeenCalledWith({ where: query.where });
   });
 
@@ -170,9 +168,7 @@ describe('GET /api/accounts/[id]', () => {
     expect((await readJson(await get())).status).toBe(404);
   });
 
-  // KNOWN ISSUE: requireAccountAccess throws a Response, but the route only maps Errors,
-  // so a non-member gets a 500 and the account is never read. Turn into a plain `it` once fixed.
-  it.failing('returns 403 to someone who is not a member', async () => {
+  it('returns 403 to someone who is not a member', async () => {
     withRole(null);
     expect((await readJson(await get())).status).toBe(403);
   });
@@ -267,8 +263,7 @@ describe('DELETE /api/accounts/[id]', () => {
 });
 
 describe('when nobody is signed in', () => {
-  // KNOWN ISSUE: requireAuth throws and these handlers do not map it, so it is a 500.
-  it.failing('returns 401', async () => {
+  it('returns 401', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
     expect(
       (await readJson(await listAccounts(apiRequest(`/api/accounts${FULL}`))))

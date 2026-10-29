@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
+import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { ok, badRequest, serverError, notFound } from '@/lib/http';
+import { ok, badRequest, notFound, routeError } from '@/lib/http';
 import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 import { broadcastAssignment } from '@/lib/realTimeNotifications';
 
@@ -47,6 +48,13 @@ export async function PATCH(
 
     if (!existingTask) {
       return notFound('Task not found');
+    }
+
+    if (data.assigned_to && data.assigned_to !== user.id) {
+      const assignee = await validateAssigneeAccess(data.assigned_to, holidayId);
+      if (!assignee.valid) {
+        return badRequest(assignee.error || 'Invalid assignee');
+      }
     }
 
     // Update the task
@@ -120,8 +128,7 @@ export async function PATCH(
       },
     );
   } catch (error) {
-    console.error('Error updating task:', error);
-    return serverError('Failed to update task');
+    return routeError(error, 'Error updating task:', 'Failed to update task');
   }
 }
 
@@ -151,7 +158,6 @@ export async function DELETE(
 
     return ok({ message: 'Task deleted successfully' });
   } catch (error) {
-    console.error('Error deleting task:', error);
-    return serverError('Failed to delete task');
+    return routeError(error, 'Error deleting task:', 'Failed to delete task');
   }
 }
