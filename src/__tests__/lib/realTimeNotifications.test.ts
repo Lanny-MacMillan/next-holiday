@@ -10,7 +10,6 @@ import {
   broadcastInvite,
   broadcastNotification,
 } from '@/lib/realTimeNotifications';
-import { connections } from '@/lib/notifications/stream';
 
 const mockFetch = jest.fn();
 const env = { ...process.env };
@@ -38,7 +37,6 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env = { ...env };
-  connections.clear();
   jest.restoreAllMocks();
 });
 
@@ -149,30 +147,9 @@ describe('broadcastNotification', () => {
   describe('when the SSE service is not configured', () => {
     beforeEach(() => delete process.env.SSE_SERVICE_URL);
 
-    it('falls back to open in-process streams', async () => {
-      const enqueue = jest.fn();
-      connections.set('u1', new Set([{ enqueue } as never]));
-
-      expect(await broadcastNotification(base)).toBe(true);
+    it('skips the real-time send and reports failure', async () => {
+      expect(await broadcastNotification(base)).toBe(false);
       expect(mockFetch).not.toHaveBeenCalled();
-      const text = new TextDecoder().decode(enqueue.mock.calls[0][0]);
-      expect(text).toMatch(/^data: .*"title":"Done".*\n\n$/);
-    });
-
-    it('returns false when nobody is connected', async () => {
-      expect(await broadcastNotification(base)).toBe(false);
-    });
-
-    it('drops a dead connection and reports failure', async () => {
-      const dead = {
-        enqueue: () => {
-          throw new Error('closed');
-        },
-      };
-      connections.set('u1', new Set([dead as never]));
-
-      expect(await broadcastNotification(base)).toBe(false);
-      expect(connections.has('u1')).toBe(false);
     });
   });
 });

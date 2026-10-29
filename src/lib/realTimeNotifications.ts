@@ -1,5 +1,4 @@
 // Real-time notification broadcasting utilities
-import { sendNotificationToUser } from '@/lib/notifications/stream';
 import { prisma } from './prisma';
 
 /**
@@ -8,9 +7,9 @@ import { prisma } from './prisma';
 async function sendToExternalSSEService(userId: string, notification: any) {
   if (!process.env.SSE_SERVICE_URL || !process.env.SSE_API_SECRET) {
     console.warn(
-      '⚠️ [BROADCAST] External SSE service not configured - using internal fallback',
+      '⚠️ [BROADCAST] External SSE service not configured - skipping real-time notification',
     );
-    return sendNotificationToUser(userId, notification);
+    return false;
   }
 
   try {

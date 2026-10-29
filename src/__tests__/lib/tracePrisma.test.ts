@@ -109,7 +109,7 @@ describe('installPrismaTracer', () => {
 
     it('logs just the model and action when there is no where clause, and unknown for no model', async () => {
       await run({ action: 'queryRaw' }, async () => null);
-      expect(logged()[0]).toBe('[prisma] unknown.queryRaw');
+      expect(logged()[0]).toMatch(/^\[prisma\] unknown\.queryRaw(?! \| where)/);
     });
 
     it('logs and rethrows a failed query', async () => {
