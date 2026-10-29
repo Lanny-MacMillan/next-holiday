@@ -43,3 +43,14 @@ export function serverError(
 ) {
   return NextResponse.json({ success: false, error }, { status: 500, headers });
 }
+
+// Route catch-alls: pass through a Response thrown by rbac helpers, map a missing session to 401.
+export function routeError(error: unknown, label: string, message: string) {
+  if (error instanceof Response) return error;
+  if (error instanceof Error && error.message === 'Authentication required') {
+    return unauthorized();
+  }
+  if ((error as { code?: string })?.code === 'P2025') return notFound();
+  console.error(label, error);
+  return serverError(message);
+}

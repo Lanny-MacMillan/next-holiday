@@ -69,19 +69,12 @@ describe('GET /holidays', () => {
     db.holiday.count.mockResolvedValue(1);
   });
 
-  it('returns 500 when authentication fails (the middleware normally stops this first)', async () => {
+  it('returns 401 when authentication fails', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
-    expect((await readJson(await list())).status).toBe(500);
+    expect((await readJson(await list())).status).toBe(401);
   });
 
-  // KNOWN ISSUE: a plain GET /api/holidays with no filters is rejected with 400.
-  it('rejects a request without every filter', async () => {
-    expect((await readJson(await GET(apiRequest('/api/holidays')))).status).toBe(
-      400,
-    );
-  });
-
-  it.failing('lists holidays when no filters are given', async () => {
+  it('lists holidays when no filters are given', async () => {
     expect((await readJson(await GET(apiRequest('/api/holidays')))).status).toBe(
       200,
     );
@@ -136,9 +129,9 @@ describe('POST /holidays', () => {
   };
   const post = (body: unknown) => POST(apiRequest('/api/holidays', 'POST', body));
 
-  it('returns 500 when authentication fails (the middleware normally stops this first)', async () => {
+  it('returns 401 when authentication fails', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
-    expect((await readJson(await post(valid))).status).toBe(500);
+    expect((await readJson(await post(valid))).status).toBe(401);
   });
 
   it.each([
@@ -203,9 +196,7 @@ describe('POST /holidays', () => {
     expect(db.holiday.create).not.toHaveBeenCalled();
   });
 
-  // KNOWN ISSUE: a non-member gets a 500 "Failed to create holiday" rather than 403, because the
-  // Forbidden response thrown by requireAccountAccess is caught by the route's catch-all.
-  it.failing('answers 403 for a non-member', async () => {
+  it('answers 403 for a non-member', async () => {
     notAMember();
     expect((await readJson(await post(valid))).status).toBe(403);
   });
@@ -220,9 +211,9 @@ describe('GET /holidays/preferences', () => {
   const get = (query = `?accountId=${ACCOUNT}`) =>
     getPreferences(apiRequest(`/api/holidays/preferences${query}`));
 
-  it('returns 500 when authentication fails (the middleware normally stops this first)', async () => {
+  it('returns 401 when authentication fails', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
-    expect((await readJson(await get())).status).toBe(500);
+    expect((await readJson(await get())).status).toBe(401);
   });
 
   it('needs an accountId', async () => {
@@ -264,7 +255,7 @@ describe('GET /holidays/preferences', () => {
     expect(db.holiday.findMany).not.toHaveBeenCalled();
   });
 
-  it.failing('answers 403 for a non-member', async () => {
+  it('answers 403 for a non-member', async () => {
     notAMember();
     expect((await readJson(await get())).status).toBe(403);
   });
@@ -333,7 +324,7 @@ describe('POST /holidays/preferences', () => {
     expect(db.holiday.delete).not.toHaveBeenCalled();
   });
 
-  it.failing('answers 403 for a non-member', async () => {
+  it('answers 403 for a non-member', async () => {
     notAMember();
     expect(
       (await readJson(await save({ accountId: ACCOUNT, preferences: [] }))).status,

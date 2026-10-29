@@ -20,6 +20,10 @@ jest.mock('@/lib/notifications', () => ({
   getUserName: jest.fn(),
 }));
 jest.mock('@/lib/realTimeNotifications', () => ({ broadcastAssignment: jest.fn() }));
+const validateAssigneeAccess = jest.fn();
+jest.mock('@/lib/assigneeValidation', () => ({
+  validateAssigneeAccess: (...a: unknown[]) => validateAssigneeAccess(...a),
+}));
 
 import {
   DELETE as deleteGift,
@@ -111,5 +115,31 @@ describe('budget update requires access to the holiday', () => {
       user.id,
     );
     expect(db.budget.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('reassigning needs an assignee with access to the holiday', () => {
+  const OUTSIDER = '22222222-2222-4222-8222-222222222222';
+  const refused = { valid: false, error: 'User has no access to this holiday' };
+
+  it('refuses a gift assignee without access', async () => {
+    db.gift.findFirst.mockResolvedValue({ id: 'g1' });
+    validateAssigneeAccess.mockResolvedValue(refused);
+    const res = await patchGift(req('PATCH', { assigned_to: OUTSIDER }), {
+      params: Promise.resolve({ id: HOLIDAY, giftId: 'g1' }),
+    });
+    expect(res.status).toBe(400);
+    expect(validateAssigneeAccess).toHaveBeenCalledWith(OUTSIDER, HOLIDAY);
+    expect(db.gift.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a task assignee without access', async () => {
+    db.task.findFirst.mockResolvedValue({ id: 't1' });
+    validateAssigneeAccess.mockResolvedValue(refused);
+    const res = await patchTask(req('PATCH', { assigned_to: OUTSIDER }), {
+      params: Promise.resolve({ id: HOLIDAY, taskId: 't1' }),
+    });
+    expect(res.status).toBe(400);
+    expect(db.task.update).not.toHaveBeenCalled();
   });
 });

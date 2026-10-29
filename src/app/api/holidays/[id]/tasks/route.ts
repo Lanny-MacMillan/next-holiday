@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { created, badRequest, serverError, ok } from '@/lib/http';
+import { created, badRequest, ok, routeError } from '@/lib/http';
 import { createAssignmentNotification, getUserName } from '@/lib/notifications';
 import {
   broadcastAssignment,
@@ -114,8 +114,7 @@ export async function POST(
       },
     );
   } catch (error) {
-    console.error('Error creating task:', error);
-    return serverError('Failed to create task');
+    return routeError(error, 'Error creating task:', 'Failed to create task');
   }
 }
 
@@ -142,8 +141,7 @@ export async function GET(
       'Cache-Control': 'private, max-age=5, stale-while-revalidate=60',
     });
   } catch (error) {
-    console.error('Error fetching tasks:', error);
-    return serverError('Failed to fetch tasks');
+    return routeError(error, 'Error fetching tasks:', 'Failed to fetch tasks');
   }
 }
 
@@ -241,8 +239,7 @@ export async function PUT(
     // ✅ Return in same format as gifts API
     return ok({ data: task });
   } catch (error) {
-    console.error('Error updating task:', error);
-    return serverError('Failed to update task');
+    return routeError(error, 'Error updating task:', 'Failed to update task');
   }
 }
 
@@ -276,6 +273,14 @@ export async function PATCH(
 
     if (!existingTask) {
       return badRequest('Task not found');
+    }
+
+    const newAssignee = updateData.assigned_to ?? updateData.assignedTo;
+    if (newAssignee && newAssignee !== user.id) {
+      const assignee = await validateAssigneeAccess(newAssignee, id);
+      if (!assignee.valid) {
+        return badRequest(assignee.error || 'Invalid assignee');
+      }
     }
 
     // Only allow updating specific fields
@@ -433,8 +438,7 @@ export async function PATCH(
     // ✅ Return in same format as gifts API
     return ok({ data: task });
   } catch (error) {
-    console.error('Error updating task:', error);
-    return serverError('Failed to update task');
+    return routeError(error, 'Error updating task:', 'Failed to update task');
   }
 }
 
@@ -464,7 +468,6 @@ export async function DELETE(
 
     return ok({ success: true });
   } catch (error) {
-    console.error('Error deleting task:', error);
-    return serverError('Failed to delete task');
+    return routeError(error, 'Error deleting task:', 'Failed to delete task');
   }
 }

@@ -6,7 +6,7 @@ import { getCurrentUser, requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
-import { ok, created, badRequest, notFound, serverError } from '@/lib/http';
+import { ok, created, badRequest, notFound, routeError } from '@/lib/http';
 
 // Validation schemas
 const CreateBudgetTransactionSchema = z.object({
@@ -66,8 +66,11 @@ export async function GET(request: NextRequest) {
 
     return ok(toPlain(transformedTransactions));
   } catch (error) {
-    console.error('Error fetching budget transactions:', error);
-    return serverError('Failed to fetch budget transactions');
+    return routeError(
+      error,
+      'Error fetching budget transactions:',
+      'Failed to fetch budget transactions',
+    );
   }
 }
 
@@ -157,7 +160,10 @@ export async function POST(request: NextRequest) {
 
     return created(toPlain(transformedTransaction));
   } catch (error) {
-    console.error('Error creating budget transaction:', error);
-    return serverError('Failed to create budget transaction');
+    return routeError(
+      error,
+      'Error creating budget transaction:',
+      'Failed to create budget transaction',
+    );
   }
 }

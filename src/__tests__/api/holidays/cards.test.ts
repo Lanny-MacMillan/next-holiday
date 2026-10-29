@@ -93,11 +93,11 @@ describe('POST /cards', () => {
     expect(assertHolidayAccess).toHaveBeenCalledWith(HOLIDAY, ME);
   });
 
-  it('returns 500 when authentication fails (the middleware normally stops this first)', async () => {
+  it('returns 401 when authentication fails', async () => {
     requireAuth.mockRejectedValue(new Error('Authentication required'));
     expect(
       (await readJson(await post({ recipient: 'G', message: 'm' }))).status,
-    ).toBe(500);
+    ).toBe(401);
   });
 
   it.each([
@@ -213,7 +213,7 @@ describe('PUT /cards, completion toggle', () => {
 
     expect(status).toBe(200);
     const { where, data } = db.card.update.mock.calls[0][0];
-    expect(where).toEqual({ id: CARD });
+    expect(where).toEqual({ id: CARD, holidayId: HOLIDAY });
     expect(data.isCompleted).toBe(true);
     expect(data.sentDate).toBeInstanceOf(Date);
   });
@@ -269,19 +269,14 @@ describe('PUT /cards, completion toggle', () => {
     expect(broadcastCompletion).not.toHaveBeenCalled();
   });
 
-  // KNOWN ISSUE: the card is found by its own id, not scoped to this holiday, so a
-  // caller with access to one holiday can toggle a card in another. Make this a plain `it` once scoped.
-  it.failing(
-    'only looks up cards that belong to the authorised holiday',
-    async () => {
-      db.card.findUnique.mockResolvedValue(existing());
-      db.card.update.mockResolvedValue(card());
-      await put({ cardId: CARD, isCompleted: true });
-      expect(db.card.findUnique.mock.calls[0][0].where).toMatchObject({
-        holidayId: HOLIDAY,
-      });
-    },
-  );
+  it('only looks up cards that belong to the authorised holiday', async () => {
+    db.card.findUnique.mockResolvedValue(existing());
+    db.card.update.mockResolvedValue(card());
+    await put({ cardId: CARD, isCompleted: true });
+    expect(db.card.findUnique.mock.calls[0][0].where).toMatchObject({
+      holidayId: HOLIDAY,
+    });
+  });
 });
 
 describe('PUT /cards, action format', () => {
@@ -305,10 +300,13 @@ describe('PUT /cards, action format', () => {
   });
 
   it('delete removes the card', async () => {
+    db.card.findUnique.mockResolvedValue(existing());
     const { status, body } = await readJson(await put({ action: 'delete' }));
     expect(status).toBe(200);
     expect(body.data).toEqual({ success: true });
-    expect(db.card.delete).toHaveBeenCalledWith({ where: { id: CARD } });
+    expect(db.card.delete).toHaveBeenCalledWith({
+      where: { id: CARD, holidayId: HOLIDAY },
+    });
   });
 
   it('update writes the form fields and returns the card', async () => {
@@ -515,20 +513,18 @@ describe('DELETE /cards', () => {
     const { status, body } = await readJson(await del());
     expect(status).toBe(200);
     expect(body.data).toEqual({ success: true });
-    expect(db.card.delete).toHaveBeenCalledWith({ where: { id: CARD } });
+    expect(db.card.delete).toHaveBeenCalledWith({
+      where: { id: CARD, holidayId: HOLIDAY },
+    });
   });
 
-  // KNOWN ISSUE: same as PUT: the card is not tied to the authorised holiday.
-  it.failing(
-    'only deletes a card that belongs to the authorised holiday',
-    async () => {
-      db.card.findUnique.mockResolvedValue(card());
-      await del();
-      expect(db.card.delete.mock.calls[0][0].where).toMatchObject({
-        holidayId: HOLIDAY,
-      });
-    },
-  );
+  it('only deletes a card that belongs to the authorised holiday', async () => {
+    db.card.findUnique.mockResolvedValue(card());
+    await del();
+    expect(db.card.delete.mock.calls[0][0].where).toMatchObject({
+      holidayId: HOLIDAY,
+    });
+  });
 
   it('returns 500 when the database fails', async () => {
     db.card.findUnique.mockResolvedValue(card());

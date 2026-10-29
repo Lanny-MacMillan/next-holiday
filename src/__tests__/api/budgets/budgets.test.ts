@@ -99,9 +99,7 @@ describe('POST /api/budgets (fetch by holiday ids)', () => {
     expect((await readJson(await fetchBy(['']))).status).toBe(400);
   });
 
-  // KNOWN ISSUE: this branch looks budgets up by holiday id alone, so anyone can read
-  // another account's budget. Turn into a plain `it` once it is scoped to the caller.
-  it.failing('only looks in accounts the caller belongs to', async () => {
+  it('only looks in accounts the caller belongs to', async () => {
     db.budget.findMany.mockResolvedValue([]);
     await fetchBy(['someone-elses-holiday']);
     expect(JSON.stringify(db.budget.findMany.mock.calls[0][0].where)).toContain(
@@ -175,8 +173,7 @@ describe('POST /api/budgets (create)', () => {
     expect(db.budget.create).not.toHaveBeenCalled();
   });
 
-  // KNOWN ISSUE: requireAccountAccess throws a Response, which this catch turns into a 500.
-  it.failing('returns 403 for someone outside the account', async () => {
+  it('returns 403 for someone outside the account', async () => {
     withRole(null);
     expect((await readJson(await create())).status).toBe(403);
   });
@@ -273,8 +270,7 @@ describe('POST /api/budget-transactions', () => {
     expect(db.budget.update).not.toHaveBeenCalled();
   });
 
-  // KNOWN ISSUE: same Response-thrown-into-a-500 problem as the budgets route.
-  it.failing('returns 403 for someone outside the account', async () => {
+  it('returns 403 for someone outside the account', async () => {
     withRole(null);
     expect((await readJson(await create())).status).toBe(403);
   });

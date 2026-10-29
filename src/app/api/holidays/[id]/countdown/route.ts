@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
-import { ok, badRequest, serverError, notFound } from '@/lib/http';
+import { ok, badRequest, routeError, notFound } from '@/lib/http';
 
 // Validation schemas
 const UpdateCountdownSchema = z.object({
@@ -78,11 +78,11 @@ export async function PUT(
 
     return ok(toPlain(result));
   } catch (error) {
-    console.error('Error updating countdown timer:', error);
-    if (error instanceof Error) {
-      return serverError(error.message);
-    }
-    return serverError('Failed to update countdown timer');
+    return routeError(
+      error,
+      'Error updating countdown timer:',
+      'Failed to update countdown timer',
+    );
   }
 }
 
@@ -143,10 +143,10 @@ export async function DELETE(
 
     return ok(toPlain(result));
   } catch (error) {
-    console.error('Error clearing countdown timer:', error);
-    if (error instanceof Error) {
-      return serverError(error.message);
-    }
-    return serverError('Failed to clear countdown timer');
+    return routeError(
+      error,
+      'Error clearing countdown timer:',
+      'Failed to clear countdown timer',
+    );
   }
 }

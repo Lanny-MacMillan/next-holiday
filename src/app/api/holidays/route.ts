@@ -18,7 +18,7 @@ import {
   unauthorized,
   forbidden,
   notFound,
-  serverError,
+  routeError,
 } from '@/lib/http';
 
 // Validation schemas
@@ -71,11 +71,11 @@ export async function GET(request: NextRequest) {
     // Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
     const queryResult = HolidayQuerySchema.safeParse({
-      accountId: searchParams.get('accountId'),
-      holidayType: searchParams.get('holidayType'),
-      q: searchParams.get('q'),
-      sortBy: searchParams.get('sortBy'),
-      sortOrder: searchParams.get('sortOrder'),
+      accountId: searchParams.get('accountId') ?? undefined,
+      holidayType: searchParams.get('holidayType') ?? undefined,
+      q: searchParams.get('q') ?? undefined,
+      sortBy: searchParams.get('sortBy') ?? undefined,
+      sortOrder: searchParams.get('sortOrder') ?? undefined,
     });
 
     if (!queryResult.success) {
@@ -96,10 +96,7 @@ export async function GET(request: NextRequest) {
       ...(accountId && { accountId }),
       ...(holidayType && { holidayType }),
       ...(q && {
-        OR: [
-          { name: { contains: q, mode: 'insensitive' as const } },
-          { description: { contains: q, mode: 'insensitive' as const } },
-        ],
+        OR: [{ name: { contains: q } }, { description: { contains: q } }],
       }),
     };
 
@@ -154,8 +151,7 @@ export async function GET(request: NextRequest) {
 
     return ok(toPlain(response));
   } catch (error) {
-    console.error('Error fetching holidays:', error);
-    return serverError('Failed to fetch holidays');
+    return routeError(error, 'Error fetching holidays:', 'Failed to fetch holidays');
   }
 }
 
@@ -213,7 +209,6 @@ export async function POST(request: NextRequest) {
 
     return created(toPlain(transformedHoliday));
   } catch (error) {
-    console.error('Error creating holiday:', error);
-    return serverError('Failed to create holiday');
+    return routeError(error, 'Error creating holiday:', 'Failed to create holiday');
   }
 }

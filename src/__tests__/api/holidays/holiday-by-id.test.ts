@@ -65,13 +65,10 @@ describe('authentication', () => {
     ],
     ['countdown DELETE', () => clearCountdown(apiRequest('/x', 'DELETE'), ctx)],
     ['clear-data POST', () => clearData(apiRequest('/x', 'POST'), ctx)],
-  ])(
-    '%s returns 500 when authentication fails (the middleware normally stops this first)',
-    async (_, call) => {
-      requireAuth.mockRejectedValue(new Error('Authentication required'));
-      expect((await readJson(await call())).status).toBe(500);
-    },
-  );
+  ])('%s returns 401 when authentication fails', async (_, call) => {
+    requireAuth.mockRejectedValue(new Error('Authentication required'));
+    expect((await readJson(await call())).status).toBe(401);
+  });
 });
 
 describe('GET /holidays/[id]', () => {
@@ -156,9 +153,7 @@ describe('PUT /holidays/[id]', () => {
     expect(db.holiday.update).not.toHaveBeenCalled();
   });
 
-  // KNOWN ISSUE: a non-member gets a 500 "Failed to update holiday" rather than 403, because the
-  // Forbidden response thrown by requireAccountAccess is caught by the route's catch-all.
-  it.failing('answers 403 for someone who is not a member', async () => {
+  it('answers 403 for someone who is not a member', async () => {
     notAMember();
     expect((await readJson(await put({ name: 'a' }))).status).toBe(403);
   });
@@ -191,7 +186,7 @@ describe('DELETE /holidays/[id]', () => {
     expect(db.holiday.delete).not.toHaveBeenCalled();
   });
 
-  it.failing('answers 403 for someone who is not a member', async () => {
+  it('answers 403 for someone who is not a member', async () => {
     notAMember();
     expect((await readJson(await del())).status).toBe(403);
   });
@@ -286,19 +281,19 @@ describe('countdown', () => {
     expect(db.holiday.update).not.toHaveBeenCalled();
   });
 
-  it.failing('answers 403 for someone who is not a member', async () => {
+  it('answers 403 for someone who is not a member', async () => {
     notAMember();
     expect((await readJson(await set({ countdownTimer: when }))).status).toBe(403);
   });
 
-  it('returns 500 with the error message when the database fails', async () => {
+  it('returns 500 without exposing the database error', async () => {
     db.holiday.update.mockRejectedValue(new Error('db down'));
     const put = await readJson(await set({ countdownTimer: when }));
     const del = await readJson(
       await clearCountdown(apiRequest('/x', 'DELETE'), ctx),
     );
     expect(put.status).toBe(500);
-    expect(put.body.error).toBe('db down');
+    expect(put.body.error).toBe('Failed to update countdown timer');
     expect(del.status).toBe(500);
   });
 });
@@ -336,7 +331,7 @@ describe('POST /clear-data', () => {
     expect(db.budget.deleteMany).not.toHaveBeenCalled();
   });
 
-  it.failing('answers 403 for someone who is not a member', async () => {
+  it('answers 403 for someone who is not a member', async () => {
     notAMember();
     expect((await readJson(await clear())).status).toBe(403);
   });

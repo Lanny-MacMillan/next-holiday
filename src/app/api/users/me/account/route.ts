@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { toPlain } from '@/lib/json';
-import { ok, serverError } from '@/lib/http';
+import { ok, routeError } from '@/lib/http';
 
 // GET /api/users/me/account - Get or create user's first account
 export async function GET(request: NextRequest) {
@@ -68,7 +68,10 @@ export async function GET(request: NextRequest) {
 
     return ok(toPlain(account));
   } catch (error) {
-    console.error('Error getting user account:', error);
-    return serverError('Failed to get user account');
+    return routeError(
+      error,
+      'Error getting user account:',
+      'Failed to get user account',
+    );
   }
 }

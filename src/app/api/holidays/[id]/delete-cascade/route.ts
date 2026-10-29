@@ -13,6 +13,7 @@ import {
   forbidden,
   notFound,
   serverError,
+  routeError,
 } from '@/lib/http';
 
 // Validation schema for the request body
@@ -83,8 +84,11 @@ export async function POST(
       ...result,
     });
   } catch (error) {
-    console.error('Error in cascade delete API:', error);
-    return serverError('Failed to process cascade delete request');
+    return routeError(
+      error,
+      'Error in cascade delete API:',
+      'Failed to process cascade delete request',
+    );
   }
 }
 
@@ -139,7 +143,10 @@ export async function GET(
       ...result,
     });
   } catch (error) {
-    console.error('Error in cascade delete dry run API:', error);
-    return serverError('Failed to process dry run request');
+    return routeError(
+      error,
+      'Error in cascade delete dry run API:',
+      'Failed to process dry run request',
+    );
   }
 }

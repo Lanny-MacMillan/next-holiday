@@ -145,8 +145,7 @@ describe('POST /api/performance', () => {
     expect((await send('{')).res.status).toBe(500);
   });
 
-  // KNOWN ISSUE: a report with no session crashes on session.url and gets a 500 instead of a 400.
-  it.failing('rejects a report with no session with a 400', async () => {
+  it('rejects a report with no session with a 400', async () => {
     expect((await send({ metrics: [], vitals: [] })).res.status).toBe(400);
   });
 });

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
-import { ok, badRequest, serverError, notFound } from '@/lib/http';
+import { ok, badRequest, notFound, routeError } from '@/lib/http';
 
 // Validation schema
 const UpdateBudgetSchema = z.object({
@@ -74,7 +74,6 @@ export async function PUT(
 
     return ok(transformedBudget);
   } catch (error) {
-    console.error('Error updating budget:', error);
-    return serverError('Failed to update budget');
+    return routeError(error, 'Error updating budget:', 'Failed to update budget');
   }
 }

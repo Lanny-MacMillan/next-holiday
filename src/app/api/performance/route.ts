@@ -143,6 +143,13 @@ export async function POST(request: NextRequest) {
 
     const data: PerformanceData = await request.json();
 
+    if (!data?.session?.url || !data.session.sessionId) {
+      return NextResponse.json(
+        { success: false, message: 'Missing session' },
+        { status: 400 },
+      );
+    }
+
     // Add server timestamp and IP info
     const serverData = {
       ...data,

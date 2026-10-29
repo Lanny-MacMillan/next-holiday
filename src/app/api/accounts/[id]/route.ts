@@ -100,6 +100,7 @@ export async function GET(
 
     return ok(account);
   } catch (error) {
+    if (error instanceof Response) return error;
     if (error instanceof Error && error.message.includes('Access denied')) {
       return forbidden(error.message);
     }
@@ -164,6 +165,7 @@ export async function PUT(
 
     return ok(account);
   } catch (error) {
+    if (error instanceof Response) return error;
     if (error instanceof Error && error.message.includes('Access denied')) {
       return forbidden(error.message);
     }
@@ -203,6 +205,7 @@ export async function DELETE(
 
     return ok({ message: 'Account deleted successfully' });
   } catch (error) {
+    if (error instanceof Response) return error;
     if (error instanceof Error && error.message.includes('Access denied')) {
       return forbidden(error.message);
     }
