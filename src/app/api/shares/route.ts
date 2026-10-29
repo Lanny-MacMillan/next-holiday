@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
+import {
+  authenticate,
+  claimsOtherUser,
+  forbiddenResponse,
+  plusRequired,
+} from '@/lib/routeAuth';
 
 export async function POST(request: NextRequest) {
   try {
     const auth = await authenticate(request);
     if (auth.response) return auth.response;
+    const notPlus = plusRequired(auth.user);
+    if (notPlus) return notPlus;
 
     const body = await request.json();
     const { holidayKey, ownerUserId: ownerUserIdParam } = body;

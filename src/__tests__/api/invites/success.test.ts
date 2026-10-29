@@ -25,6 +25,7 @@ import { POST as accept } from '@/app/api/invites/[inviteId]/accept/route';
 
 const me = {
   id: 'me-id',
+  subscriptionPlan: 'plus',
   auth0Sub: 'auth0|me',
   email: 'me@x.com',
   verifiedEmail: 'me@x.com',
@@ -68,6 +69,22 @@ describe('POST /api/invites', () => {
         ...data,
       }),
     );
+  });
+
+  describe('Plus only', () => {
+    it.each([
+      ['a free account', { ...me, subscriptionPlan: 'free' }],
+      ['an account with no plan on record', { ...me, subscriptionPlan: undefined }],
+    ])('refuses an invite from %s and writes nothing', async (_label, user) => {
+      getCurrentUser.mockResolvedValue(user);
+
+      const { status, body } = await send();
+
+      expect(status).toBe(403);
+      expect(body.error).toBe('A Plus subscription is required');
+      expect(db.invite.create).not.toHaveBeenCalled();
+      expect(broadcastInvite).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps an email invite for someone who has not signed up', async () => {

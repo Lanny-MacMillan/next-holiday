@@ -17,7 +17,7 @@ import {
 } from '@/__tests__/support/api';
 import { GET, POST } from '@/app/api/shares/route';
 
-const me = { id: 'me-id', auth0Sub: 'auth0|me' };
+const me = { id: 'me-id', auth0Sub: 'auth0|me', subscriptionPlan: 'plus' };
 
 beforeEach(() => {
   resetPrismaMock();
@@ -40,6 +40,22 @@ describe('POST /api/shares', () => {
       id: 's1',
       holidayId: 'h1',
       ownerUserId: 'me-id',
+    });
+  });
+
+  describe('Plus only', () => {
+    it.each([
+      ['a free account', { ...me, subscriptionPlan: 'free' }],
+      ['an account with no plan on record', { ...me, subscriptionPlan: undefined }],
+    ])('refuses %s and writes nothing', async (_label, user) => {
+      getCurrentUser.mockResolvedValue(user);
+
+      const { status, body } = await post({ holidayKey: 'christmas' });
+
+      expect(status).toBe(403);
+      expect(body.error).toBe('A Plus subscription is required');
+      expect(db.share.create).not.toHaveBeenCalled();
+      expect(db.holiday.findFirst).not.toHaveBeenCalled();
     });
   });
 

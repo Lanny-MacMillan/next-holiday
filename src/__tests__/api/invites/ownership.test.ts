@@ -30,6 +30,7 @@ import { POST as dismissInvite } from '@/app/api/invites/[inviteId]/dismiss/rout
 
 const me = {
   id: 'me-id',
+  subscriptionPlan: 'plus',
   auth0Sub: 'auth0|me',
   email: 'me@x.com',
   verifiedEmail: 'me@x.com',

@@ -36,6 +36,13 @@ export function forbiddenResponse(message = 'Forbidden') {
   return NextResponse.json({ error: message }, { status: 403 });
 }
 
+// Sharing is a Plus feature; the UI hides it, so the API has to refuse it too.
+export function plusRequired(user: AuthUser) {
+  return user.subscriptionPlan === 'plus'
+    ? null
+    : forbiddenResponse('A Plus subscription is required');
+}
+
 export async function isShareParticipant(
   shareId: string,
   userId: string,
