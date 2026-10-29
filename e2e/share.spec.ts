@@ -1,63 +1,44 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { call, setUpHoliday, setUpUser } from './support/api';
 import { signIn } from './support/auth';
 
-test('explore sharing', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const a = await signIn(ctxA, 'A');
-  await setUpHoliday(ctxA, a);
-  console.log(
-    'UPGRADE',
-    JSON.stringify(
-      await call(ctxA, a, 'POST', '/api/upgrade-user', {
-        auth0Sub: a.sub,
-        plan: 'plus',
-      }),
-    ).slice(0, 200),
-  );
-  const ctxB = await browser.newContext();
-  const b = await signIn(ctxB, 'B');
-  await setUpUser(ctxB, b);
+test('a Plus user invites someone by email and they get access after accepting', async ({
+  browser,
+}) => {
+  const contextA = await browser.newContext();
+  const a = await signIn(contextA, 'A');
+  const { holidayId } = await setUpHoliday(contextA, a);
+  const upgraded = await call(contextA, a, 'POST', '/api/upgrade-user', {
+    auth0Sub: a.sub,
+    plan: 'plus',
+  });
+  expect(upgraded.status).toBe(200);
 
-  const pageA = await ctxA.newPage();
-  const log = (tag: string) => (r: import('@playwright/test').Response) =>
-    r.url().includes('/api/invites') &&
-    console.log(
-      tag,
-      r.status(),
-      r.request().method(),
-      r.url().replace('http://localhost:3000', ''),
-    );
-  pageA.on('response', log('A-API'));
+  const contextB = await browser.newContext();
+  const b = await signIn(contextB, 'B');
+  await setUpUser(contextB, b);
+  const giftsUrl = `/api/holidays/${holidayId}/gifts`;
+  expect((await call(contextB, b, 'GET', giftsUrl)).status).toBe(403);
+
+  const pageA = await contextA.newPage();
   await pageA.goto('/');
-  await pageA.waitForTimeout(5000);
-  console.log(
-    'A-BUTTONS',
-    (await pageA.getByRole('button').allInnerTexts()).join(' | '),
-  );
   await pageA.getByRole('button', { name: 'Invite', exact: true }).click();
   await pageA.getByPlaceholder('Enter email address or user ID').fill(b.email);
   await pageA.getByRole('button', { name: 'Send Invite' }).click();
-  await pageA.waitForTimeout(3000);
-  console.log(
-    'A-BODY',
-    (await pageA.locator('body').innerText()).replace(/\n+/g, ' / ').slice(0, 400),
-  );
+  await expect(pageA.getByText('Invite Sent')).toBeVisible();
 
-  const pageB = await ctxB.newPage();
-  pageB.on('response', log('B-API'));
+  const pageB = await contextB.newPage();
   await pageB.goto('/');
-  await pageB.waitForTimeout(4000);
   await pageB.getByRole('button', { name: 'Notifications' }).click();
-  await pageB.waitForTimeout(2000);
-  console.log(
-    'B-BODY',
-    (await pageB.locator('body').innerText()).replace(/\n+/g, ' / ').slice(0, 600),
-  );
-  console.log(
-    'B-BUTTONS',
-    (await pageB.getByRole('button').allInnerTexts()).join(' | '),
-  );
-  await pageB.screenshot({ path: 'test-results/b-notifications.png' });
-  void call;
+  await expect(
+    pageB.getByText(/invited you to collaborate on Christmas/),
+  ).toBeVisible();
+  await pageB.getByRole('button', { name: 'Accept' }).first().click();
+
+  await expect
+    .poll(async () => (await call(contextB, b, 'GET', giftsUrl)).status)
+    .toBe(200);
+
+  await contextA.close();
+  await contextB.close();
 });
