@@ -1,4 +1,4 @@
-import type { ErrorEvent } from '@sentry/nextjs';
+import type { Breadcrumb, ErrorEvent } from '@sentry/nextjs';
 
 const SENSITIVE_HEADERS = ['authorization', 'cookie', 'x-test-user'];
 
@@ -16,6 +16,18 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
   return event;
 }
 
+// Some API calls carry a user id in the query string; keep only the path.
+export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
+  const url = breadcrumb.data?.url;
+  if (
+    (breadcrumb.category === 'fetch' || breadcrumb.category === 'xhr') &&
+    typeof url === 'string'
+  ) {
+    breadcrumb.data = { ...breadcrumb.data, url: url.split('?')[0] };
+  }
+  return breadcrumb;
+}
+
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 export const sentryOptions = {
@@ -28,4 +40,5 @@ export const sentryOptions = {
     'ResizeObserver loop completed with undelivered notifications.',
   ],
   beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
 };

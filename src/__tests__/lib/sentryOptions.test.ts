@@ -1,5 +1,5 @@
 import type { ErrorEvent } from '@sentry/nextjs';
-import { scrubEvent, sentryOptions } from '@/lib/sentryOptions';
+import { scrubBreadcrumb, scrubEvent, sentryOptions } from '@/lib/sentryOptions';
 
 const event = (over: Partial<ErrorEvent> = {}) =>
   ({
@@ -35,11 +35,36 @@ describe('scrubEvent', () => {
   });
 });
 
+describe('scrubBreadcrumb', () => {
+  it('drops the query string from fetch and xhr requests', () => {
+    for (const category of ['fetch', 'xhr']) {
+      const out = scrubBreadcrumb({
+        category,
+        data: { url: '/api/shares?userId=google-oauth2|123', method: 'GET' },
+      });
+      expect(out.data).toEqual({ url: '/api/shares', method: 'GET' });
+    }
+  });
+
+  it('leaves other breadcrumbs and urls without a query alone', () => {
+    const click = { category: 'ui.click', data: { url: '/a?b=1' } };
+    expect(scrubBreadcrumb(click)).toEqual({
+      category: 'ui.click',
+      data: { url: '/a?b=1' },
+    });
+    expect(
+      scrubBreadcrumb({ category: 'fetch', data: { url: '/api/home' } }).data?.url,
+    ).toBe('/api/home');
+    expect(scrubBreadcrumb({ category: 'fetch' })).toEqual({ category: 'fetch' });
+  });
+});
+
 describe('sentryOptions', () => {
   it('reports errors only and sends no default personal data', () => {
     expect(sentryOptions.tracesSampleRate).toBe(0);
     expect(sentryOptions.sendDefaultPii).toBe(false);
     expect(sentryOptions.beforeSend).toBe(scrubEvent);
+    expect(sentryOptions.beforeBreadcrumb).toBe(scrubBreadcrumb);
   });
 
   it('stays off without a DSN', () => {
