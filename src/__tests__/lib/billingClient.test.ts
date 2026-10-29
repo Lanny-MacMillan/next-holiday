@@ -46,4 +46,17 @@ describe('goToStripe', () => {
       'Could not reach the payment page',
     );
   });
+
+  it("reports 'downgraded' and does not navigate when the server changed the plan itself", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { downgraded: true } }),
+    });
+    const navigate = jest.fn();
+
+    await expect(goToStripe('/api/billing/portal', navigate)).resolves.toBe(
+      'downgraded',
+    );
+    expect(navigate).not.toHaveBeenCalled();
+  });
 });

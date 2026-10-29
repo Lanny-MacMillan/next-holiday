@@ -258,6 +258,18 @@ describe('CancelSubscriptionModal', () => {
       expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
     });
 
+    it('finishes the downgrade in the app when the server already did it', async () => {
+      goToStripe.mockResolvedValue('downgraded');
+      renderModal();
+      confirm();
+
+      await waitFor(() => expect(props.onCancel).toHaveBeenCalled());
+      expect(props.onClose).toHaveBeenCalled();
+      expect(urls()).not.toContain('POST /api/upgrade-user');
+      expect(urls()).not.toContain('POST /api/users/cancel-subscription-cleanup');
+      expect(store.getState().user.user?.subscriptionPlan).toBe('free');
+    });
+
     it('alerts and stays open when the portal cannot be opened', async () => {
       goToStripe.mockRejectedValue(new Error('No active subscription'));
       renderModal();

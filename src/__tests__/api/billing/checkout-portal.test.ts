@@ -9,6 +9,10 @@ const stripe = {
   subscriptions: { search: jest.fn() },
   billingPortal: { sessions: { create: jest.fn() } },
 };
+const deactivatePlus = jest.fn();
+jest.mock('@/lib/server/billing', () => ({
+  deactivatePlus: (...a: unknown[]) => deactivatePlus(...a),
+}));
 jest.mock('@/lib/stripe', () => ({
   getStripe: () => stripe,
   appOrigin: () => 'https://app.test',
@@ -42,6 +46,7 @@ beforeEach(() => {
   stripe.subscriptions.search.mockReset();
   stripe.billingPortal.sessions.create.mockReset();
   authenticate.mockReset().mockResolvedValue({ user });
+  deactivatePlus.mockReset().mockResolvedValue(undefined);
   process.env.NEXT_PUBLIC_PAYMENTS_PROVIDER = 'stripe';
   process.env.STRIPE_PRICE_ID = 'price_plus';
 });
@@ -155,6 +160,48 @@ describe('POST /api/billing/portal', () => {
     stripe.subscriptions.search.mockResolvedValue({ data: [] });
     expect((await json(await call())).status).toBe(404);
     expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+  });
+
+  describe('Plus with no subscription behind it (the free demo)', () => {
+    const plus = (startedMinutesAgo: number | null) => ({
+      ...user,
+      subscriptionPlan: 'plus',
+      subscriptionStartDate:
+        startedMinutesAgo === null
+          ? null
+          : new Date(Date.now() - startedMinutesAgo * 60_000),
+    });
+
+    it('downgrades the user straight away', async () => {
+      authenticate.mockResolvedValue({ user: plus(60) });
+      stripe.subscriptions.search.mockResolvedValue({ data: [] });
+      const { status, body } = await json(await call());
+
+      expect(status).toBe(200);
+      expect(body.data).toEqual({ downgraded: true });
+      expect(deactivatePlus).toHaveBeenCalledWith('u1');
+      expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+    });
+
+    it('treats a Plus with no start date as a demo upgrade', async () => {
+      authenticate.mockResolvedValue({ user: plus(null) });
+      stripe.subscriptions.search.mockResolvedValue({ data: [] });
+      expect((await json(await call())).body.data).toEqual({ downgraded: true });
+    });
+
+    it('leaves a brand-new Plus alone, since search may not have caught up', async () => {
+      authenticate.mockResolvedValue({ user: plus(1) });
+      stripe.subscriptions.search.mockResolvedValue({ data: [] });
+
+      expect((await json(await call())).status).toBe(404);
+      expect(deactivatePlus).not.toHaveBeenCalled();
+    });
+
+    it('never downgrades someone who is on free', async () => {
+      stripe.subscriptions.search.mockResolvedValue({ data: [] });
+      await call();
+      expect(deactivatePlus).not.toHaveBeenCalled();
+    });
   });
 
   it('answers 500 when Stripe fails', async () => {

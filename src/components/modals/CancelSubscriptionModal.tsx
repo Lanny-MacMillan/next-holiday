@@ -34,41 +34,48 @@ export default function CancelSubscriptionModal({
         throw new Error('User not authenticated');
       }
 
-      // With Stripe, cancelling happens on Stripe's billing portal; the webhook then
-      // downgrades the account and cleans up sharing, so there is nothing more to do here.
+      // With Stripe, cancelling happens on Stripe's billing portal and the webhook
+      // downgrades the account later. Plus from the free demo has no Stripe
+      // subscription, so the server downgrades it straight away.
+      let downgradedByServer = false;
       if (paymentsProvider() === 'stripe') {
-        await goToStripe('/api/billing/portal');
-        return;
+        if ((await goToStripe('/api/billing/portal')) !== 'downgraded') return;
+        downgradedByServer = true;
       }
 
-      // 1. Clean up sharing relationships before downgrading
-      setLoadingMessage('Cleaning up shared holidays...');
-      const cleanupResponse = await fetch('/api/users/cancel-subscription-cleanup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          auth0Sub: auth0User.sub,
-        }),
-      });
+      if (!downgradedByServer) {
+        // 1. Clean up sharing relationships before downgrading
+        setLoadingMessage('Cleaning up shared holidays...');
+        const cleanupResponse = await fetch(
+          '/api/users/cancel-subscription-cleanup',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              auth0Sub: auth0User.sub,
+            }),
+          },
+        );
 
-      if (!cleanupResponse.ok) {
-        const cleanupError = await cleanupResponse.json();
+        if (!cleanupResponse.ok) {
+          const cleanupError = await cleanupResponse.json();
 
-        // Don't throw here - we still want to proceed with cancellation
-      } else {
-        const cleanupResult = await cleanupResponse.json();
+          // Don't throw here - we still want to proceed with cancellation
+        } else {
+          const cleanupResult = await cleanupResponse.json();
+        }
+
+        // 2. Downgrade user to free in database
+        setLoadingMessage('Updating subscription...');
+        const downgradeResult = await dispatch(
+          upgradeUser({
+            auth0Sub: auth0User.sub,
+            plan: 'free',
+          }),
+        ).unwrap();
       }
-
-      // 2. Downgrade user to free in database
-      setLoadingMessage('Updating subscription...');
-      const downgradeResult = await dispatch(
-        upgradeUser({
-          auth0Sub: auth0User.sub,
-          plan: 'free',
-        }),
-      ).unwrap();
 
       // 3. Update Redux immediately to prevent race conditions with data refresh
       dispatch(
