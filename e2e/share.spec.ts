@@ -25,7 +25,7 @@ test('a Plus user invites someone by email and they get access after accepting',
   await pageA.getByRole('button', { name: 'Invite', exact: true }).click();
   await pageA.getByPlaceholder('Enter email address or user ID').fill(b.email);
   await pageA.getByRole('button', { name: 'Send Invite' }).click();
-  await expect(pageA.getByText('Invite Sent')).toBeVisible();
+  await expect(pageA.getByText('Invite Sent', { exact: true })).toBeVisible();
 
   const pageB = await contextB.newPage();
   await pageB.goto('/');
