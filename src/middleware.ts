@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyIdToken } from '@/lib/verifyAuth0Token';
+import { checkRateLimit } from '@/lib/rateLimit';
 
-// Performance beacons are anonymous by design.
-const PUBLIC_API_PATHS = ['/api/performance'];
+// Performance beacons and the health check are anonymous by design.
+const PUBLIC_API_PATHS = ['/api/performance', '/api/health'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const limit = checkRateLimit(ip);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+    );
+  }
 
   if (PUBLIC_API_PATHS.includes(pathname)) {
     return NextResponse.next();

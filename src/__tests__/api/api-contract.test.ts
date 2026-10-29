@@ -105,6 +105,7 @@ const ROUTES_WITHOUT_LITERAL_CALLER = [
   'GET /api/budget-transactions',
   'GET /api/budgets',
   'GET /api/contacts',
+  'GET /api/health',
   'GET /api/holidays',
   'GET /api/holidays/[id]/delete-cascade',
   'GET /api/performance',
