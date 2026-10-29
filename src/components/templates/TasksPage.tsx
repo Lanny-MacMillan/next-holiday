@@ -38,6 +38,21 @@ interface Task {
   assignedToName?: string | null;
 }
 
+const STARTER_TONES = {
+  blue: {
+    box: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700',
+    heading: 'text-blue-800 dark:text-blue-200',
+    text: 'text-blue-700 dark:text-blue-300',
+    button: 'bg-blue-500 hover:bg-blue-600',
+  },
+  amber: {
+    box: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700',
+    heading: 'text-amber-800 dark:text-amber-200',
+    text: 'text-amber-700 dark:text-amber-300',
+    button: 'bg-amber-500 hover:bg-amber-600',
+  },
+} as const;
+
 const PRIORITY_ORDER: Record<Priority, number> = { high: 3, medium: 2, low: 1 };
 
 const SORT_LABELS: Record<Exclude<SortOption, 'none'>, string> = {
@@ -79,8 +94,11 @@ function sortTasks(tasks: Task[], sortBy: SortOption) {
 // One tasks page for every holiday; the config supplies names, category and colours.
 export default function TasksPage({ config }: { config: TaskPageConfig }) {
   const { holidayKey, taskCategory } = config;
-  const isEvents = config.variant === 'events';
-  const noun = isEvents ? 'Event' : 'Task';
+  const variant = config.variant ?? 'tasks';
+  const isTasks = variant === 'tasks';
+  const noun = { tasks: 'Task', events: 'Event', decorations: 'Decoration' }[
+    variant
+  ];
   const nounLower = noun.toLowerCase();
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
@@ -128,6 +146,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
   const [showSortModal, setShowSortModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [starterDismissed, setStarterDismissed] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -136,6 +155,25 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
   useEffect(() => {
     dispatch(fetchContacts());
   }, [dispatch]);
+
+  async function addStarterItems() {
+    if (!config.starter || !holidayId || !auth0User) return;
+
+    try {
+      for (const item of config.starter.items) {
+        await createTask({
+          title: item.title,
+          description: item.description,
+          priority: item.priority,
+          category: taskCategory,
+          holidayId,
+        });
+      }
+      setStarterDismissed(true);
+    } catch (error) {
+      console.error('Error adding the starter list:', error);
+    }
+  }
 
   async function handleAddTask(values: Record<string, any>) {
     if (!values.title?.trim() || !holidayId || !auth0User) return;
@@ -292,14 +330,44 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
           </div>
         )}
 
-        {isEvents && tasks.length > 0 && (
+        {config.starter && tasks.length === 0 && !starterDismissed && (
+          <div
+            className={`card card-tasks rounded-lg p-4 ${STARTER_TONES[config.starter.tone].box}`}
+          >
+            <h3
+              className={`text-lg font-semibold mb-2 ${STARTER_TONES[config.starter.tone].heading}`}
+            >
+              {config.starter.heading}
+            </h3>
+            <p className={`text-sm mb-3 ${STARTER_TONES[config.starter.tone].text}`}>
+              {config.starter.question}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={addStarterItems}
+                disabled={createLoading}
+                className={`text-white px-4 py-2 rounded transition-colors text-sm disabled:opacity-50 ${STARTER_TONES[config.starter.tone].button}`}
+              >
+                {createLoading ? 'Adding...' : config.starter.button}
+              </button>
+              <button
+                onClick={() => setStarterDismissed(true)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isTasks && tasks.length > 0 && (
           <div className="card rounded-lg p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
-              Event Status
+              {noun} Status
             </h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               {[
-                ['text-blue-600', tasks.length, 'Total Events'],
+                ['text-blue-600', tasks.length, `Total ${noun}s`],
                 ['text-green-600', completedTasks.length, 'Completed'],
                 ['text-orange-600', incompleteTasks.length, 'Remaining'],
               ].map(([color, count, label]) => (
@@ -315,20 +383,26 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         )}
 
         <TaskSection
-          title={isEvents ? 'Upcoming Events' : 'Incomplete'}
+          title={
+            {
+              tasks: 'Incomplete',
+              events: 'Upcoming Events',
+              decorations: 'Pending Decorations',
+            }[variant]
+          }
           items={incompleteTasks}
           isCompleted={false}
           emptyMessage={
-            isEvents
-              ? 'No events planned yet.'
-              : `All tasks completed! ${config.doneEmoji}`
+            isTasks
+              ? `All tasks completed! ${config.doneEmoji}`
+              : `No ${nounLower}s planned yet.`
           }
           completedMessage=""
           renderItem={(task: Task) => renderTask(task, false)}
         />
 
         <TaskSection
-          title={isEvents ? 'Completed Events' : 'Completed'}
+          title={isTasks ? 'Completed' : `Completed ${noun}s`}
           items={completedTasks}
           isCompleted={true}
           emptyMessage=""

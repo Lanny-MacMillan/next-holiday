@@ -7,6 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import TasksPage from '@/components/templates/TasksPage';
 import { taskPageConfigs } from '@/config/taskPageConfigs';
 import { eventPageConfigs } from '@/config/eventPageConfigs';
+import { decorationPageConfigs } from '@/config/decorationPageConfigs';
 
 const me = { sub: 'auth0|me', id: 'u1', name: 'Me', email: 'me@x.com' };
 let shared: any;
@@ -710,6 +711,173 @@ describe('TasksPage as an events page', () => {
 
     expect(config.variant).toBe('events');
     expect(config.taskCategory).toBe('Events');
+    expect(config.holidayKey).toBe(key);
+  });
+});
+
+describe('TasksPage as a decorations page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    holidayShared = false;
+    shared = {
+      holidayId: 'h1',
+      holidayData: {
+        tasks: [
+          task('a', 'Hang lights', { category: 'Decorations' }),
+          task('b', 'Set table', { category: 'Decorations', isCompleted: true }),
+          task('c', 'Buy ham', { category: 'Tasks' }),
+        ],
+      },
+      auth0User: me,
+      homeInitialized: true,
+      shareMembers: [{ userId: 'auth0|me', uuid: 'u1', name: 'Me' }],
+    };
+    Object.entries(mutations).forEach(([k, m]) => {
+      if (typeof m === 'function')
+        (m as jest.Mock).mockReset().mockResolvedValue({});
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('shows only decorations, under their own title and section names', () => {
+    renderPage(decorationPageConfigs.thanksgiving);
+
+    expect(screen.getByRole('heading', { name: 'Decorations' })).toBeTruthy();
+    expect(screen.getByText('Keep track of Thanksgiving decorations!')).toBeTruthy();
+    expect(screen.getByText('Pending Decorations (1)')).toBeTruthy();
+    expect(screen.getByText('Completed Decorations (1)')).toBeTruthy();
+    expect(screen.queryByText('Buy ham')).toBeNull();
+  });
+
+  it('summarises the decorations', () => {
+    renderPage(decorationPageConfigs.thanksgiving);
+
+    expect(screen.getByText('Decoration Status')).toBeTruthy();
+    expect(screen.getByText('Total Decorations').previousSibling?.textContent).toBe(
+      '2',
+    );
+  });
+
+  it('says so when there are none', () => {
+    shared.holidayData = { tasks: [] };
+    renderPage(decorationPageConfigs.thanksgiving);
+
+    expect(screen.getByText('No decorations planned yet.')).toBeTruthy();
+    expect(screen.getByText('No completed decorations yet.')).toBeTruthy();
+    expect(screen.queryByText('Decoration Status')).toBeNull();
+  });
+
+  it('adds a decoration in the Decorations category, with decoration wording', async () => {
+    renderPage(decorationPageConfigs.thanksgiving);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add New Decoration' }));
+    fireEvent.click(screen.getByText('submit Add New Decoration'));
+
+    await waitFor(() => expect(mutations.createTask).toHaveBeenCalled());
+    expect(mutations.createTask.mock.calls[0][0].category).toBe('Decorations');
+    expect(await screen.findByText('Decoration added successfully!')).toBeTruthy();
+  });
+
+  it('has no title on a page without a description', () => {
+    renderPage(decorationPageConfigs.kwanzaa);
+
+    expect(
+      screen.getByRole('heading', { name: 'Decorations Checklist' }),
+    ).toBeTruthy();
+  });
+
+  describe('the starter list', () => {
+    beforeEach(() => {
+      shared.holidayData = { tasks: [] };
+    });
+
+    it('is offered on an empty page that has one', () => {
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      expect(screen.getByText('✨ Set Up Kwanzaa Decorations')).toBeTruthy();
+      expect(
+        screen.getByText('Would you like to add common Kwanzaa decoration tasks?'),
+      ).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Add Default Tasks' })).toBeTruthy();
+    });
+
+    it("uses the page's own wording on New Year", () => {
+      renderPage(decorationPageConfigs['new-year']);
+
+      expect(screen.getByText("🎊 Set Up New Year's Decorations")).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Add Default Decorations' }),
+      ).toBeTruthy();
+    });
+
+    it('is not offered on a page that has none', () => {
+      renderPage(decorationPageConfigs.thanksgiving);
+
+      expect(screen.queryByText(/Set Up/)).toBeNull();
+    });
+
+    it('is not offered once there are decorations', () => {
+      shared.holidayData = {
+        tasks: [task('a', 'Hang lights', { category: 'Decorations' })],
+      };
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      expect(screen.queryByText(/Set Up/)).toBeNull();
+    });
+
+    it('adds every starter decoration, then goes away', async () => {
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Default Tasks' }));
+
+      const items = decorationPageConfigs.kwanzaa.starter.items;
+      await waitFor(() =>
+        expect(mutations.createTask).toHaveBeenCalledTimes(items.length),
+      );
+      expect(mutations.createTask.mock.calls[0][0]).toEqual({
+        title: items[0].title,
+        description: items[0].description,
+        priority: items[0].priority,
+        category: 'Decorations',
+        holidayId: 'h1',
+      });
+      await waitFor(() => expect(screen.queryByText(/Set Up/)).toBeNull());
+    });
+
+    it('stays when adding fails, so it can be tried again', async () => {
+      mutations.createTask.mockRejectedValue(new Error('boom'));
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Default Tasks' }));
+
+      await waitFor(() => expect(console.error).toHaveBeenCalled());
+      expect(screen.getByText('✨ Set Up Kwanzaa Decorations')).toBeTruthy();
+    });
+
+    it('can be skipped', () => {
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+
+      expect(screen.queryByText(/Set Up/)).toBeNull();
+      expect(mutations.createTask).not.toHaveBeenCalled();
+    });
+
+    it('does nothing while the holiday has not been found', () => {
+      shared.holidayId = null;
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Default Tasks' }));
+
+      expect(mutations.createTask).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each(Object.keys(decorationPageConfigs))('has a page for %s', key => {
+    const config = (decorationPageConfigs as Record<string, any>)[key];
+
+    expect(config.variant).toBe('decorations');
+    expect(config.taskCategory).toBe('Decorations');
     expect(config.holidayKey).toBe(key);
   });
 });
