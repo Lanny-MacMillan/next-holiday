@@ -41,3 +41,27 @@ test('a gift assigned to a member of a shared holiday shows for both of them', a
   await contextA.close();
   await contextB.close();
 });
+
+test("a member of a shared holiday sees the owner's cards", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const { contextA, a, contextB, holidayId } = await shareChristmas(browser);
+  const recipient = `Cousin Kit ${Date.now()}`;
+  const created = await call(
+    contextA,
+    a,
+    'POST',
+    `/api/holidays/${holidayId}/cards`,
+    {
+      recipient,
+      message: 'Happy holidays',
+    },
+  );
+  expect(created.status).toBeLessThan(300);
+
+  const pageB = await contextB.newPage();
+  await pageB.goto('/christmas/cards');
+  await expect(pageB.getByText(recipient)).toBeVisible();
+
+  await contextA.close();
+  await contextB.close();
+});
