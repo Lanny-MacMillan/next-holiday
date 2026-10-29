@@ -96,3 +96,28 @@ test.describe('gifts', () => {
     await contextB.close();
   });
 });
+
+test.describe('opening a holiday page directly', () => {
+  test('a fresh session loads the page instead of staying on the spinner', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    const session = await signIn(context, 'A');
+    const { holidayId } = await setUpHoliday(context, session);
+    const gift = `Mittens ${Date.now()}`;
+    const created = await call(
+      context,
+      session,
+      'POST',
+      `/api/holidays/${holidayId}/gifts`,
+      { name: gift, recipient: 'Grandpa', price: 12 },
+    );
+    expect(created.status).toBeLessThan(300);
+
+    const page = await context.newPage();
+    await page.goto('/christmas/gift-list');
+
+    await expect(page.getByText(gift)).toBeVisible();
+    await context.close();
+  });
+});
