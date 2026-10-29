@@ -12,10 +12,14 @@ const originOf = (value: string | undefined) => {
 // Location lookup used by the performance monitor (src/lib/performance/location-service.ts).
 const IP_LOOKUP = 'https://ipapi.co';
 
+// Umami Cloud loads its script from cloud.umami.is but reports to this origin.
+const UMAMI_CLOUD_GATEWAY = 'https://gateway.umami.is';
+
 export function contentSecurityPolicy(env: Env = process.env, dev = false) {
   const auth0 = originOf(env.NEXT_PUBLIC_AUTH0_DOMAIN);
   const sse = originOf(env.NEXT_PUBLIC_SSE_SERVICE_URL);
   const umami = originOf(env.NEXT_PUBLIC_UMAMI_SCRIPT_URL);
+  const sentry = originOf(env.NEXT_PUBLIC_SENTRY_DSN);
   const some = (...origins: Array<string | null>) =>
     origins.filter((o): o is string => !!o);
 
@@ -34,7 +38,8 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
     'connect-src': [
       "'self'",
       IP_LOOKUP,
-      ...some(auth0, sse, umami),
+      ...some(auth0, sse, umami, sentry),
+      ...(umami === 'https://cloud.umami.is' ? [UMAMI_CLOUD_GATEWAY] : []),
       ...(dev ? ['ws:', 'http:'] : []),
     ],
     'frame-src': some(auth0).length ? some(auth0) : ["'none'"],
@@ -50,10 +55,7 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
     .join('; ');
 }
 
-export function securityHeaders(
-  env: Env = process.env,
-  dev = env.NODE_ENV !== 'production',
-) {
+export function securityHeaders(env: Env = process.env, dev = false) {
   const headers = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'X-Frame-Options', value: 'DENY' },
