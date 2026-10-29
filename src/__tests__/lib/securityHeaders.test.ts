@@ -15,6 +15,7 @@ describe('contentSecurityPolicy', () => {
     expect(csp).toMatch(/connect-src [^;]*https:\/\/sse\.example\.com(?!\/)/);
     expect(csp).toMatch(/script-src [^;]*https:\/\/stats\.example\.com/);
     expect(csp).toContain('frame-src https://tenant.us.auth0.com');
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/ipapi\.co/);
   });
 
   it('forbids framing, plugins and a changed base URL', () => {

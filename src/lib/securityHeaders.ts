@@ -9,6 +9,9 @@ const originOf = (value: string | undefined) => {
   }
 };
 
+// Location lookup used by the performance monitor (src/lib/performance/location-service.ts).
+const IP_LOOKUP = 'https://ipapi.co';
+
 export function contentSecurityPolicy(env: Env = process.env, dev = false) {
   const auth0 = originOf(env.NEXT_PUBLIC_AUTH0_DOMAIN);
   const sse = originOf(env.NEXT_PUBLIC_SSE_SERVICE_URL);
