@@ -31,7 +31,12 @@ import {
   POST as addMember,
 } from '@/app/api/shares/[shareId]/members/route';
 
-const me = { id: 'me-id', auth0Sub: 'auth0|me', email: 'me@x.com' };
+const me = {
+  id: 'me-id',
+  auth0Sub: 'auth0|me',
+  email: 'me@x.com',
+  subscriptionPlan: 'plus',
+};
 const other = { id: 'other-id', auth0Sub: 'auth0|other' };
 const third = { id: 'third-id', auth0Sub: 'auth0|third' };
 
