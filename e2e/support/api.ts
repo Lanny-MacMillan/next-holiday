@@ -20,19 +20,22 @@ export async function call(
   return { status: response.status(), body: text ? JSON.parse(text) : null };
 }
 
+export async function setUpUser(context: BrowserContext, session: Session) {
+  await call(context, session, 'POST', '/api/users', { name: session.name });
+  await call(context, session, 'POST', '/api/users/setup', {
+    auth0User: { sub: session.sub, email: session.email, name: session.name },
+  });
+  const home = await call(context, session, 'GET', '/api/home');
+  return home.body.data.account.id as string;
+}
+
 // Brings a brand-new user to the state of someone who has picked a holiday.
 export async function setUpHoliday(
   context: BrowserContext,
   session: Session,
   holiday = 'Christmas',
 ) {
-  await call(context, session, 'POST', '/api/users', { name: session.name });
-  await call(context, session, 'POST', '/api/users/setup', {
-    auth0User: { sub: session.sub, email: session.email, name: session.name },
-  });
-
-  const home = await call(context, session, 'GET', '/api/home');
-  const accountId = home.body.data.account.id as string;
+  const accountId = await setUpUser(context, session);
 
   await call(context, session, 'POST', '/api/holidays/preferences', {
     accountId,
