@@ -16,6 +16,7 @@ import TaskSection from '@/components/common/TaskSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import Toast from '@/components/common/Toast';
+import Footer from '@/components/common/Footer';
 
 type SortOption =
   | 'priority'
@@ -511,6 +512,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         onClose={() => setToast(null)}
         type={toast?.type}
       />
+      {config.footer && <Footer />}
     </div>
   );
 }

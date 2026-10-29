@@ -48,6 +48,10 @@ jest.mock('@/components/common/HolidayPageHeader', () => ({
     </header>
   ),
 }));
+jest.mock('@/components/common/Footer', () => ({
+  __esModule: true,
+  default: () => <footer>page footer</footer>,
+}));
 jest.mock('@/components/common/AddButton', () => ({
   __esModule: true,
   default: ({ title, onClick }: any) => (
@@ -1002,5 +1006,104 @@ describe('TasksPage as a checklist page', () => {
 
     expect(config.taskCategory).toBeTruthy();
     expect(config.labels.noun).toBeTruthy();
+  });
+});
+
+describe('TasksPage as the resolution tracker and reservations pages', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    holidayShared = false;
+    shared = {
+      holidayId: 'h1',
+      holidayData: {
+        tasks: [
+          task('a', 'Run a 5k', { category: 'Resolutions' }),
+          task('b', 'Read more', { category: 'Resolutions', isCompleted: true }),
+          task('c', 'Dinner for two', {
+            category: 'Reservations',
+            isCompleted: true,
+          }),
+        ],
+      },
+      auth0User: me,
+      homeInitialized: true,
+      shareMembers: [{ userId: 'auth0|me', uuid: 'u1', name: 'Me' }],
+    };
+    Object.entries(mutations).forEach(([k, m]) => {
+      if (typeof m === 'function')
+        (m as jest.Mock).mockReset().mockResolvedValue({});
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('shows the page footer when the config asks for one', () => {
+    renderPage(checklistPageConfigs['resolution-tracker']);
+
+    expect(screen.getByText('page footer')).toBeTruthy();
+  });
+
+  it('shows no footer on a page that does not ask for one', () => {
+    renderPage(checklistPageConfigs['costume-ideas']);
+
+    expect(screen.queryByText('page footer')).toBeNull();
+  });
+
+  it('shows resolutions in their own words and category', () => {
+    renderPage(checklistPageConfigs['resolution-tracker']);
+
+    expect(screen.getByRole('heading', { name: 'Resolution Tracker' })).toBeTruthy();
+    expect(screen.getByText('Pending Resolutions (1)')).toBeTruthy();
+    expect(screen.getByText('Completed Resolutions (1)')).toBeTruthy();
+    expect(screen.queryByText('Dinner for two')).toBeNull();
+  });
+
+  it('calls finished reservations confirmed, with no message when none are', () => {
+    shared.holidayData = { tasks: [task('a', 'Spa', { category: 'Reservations' })] };
+    renderPage(checklistPageConfigs.reservations);
+
+    expect(screen.getByText('Pending Reservations (1)')).toBeTruthy();
+    expect(screen.getByText('Confirmed Reservations (0)')).toBeTruthy();
+    expect(screen.queryByText(/No completed/)).toBeNull();
+  });
+
+  describe('the reservations starter list', () => {
+    beforeEach(() => {
+      shared.holidayData = { tasks: [] };
+    });
+
+    it('is offered on an empty page, in its own words', () => {
+      renderPage(checklistPageConfigs.reservations);
+
+      expect(screen.getByText("💖 Set Up Valentine's Reservations")).toBeTruthy();
+      expect(
+        screen.getByText(
+          "Would you like to add some common Valentine's reservation planning tasks?",
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Add Default Reservations' }),
+      ).toBeTruthy();
+    });
+
+    it('adds all ten reservations in the Reservations category', async () => {
+      renderPage(checklistPageConfigs.reservations);
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Add Default Reservations' }),
+      );
+
+      await waitFor(() => expect(mutations.createTask).toHaveBeenCalledTimes(10));
+      for (const [call] of mutations.createTask.mock.calls) {
+        expect(call.category).toBe('Reservations');
+      }
+    });
+
+    it('can be skipped', () => {
+      renderPage(checklistPageConfigs.reservations);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+
+      expect(screen.queryByText(/Set Up/)).toBeNull();
+    });
   });
 });

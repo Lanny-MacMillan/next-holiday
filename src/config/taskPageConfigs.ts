@@ -35,6 +35,7 @@ export interface TaskPageConfig {
     completedEmpty: string;
   };
   summary?: boolean;
+  footer?: boolean;
   modalClassName?: string;
   // A starter list offered on an empty page
   starter?: {
