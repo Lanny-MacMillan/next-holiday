@@ -389,7 +389,6 @@ The application provides 50+ REST API endpoints organized by feature. All endpoi
 - `PUT /api/notifications/:id/read` - Mark notification as read
 - `PUT /api/notifications/:id/dismiss` - Dismiss notification
 - `PUT /api/notifications/read-all` - Mark all notifications as read
-- `GET /api/notifications/stream` - SSE endpoint for real-time notifications
 
 #### Account Management
 
