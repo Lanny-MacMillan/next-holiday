@@ -33,3 +33,30 @@ describe('checkRateLimit', () => {
     expect(checkRateLimit('fresh', RATE_LIMIT.windowMs + 1).allowed).toBe(true);
   });
 });
+
+describe('the request ceiling', () => {
+  const load = (value?: string) => {
+    const saved = process.env.RATE_LIMIT_PER_MINUTE;
+    if (value === undefined) delete process.env.RATE_LIMIT_PER_MINUTE;
+    else process.env.RATE_LIMIT_PER_MINUTE = value;
+    let max = 0;
+    jest.isolateModules(() => {
+      max = require('@/lib/rateLimit').RATE_LIMIT.max;
+    });
+    if (saved === undefined) delete process.env.RATE_LIMIT_PER_MINUTE;
+    else process.env.RATE_LIMIT_PER_MINUTE = saved;
+    return max;
+  };
+
+  it('is 300 a minute by default', () => {
+    expect(load()).toBe(300);
+  });
+
+  it('can be raised with RATE_LIMIT_PER_MINUTE', () => {
+    expect(load('5000')).toBe(5000);
+  });
+
+  it.each(['', 'lots', '0'])('ignores a setting of %p', value => {
+    expect(load(value)).toBe(300);
+  });
+});
