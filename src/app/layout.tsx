@@ -57,11 +57,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
         {/* Umami Analytics */}
-        <script
-          defer
-          src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
-          data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
-        />
+        {process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL && (
+          <script
+            defer
+            src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+          />
+        )}
         {/* Eruda mobile console - for debugging */}
         {/* <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
         <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} /> */}
