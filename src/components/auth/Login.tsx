@@ -1,7 +1,26 @@
 'use client';
 
 import { useAuth0 } from '@auth0/auth0-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const TRIED_KEY = 'verifyEmailTried';
+
+// The sign-in redirect reloads the page, so a flag in sessionStorage is how the
+// next visit knows the user already tried once.
+function triedBefore() {
+  try {
+    return sessionStorage.getItem(TRIED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setTried(value: boolean) {
+  try {
+    if (value) sessionStorage.setItem(TRIED_KEY, '1');
+    else sessionStorage.removeItem(TRIED_KEY);
+  } catch {}
+}
 
 // Auth0 sends a new user back with this error until their email is verified.
 function isUnverifiedEmail(error?: Error) {
@@ -16,10 +35,21 @@ export default function Login() {
   const { loginWithRedirect, error } = useAuth0();
   const [dismissed, setDismissed] = useState(false);
   const showVerifyEmail = isUnverifiedEmail(error) && !dismissed;
+  const [triedAlready] = useState(triedBefore);
+
+  useEffect(() => {
+    if (!isUnverifiedEmail(error)) setTried(false);
+  }, [error]);
 
   const closeVerifyEmail = () => {
+    setTried(false);
     window.history.replaceState({}, '', window.location.pathname);
     setDismissed(true);
+  };
+
+  const signInAfterVerifying = () => {
+    setTried(true);
+    loginWithRedirect();
   };
 
   return (
@@ -60,6 +90,15 @@ export default function Login() {
             >
               Verify your email to continue
             </h2>
+            {triedAlready && (
+              <p
+                role="alert"
+                className="text-sm bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 rounded-lg p-3 mb-4"
+              >
+                We still haven&apos;t received your verification. Open the link in
+                the email we sent, give it a moment, then try again.
+              </p>
+            )}
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-2">
               Your account is ready, but we need to confirm your email address first.
               We sent you a message with a verification link.
@@ -69,10 +108,12 @@ export default function Login() {
               your spam folder.
             </p>
             <button
-              onClick={() => loginWithRedirect()}
+              onClick={signInAfterVerifying}
               className="w-full bg-green-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm sm:text-base"
             >
-              I&apos;ve verified my email, sign in
+              {triedAlready
+                ? 'Try signing in again'
+                : "I've verified my email, sign in"}
             </button>
             <button
               onClick={closeVerifyEmail}

@@ -19,6 +19,7 @@ const unverified = () =>
 beforeEach(() => {
   loginWithRedirect.mockReset();
   authError = undefined;
+  sessionStorage.clear();
 });
 
 describe('Login', () => {
@@ -47,6 +48,68 @@ describe('Login', () => {
       screen.getByRole('button', { name: /I've verified my email, sign in/ }),
     );
     expect(loginWithRedirect).toHaveBeenCalledTimes(1);
+  });
+
+  it('remembers the attempt, so the next visit can say it is still unverified', () => {
+    authError = unverified();
+    render(<Login />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /I've verified my email, sign in/ }),
+    );
+    expect(sessionStorage.getItem('verifyEmailTried')).toBe('1');
+  });
+
+  it('says the verification has not arrived when the user comes back unverified after trying', () => {
+    sessionStorage.setItem('verifyEmailTried', '1');
+    authError = unverified();
+    render(<Login />);
+
+    expect(screen.getByRole('alert').textContent).toMatch(
+      /still haven't received your verification/,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Try signing in again' }));
+    expect(loginWithRedirect).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no still-unverified message on the first visit', () => {
+    authError = unverified();
+    render(<Login />);
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('forgets the attempt once the user is not in the unverified state any more', () => {
+    sessionStorage.setItem('verifyEmailTried', '1');
+    render(<Login />);
+
+    expect(sessionStorage.getItem('verifyEmailTried')).toBeNull();
+  });
+
+  it('forgets the attempt when the dialog is closed', () => {
+    sessionStorage.setItem('verifyEmailTried', '1');
+    authError = unverified();
+    render(<Login />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(sessionStorage.getItem('verifyEmailTried')).toBeNull();
+  });
+
+  it('still works when sessionStorage is unavailable', () => {
+    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    authError = unverified();
+    render(<Login />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /I've verified my email, sign in/ }),
+    );
+    expect(loginWithRedirect).toHaveBeenCalledTimes(1);
+    jest.restoreAllMocks();
   });
 
   it('closes the dialog and clears the error from the address', () => {
