@@ -5,18 +5,15 @@ import { createPortal } from 'react-dom';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import {
   selectShareByHolidayKey,
-  selectIsOwnerByHolidayKey,
   ShareMember,
   removeMemberFromShare,
   leaveShare,
-  fetchShares,
   refreshShares,
 } from '@/store/slices/sharesSlice';
 import {
   selectOutgoingInvites,
   selectPendingInvites,
 } from '@/store/slices/invitesSlice';
-import { setHomeData, removeSharedHolidayData } from '@/store/slices/homeSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useShareCleanup } from '@/hooks/useShareCleanup';
 import SharedUserList from './SharedUserList';

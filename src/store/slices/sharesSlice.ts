@@ -103,7 +103,7 @@ export const createShare = createAsyncThunk(
             errorData.message ||
             `Failed to create share (${response.status})`,
         );
-      } catch (jsonError) {
+      } catch {
         // If response isn't JSON, use status text
         throw new Error(
           response.statusText || `Failed to create share (${response.status})`,

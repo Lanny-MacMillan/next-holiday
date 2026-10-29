@@ -16,7 +16,6 @@ import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import Toast from '@/components/common/Toast';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
-import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';

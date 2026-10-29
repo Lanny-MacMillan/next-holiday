@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -8,13 +8,8 @@ import {
   updateContact,
   deleteContact,
   Contact,
-  fetchContacts,
 } from '@/store/slices/addressBookSlice';
-import {
-  selectHomeData,
-  selectContacts,
-  refreshHomeData,
-} from '@/store/slices/homeSlice';
+import { selectContacts, refreshHomeData } from '@/store/slices/homeSlice';
 
 import SortModal from '@/components/modals/SortModal';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
