@@ -6,6 +6,15 @@ test('explore sharing', async ({ browser }) => {
   const ctxA = await browser.newContext();
   const a = await signIn(ctxA, 'A');
   await setUpHoliday(ctxA, a);
+  console.log(
+    'UPGRADE',
+    JSON.stringify(
+      await call(ctxA, a, 'POST', '/api/upgrade-user', {
+        auth0Sub: a.sub,
+        plan: 'plus',
+      }),
+    ).slice(0, 200),
+  );
   const ctxB = await browser.newContext();
   const b = await signIn(ctxB, 'B');
   await setUpUser(ctxB, b);
@@ -21,8 +30,7 @@ test('explore sharing', async ({ browser }) => {
     );
   pageA.on('response', log('A-API'));
   await pageA.goto('/');
-  await pageA.locator('a[href^="/christmas"]').first().click();
-  await pageA.waitForTimeout(3000);
+  await pageA.waitForTimeout(5000);
   console.log(
     'A-BUTTONS',
     (await pageA.getByRole('button').allInnerTexts()).join(' | '),
