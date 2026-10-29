@@ -106,7 +106,7 @@ export const createInvite = createAsyncThunk(
       try {
         const errorData = await response.json();
         errorMessage = errorData.error || errorData.message || errorMessage;
-      } catch (jsonError) {
+      } catch {
         errorMessage = response.statusText || errorMessage;
       }
 

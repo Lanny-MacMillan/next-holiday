@@ -4,10 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { initializeTheme, clearCachedData } from '@/store/slices/themeSlice';
-import {
-  getCurrentUserPreferences,
-  updateUserPreferences,
-} from '@/store/slices/userPreferencesSlice';
+import { getCurrentUserPreferences } from '@/store/slices/userPreferencesSlice';
 import AuthWrapper from './auth/AuthWrapper';
 import Header from './common/Header';
 import Login from './auth/Login';

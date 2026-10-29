@@ -6,10 +6,7 @@ import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
-import {
-  selectIsHolidayShared,
-  selectShareByHolidayKey,
-} from '@/store/slices/sharesSlice';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { RootState } from '@/store';
 import FormModal from '@/components/modals/FormModal';
 import AddButton from '@/components/common/AddButton';

@@ -9,7 +9,6 @@ import {
   updateTaskInHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
-  setHomeData,
 } from '@/store/slices/homeSlice';
 import {
   selectIsHolidayShared,

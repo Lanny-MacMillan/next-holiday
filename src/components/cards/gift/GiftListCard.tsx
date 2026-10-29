@@ -1,4 +1,3 @@
-import React from 'react';
 import Link from 'next/link';
 import { useAppSelector } from '@/store/hooks';
 import { useAuth0 } from '@auth0/auth0-react';

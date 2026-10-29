@@ -14,7 +14,6 @@ import {
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import {
   updateTaskInHomeData,
-  setHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
 } from '@/store/slices/homeSlice';

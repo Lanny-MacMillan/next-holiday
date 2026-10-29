@@ -10,11 +10,7 @@ import {
   selectOutgoingInvites,
   Invite,
 } from '@/store/slices/invitesSlice';
-import {
-  selectShareByHolidayKey,
-  selectIsUserInShare,
-  selectIsOwnerByHolidayKey,
-} from '@/store/slices/sharesSlice';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { selectHolidayIdByKey } from '@/store/selectors/home';
 import FormModal from '../modals/FormModal';
 import Toast from './Toast';

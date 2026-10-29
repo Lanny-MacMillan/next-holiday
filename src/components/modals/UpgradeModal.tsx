@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { upgradeUser } from '@/store/slices/userSlice';
 import { useAuth0 } from '@auth0/auth0-react';

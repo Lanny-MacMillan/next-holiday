@@ -1,5 +1,3 @@
-import React from 'react';
-
 export interface HolidayShapeProps {
   className?: string;
   width?: number;

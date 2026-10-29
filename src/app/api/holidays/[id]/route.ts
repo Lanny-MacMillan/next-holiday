@@ -1,18 +1,11 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser, requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
-import {
-  ok,
-  badRequest,
-  unauthorized,
-  forbidden,
-  notFound,
-  routeError,
-} from '@/lib/http';
+import { ok, badRequest, notFound, routeError } from '@/lib/http';
 
 // Validation schemas
 const UpdateHolidaySchema = z.object({

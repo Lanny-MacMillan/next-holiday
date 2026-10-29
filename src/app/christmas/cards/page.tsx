@@ -7,10 +7,9 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { transformCardPayload } from '@/utils/formTransformers';
-import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import FormModal from '@/components/modals/FormModal';
-import { getFormConfigEnhanced, getFormConfig } from '@/config/formConfigs';
+import { getFormConfigEnhanced } from '@/config/formConfigs';
 import AddButton from '@/components/common/AddButton';
 import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import Footer from '@/components/common/Footer';

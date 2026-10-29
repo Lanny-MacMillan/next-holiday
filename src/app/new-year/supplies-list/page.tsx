@@ -1,16 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RootState } from '@/store';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useSubscription } from '@/hooks/useSubscription';
 import Toast from '@/components/common/Toast';
-import {
-  selectIsHolidayShared,
-  selectShareByHolidayKey,
-} from '@/store/slices/sharesSlice';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { transformSuppliesPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import SortModal from '@/components/modals/SortModal';
