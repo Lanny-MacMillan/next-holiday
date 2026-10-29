@@ -141,7 +141,7 @@ function injectRandomKeyframes(keyframes: string): void {
   if (styleElement.sheet) {
     try {
       styleElement.sheet.insertRule(keyframes, styleElement.sheet.cssRules.length);
-    } catch (error) {
+    } catch {
       // Fallback: append to textContent
       styleElement.textContent += '\n' + keyframes;
     }

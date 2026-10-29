@@ -1,7 +1,6 @@
 'use client';
 
 import { HolidayPageTemplate } from '@/components/templates/HolidayPageTemplate';
-import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 
 const subsections = [
   {

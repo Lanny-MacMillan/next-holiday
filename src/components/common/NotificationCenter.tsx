@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { acceptInvite, declineInvite } from '@/store/slices/invitesSlice';
+import { acceptInvite } from '@/store/slices/invitesSlice';
 import { useRefreshHomeData } from '@/hooks/useRefreshHomeData';
 import { selectHolidayPreferences } from '@/store/selectors/home';
 import { addShare, refreshShares } from '@/store/slices/sharesSlice';

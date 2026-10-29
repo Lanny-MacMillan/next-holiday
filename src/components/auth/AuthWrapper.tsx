@@ -3,12 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-  setUser,
-  clearUser,
-  checkUserInDb,
-  addUserToDb,
-} from '@/store/slices/userSlice';
+import { setUser, clearUser } from '@/store/slices/userSlice';
 import { clearHomeData } from '@/store/slices/homeSlice';
 import { clearCachedData } from '@/store/slices/themeSlice';
 import { clearPreferences } from '@/store/slices/userPreferencesSlice';

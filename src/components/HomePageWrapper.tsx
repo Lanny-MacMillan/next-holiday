@@ -2,7 +2,7 @@
 
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch } from '@/store/hooks';
 import { loadHome } from '@/store/loadHome';
 import HomeContent from '@/components/HomeContent';
 import UserSetupHandler from '@/components/UserSetupHandler';

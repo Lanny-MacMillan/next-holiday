@@ -121,7 +121,7 @@ export function buildFormConfig(
 /**
  * Utility function to check if a holiday should show assignTo fields
  */
-export function shouldShowAssignTo(shareMembers: ShareMember[]): boolean {
+function shouldShowAssignTo(shareMembers: ShareMember[]): boolean {
   // Filter out invalid members (no UUID) and count valid assignable members
   const validMembers = shareMembers.filter(
     member => member.uuid && member.uuid.trim() !== '',

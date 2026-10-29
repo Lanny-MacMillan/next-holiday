@@ -16,7 +16,6 @@ import {
   updateGiftInHomeData,
   addGiftToHomeData,
   removeGiftFromHomeData,
-  setHomeData,
 } from '@/store/slices/homeSlice';
 import { transformGiftPayload } from '@/utils/formTransformers';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';

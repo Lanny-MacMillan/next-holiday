@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     let pagePath = '/unknown';
     try {
       pagePath = new URL(serverData.session.url).pathname;
-    } catch (e) {
+    } catch {
       console.warn('Invalid URL in performance data:', serverData.session.url);
     }
 

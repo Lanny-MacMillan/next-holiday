@@ -1,5 +1,3 @@
-import { useAppSelector } from '@/store/hooks';
-
 /**
  * Transform form values to gift API payload
  */

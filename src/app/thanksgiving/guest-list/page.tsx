@@ -15,11 +15,8 @@ import ReservationsTracker from '@/components/cards/reservation/ReservationsTrac
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import Toast from '@/components/common/Toast';
-import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { guestsFormConfig, editGuestsFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
-import { selectGuestListsByHoliday } from '@/store/slices/homeSlice';
-import { setHomeData } from '@/store/slices/homeSlice';
 import { updateGuestInHomeData } from '@/store/slices/homeSlice';
 
 interface Guest {
