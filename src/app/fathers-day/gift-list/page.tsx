@@ -12,10 +12,7 @@ import GiftCardItem from '@/components/cards/gift/GiftCardItem';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
-import {
-  selectIsHolidayShared,
-  selectShareByHolidayKey,
-} from '@/store/slices/sharesSlice';
+import { selectShareByHolidayKey } from '@/store/slices/sharesSlice';
 import { RootState } from '@/store';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
 

@@ -36,7 +36,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
       };
     }
     // Find user's account
-    let account = await prisma.account.findFirst({
+    const account = await prisma.account.findFirst({
       where: {
         members: {
           some: {

@@ -10,14 +10,7 @@ import {
   updateTaskInHomeData,
   addTaskToHomeData,
   removeTaskFromHomeData,
-  setHomeData,
 } from '@/store/slices/homeSlice';
-import {
-  selectHolidayPreferences,
-  selectHomeInitialized,
-  selectHomeData,
-  selectHolidayPrefById,
-} from '@/store/selectors/home';
 import {
   selectIsHolidayShared,
   selectShareByHolidayKey,

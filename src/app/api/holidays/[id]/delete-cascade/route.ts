@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getCurrentUser, requireAuth } from '@/lib/auth';
-import { requireAccountAccess } from '@/lib/rbac';
+import { requireAuth } from '@/lib/auth';
 import {
   deleteHolidayData,
   validateHolidayDeletePermission,
@@ -9,7 +8,6 @@ import {
 import {
   ok,
   badRequest,
-  unauthorized,
   forbidden,
   notFound,
   serverError,

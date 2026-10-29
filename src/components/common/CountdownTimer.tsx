@@ -84,7 +84,6 @@ import {
 } from '@/store/slices/christmas/christmasCountdownSlice';
 import { isNationalHoliday, getDefaultHolidayDate } from '@/utils/holidayUtils';
 import DatePickerModal from '../modals/DatePickerModal';
-import InviteButton from './InviteButton';
 
 interface CountdownTimerProps {
   className?: string;

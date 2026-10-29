@@ -1,6 +1,6 @@
 # Next Holiday
 
-A comprehensive, enterprise-grade holiday planning platform built with Next.js, MySQL, Prisma, and modern web technologies. Create, organize, and collaborate on holiday celebrations with your family and friends through a beautiful, multi-tenant architecture with real-time notifications.
+A holiday planning app built with Next.js, MySQL and Prisma. Create, organize, and collaborate on holiday celebrations with your family and friends through a beautiful, multi-tenant architecture with real-time notifications.
 
 **Live site**: [https://www.next-holiday.com](https://www.next-holiday.com)
 
@@ -12,18 +12,18 @@ How it fits together: [architecture](docs/architecture.md) (diagrams of the requ
 
 ## Overview
 
-Next Holiday is a production-ready, full-stack holiday planning application that transforms the chaos of holiday preparation into an organized, collaborative experience. Built on a robust MySQL database with Prisma ORM, the platform features a sophisticated multi-tenant architecture, real-time Server-Sent Events (SSE) notifications, and comprehensive account and sharing system.
+Next Holiday is a full-stack app for planning holidays alone or with family and friends: tasks, gifts, cards, guest lists and budgets for each holiday, with accounts, sharing and live notifications. It uses a MySQL database through Prisma, Auth0 for sign-in, and a separate Server-Sent Events (SSE) service for real-time notifications.
 
 ### Key Capabilities
 
-- **Multi-Tenant Architecture**: Account-based organization with row-level security for families and households
-- **Database-Backed Persistence**: MySQL database with 18+ interconnected tables for reliable data storage
+- **Multi-Tenant Architecture**: Account-based organization for families and households; every query is scoped to the caller's accounts and shares
+- **Database-Backed Persistence**: MySQL database with 20 tables
 - **Real-Time Notifications**: Microservice-based SSE notifications for instant updates across all devices
 - **Multi-User Collaboration**: Share holidays with family members and friends with role-based permissions
 - **15+ Holiday Types**: Comprehensive support from Christmas to Baby Showers, Anniversary to Kwanzaa
 - **Professional & Gamified UI**: Toggle between business-like and colorful themed interfaces
-- **Progressive Web App**: Responsive design works seamlessly across desktop, tablet, and mobile
-- **Production-Ready**: Deployed on AWS Amplify with enterprise security and scalability
+- **Responsive Layout**: Works on desktop, tablet, and phone
+- **Deployed**: AWS Amplify for the app, EC2 for the notification service
 
 ## 🚀 Features
 
@@ -31,9 +31,9 @@ Next Holiday is a production-ready, full-stack holiday planning application that
 
 **Microservice Architecture with SSE (Server-Sent Events)**
 
-The notification system is powered by a separate microservice hosted on its own EC2 instance, providing scalable and reliable real-time updates:
+The notification system is powered by a separate microservice hosted on its own EC2 instance, for real-time updates:
 
-- **Dedicated SSE Service**: Hosted as an independent microservice for optimal performance and scalability
+- **Dedicated SSE Service**: An independent service, because Amplify's serverless runtime cannot hold long-lived connections open
 - **Live Updates**: Instant notifications for task assignments, completions, and holiday invitations
 - **Multi-Tab Support**: Notifications sync across multiple browser tabs and devices
 - **Automatic Fallback**: Graceful degradation to polling if SSE is unavailable
@@ -56,7 +56,7 @@ The SSE service handles:
 - **Household Accounts**: Create family or friend group accounts for shared planning
 - **Member Management**: Add users to accounts with role-based permissions
 - **Account Ownership**: Primary account owners can manage members and settings
-- **Data Isolation**: Secure multi-tenant data separation with row-level security
+- **Data Isolation**: Queries are scoped to the caller's accounts and shares, checked in application code
 - **Account Switching**: Users can belong to multiple accounts and switch between them
 
 ### 🤝 Holiday Sharing & Collaboration
@@ -164,13 +164,13 @@ The SSE service handles:
   - And more specialized features for each holiday type
 - **Data Validation**: Client and server-side validation with Zod schemas
 - **Error Handling**: Graceful error handling with user-friendly messages
-- **Optimistic Updates**: Instant UI updates with automatic rollback on failure
+- **Optimistic Updates**: Instant UI updates
 
 ## 🛠️ Technology Stack
 
 ### Frontend
 
-- **Next.js 15.4.2**: React framework with App Router architecture and server components
+- **Next.js 15.4**: React framework with App Router architecture and server components
 - **React 19.1.0**: Latest React with concurrent features and improved performance
 - **TypeScript 5+**: Type-safe development with strict mode enabled
 - **Tailwind CSS 3.4.0**: Utility-first CSS framework with custom configurations and dark mode
@@ -181,17 +181,17 @@ The SSE service handles:
 
 - **MySQL 8.0+**: Production-grade relational database with ACID compliance
 - **Prisma ORM 6.14.0**: Type-safe database access with migrations and schema management
-- **18+ Database Tables**: Comprehensive schema for multi-tenant holiday planning
+- **20 Database Tables**: Schema for multi-tenant holiday planning
 - **UUID Primary Keys**: Distributed-system-friendly unique identifiers
 - **Foreign Key Constraints**: Referential integrity with cascade delete rules
-- **Database Migrations**: Version-controlled schema changes with rollback support
+- **Database Migrations**: Version-controlled schema changes
 
 ### Authentication & Security
 
-- **Auth0 3.5.0**: Enterprise OAuth provider with social login support
-- **JWT Tokens**: Secure authentication with automatic refresh and token validation
+- **Auth0** (`@auth0/auth0-react` 2.x): Hosted identity provider with social login
+- **ID Tokens**: Sent as a Bearer token and verified on the server with `jose` against Auth0's signing keys
 - **User Management**: Automated profile sync and account creation
-- **Session Handling**: Secure session management with httpOnly cookies
+- **Session**: Auth0's browser session with refresh tokens; the app does not use its own session cookies
 - **Multi-Factor Authentication**: Optional MFA through Auth0 for enhanced security
 
 ### Real-Time Infrastructure
@@ -232,7 +232,7 @@ The SSE service handles:
 
 ### Schema Overview
 
-The MySQL database consists of 18+ interconnected tables designed for multi-tenant holiday planning with a focus on data integrity, security, and scalability:
+The MySQL database consists of 20 tables designed for multi-tenant holiday planning with a focus on data integrity, security, and scalability:
 
 **📊 [View Live ERD Diagram](https://mermaid.ai/app/projects/5a13959b-bcd3-4844-834d-1f664ae6f043/diagrams/3605b52a-9a41-4a09-a764-2c6ee2d62a92/version/v0.1/edit)** - Interactive database schema visualization
 
@@ -286,7 +286,7 @@ The MySQL database consists of 18+ interconnected tables designed for multi-tena
 
 ### Data Isolation & Security
 
-- **Row-Level Security**: All queries filtered by account ownership
+- **Scoped Queries**: All queries are filtered by account ownership or share membership, in application code (MySQL has no row-level security)
 - **Multi-Tenant Architecture**: Complete data separation between accounts
 - **UUID Primary Keys**: Globally unique identifiers prevent enumeration attacks
 - **Cascade Deletes**: Proper cleanup when holidays or accounts are deleted
@@ -515,9 +515,9 @@ All API responses follow a consistent format:
 
 ### Data Security
 
-- **Encryption**: All data encrypted in transit and at rest
+- **Encryption**: Traffic is encrypted in transit (HTTPS)
 - **Authentication**: Secure OAuth 2.0 with Auth0
-- **Authorization**: Row-level security for multi-tenant data isolation
+- **Authorization**: Every route checks the caller owns or belongs to the record, and looks records up inside the authorised parent
 - **Input Validation**: Comprehensive validation on all API endpoints
 - **SQL Injection Prevention**: Parameterized queries through Prisma ORM
 
@@ -673,7 +673,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Next.js Team**: For the exceptional React framework with App Router and server components
 - **Prisma Team**: For the outstanding ORM, migrations, and database tools
-- **Auth0**: For secure, enterprise-grade authentication services
+- **Auth0**: For authentication
 - **Tailwind CSS**: For the utility-first CSS framework that powers the UI
 - **Redux Toolkit**: For efficient state management and RTK Query
 - **AWS**: For Amplify hosting, RDS database, and EC2 infrastructure
@@ -693,7 +693,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ✅ **15+ Holiday Types** with specialized planning features  
 ✅ **Real-Time Notifications** via dedicated SSE microservice  
-✅ **Multi-Tenant Architecture** with row-level security  
+✅ **Multi-Tenant Architecture** with account-scoped queries  
 ✅ **Collaborative Planning** with task assignments and sharing  
 ✅ **Gift & Budget Tracking** with purchase status  
 ✅ **Card Management** with address book integration  
