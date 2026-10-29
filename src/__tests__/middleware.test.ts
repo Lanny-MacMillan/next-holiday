@@ -7,11 +7,13 @@ jest.mock('@/lib/verifyAuth0Token', () => ({
 }));
 
 import { middleware } from '../middleware';
+import { RATE_LIMIT, resetRateLimit } from '@/lib/rateLimit';
 
 const call = (path: string, headers: Record<string, string> = {}) =>
   middleware(new NextRequest(`http://localhost${path}`, { headers }));
 
 beforeEach(() => {
+  resetRateLimit();
   verifyIdToken.mockReset();
   delete process.env.ALLOW_LEGACY_TEST_USER_AUTH;
 });
@@ -56,5 +58,35 @@ describe('API middleware', () => {
     process.env.ALLOW_LEGACY_TEST_USER_AUTH = 'true';
     const res = await call('/api/holidays', { 'x-test-user': '{}' });
     expect(res.status).toBe(200);
+  });
+
+  it('leaves the health check public', async () => {
+    const res = await call('/api/health');
+    expect(res.status).toBe(200);
+    expect(verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  describe('rate limiting', () => {
+    const fromIp = (ip: string) =>
+      call('/api/performance', { 'x-forwarded-for': `${ip}, 10.0.0.1` });
+
+    it('answers 429 with Retry-After once a client goes over the limit', async () => {
+      for (let i = 0; i < RATE_LIMIT.max; i++) {
+        expect((await fromIp('203.0.113.7')).status).toBe(200);
+      }
+      const res = await fromIp('203.0.113.7');
+      expect(res.status).toBe(429);
+      expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+    });
+
+    it('counts each client separately', async () => {
+      for (let i = 0; i <= RATE_LIMIT.max; i++) await fromIp('203.0.113.7');
+      expect((await fromIp('198.51.100.9')).status).toBe(200);
+    });
+
+    it('limits before checking the token', async () => {
+      for (let i = 0; i < RATE_LIMIT.max; i++) await call('/api/holidays');
+      expect((await call('/api/holidays')).status).toBe(429);
+    });
   });
 });
