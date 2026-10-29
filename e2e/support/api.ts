@@ -4,7 +4,7 @@ export type Session = { idToken: string; sub: string; email: string; name: strin
 
 const BASE = 'http://localhost:3000';
 
-async function call(
+export async function call(
   context: BrowserContext,
   session: Session,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
