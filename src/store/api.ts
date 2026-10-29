@@ -1081,7 +1081,7 @@ export const api = createApi({
           await queryFulfilled;
 
           // 3.   Delete confirmed by server - no additional sync needed
-        } catch (error) {
+        } catch {
           // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (deletedCard) {
@@ -2045,7 +2045,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
           if (deletedEvent) {
             syncAddToHomeSlice({
@@ -2201,7 +2201,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -2400,7 +2400,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -2444,7 +2444,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -2540,7 +2540,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -2636,7 +2636,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -2732,7 +2732,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -2828,7 +2828,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -3026,7 +3026,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -3070,7 +3070,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -3210,7 +3210,7 @@ export const api = createApi({
 
         try {
           await queryFulfilled;
-        } catch (error) {
+        } catch {
           patchResult.undo();
         }
       },
@@ -3308,7 +3308,7 @@ export const api = createApi({
               dispatch,
             });
           }
-        } catch (error) {
+        } catch {
           // 4.   Revert both RTK Query cache and Home Slice on error
           patchResult.undo();
           if (originalGuest) {

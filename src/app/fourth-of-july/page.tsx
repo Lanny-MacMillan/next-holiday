@@ -1,14 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
-import { BudgetDisplay } from '@/components/common/BudgetDisplay';
 import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import GuestListCard from '@/components/cards/guest/GuestListCard';
 import GiftListCard from '@/components/cards/gift/GiftListCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
-import CountdownWithInvite from '@/components/common/CountdownWithInvite';
-import SharedIndicator from '@/components/common/SharedIndicator';
 
 const fourthOfJulySubsections = [
   {

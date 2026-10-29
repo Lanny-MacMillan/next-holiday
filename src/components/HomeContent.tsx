@@ -5,7 +5,6 @@ import HolidayCard from '@/components/cards/HolidayCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
 import Footer from '@/components/common/Footer';
 import { holidayData } from '@/data/holidayData';
-import { getHolidayCountdownTime } from '@/utils/holidayUtils';
 import { HomeData } from '@/types/home';
 import { useHomePageData } from '@/hooks/useHomePageData';
 

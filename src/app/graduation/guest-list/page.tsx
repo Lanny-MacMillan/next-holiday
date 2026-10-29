@@ -15,7 +15,6 @@ import AddButton from '@/components/common/AddButton';
 import RSVPSection from '@/components/common/RSVPSection';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import TaskSection from '@/components/common/TaskSection';
 
 type SortOption = 'name' | 'rsvpStatus' | 'email' | 'none';
 

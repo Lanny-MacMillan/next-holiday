@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
           // Handle budget - if budget is provided, create/update; if not provided, remove existing
           if (budget !== undefined) {
-            let existingBudget = await tx.budget.findFirst({
+            const existingBudget = await tx.budget.findFirst({
               where: {
                 holidayId: holiday.id,
               },

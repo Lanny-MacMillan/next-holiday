@@ -29,7 +29,6 @@ import {
   IconAnniversary,
   IconGraduation,
   IconBabyShower,
-  HolidayIcons,
 } from '../../../public/holiday-icons';
 
 import { HolidayShapes } from '@/data/holidayShapes';

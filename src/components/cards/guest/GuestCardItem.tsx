@@ -1,4 +1,3 @@
-import React from 'react';
 import { Guest } from '@/types/guest';
 import { useAppSelector } from '@/store/hooks';
 import { getCardStyling } from '@/utils/cardShadows';

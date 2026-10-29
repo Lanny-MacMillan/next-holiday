@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
           where: { auth0Sub: userId },
         });
         internalUserId = user?.id || null;
-      } catch (error) {
+      } catch {
         console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
           where: { auth0Sub: userId },
         });
         internalUserId = user?.id || null;
-      } catch (error) {
+      } catch {
         console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
@@ -276,7 +276,7 @@ export async function GET(request: NextRequest) {
           where: { auth0Sub: userId },
         });
         internalUserId = user?.id || null;
-      } catch (error) {
+      } catch {
         console.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );

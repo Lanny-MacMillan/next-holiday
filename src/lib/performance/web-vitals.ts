@@ -40,7 +40,7 @@ export class WebVitalsTracker {
           }
         }
       }).observe({ entryTypes: ['paint'] });
-    } catch (e) {
+    } catch {
       console.error('FCP not supported');
     }
   }

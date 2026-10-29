@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser, requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
@@ -11,15 +11,7 @@ import {
   createPaginationMeta,
   createPaginatedResponse,
 } from '@/lib/pagination';
-import {
-  ok,
-  created,
-  badRequest,
-  unauthorized,
-  forbidden,
-  notFound,
-  routeError,
-} from '@/lib/http';
+import { ok, created, badRequest, routeError } from '@/lib/http';
 
 // Validation schemas
 const CreateHolidaySchema = z.object({
