@@ -86,5 +86,10 @@ export async function signIn(context: BrowserContext, user: TestUser) {
     },
   ]);
 
-  return { email: credentials(user).email, idToken: tokens.id_token };
+  return {
+    email: credentials(user).email,
+    idToken: tokens.id_token,
+    sub: decodedToken.claims.sub as string,
+    name: (decodedToken.claims.name as string | undefined) ?? '',
+  };
 }
