@@ -20,6 +20,14 @@ describe('contentSecurityPolicy', () => {
     expect(csp).toMatch(/connect-src [^;]*https:\/\/o1\.ingest\.sentry\.io/);
   });
 
+  it('allows the Umami Cloud reporting gateway only when Umami Cloud is used', () => {
+    const cloud = contentSecurityPolicy({
+      NEXT_PUBLIC_UMAMI_SCRIPT_URL: 'https://cloud.umami.is/script.js',
+    });
+    expect(cloud).toContain('https://gateway.umami.is');
+    expect(contentSecurityPolicy(env)).not.toContain('gateway.umami.is');
+  });
+
   it('forbids framing, plugins and a changed base URL', () => {
     const csp = contentSecurityPolicy(env);
     expect(csp).toContain("frame-ancestors 'none'");
