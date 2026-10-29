@@ -18,20 +18,31 @@ export interface TaskPageConfig {
     | 'cyan';
   doneEmoji: string;
   // Tasks of one category are shown and created; null shows every task and lets the user pick one
-  taskCategory: 'Tasks' | 'To-Do' | 'Events' | 'Decorations' | null;
+  taskCategory: string | null;
   // Accent for the checkboxes, left borders and buttons, where the holiday sets one
   accent?: string;
   border?: string;
   submitColor?: string;
   // Events are tasks in their own category, shown with their own wording and a summary
   variant?: 'tasks' | 'events' | 'decorations';
+  // Wording for pages that are neither tasks, events nor decorations
+  labels?: {
+    noun: string;
+    plural: string;
+    pending: string;
+    completed: string;
+    empty: string;
+    completedEmpty: string;
+  };
+  summary?: boolean;
   modalClassName?: string;
   // A starter list offered on an empty page
   starter?: {
     heading: string;
     question: string;
     button: string;
-    tone: 'blue' | 'amber';
+    tone: 'blue' | 'amber' | 'orange';
+    skip?: string;
     items: {
       title: string;
       description: string;

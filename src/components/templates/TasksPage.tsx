@@ -45,6 +45,12 @@ const STARTER_TONES = {
     text: 'text-blue-700 dark:text-blue-300',
     button: 'bg-blue-500 hover:bg-blue-600',
   },
+  orange: {
+    box: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+    heading: 'text-orange-800 dark:text-orange-200',
+    text: 'text-orange-700 dark:text-orange-300',
+    button: 'bg-orange-500 hover:bg-orange-600',
+  },
   amber: {
     box: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700',
     heading: 'text-amber-800 dark:text-amber-200',
@@ -96,10 +102,38 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
   const { holidayKey, taskCategory } = config;
   const variant = config.variant ?? 'tasks';
   const isTasks = variant === 'tasks';
-  const noun = { tasks: 'Task', events: 'Event', decorations: 'Decoration' }[
-    variant
-  ];
+  const labels = {
+    ...{
+      tasks: {
+        noun: 'Task',
+        plural: 'Tasks',
+        pending: 'Incomplete',
+        completed: 'Completed',
+        empty: `All tasks completed! ${config.doneEmoji}`,
+        completedEmpty: 'No completed tasks yet.',
+      },
+      events: {
+        noun: 'Event',
+        plural: 'Events',
+        pending: 'Upcoming Events',
+        completed: 'Completed Events',
+        empty: 'No events planned yet.',
+        completedEmpty: 'No completed events yet.',
+      },
+      decorations: {
+        noun: 'Decoration',
+        plural: 'Decorations',
+        pending: 'Pending Decorations',
+        completed: 'Completed Decorations',
+        empty: 'No decorations planned yet.',
+        completedEmpty: 'No completed decorations yet.',
+      },
+    }[variant],
+    ...config.labels,
+  };
+  const { noun, plural } = labels;
   const nounLower = noun.toLowerCase();
+  const pluralLower = plural.toLowerCase();
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
   const isHolidayShared = useAppSelector((state: any) =>
@@ -258,7 +292,9 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
             className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
             style={{ borderBottomColor: config.accent ?? '#3b82f6' }}
           ></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading {nounLower}s...</p>
+          <p className="text-gray-600 dark:text-gray-300">
+            Loading {pluralLower}...
+          </p>
         </div>
       </div>
     );
@@ -312,7 +348,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         title={config.title}
         backHref={`/${holidayKey}`}
         onSortClick={() => setShowSortModal(true)}
-        sortTitle={`Sort ${nounLower}s`}
+        sortTitle={`Sort ${pluralLower}`}
         description={config.description}
         holidayColor={config.headerColor}
         error={undefined}
@@ -354,20 +390,20 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
                 onClick={() => setStarterDismissed(true)}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
               >
-                Skip
+                {config.starter.skip ?? 'Skip'}
               </button>
             </div>
           </div>
         )}
 
-        {!isTasks && tasks.length > 0 && (
+        {(config.summary ?? !isTasks) && tasks.length > 0 && (
           <div className="card rounded-lg p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
               {noun} Status
             </h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               {[
-                ['text-blue-600', tasks.length, `Total ${noun}s`],
+                ['text-blue-600', tasks.length, `Total ${plural}`],
                 ['text-green-600', completedTasks.length, 'Completed'],
                 ['text-orange-600', incompleteTasks.length, 'Remaining'],
               ].map(([color, count, label]) => (
@@ -383,30 +419,20 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         )}
 
         <TaskSection
-          title={
-            {
-              tasks: 'Incomplete',
-              events: 'Upcoming Events',
-              decorations: 'Pending Decorations',
-            }[variant]
-          }
+          title={labels.pending}
           items={incompleteTasks}
           isCompleted={false}
-          emptyMessage={
-            isTasks
-              ? `All tasks completed! ${config.doneEmoji}`
-              : `No ${nounLower}s planned yet.`
-          }
+          emptyMessage={labels.empty}
           completedMessage=""
           renderItem={(task: Task) => renderTask(task, false)}
         />
 
         <TaskSection
-          title={isTasks ? 'Completed' : `Completed ${noun}s`}
+          title={labels.completed}
           items={completedTasks}
           isCompleted={true}
           emptyMessage=""
-          completedMessage={`No completed ${nounLower}s yet.`}
+          completedMessage={labels.completedEmpty}
           renderItem={(task: Task) => renderTask(task, true)}
         />
       </main>
@@ -476,7 +502,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         sortBy={sortBy}
         onSortChange={(sortOption: string) => setSortBy(sortOption as SortOption)}
         sortOptions={sortOptions}
-        title={`Sort ${noun}s`}
+        title={`Sort ${plural}`}
       />
 
       <Toast
