@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { paymentsProvider } from '@/lib/payments';
 
 /**
  * POST /api/upgrade-user
@@ -27,6 +28,14 @@ export async function POST(request: NextRequest) {
       return Response.json(
         { error: "Invalid plan. Must be 'free' or 'plus'" },
         { status: 400 },
+      );
+    }
+
+    // With Stripe on, Plus is only granted by a paid checkout (the webhook), never by this route
+    if (plan === 'plus' && paymentsProvider() === 'stripe') {
+      return Response.json(
+        { error: 'Upgrades are completed through checkout' },
+        { status: 403 },
       );
     }
 

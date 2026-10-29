@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyIdToken } from '@/lib/verifyAuth0Token';
 import { checkRateLimit } from '@/lib/rateLimit';
 
-// Performance beacons and the health check are anonymous by design.
-const PUBLIC_API_PATHS = ['/api/performance', '/api/health'];
+// Performance beacons and the health check are anonymous by design; Stripe's webhook
+// proves who it is with a signature instead of a token.
+const PUBLIC_API_PATHS = ['/api/performance', '/api/health', '/api/billing/webhook'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

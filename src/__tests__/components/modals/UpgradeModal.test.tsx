@@ -6,6 +6,13 @@ import { Provider } from 'react-redux';
 import { store } from '@/store';
 import UpgradeModal from '@/components/modals/UpgradeModal';
 
+const goToStripe = jest.fn();
+jest.mock('@/lib/billingClient', () => ({
+  goToStripe: (...a: unknown[]) => goToStripe(...a),
+}));
+let provider: 'free' | 'stripe' = 'free';
+jest.mock('@/lib/payments', () => ({ paymentsProvider: () => provider }));
+
 let authValue: { user?: { sub: string } };
 jest.mock('@auth0/auth0-react', () => ({ useAuth0: () => authValue }));
 
@@ -53,6 +60,7 @@ const toggleTestMode = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  provider = 'free';
   authValue = { user: { sub: 'auth0|me' } };
   global.fetch = mockFetch as unknown as typeof fetch;
   jest.spyOn(window, 'alert').mockImplementation(() => {});
@@ -307,6 +315,46 @@ describe('UpgradeModal', () => {
         cardholderName: 'Grace Hopper',
         amount: 299,
       });
+    });
+  });
+
+  describe('with Stripe turned on', () => {
+    beforeEach(() => {
+      provider = 'stripe';
+    });
+
+    it('Upgrade Now goes straight to Stripe checkout, with no card form of our own', async () => {
+      goToStripe.mockResolvedValue(undefined);
+      renderModal();
+      goToPayment();
+
+      await waitFor(() =>
+        expect(goToStripe).toHaveBeenCalledWith('/api/billing/checkout'),
+      );
+      expect(screen.queryByPlaceholderText('John Doe')).not.toBeInTheDocument();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('says what it is doing while it opens checkout', async () => {
+      goToStripe.mockReturnValue(new Promise(() => {}));
+      renderModal();
+      goToPayment();
+      expect(
+        await screen.findByRole('button', { name: 'Opening checkout...' }),
+      ).toBeDisabled();
+    });
+
+    it('tells the user and lets them try again when checkout cannot start', async () => {
+      goToStripe.mockRejectedValue(new Error('Payments are not enabled'));
+      renderModal();
+      goToPayment();
+
+      await waitFor(() =>
+        expect(window.alert).toHaveBeenCalledWith(
+          'Could not start checkout: Payments are not enabled. Please try again.',
+        ),
+      );
+      expect(screen.getByRole('button', { name: 'Upgrade Now' })).toBeEnabled();
     });
   });
 });

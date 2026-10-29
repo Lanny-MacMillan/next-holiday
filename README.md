@@ -373,6 +373,21 @@ Check it came up with `pm2 list` (status `online`) and `curl localhost:4000/heal
 - `CORS_ORIGINS` on the instance must list every origin the app is served from.
 - When both repos change, deploy the app first, then the service.
 
+### Payments
+
+Plus upgrades are behind a flag, `NEXT_PUBLIC_PAYMENTS_PROVIDER`:
+
+- **unset or `free` (the default):** upgrading is a free demo. The payment step is labelled "Demo only", and `/api/upgrade-user` grants Plus on request.
+- **`stripe`:** "Upgrade Now" opens Stripe Checkout and cancelling opens Stripe's billing portal. The app never sees a card number. `/api/upgrade-user` stops granting Plus and the demo `/api/payment` route returns 404; Plus is granted only by Stripe's webhook.
+
+To turn Stripe on (start in Stripe's test mode):
+
+1. In Stripe, create a recurring Price for Plus and note its id.
+2. Add a webhook endpoint `https://<your domain>/api/billing/webhook` for `checkout.session.completed` and `customer.subscription.deleted`, and note its signing secret.
+3. In Amplify, set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, then `NEXT_PUBLIC_PAYMENTS_PROVIDER=stripe`, and redeploy (the flag is read at build time).
+
+Checkout carries the user id in `client_reference_id` and in the subscription's metadata, so no Stripe ids are stored in the database. When a subscription ends, the webhook puts the user back on free and runs the same sharing cleanup as the in-app cancel.
+
 ### Auth0
 
 The callback, logout and web-origin URLs must list every domain the app is served from. A post-login Action refuses logins whose email is not verified.

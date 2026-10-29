@@ -6,6 +6,8 @@ import { updateSettings } from '@/store/slices/themeSlice';
 import { updateUserPreferences } from '@/store/slices/userPreferencesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import { errorMessage } from '@/utils/errorMessage';
+import { goToStripe } from '@/lib/billingClient';
+import { paymentsProvider } from '@/lib/payments';
 
 export interface CancelSubscriptionModalProps {
   isOpen: boolean;
@@ -32,8 +34,12 @@ export default function CancelSubscriptionModal({
         throw new Error('User not authenticated');
       }
 
-      // TODO: Implement charge stop with payment processor
-      // This should cancel the recurring billing
+      // With Stripe, cancelling happens on Stripe's billing portal; the webhook then
+      // downgrades the account and cleans up sharing, so there is nothing more to do here.
+      if (paymentsProvider() === 'stripe') {
+        await goToStripe('/api/billing/portal');
+        return;
+      }
 
       // 1. Clean up sharing relationships before downgrading
       setLoadingMessage('Cleaning up shared holidays...');

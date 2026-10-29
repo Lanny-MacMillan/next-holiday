@@ -60,6 +60,12 @@ describe('API middleware', () => {
     expect(res.status).toBe(200);
   });
 
+  it('leaves the Stripe webhook public, because it carries a signature instead of a token', async () => {
+    const res = await call('/api/billing/webhook');
+    expect(res.status).toBe(200);
+    expect(verifyIdToken).not.toHaveBeenCalled();
+  });
+
   it('leaves the health check public', async () => {
     const res = await call('/api/health');
     expect(res.status).toBe(200);

@@ -7,6 +7,13 @@ import { store } from '@/store';
 import { setUser } from '@/store/slices/userSlice';
 import CancelSubscriptionModal from '@/components/modals/CancelSubscriptionModal';
 
+const goToStripe = jest.fn();
+jest.mock('@/lib/billingClient', () => ({
+  goToStripe: (...a: unknown[]) => goToStripe(...a),
+}));
+let provider: 'free' | 'stripe' = 'free';
+jest.mock('@/lib/payments', () => ({ paymentsProvider: () => provider }));
+
 let authValue: { user?: { sub: string; email: string; name: string } };
 jest.mock('@auth0/auth0-react', () => ({ useAuth0: () => authValue }));
 
@@ -50,6 +57,7 @@ const confirm = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  provider = 'free';
   authValue = { user: { sub: 'auth0|me', email: 'me@x.com', name: 'Me' } };
   global.fetch = mockFetch as unknown as typeof fetch;
   jest.spyOn(window, 'alert').mockImplementation(() => {});
@@ -229,6 +237,38 @@ describe('CancelSubscriptionModal', () => {
         ),
       );
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('with Stripe turned on', () => {
+    beforeEach(() => {
+      provider = 'stripe';
+    });
+
+    it('sends the user to the Stripe billing portal and does nothing else itself', async () => {
+      goToStripe.mockResolvedValue(undefined);
+      renderModal();
+      confirm();
+
+      await waitFor(() =>
+        expect(goToStripe).toHaveBeenCalledWith('/api/billing/portal'),
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(props.onCancel).not.toHaveBeenCalled();
+      expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
+    });
+
+    it('alerts and stays open when the portal cannot be opened', async () => {
+      goToStripe.mockRejectedValue(new Error('No active subscription'));
+      renderModal();
+      confirm();
+
+      await waitFor(() =>
+        expect(window.alert).toHaveBeenCalledWith(
+          'Cancellation failed: No active subscription. Please try again or contact support.',
+        ),
+      );
+      expect(props.onClose).not.toHaveBeenCalled();
     });
   });
 });
