@@ -24,7 +24,8 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.4.0",
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@jest/globals": "^29.7.0",
+    "@playwright/test": "^1.55.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^16.3.3",
