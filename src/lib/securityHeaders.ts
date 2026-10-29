@@ -51,10 +51,7 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
     .join('; ');
 }
 
-export function securityHeaders(
-  env: Env = process.env,
-  dev = env.NODE_ENV !== 'production',
-) {
+export function securityHeaders(env: Env = process.env, dev = false) {
   const headers = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'X-Frame-Options', value: 'DENY' },
