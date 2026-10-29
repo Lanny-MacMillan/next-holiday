@@ -11,6 +11,8 @@ export interface GiftListConfig {
   itemPlural: string;
   doneEmoji: string;
   cardClassName?: string;
+  // Supplies lists use the gift list with a form that has no recipient
+  formType?: 'gifts' | 'supplies';
   theme: {
     header: string;
     addButton:
@@ -269,6 +271,44 @@ export const giftListConfigs = {
       accent: '#ec4899',
       border: 'rgb(var(--color-pink-500))',
       gamified: 'bg-gradient-to-br from-pink-400 to-pink-600',
+    },
+  },
+  'new-year-supplies': {
+    holidayKey: 'new-year',
+    budgetName: 'New Year',
+    title: 'Supply List',
+    description: 'Track your New Year supply ideas!',
+    gradientClass: 'new-year-gradient',
+    itemName: 'Supply',
+    itemPlural: 'supplies',
+    doneEmoji: '🎉',
+    formType: 'supplies',
+    theme: {
+      header: 'amber-500',
+      addButton: 'amber',
+      budget: 'bg-gradient-to-br from-yellow-400 to-yellow-600',
+      accent: '#f59e0b',
+      border: 'rgb(var(--color-amber-500))',
+      gamified: 'bg-gradient-to-br from-yellow-400 to-yellow-600',
+    },
+  },
+  'fourth-of-july-supplies': {
+    holidayKey: 'fourth-of-july',
+    budgetName: 'Fourth of July',
+    title: 'Fourth of July Supply List',
+    description: 'Track your Fourth of July supply ideas!',
+    gradientClass: 'fourth-of-july-gradient',
+    itemName: 'Supply',
+    itemPlural: 'supplies',
+    doneEmoji: '🎉',
+    formType: 'supplies',
+    theme: {
+      header: 'red-500',
+      addButton: 'red',
+      budget: 'bg-gradient-to-br from-red-400 to-red-600',
+      accent: '#dc2626',
+      border: 'rgb(var(--color-red-500))',
+      gamified: 'bg-gradient-to-br from-red-400 to-red-600',
     },
   },
 } satisfies Record<string, GiftListConfig>;
