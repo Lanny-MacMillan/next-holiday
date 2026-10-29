@@ -33,6 +33,7 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'connect-src': [
       "'self'",
+      IP_LOOKUP,
       ...some(auth0, sse, umami),
       ...(dev ? ['ws:', 'http:'] : []),
     ],
