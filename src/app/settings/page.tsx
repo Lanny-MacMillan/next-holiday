@@ -281,7 +281,7 @@ export default function SettingsPage() {
         dispatch(setHomeData(optimisticHomeData));
 
         try {
-          let notificationData: any = {};
+          const notificationData: any = {};
 
           if (key === 'notifications.assignmentNotifications') {
             notificationData.assignmentNotifications = value;
@@ -359,7 +359,7 @@ export default function SettingsPage() {
     // Update other user preferences (theme, displayMode, etc.)
     if (user?.sub && preferences) {
       try {
-        let preferencesData: any = {};
+        const preferencesData: any = {};
 
         if (key === 'theme') {
           preferencesData.theme = value;

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { ok, badRequest, notFound, routeError } from '@/lib/http';
-import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import { getUserName } from '@/lib/notifications';
 import { broadcastAssignment } from '@/lib/realTimeNotifications';
 
 const updateTaskSchema = z.object({

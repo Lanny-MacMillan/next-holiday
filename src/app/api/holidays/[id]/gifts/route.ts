@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { created, badRequest, serverError, ok, routeError } from '@/lib/http';
-import { createAssignmentNotification, getUserName } from '@/lib/notifications';
+import { getUserName } from '@/lib/notifications';
 import {
   broadcastAssignment,
   broadcastCompletion,

@@ -7,14 +7,7 @@ import {
   requireAccountOwner,
   requireAccountAdmin,
 } from '@/lib/rbac';
-import {
-  ok,
-  badRequest,
-  unauthorized,
-  forbidden,
-  notFound,
-  serverError,
-} from '@/lib/http';
+import { ok, badRequest, forbidden, notFound, serverError } from '@/lib/http';
 
 // Validation schemas
 const UpdateAccountSchema = z.object({

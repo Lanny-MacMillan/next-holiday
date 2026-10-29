@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useGuestMutations } from '@/hooks/useGuestMutations';
@@ -15,13 +14,8 @@ import RSVPSection from '@/components/common/RSVPSection';
 import ReservationsTracker from '@/components/cards/reservation/ReservationsTracker';
 import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
-import { getFormConfig } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
-import {
-  getFormConfigEnhanced,
-  guestsFormConfig,
-  editGuestsFormConfig,
-} from '@/config/formConfigs';
+import { guestsFormConfig, editGuestsFormConfig } from '@/config/formConfigs';
 
 interface Guest {
   id: string;
