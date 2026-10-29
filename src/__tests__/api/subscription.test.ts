@@ -184,3 +184,36 @@ describe('POST /api/payment', () => {
     expect(res.status).toBe(500);
   });
 });
+
+describe('with Stripe turned on', () => {
+  const env = { ...process.env };
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_PAYMENTS_PROVIDER = 'stripe';
+    db.user.update.mockImplementation(async ({ data }: { data: unknown }) => data);
+  });
+  afterEach(() => {
+    process.env = { ...env };
+  });
+
+  it('upgrade-user no longer grants Plus on request', async () => {
+    const res = await upgrade(
+      apiRequest('/api/upgrade-user', 'POST', { plan: 'plus' }),
+    );
+    expect(res.status).toBe(403);
+    expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  it('upgrade-user still lets a user go back to free', async () => {
+    const res = await upgrade(
+      apiRequest('/api/upgrade-user', 'POST', { plan: 'free' }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('the demo payment route is gone', async () => {
+    const res = await pay(
+      apiRequest('/api/payment', 'POST', { cardholderName: 'Ada', amount: 299 }),
+    );
+    expect(res.status).toBe(404);
+  });
+});

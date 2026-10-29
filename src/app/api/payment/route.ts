@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { paymentsProvider } from '@/lib/payments';
 
 /**
  * POST /api/payment
@@ -6,6 +7,10 @@ import { NextRequest } from 'next/server';
  * In test mode, this endpoint simulates payment processing without actually charging
  */
 export async function POST(request: NextRequest) {
+  if (paymentsProvider() === 'stripe') {
+    return Response.json({ error: 'Payments are not enabled' }, { status: 404 });
+  }
+
   try {
     const body = await request.json();
     const { cardNumber, expiryDate, cvv, cardholderName, amount } = body;

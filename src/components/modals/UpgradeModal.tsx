@@ -3,6 +3,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { upgradeUser } from '@/store/slices/userSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import { errorMessage } from '@/utils/errorMessage';
+import { goToStripe } from '@/lib/billingClient';
+import { paymentsProvider } from '@/lib/payments';
 
 export interface UpgradeModalProps {
   isOpen: boolean;
@@ -102,8 +104,19 @@ export default function UpgradeModal({
     // },
   ];
 
-  const handleUpgradeClick = () => {
-    setCurrentPage('payment');
+  const handleUpgradeClick = async () => {
+    if (paymentsProvider() !== 'stripe') {
+      setCurrentPage('payment');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await goToStripe('/api/billing/checkout');
+    } catch (error) {
+      alert(`Could not start checkout: ${errorMessage(error)}. Please try again.`);
+      setIsLoading(false);
+    }
   };
 
   const handleBackToFeatures = () => {
@@ -298,9 +311,10 @@ export default function UpgradeModal({
               </button>
               <button
                 onClick={handleUpgradeClick}
+                disabled={isLoading}
                 className="flex-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white px-3 sm:px-4 py-2 rounded hover:opacity-80 transition-all duration-200 font-medium text-sm sm:text-base"
               >
-                Upgrade Now
+                {isLoading ? 'Opening checkout...' : 'Upgrade Now'}
               </button>
             </div>
           </div>

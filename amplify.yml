@@ -20,6 +20,10 @@ frontend:
         - env | grep -e NEXT_PUBLIC_DISABLE_SERIALIZABLE_CHECK >> .env.production || true
         - env | grep -e NODE_ENV >> .env.production || true
         - env | grep -e PAYMENT_TEST_MODE >> .env.production || true
+        - env | grep -e NEXT_PUBLIC_PAYMENTS_PROVIDER >> .env.production || true
+        - env | grep -e STRIPE_SECRET_KEY >> .env.production || true
+        - env | grep -e STRIPE_PRICE_ID >> .env.production || true
+        - env | grep -e STRIPE_WEBHOOK_SECRET >> .env.production || true
         - env | grep -e SSE_API_SECRET >> .env.production || true
         - env | grep -e SSE_SERVICE_URL >> .env.production || true
         - env | grep -e NEXT_PUBLIC_SSE_SERVICE_URL >> .env.production || true
