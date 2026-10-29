@@ -6,7 +6,10 @@ import { useHolidayMutations } from '@/hooks/useHolidayMutations';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { refreshShares } from '@/store/slices/sharesSlice';
-import { transformGiftPayload } from '@/utils/formTransformers';
+import {
+  transformGiftPayload,
+  transformSuppliesPayload,
+} from '@/utils/formTransformers';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import type { GiftListConfig } from '@/config/giftListConfigs';
 import { BudgetDisplay } from '@/components/common/BudgetDisplay';
@@ -60,6 +63,7 @@ function failureMessage(error: unknown, fallback: string) {
 // One gift list for every holiday; the config supplies names, wording and colours.
 export default function GiftListPage({ config }: { config: GiftListConfig }) {
   const { holidayKey, itemName, itemPlural, theme } = config;
+  const isSupplies = config.formType === 'supplies';
   const dispatch = useAppDispatch();
   const { contacts } = useAppSelector((state: any) => state.addressBook);
 
@@ -97,13 +101,22 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
     if (auth0User?.sub) dispatch(refreshShares(auth0User.sub));
   }, [dispatch, auth0User?.sub]);
 
+  const payloadFor = (values: Record<string, any>) =>
+    isSupplies
+      ? transformSuppliesPayload(values, shareMembers)
+      : transformGiftPayload(values, contacts, shareMembers);
+
   async function handleAddGift(values: Record<string, any>) {
-    if (!values.name?.trim() || !values.recipient?.trim()) return;
+    if (isSupplies && !values.name?.trim()) {
+      setToast({ message: 'Please fill in the Item Name field', type: 'error' });
+      return;
+    }
+    if (!values.name?.trim() || (!isSupplies && !values.recipient?.trim())) return;
     if (!holidayId || !auth0User) return;
 
     setIsSubmitting(true);
     try {
-      await createGift(transformGiftPayload(values, contacts, shareMembers));
+      await createGift(payloadFor(values));
       dispatch(fetchContacts());
       setToast({ message: `${itemName} added successfully!`, type: 'success' });
       setShowAddModal(false);
@@ -125,10 +138,7 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
 
     setIsEditSubmitting(true);
     try {
-      await editGift(
-        selectedGift.id,
-        transformGiftPayload(values, contacts, shareMembers),
-      );
+      await editGift(selectedGift.id, payloadFor(values));
       setToast({ message: `${itemName} updated successfully!`, type: 'success' });
       setShowEditModal(false);
       setSelectedGift(null);
@@ -236,7 +246,7 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
     : {};
 
   const formFields = (mode: 'add' | 'edit') =>
-    getFormConfigEnhanced('gifts', mode, {
+    getFormConfigEnhanced(isSupplies ? 'supplies' : 'gifts', mode, {
       holidayKey,
       shareMembers,
       auth0User,
