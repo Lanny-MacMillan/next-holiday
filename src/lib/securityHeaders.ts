@@ -16,6 +16,7 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
   const auth0 = originOf(env.NEXT_PUBLIC_AUTH0_DOMAIN);
   const sse = originOf(env.NEXT_PUBLIC_SSE_SERVICE_URL);
   const umami = originOf(env.NEXT_PUBLIC_UMAMI_SCRIPT_URL);
+  const sentry = originOf(env.NEXT_PUBLIC_SENTRY_DSN);
   const some = (...origins: Array<string | null>) =>
     origins.filter((o): o is string => !!o);
 
@@ -34,7 +35,7 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
     'connect-src': [
       "'self'",
       IP_LOOKUP,
-      ...some(auth0, sse, umami),
+      ...some(auth0, sse, umami, sentry),
       ...(dev ? ['ws:', 'http:'] : []),
     ],
     'frame-src': some(auth0).length ? some(auth0) : ["'none'"],
