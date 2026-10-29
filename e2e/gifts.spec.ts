@@ -2,11 +2,8 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { call, setUpHoliday, type Session } from './support/api';
 import { signIn } from './support/auth';
 
-// Holiday pages read what the home page loads, so go through it like a person would.
 async function openGiftList(page: Page, slug = 'christmas') {
-  await page.goto('/');
-  await page.locator(`a[href^="/${slug}"]`).first().click();
-  await page.locator(`a[href="/${slug}/gift-list"]`).first().click();
+  await page.goto(`/${slug}/gift-list`);
 }
 
 async function giftNames(

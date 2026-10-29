@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { call, setUpHoliday } from './support/api';
+import { call, setPlan, setUpHoliday } from './support/api';
 import { signIn } from './support/auth';
 
 const budgetCard = (page: Page) =>
@@ -11,13 +11,7 @@ async function setUp(browser: import('@playwright/test').Browser, plus: boolean)
   const context = await browser.newContext();
   const session = await signIn(context, 'A');
   const { accountId, holidayId } = await setUpHoliday(context, session);
-  if (plus) {
-    const upgraded = await call(context, session, 'POST', '/api/upgrade-user', {
-      auth0Sub: session.sub,
-      plan: 'plus',
-    });
-    expect(upgraded.status).toBe(200);
-  }
+  await setPlan(context, session, plus ? 'plus' : 'free');
   const budget = await call(context, session, 'POST', '/api/holidays/preferences', {
     accountId,
     preferences: [{ holiday: 'Christmas', budget: 200 }],

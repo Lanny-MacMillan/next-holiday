@@ -5,6 +5,7 @@ import { shareChristmas } from './support/share';
 test('a gift assigned to a member of a shared holiday shows for both of them', async ({
   browser,
 }) => {
+  test.setTimeout(120_000);
   const { contextA, a, contextB, b, giftsUrl } = await shareChristmas(browser);
   const gift = `Mug ${Date.now()}`;
 

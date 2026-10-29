@@ -48,3 +48,16 @@ export async function setUpHoliday(
   );
   return { accountId, holidayId: preference.holidayId as string };
 }
+
+// The test users are shared across specs, so a spec that depends on the plan sets it first.
+export async function setPlan(
+  context: BrowserContext,
+  session: Session,
+  plan: 'free' | 'plus',
+) {
+  const response = await call(context, session, 'POST', '/api/upgrade-user', {
+    auth0Sub: session.sub,
+    plan,
+  });
+  if (response.status !== 200) throw new Error(`Could not set plan to ${plan}`);
+}

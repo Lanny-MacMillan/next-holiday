@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { call, setUpHoliday } from './support/api';
+import { setPlan, setUpHoliday } from './support/api';
 import { signIn } from './support/auth';
 
 test.describe('Plus features', () => {
@@ -9,6 +9,7 @@ test.describe('Plus features', () => {
     const context = await browser.newContext();
     const session = await signIn(context, 'A');
     await setUpHoliday(context, session);
+    await setPlan(context, session, 'free');
 
     const page = await context.newPage();
     await page.goto('/');
@@ -19,11 +20,7 @@ test.describe('Plus features', () => {
       page.getByRole('button', { name: 'Invite', exact: true }),
     ).toHaveCount(0);
 
-    const upgraded = await call(context, session, 'POST', '/api/upgrade-user', {
-      auth0Sub: session.sub,
-      plan: 'plus',
-    });
-    expect(upgraded.status).toBe(200);
+    await setPlan(context, session, 'plus');
 
     await page.reload();
     await expect(

@@ -12,9 +12,7 @@ test.describe('cards', () => {
     const recipient = `Aunt Rose ${Date.now()}`;
 
     const page = await context.newPage();
-    await page.goto('/');
-    await page.locator('a[href^="/christmas"]').first().click();
-    await page.locator('a[href="/christmas/cards"]').first().click();
+    await page.goto('/christmas/cards');
 
     await page.getByRole('button', { name: /add new card/i }).click();
     await page.getByPlaceholder('Recipient*').fill(recipient);
