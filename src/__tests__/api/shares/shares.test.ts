@@ -43,6 +43,14 @@ describe('POST /api/shares', () => {
     });
   });
 
+  // KNOWN ISSUE: Plus is only enforced in the UI. A free account can create a
+  // share by calling the API directly.
+  it.failing('refuses to create a share for a free account', async () => {
+    getCurrentUser.mockResolvedValue({ ...me, subscriptionPlan: 'free' });
+    const { status } = await post({ holidayKey: 'christmas' });
+    expect(status).toBe(403);
+  });
+
   it('creates a share and makes the owner its first member', async () => {
     const { status, body } = await post({ holidayKey: 'christmas' });
 

@@ -70,6 +70,14 @@ describe('POST /api/invites', () => {
     );
   });
 
+  // KNOWN ISSUE: Plus is only enforced in the UI. A free account can send invites
+  // by calling the API directly.
+  it.failing('refuses an invite from a free account', async () => {
+    getCurrentUser.mockResolvedValue({ ...me, subscriptionPlan: 'free' });
+    const { status } = await send();
+    expect(status).toBe(403);
+  });
+
   it('keeps an email invite for someone who has not signed up', async () => {
     const { status, body } = await send();
 
