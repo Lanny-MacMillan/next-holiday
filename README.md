@@ -4,6 +4,12 @@ A comprehensive, enterprise-grade holiday planning platform built with Next.js, 
 
 **Live site**: [https://www.next-holiday.com](https://www.next-holiday.com)
 
+[![CI](https://github.com/Lanny-MacMillan/next-holiday/actions/workflows/ci.yml/badge.svg)](https://github.com/Lanny-MacMillan/next-holiday/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Lanny-MacMillan/next-holiday/actions/workflows/codeql.yml/badge.svg)](https://github.com/Lanny-MacMillan/next-holiday/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+How it fits together: [architecture](docs/architecture.md) (diagrams of the request, auth and live-notification flows) and [design decisions](docs/decisions.md).
+
 ## Overview
 
 Next Holiday is a production-ready, full-stack holiday planning application that transforms the chaos of holiday preparation into an organized, collaborative experience. Built on a robust MySQL database with Prisma ORM, the platform features a sophisticated multi-tenant architecture, real-time Server-Sent Events (SSE) notifications, and comprehensive account and sharing system.
@@ -203,12 +209,13 @@ The SSE service handles:
 
 - **Jest 29.7.0**: Testing framework with comprehensive test coverage
 - **React Testing Library**: Component and integration testing utilities
+- **Playwright**: Browser tests against a real Auth0 test tenant (sign-in, adding a gift, access isolation between users, sharing and accepting an invite, opening a page directly)
 - **ESLint 9**: Code linting with Next.js and TypeScript rules
 - **Prettier 3.8.1**: Code formatting with consistent style
 - **TypeScript Strict Mode**: Full type checking across frontend and backend
 - **Turbopack**: Fast development bundler for rapid iteration (Next.js 15+)
-- **Test Suites**: 300+ tests covering components, API routes, and business logic; every page is smoke-tested
-- **CI**: GitHub Actions runs lint, typecheck, tests and a production build on every pull request
+- **Test Suites**: about 2,100 unit and integration tests in over 100 suites covering components, API routes, store and business logic, about 60% of lines; every page is smoke-tested
+- **CI**: GitHub Actions runs lint, typecheck, tests, a production build and the browser tests on every pull request, plus CodeQL scanning; Dependabot opens weekly dependency updates
 
 ### Deployment & Infrastructure
 
@@ -678,7 +685,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ✅ **Dark/Light Themes** with professional and gamified modes  
 ✅ **Mobile Responsive** design for all devices  
 ✅ **Production Ready** deployed on AWS infrastructure  
-✅ **Comprehensive Testing** with 100+ test suites  
+✅ **Comprehensive Testing** with 100+ unit suites and browser tests  
 ✅ **Type Safe** with TypeScript throughout  
 ✅ **Well Documented** with inline comments and external docs
 
