@@ -4,6 +4,7 @@ const env = {
   NEXT_PUBLIC_AUTH0_DOMAIN: 'tenant.us.auth0.com',
   NEXT_PUBLIC_SSE_SERVICE_URL: 'https://sse.example.com/path',
   NEXT_PUBLIC_UMAMI_SCRIPT_URL: 'https://stats.example.com/script.js',
+  NEXT_PUBLIC_SENTRY_DSN: 'https://key@o1.ingest.sentry.io/2',
 };
 const header = (name: string, e = env, dev = false) =>
   securityHeaders(e, dev)[0].headers.find(h => h.key === name)?.value;
@@ -16,6 +17,7 @@ describe('contentSecurityPolicy', () => {
     expect(csp).toMatch(/script-src [^;]*https:\/\/stats\.example\.com/);
     expect(csp).toContain('frame-src https://tenant.us.auth0.com');
     expect(csp).toMatch(/connect-src [^;]*https:\/\/ipapi\.co/);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/o1\.ingest\.sentry\.io/);
   });
 
   it('forbids framing, plugins and a changed base URL', () => {
