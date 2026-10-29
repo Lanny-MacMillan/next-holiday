@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchCards } from '@/store/slices/cardsSlice';
 import { fetchGifts } from '@/store/slices/giftListSlice';
 import { fetchTasks } from '@/store/slices/tasksSlice';
+import { loadHome } from '@/store/loadHome';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import { fetchShares } from '@/store/slices/sharesSlice';
 import {
@@ -26,6 +27,7 @@ export default function DataInitializer() {
   const { initialized: invitesInitialized, loading: invitesLoading } =
     useAppSelector(state => state.invites);
   const homeData = useAppSelector((state: any) => state.home.data);
+  const homeInitialized = useAppSelector((state: any) => state.home.initialized);
 
   // One attempt per resource per user. A failed fetch leaves `initialized` false,
   // so without this every state change (e.g. `invitesLoading` toggling) would
@@ -49,6 +51,12 @@ export default function DataInitializer() {
       attempted.current[key] = true;
       run();
     };
+
+    // Holiday pages read this; only the home page used to load it
+    if (user?.sub) {
+      const profile = user;
+      fetchOnce('home', homeInitialized, () => dispatch(loadHome(profile)));
+    }
 
     // Fetch all data if not already initialized
     fetchOnce('cards', cardsInitialized, () => dispatch(fetchCards()));
@@ -79,6 +87,7 @@ export default function DataInitializer() {
     invitesInitialized,
     invitesLoading,
     homeData?.contacts?.length,
+    homeInitialized,
     user?.sub,
   ]);
 

@@ -13,6 +13,9 @@ jest.mock('@/store/hooks', () => ({
   useAppSelector: (select: (s: unknown) => unknown) => select(state),
 }));
 jest.mock('@auth0/auth0-react', () => ({ useAuth0: () => authValue }));
+jest.mock('@/store/loadHome', () => ({
+  loadHome: (user: { sub: string }) => ({ type: 'loadHome', sub: user.sub }),
+}));
 jest.mock('@/store/slices/cardsSlice', () => ({
   fetchCards: () => ({ type: 'fetchCards' }),
 }));
@@ -40,7 +43,7 @@ const fresh = () => ({
   addressBook: { initialized: false },
   shares: { initialized: false },
   invites: { initialized: false, loading: false },
-  home: { data: null },
+  home: { data: null, initialized: false },
 });
 const types = () => dispatch.mock.calls.map(c => c[0].type);
 
@@ -67,14 +70,27 @@ describe('DataInitializer', () => {
         'fetchOutgoingInvites',
         'fetchShares',
         'fetchTasks',
+        'loadHome',
       ].sort(),
     );
     expect(dispatch).toHaveBeenCalledWith({ type: 'fetchShares', sub: 'auth0|me' });
   });
 
+  it('loads the home data for the signed-in user, so any page can be opened directly', () => {
+    render(<DataInitializer />);
+    expect(dispatch).toHaveBeenCalledWith({ type: 'loadHome', sub: 'auth0|me' });
+  });
+
+  it('does not load the home data again once it is there', () => {
+    state.home.initialized = true;
+    render(<DataInitializer />);
+    expect(types()).not.toContain('loadHome');
+  });
+
   it('leaves out shares and invites without a user', () => {
     authValue = {};
     render(<DataInitializer />);
+    expect(types()).not.toContain('loadHome');
     expect(types().sort()).toEqual([
       'fetchCards',
       'fetchContacts',
@@ -90,6 +106,7 @@ describe('DataInitializer', () => {
     state.shares.initialized = true;
     state.invites.initialized = true;
     state.addressBook.initialized = true;
+    state.home.initialized = true;
     render(<DataInitializer />);
     expect(dispatch).not.toHaveBeenCalled();
   });
