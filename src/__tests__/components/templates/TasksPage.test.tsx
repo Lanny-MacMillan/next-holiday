@@ -8,6 +8,7 @@ import TasksPage from '@/components/templates/TasksPage';
 import { taskPageConfigs } from '@/config/taskPageConfigs';
 import { eventPageConfigs } from '@/config/eventPageConfigs';
 import { decorationPageConfigs } from '@/config/decorationPageConfigs';
+import { checklistPageConfigs } from '@/config/checklistPageConfigs';
 
 const me = { sub: 'auth0|me', id: 'u1', name: 'Me', email: 'me@x.com' };
 let shared: any;
@@ -879,5 +880,127 @@ describe('TasksPage as a decorations page', () => {
     expect(config.variant).toBe('decorations');
     expect(config.taskCategory).toBe('Decorations');
     expect(config.holidayKey).toBe(key);
+  });
+});
+
+describe('TasksPage as a checklist page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    holidayShared = false;
+    shared = {
+      holidayId: 'h1',
+      holidayData: {
+        tasks: [
+          task('a', 'Witch', { category: 'Costume Ideas' }),
+          task('b', 'Ghost', { category: 'Costume Ideas', isCompleted: true }),
+          task('c', 'Buy candy', { category: 'Trick or Treat Prep' }),
+          task('d', 'Hang lights', { category: 'Decorations' }),
+        ],
+      },
+      auth0User: me,
+      homeInitialized: true,
+      shareMembers: [{ userId: 'auth0|me', uuid: 'u1', name: 'Me' }],
+    };
+    Object.entries(mutations).forEach(([k, m]) => {
+      if (typeof m === 'function')
+        (m as jest.Mock).mockReset().mockResolvedValue({});
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('shows only its own category, in its own words', () => {
+    renderPage(checklistPageConfigs['costume-ideas']);
+
+    expect(screen.getByRole('heading', { name: 'Costume Ideas' })).toBeTruthy();
+    expect(screen.getByText('Pending Costume Ideas (1)')).toBeTruthy();
+    expect(screen.getByText('Completed Costume Ideas (1)')).toBeTruthy();
+    expect(screen.queryByText('Buy candy')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Add New Costume Idea' }),
+    ).toBeTruthy();
+  });
+
+  it('has no summary card, as these pages never had one', () => {
+    renderPage(checklistPageConfigs['costume-ideas']);
+
+    expect(screen.queryByText(/Status/)).toBeNull();
+  });
+
+  it('says so in its own words when empty', () => {
+    shared.holidayData = { tasks: [] };
+    renderPage(checklistPageConfigs['costume-ideas']);
+
+    expect(screen.getByText('No costume ideas yet.')).toBeTruthy();
+    expect(screen.getByText('No completed costume ideas yet.')).toBeTruthy();
+  });
+
+  it('adds an item in its own category with its own wording', async () => {
+    renderPage(checklistPageConfigs['costume-ideas']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add New Costume Idea' }));
+    fireEvent.click(screen.getByText('submit Add New Costume Idea'));
+
+    await waitFor(() => expect(mutations.createTask).toHaveBeenCalled());
+    expect(mutations.createTask.mock.calls[0][0].category).toBe('Costume Ideas');
+    expect(await screen.findByText('Costume Idea added successfully!')).toBeTruthy();
+  });
+
+  it('keeps the plain Incomplete and Completed sections where a page had them', () => {
+    shared.holidayData = {
+      tasks: [task('a', 'Bingo', { category: 'Games' })],
+    };
+    renderPage(checklistPageConfigs.games);
+
+    expect(screen.getByText('Incomplete (1)')).toBeTruthy();
+    expect(screen.getByText('Completed (0)')).toBeTruthy();
+    expect(screen.getByText('No completed games yet.')).toBeTruthy();
+  });
+
+  describe('the trick-or-treat starter list', () => {
+    beforeEach(() => {
+      shared.holidayData = { tasks: [] };
+    });
+
+    it('is offered on an empty page, in its own words', () => {
+      renderPage(checklistPageConfigs['trick-or-treat-prep']);
+
+      expect(
+        screen.getByText('Get started with common trick-or-treat prep tasks!'),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Add Suggested Tasks' }),
+      ).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'No Thanks' })).toBeTruthy();
+    });
+
+    it('adds its tasks in the category the page shows, so they appear', async () => {
+      renderPage(checklistPageConfigs['trick-or-treat-prep']);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Suggested Tasks' }));
+
+      const items = checklistPageConfigs['trick-or-treat-prep'].starter.items;
+      await waitFor(() =>
+        expect(mutations.createTask).toHaveBeenCalledTimes(items.length),
+      );
+      for (const [call] of mutations.createTask.mock.calls) {
+        expect(call.category).toBe('Trick or Treat Prep');
+      }
+    });
+
+    it('can be declined', () => {
+      renderPage(checklistPageConfigs['trick-or-treat-prep']);
+
+      fireEvent.click(screen.getByRole('button', { name: 'No Thanks' }));
+
+      expect(screen.queryByText(/Get started/)).toBeNull();
+      expect(mutations.createTask).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each(Object.keys(checklistPageConfigs))('has a page for %s', key => {
+    const config = (checklistPageConfigs as Record<string, any>)[key];
+
+    expect(config.taskCategory).toBeTruthy();
+    expect(config.labels.noun).toBeTruthy();
   });
 });
