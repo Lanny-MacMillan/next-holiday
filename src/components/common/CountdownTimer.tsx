@@ -420,33 +420,33 @@ export default function CountdownTimer({
 
     switch (holiday) {
       case 'Hanukkah':
-        return 'Hanukkah is here! 🕯️';
+        return 'Hanukkah is here!';
       case 'Kwanzaa':
-        return 'Kwanzaa is here! 🕯️';
+        return 'Kwanzaa is here!';
       case 'Christmas':
-        return 'Christmas is here! 🎄';
+        return 'Christmas is here!';
       case 'New Year':
-        return 'New Year is here! 🎆';
+        return 'New Year is here!';
       case "Valentine's Day":
-        return "Valentine's Day is here! 💕";
+        return "Valentine's Day is here!";
       case 'Easter':
-        return 'Easter is here! 🐰';
+        return 'Easter is here!';
       case 'Halloween':
-        return 'Halloween is here! 🎃';
+        return 'Halloween is here!';
       case 'Thanksgiving':
-        return 'Thanksgiving is here! 🦃';
+        return 'Thanksgiving is here!';
       case 'Graduation':
-        return 'Graduation is here! 🎓';
+        return 'Graduation is here!';
       case 'Anniversary':
-        return 'Anniversary is here! 💍';
+        return 'Anniversary is here!';
       case 'Birthday':
-        return 'Birthday is here! 🎂';
+        return 'Birthday is here!';
       case 'Fourth of July':
-        return 'Fourth of July is here! 🇺🇸';
+        return 'Fourth of July is here!';
       case "Father's Day":
-        return "Father's Day is here! 👨‍👧‍👦";
+        return "Father's Day is here!";
       case "Mother's Day":
-        return "Mother's Day is here! 👩‍👧‍👦";
+        return "Mother's Day is here!";
       default:
         return 'The holiday is here!';
     }

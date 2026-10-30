@@ -200,7 +200,7 @@ describe('GiftListPage', () => {
     pageData.holidayData = { gifts: [] };
     renderPage(giftListConfigs.hanukkah);
 
-    expect(screen.getByText('All gifts completed! 🕯️')).toBeTruthy();
+    expect(screen.getByText('All gifts completed!')).toBeTruthy();
     expect(screen.getByText('No completed gifts yet.')).toBeTruthy();
   });
 

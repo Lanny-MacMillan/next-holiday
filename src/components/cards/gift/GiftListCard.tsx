@@ -416,7 +416,7 @@ export default function GiftListCard({
                   : isEaster
                     ? 'Basket List'
                     : isNewYear
-                      ? '✨ Supplies List'
+                      ? 'Supplies List'
                       : isFourthOfJuly
                         ? 'Supplies List'
                         : 'Gift List'}
@@ -431,7 +431,7 @@ export default function GiftListCard({
                 : isEaster
                   ? 'Track your Easter basket items'
                   : isNewYear
-                    ? 'Track your ✨ New Year supplies'
+                    ? 'Track your New Year supplies'
                     : isFourthOfJuly
                       ? 'Track your Fourth of July supplies'
                       : `Track your ${displayHolidayName} gift ideas`}
@@ -545,7 +545,7 @@ export default function GiftListCard({
                 : isEaster
                   ? 'Basket List'
                   : isNewYear
-                    ? '✨ Supplies List'
+                    ? 'Supplies List'
                     : isFourthOfJuly
                       ? 'Supplies List'
                       : 'Gift List'}
@@ -564,7 +564,7 @@ export default function GiftListCard({
             {isThanksgiving
               ? 'Track your Thanksgiving shopping budget'
               : isNewYear
-                ? 'Track your ✨ New Year supplies'
+                ? 'Track your New Year supplies'
                 : isFourthOfJuly
                   ? 'Track your Fourth of July supplies'
                   : `Track your ${displayHolidayName} gift ideas`}

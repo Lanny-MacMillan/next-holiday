@@ -1026,7 +1026,7 @@ export default function NotificationCenter({
               {confirmInvite.hasExistingHoliday && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-3">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 font-semibold mb-2">
-                    ⚠️ Important:
+                    Important:
                   </p>
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
                     <strong>

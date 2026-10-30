@@ -142,21 +142,12 @@ describe('GiftCardItem in professional mode', () => {
 });
 
 describe('GiftCardItem in gamified mode', () => {
-  it.each([
-    [10, '🎈'],
-    [30, '🎀'],
-    [60, '🎁'],
-    [150, '💎'],
-  ])('shows an icon that grows with the price (%s)', (price, icon) => {
-    renderItem({ gift: gift({ price }) }, { displayMode: 'gamified' });
+  it('shows no price icon, whichever way it is switched on', () => {
+    renderItem({ gift: gift({ price: 150 }) }, { displayMode: 'gamified' });
+    expect(screen.queryByText('💎')).toBeNull();
 
-    expect(screen.getByText(icon)).toBeTruthy();
-  });
-
-  it('is chosen by the display setting or by the prop', () => {
     renderItem({ gamified: true });
-
-    expect(screen.getByText('🎀')).toBeTruthy();
+    expect(screen.queryByText('🎀')).toBeNull();
   });
 
   it('shows the gift details and the assignee', () => {

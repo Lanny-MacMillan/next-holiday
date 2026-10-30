@@ -325,7 +325,7 @@ export default function DailyPrinciplesPage() {
           title="Incomplete"
           items={incompleteTasks}
           isCompleted={false}
-          emptyMessage="All principles completed! 🕯️✨"
+          emptyMessage="All principles completed!"
           completedMessage=""
           renderItem={(task: any) => (
             <ToDoCard
