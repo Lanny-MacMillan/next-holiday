@@ -14,7 +14,7 @@ CI runs four parallel jobs on every PR: `lint` (also checks formatting and dead 
 
 - Server data comes from the API through RTK Query (`src/store/api.ts`) or a store thunk. Do not load data with `fetch` inside `useEffect` (a lint error; four older cases are warnings in `eslint.config.mjs`). A `fetch` in a button or form handler is fine.
 - `/api/home` (`src/lib/server/homeData.ts`) hydrates the `home` slice; holiday pages read from it. Mutations update `home` on success.
-- Holiday pages are built from `HolidayPageTemplate`. Do not add per-holiday slices or per-holiday copies of a page; extend the template or the shared hooks.
+- Holiday landing pages are built from `HolidayPageTemplate`; the pages under a holiday are short wrappers around `GiftListPage`, `CardsPage`, `GuestListPage` or `TasksPage` (in `src/components/templates`), each with a config in `src/config/*Configs.ts`. Do not add per-holiday slices or per-holiday copies of a page; add a config entry, or extend the shared component. See `docs/page-unification.md`.
 - `localStorage` is only for UI preferences (theme, display mode) and the redux-persist whitelist in `src/store/index.ts`. Never for server data.
 
 ## Auth and API routes
