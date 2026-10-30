@@ -12,6 +12,8 @@ import {
   createPaginatedResponse,
 } from '@/lib/pagination';
 import { ok, created, badRequest, routeError } from '@/lib/http';
+import { seedHolidayTasks } from '@/lib/server/seedHoliday';
+import { logger } from '@/lib/logger';
 
 // Validation schemas
 const CreateHolidaySchema = z.object({
@@ -191,6 +193,13 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // A holiday with traditional items gets them now; the holiday exists either way
+    try {
+      await seedHolidayTasks(prisma, holiday, user.id);
+    } catch (error) {
+      logger.error('Could not add the traditional items to the new holiday:', error);
+    }
 
     // Transform date fields to strings for API response
     const transformedHoliday = {

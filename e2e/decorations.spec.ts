@@ -38,7 +38,7 @@ for (const [holiday, slug] of [
   });
 }
 
-test('the Kwanzaa decorations page offers its starter list, and adding it fills the page', async ({
+test('a new Kwanzaa already has its ten traditional decorations', async ({
   browser,
 }) => {
   const context = await browser.newContext();
@@ -47,14 +47,9 @@ test('the Kwanzaa decorations page offers its starter list, and adding it fills 
 
   const page = await context.newPage();
   await page.goto('/kwanzaa/decorations');
-  await expect(page.getByText('✨ Set Up Kwanzaa Decorations')).toBeVisible();
-  await page.getByRole('button', { name: 'Add Default Tasks' }).click();
 
   await expect(page.getByText('Kinara Candle Holder Setup')).toBeVisible();
   await expect(page.getByText('Pending Decorations (10)')).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByText('Pending Decorations (10)')).toBeVisible();
-  await expect(page.getByText('✨ Set Up Kwanzaa Decorations')).toHaveCount(0);
+  await expect(page.getByText(/Set Up Kwanzaa Decorations/)).toHaveCount(0);
   await context.close();
 });

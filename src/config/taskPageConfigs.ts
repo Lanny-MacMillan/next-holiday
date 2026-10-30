@@ -42,8 +42,7 @@ export interface TaskPageConfig {
     heading: string;
     question: string;
     button: string;
-    tone: 'blue' | 'amber' | 'orange';
-    skip?: string;
+    tone: 'blue';
     items: {
       title: string;
       description: string;

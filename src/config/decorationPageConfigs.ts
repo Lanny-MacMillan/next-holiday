@@ -1,4 +1,5 @@
 import type { TaskPageConfig } from '@/config/taskPageConfigs';
+import { KWANZAA_DECORATIONS } from '@/config/holidaySeeds';
 
 type StarterItems = NonNullable<TaskPageConfig['starter']>['items'];
 
@@ -7,92 +8,6 @@ const common = {
   taskCategory: 'Decorations',
   doneEmoji: '',
 } as const;
-
-const kwanzaaStarter: StarterItems = [
-  {
-    title: 'Kinara Candle Holder Setup',
-    description: 'Set up the seven-branched kinara candle holder as centerpiece',
-    priority: 'high',
-  },
-  {
-    title: 'Mkeka Mat Placement',
-    description: 'Place the mkeka (straw mat) as foundation for all decorations',
-    priority: 'high',
-  },
-  {
-    title: 'Unity Cup Display',
-    description: 'Set up Kikombe cha Umoja (unity cup) for ceremonies',
-    priority: 'high',
-  },
-  {
-    title: 'African Decorative Elements',
-    description: 'Add traditional African art, fabrics, and cultural displays',
-    priority: 'medium',
-  },
-  {
-    title: 'Red, Black, Green Color Scheme',
-    description: 'Incorporate Kwanzaa colors throughout decoration scheme',
-    priority: 'medium',
-  },
-  {
-    title: 'Harvest Display Setup',
-    description: 'Create display of fruits and vegetables (mazao)',
-    priority: 'medium',
-  },
-  {
-    title: 'Corn Decoration Arrangement',
-    description: 'Place ears of corn (vibunzi) representing children',
-    priority: 'low',
-  },
-  {
-    title: 'Heritage Wall Creation',
-    description: 'Create family heritage and ancestral photo display',
-    priority: 'medium',
-  },
-  {
-    title: 'Seven Principles Banners',
-    description: 'Create and hang banners for each Kwanzaa principle',
-    priority: 'low',
-  },
-  {
-    title: 'Candle Lighting Area Setup',
-    description: 'Prepare safe space for daily candle lighting ceremonies',
-    priority: 'high',
-  },
-];
-
-const newYearStarter: StarterItems = [
-  {
-    title: 'Set up New Year countdown display',
-    description: 'Prepare countdown decorations for midnight celebration',
-    priority: 'high',
-  },
-  {
-    title: 'Hang New Year banners and streamers',
-    description: 'Display festive New Year banners and colorful streamers',
-    priority: 'medium',
-  },
-  {
-    title: 'Arrange New Year centerpieces',
-    description: 'Create elegant centerpieces with champagne glasses and confetti',
-    priority: 'medium',
-  },
-  {
-    title: 'Set up party decorations and balloons',
-    description: 'Prepare gold, silver, and black balloons and party decorations',
-    priority: 'high',
-  },
-  {
-    title: 'Prepare confetti and sparklers',
-    description: 'Set up confetti cannons and safe sparklers for celebration',
-    priority: 'medium',
-  },
-  {
-    title: 'Create photo booth backdrop',
-    description: 'Set up New Year themed photo booth with props',
-    priority: 'low',
-  },
-];
 
 export const decorationPageConfigs = {
   easter: {
@@ -158,7 +73,7 @@ export const decorationPageConfigs = {
       question: 'Would you like to add common Kwanzaa decoration tasks?',
       button: 'Add Default Tasks',
       tone: 'blue',
-      items: kwanzaaStarter,
+      items: KWANZAA_DECORATIONS,
     },
   },
   'new-year': {
@@ -172,13 +87,6 @@ export const decorationPageConfigs = {
     accent: '#f59e0b',
     border: 'rgb(245 158 11)',
     modalClassName: 'card-tasks',
-    starter: {
-      heading: "🎊 Set Up New Year's Decorations",
-      question: "Would you like to add some common New Year's decoration tasks?",
-      button: 'Add Default Decorations',
-      tone: 'amber',
-      items: newYearStarter,
-    },
   },
   thanksgiving: {
     ...common,

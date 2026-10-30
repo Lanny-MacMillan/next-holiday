@@ -8,6 +8,7 @@ import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
 import { ok, badRequest, serverError, routeError } from '@/lib/http';
 import { logger } from '@/lib/logger';
+import { seedHolidayTasks } from '@/lib/server/seedHoliday';
 
 // Validation schemas
 const HolidayPreferenceSchema = z.object({
@@ -180,6 +181,7 @@ export async function POST(request: NextRequest) {
                 countdownTimer: countdownTimer ? new Date(countdownTimer) : null,
               },
             });
+            await seedHolidayTasks(tx, holiday, user.id);
           }
 
           let budgetResult = null;

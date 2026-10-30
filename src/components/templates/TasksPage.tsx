@@ -46,18 +46,6 @@ const STARTER_TONES = {
     text: 'text-blue-700 dark:text-blue-300',
     button: 'bg-blue-500 hover:bg-blue-600',
   },
-  orange: {
-    box: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
-    heading: 'text-orange-800 dark:text-orange-200',
-    text: 'text-orange-700 dark:text-orange-300',
-    button: 'bg-orange-500 hover:bg-orange-600',
-  },
-  amber: {
-    box: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700',
-    heading: 'text-amber-800 dark:text-amber-200',
-    text: 'text-amber-700 dark:text-amber-300',
-    button: 'bg-amber-500 hover:bg-amber-600',
-  },
 } as const;
 
 const PRIORITY_ORDER: Record<Priority, number> = { high: 3, medium: 2, low: 1 };
@@ -391,7 +379,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
                 onClick={() => setStarterDismissed(true)}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
               >
-                {config.starter.skip ?? 'Skip'}
+                Skip
               </button>
             </div>
           </div>

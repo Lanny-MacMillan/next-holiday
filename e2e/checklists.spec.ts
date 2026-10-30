@@ -55,25 +55,6 @@ for (const [holiday, slug, noun, pending, completed] of [
   });
 }
 
-test('the suggested trick-or-treat tasks appear on the page once added', async ({
-  browser,
-}) => {
-  const context = await browser.newContext();
-  const session = await signIn(context, 'A');
-  await setUpHoliday(context, session, 'Halloween');
-
-  const page = await context.newPage();
-  await page.goto('/halloween/trick-or-treat-prep');
-  await page.getByRole('button', { name: 'Add Suggested Tasks' }).click();
-
-  await expect(page.getByText('Buy Halloween Candy')).toBeVisible();
-  await expect(page.getByText('Pending Trick-or-Treat Prep (4)')).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByText('Pending Trick-or-Treat Prep (4)')).toBeVisible();
-  await context.close();
-});
-
 test("the reservations page offers Valentine's starter list, and adding it fills the page", async ({
   browser,
 }) => {

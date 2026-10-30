@@ -806,13 +806,10 @@ describe('TasksPage as a decorations page', () => {
       expect(screen.getByRole('button', { name: 'Add Default Tasks' })).toBeTruthy();
     });
 
-    it("uses the page's own wording on New Year", () => {
+    it('is not offered on New Year, which has no traditional list', () => {
       renderPage(decorationPageConfigs['new-year']);
 
-      expect(screen.getByText("🎊 Set Up New Year's Decorations")).toBeTruthy();
-      expect(
-        screen.getByRole('button', { name: 'Add Default Decorations' }),
-      ).toBeTruthy();
+      expect(screen.queryByText(/Set Up/)).toBeNull();
     });
 
     it('is not offered on a page that has none', () => {
@@ -960,45 +957,12 @@ describe('TasksPage as a checklist page', () => {
     expect(screen.getByText('No completed games yet.')).toBeTruthy();
   });
 
-  describe('the trick-or-treat starter list', () => {
-    beforeEach(() => {
-      shared.holidayData = { tasks: [] };
-    });
+  it('offers no starter list on trick-or-treat prep', () => {
+    shared.holidayData = { tasks: [] };
+    renderPage(checklistPageConfigs['trick-or-treat-prep']);
 
-    it('is offered on an empty page, in its own words', () => {
-      renderPage(checklistPageConfigs['trick-or-treat-prep']);
-
-      expect(
-        screen.getByText('Get started with common trick-or-treat prep tasks!'),
-      ).toBeTruthy();
-      expect(
-        screen.getByRole('button', { name: 'Add Suggested Tasks' }),
-      ).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'No Thanks' })).toBeTruthy();
-    });
-
-    it('adds its tasks in the category the page shows, so they appear', async () => {
-      renderPage(checklistPageConfigs['trick-or-treat-prep']);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Add Suggested Tasks' }));
-
-      const items = checklistPageConfigs['trick-or-treat-prep'].starter.items;
-      await waitFor(() =>
-        expect(mutations.createTask).toHaveBeenCalledTimes(items.length),
-      );
-      for (const [call] of mutations.createTask.mock.calls) {
-        expect(call.category).toBe('Trick or Treat Prep');
-      }
-    });
-
-    it('can be declined', () => {
-      renderPage(checklistPageConfigs['trick-or-treat-prep']);
-
-      fireEvent.click(screen.getByRole('button', { name: 'No Thanks' }));
-
-      expect(screen.queryByText(/Get started/)).toBeNull();
-      expect(mutations.createTask).not.toHaveBeenCalled();
-    });
+    expect(screen.queryByText(/Get started/)).toBeNull();
+    expect(screen.getByText('No trick-or-treat prep tasks yet.')).toBeTruthy();
   });
 
   it.each(Object.keys(checklistPageConfigs))('has a page for %s', key => {
