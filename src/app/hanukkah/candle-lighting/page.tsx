@@ -19,59 +19,14 @@ import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import { CANDLE_LIGHTING_TASKS } from '@/config/holidaySeeds';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
-const defaultCandleTasks = [
-  {
-    title: 'Light 1st Candle',
-    description: 'First night of Hanukkah - Light the shamash and first candle',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 2nd Candle',
-    description: 'Second night of Hanukkah - Light the shamash and two candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 3rd Candle',
-    description: 'Third night of Hanukkah - Light the shamash and three candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 4th Candle',
-    description: 'Fourth night of Hanukkah - Light the shamash and four candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 5th Candle',
-    description: 'Fifth night of Hanukkah - Light the shamash and five candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 6th Candle',
-    description: 'Sixth night of Hanukkah - Light the shamash and six candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 7th Candle',
-    description: 'Seventh night of Hanukkah - Light the shamash and seven candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 8th Candle',
-    description: 'Eighth night of Hanukkah - Light the shamash and eight candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-];
+const defaultCandleTasks = CANDLE_LIGHTING_TASKS.map(task => ({
+  ...task,
+  category: 'Candle Lighting',
+}));
 
 export default function CandleLightingPage() {
   const dispatch = useAppDispatch();

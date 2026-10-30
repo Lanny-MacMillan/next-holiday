@@ -83,36 +83,6 @@ export const checklistPageConfigs = {
       empty: 'No trick-or-treat prep tasks yet.',
       completedEmpty: 'No completed trick-or-treat prep yet.',
     },
-    starter: {
-      heading: 'Get started with common trick-or-treat prep tasks!',
-      question:
-        'Would you like to add some suggested trick-or-treat preparation tasks?',
-      button: 'Add Suggested Tasks',
-      skip: 'No Thanks',
-      tone: 'orange',
-      items: [
-        {
-          title: 'Buy Halloween Candy',
-          description: 'Stock up on candy for trick-or-treaters',
-          priority: 'high',
-        },
-        {
-          title: 'Prepare Trick-or-Treat Route',
-          description: 'Plan route for trick-or-treating',
-          priority: 'medium',
-        },
-        {
-          title: 'Buy Glow Sticks',
-          description: 'For safety during trick-or-treating',
-          priority: 'medium',
-        },
-        {
-          title: 'Check Flashlights',
-          description: 'Ensure flashlights work for evening trick-or-treating',
-          priority: 'low',
-        },
-      ],
-    },
   },
   'resolution-tracker': {
     holidayKey: 'new-year',

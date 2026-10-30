@@ -21,54 +21,9 @@ import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import { toDateOnlyString } from '@/lib/dates';
+import { KWANZAA_PRINCIPLES, nextKwanzaaStart } from '@/config/holidaySeeds';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
-
-// Default Kwanzaa principles for preloading
-const defaultKwanzaaPrinciples = [
-  {
-    dayNumber: 1,
-    name: 'Umoja (Unity)',
-    description: 'First day of Kwanzaa - focus on unity',
-    priority: 'high' as const,
-  },
-  {
-    dayNumber: 2,
-    name: 'Kujichagulia (Self-Determination)',
-    description: 'Second day of Kwanzaa - focus on self-determination',
-    priority: 'high' as const,
-  },
-  {
-    dayNumber: 3,
-    name: 'Ujima (Collective Work and Responsibility)',
-    description: 'Third day of Kwanzaa - focus on collective work',
-    priority: 'high' as const,
-  },
-  {
-    dayNumber: 4,
-    name: 'Ujamaa (Cooperative Economics)',
-    description: 'Fourth day of Kwanzaa - focus on cooperative economics',
-    priority: 'high' as const,
-  },
-  {
-    dayNumber: 5,
-    name: 'Nia (Purpose)',
-    description: 'Fifth day of Kwanzaa - focus on purpose',
-    priority: 'high' as const,
-  },
-  {
-    dayNumber: 6,
-    name: 'Kuumba (Creativity)',
-    description: 'Sixth day of Kwanzaa - focus on creativity',
-    priority: 'high' as const,
-  },
-  {
-    dayNumber: 7,
-    name: 'Imani (Faith)',
-    description: 'Seventh day of Kwanzaa - focus on faith',
-    priority: 'high' as const,
-  },
-];
 
 export default function DailyPrinciplesPage() {
   const dispatch = useAppDispatch();
@@ -208,17 +163,16 @@ export default function DailyPrinciplesPage() {
     if (!holidayId || !auth0User) return;
 
     try {
-      // Calculate Kwanzaa dates (Dec 26, 2026 - Jan 1, 2027)
-      const kwanzaaStartDate = new Date('2026-12-26');
-
       // Add default principles one at a time
-      for (let i = 0; i < defaultKwanzaaPrinciples.length; i++) {
-        const principle = defaultKwanzaaPrinciples[i];
+      for (let i = 0; i < KWANZAA_PRINCIPLES.length; i++) {
+        const principle = KWANZAA_PRINCIPLES[i];
 
-        // Calculate due date based on day number
-        const dueDate = new Date(kwanzaaStartDate);
-        dueDate.setDate(kwanzaaStartDate.getDate() + (principle.dayNumber - 1));
-        const dueDateString = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        // Each principle falls on its day of the coming Kwanzaa
+        const dueDateString = new Date(
+          nextKwanzaaStart().getTime() + (principle.dayNumber - 1) * 86_400_000,
+        )
+          .toISOString()
+          .split('T')[0];
 
         const result = await createTask({
           title: principle.name,
