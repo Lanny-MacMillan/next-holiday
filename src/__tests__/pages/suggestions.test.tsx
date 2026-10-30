@@ -218,7 +218,7 @@ describe.each(pages)(
       mount(Page);
 
       expect(
-        await screen.findByRole('button', { name: `💡 Suggestions (${count - 1})` }),
+        await screen.findByRole('button', { name: `Suggestions (${count - 1})` }),
       ).toBeTruthy();
       expect(
         screen.queryByRole('button', { name: 'Choose suggestions' }),

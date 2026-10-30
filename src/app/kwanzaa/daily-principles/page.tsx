@@ -293,7 +293,7 @@ export default function DailyPrinciplesPage() {
       <main className="w-full max-w-4xl flex flex-col gap-6">
         {/* Default Principles Prompt */}
         <Suggestions
-          heading={'🕯️ Set Up Kwanzaa Principles'}
+          heading={'Set Up Kwanzaa Principles'}
           question={
             'Would you like to add the seven traditional Kwanzaa principles to track daily?'
           }

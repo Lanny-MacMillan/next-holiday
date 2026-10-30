@@ -63,7 +63,7 @@ describe('after the prompt', () => {
   it('leaves a small button with how many suggestions are left', () => {
     renderIt({ showPrompt: false, existingTitles: ['Hang lights'] });
 
-    expect(screen.getByRole('button', { name: '💡 Suggestions (2)' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Suggestions (2)' })).toBeTruthy();
     expect(screen.queryByText('Set up decorations')).toBeNull();
   });
 
