@@ -34,9 +34,8 @@ test.describe('production hardening', () => {
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['x-frame-options']).toBe('DENY');
     expect(headers['referrer-policy']).toBeTruthy();
-    expect(headers['content-security-policy-report-only']).toContain(
-      "frame-ancestors 'none'",
-    );
+    expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(headers['content-security-policy-report-only']).toBeUndefined();
   });
 
   test('a normal signed-in visit breaks no Content Security Policy rule', async ({

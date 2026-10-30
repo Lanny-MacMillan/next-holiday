@@ -11,7 +11,7 @@ test('a few suggestions can be picked from the meal planning list, and the rest 
 
   const page = await context.newPage();
   await page.goto('/thanksgiving/meal-planning');
-  await expect(page.getByText('🍽️ Set Up Meal Planning')).toBeVisible();
+  await expect(page.getByText('Set Up Meal Planning')).toBeVisible();
   await page.getByRole('button', { name: 'Choose suggestions' }).click();
 
   const picker = page.getByRole('dialog', { name: 'Suggested meal planning tasks' });
@@ -26,13 +26,11 @@ test('a few suggestions can be picked from the meal planning list, and the rest 
   await expect(page.getByText('Plan Traditional Turkey Menu')).toBeVisible();
   await expect(page.getByText('Create Cooking Timeline')).toBeVisible();
   await expect(page.getByText('Dessert Planning')).toHaveCount(0);
-  await expect(
-    page.getByRole('button', { name: '💡 Suggestions (8)' }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Suggestions (8)' })).toBeVisible();
 
   await page.reload();
   await expect(page.getByText('Plan Traditional Turkey Menu')).toBeVisible();
-  await page.getByRole('button', { name: '💡 Suggestions (8)' }).click();
+  await page.getByRole('button', { name: 'Suggestions (8)' }).click();
   const again = page.getByRole('dialog', { name: 'Suggested meal planning tasks' });
   await expect(again.getByText('Already added')).toHaveCount(2);
   await again.getByRole('button', { name: 'Cancel' }).click();
@@ -55,8 +53,6 @@ test('skipping the suggestions on an empty page keeps the prompt away but the bu
   await expect(page.getByRole('button', { name: 'Choose suggestions' })).toHaveCount(
     0,
   );
-  await expect(
-    page.getByRole('button', { name: '💡 Suggestions (8)' }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Suggestions (8)' })).toBeVisible();
   await context.close();
 });

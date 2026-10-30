@@ -67,7 +67,7 @@ export const decorationPageConfigs = {
     submitColor: '#dc2626',
     modalClassName: 'card card-tasks',
     starter: {
-      heading: '✨ Set Up Kwanzaa Decorations',
+      heading: 'Set Up Kwanzaa Decorations',
       question: 'Would you like to add common Kwanzaa decoration tasks?',
       items: KWANZAA_DECORATIONS,
     },

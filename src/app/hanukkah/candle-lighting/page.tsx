@@ -324,7 +324,7 @@ export default function CandleLightingPage() {
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Default Tasks Prompt */}
         <Suggestions
-          heading={'🕯️ Set Up Hanukkah Candle Lighting'}
+          heading={'Set Up Hanukkah Candle Lighting'}
           question={
             'Would you like to add the 8 nights of Hanukkah candle lighting tasks?'
           }

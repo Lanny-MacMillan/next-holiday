@@ -802,7 +802,7 @@ describe('TasksPage as a decorations page', () => {
     it('are offered on an empty page that has a list, in its own words', () => {
       renderPage(decorationPageConfigs.kwanzaa);
 
-      expect(screen.getByText('✨ Set Up Kwanzaa Decorations')).toBeTruthy();
+      expect(screen.getByText('Set Up Kwanzaa Decorations')).toBeTruthy();
       expect(
         screen.getByText('Would you like to add common Kwanzaa decoration tasks?'),
       ).toBeTruthy();
@@ -912,7 +912,7 @@ describe('TasksPage as a decorations page', () => {
 
       expect(screen.queryByText(/Set Up/)).toBeNull();
       fireEvent.click(
-        screen.getByRole('button', { name: `💡 Suggestions (${items.length - 1})` }),
+        screen.getByRole('button', { name: `Suggestions (${items.length - 1})` }),
       );
       expect(screen.getByText('Already added')).toBeTruthy();
 
@@ -1103,7 +1103,7 @@ describe('TasksPage as the resolution tracker and reservations pages', () => {
     it('are offered on an empty page, in its own words', () => {
       renderPage(checklistPageConfigs.reservations);
 
-      expect(screen.getByText("💖 Set Up Valentine's Reservations")).toBeTruthy();
+      expect(screen.getByText("Set Up Valentine's Reservations")).toBeTruthy();
       expect(
         screen.getByText(
           "Would you like to add some common Valentine's reservation planning tasks?",

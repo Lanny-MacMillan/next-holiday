@@ -129,7 +129,7 @@ export default function Suggestions({
             onClick={openPicker}
             className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
           >
-            💡 Suggestions ({remaining.length})
+            Suggestions ({remaining.length})
           </button>
         </div>
       )}

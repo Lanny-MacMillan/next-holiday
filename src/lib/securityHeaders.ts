@@ -9,9 +9,6 @@ const originOf = (value: string | undefined) => {
   }
 };
 
-// Location lookup used by the performance monitor (src/lib/performance/location-service.ts).
-const IP_LOOKUP = 'https://ipapi.co';
-
 // Umami Cloud loads its script from cloud.umami.is but reports to this origin.
 const UMAMI_CLOUD_GATEWAY = 'https://gateway.umami.is';
 
@@ -37,7 +34,6 @@ export function contentSecurityPolicy(env: Env = process.env, dev = false) {
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'connect-src': [
       "'self'",
-      IP_LOOKUP,
       ...some(auth0, sse, umami, sentry),
       ...(umami === 'https://cloud.umami.is' ? [UMAMI_CLOUD_GATEWAY] : []),
       ...(dev ? ['ws:', 'http:'] : []),
@@ -64,9 +60,10 @@ export function securityHeaders(env: Env = process.env, dev = false) {
       key: 'Permissions-Policy',
       value: 'camera=(), microphone=(), geolocation=(), payment=()',
     },
-    // Report-only until the policy has been watched on production for violations.
+    // Enforced in production. Under `next dev` it only reports, so hot reload and other
+    // dev tooling can never be blocked.
     {
-      key: 'Content-Security-Policy-Report-Only',
+      key: dev ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
       value: contentSecurityPolicy(env, dev),
     },
   ];

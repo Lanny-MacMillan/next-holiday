@@ -379,7 +379,7 @@ export default function ThanksgivingMealPlanningPage() {
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Default Tasks Prompt */}
         <Suggestions
-          heading={'🍽️ Set Up Meal Planning'}
+          heading={'Set Up Meal Planning'}
           question={
             'Would you like to add some common Thanksgiving meal planning tasks?'
           }
