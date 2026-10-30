@@ -130,8 +130,6 @@ export const checklistPageConfigs = {
       heading: "💖 Set Up Valentine's Reservations",
       question:
         "Would you like to add some common Valentine's reservation planning tasks?",
-      button: 'Add Default Reservations',
-      tone: 'blue',
       items: [
         {
           title: "Valentine's Restaurant Reservation",

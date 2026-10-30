@@ -17,6 +17,7 @@ import FormModal from '@/components/modals/FormModal';
 import DeleteModal from '@/components/modals/DeleteModal';
 import Toast from '@/components/common/Toast';
 import Footer from '@/components/common/Footer';
+import Suggestions, { type Suggestion } from '@/components/common/Suggestions';
 
 type SortOption =
   | 'priority'
@@ -38,15 +39,6 @@ interface Task {
   assignedTo?: string;
   assignedToName?: string | null;
 }
-
-const STARTER_TONES = {
-  blue: {
-    box: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700',
-    heading: 'text-blue-800 dark:text-blue-200',
-    text: 'text-blue-700 dark:text-blue-300',
-    button: 'bg-blue-500 hover:bg-blue-600',
-  },
-} as const;
 
 const PRIORITY_ORDER: Record<Priority, number> = { high: 3, medium: 2, low: 1 };
 
@@ -179,22 +171,17 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
     dispatch(fetchContacts());
   }, [dispatch]);
 
-  async function addStarterItems() {
-    if (!config.starter || !holidayId || !auth0User) return;
+  async function addSuggestions(items: Suggestion[]) {
+    if (!holidayId || !auth0User) throw new Error('No holiday');
 
-    try {
-      for (const item of config.starter.items) {
-        await createTask({
-          title: item.title,
-          description: item.description,
-          priority: item.priority,
-          category: taskCategory,
-          holidayId,
-        });
-      }
-      setStarterDismissed(true);
-    } catch (error) {
-      console.error('Error adding the starter list:', error);
+    for (const item of items) {
+      await createTask({
+        title: item.title,
+        description: item.description,
+        priority: item.priority,
+        category: taskCategory,
+        holidayId,
+      });
     }
   }
 
@@ -355,34 +342,17 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
           </div>
         )}
 
-        {config.starter && tasks.length === 0 && !starterDismissed && (
-          <div
-            className={`card card-tasks rounded-lg p-4 ${STARTER_TONES[config.starter.tone].box}`}
-          >
-            <h3
-              className={`text-lg font-semibold mb-2 ${STARTER_TONES[config.starter.tone].heading}`}
-            >
-              {config.starter.heading}
-            </h3>
-            <p className={`text-sm mb-3 ${STARTER_TONES[config.starter.tone].text}`}>
-              {config.starter.question}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addStarterItems}
-                disabled={createLoading}
-                className={`text-white px-4 py-2 rounded transition-colors text-sm disabled:opacity-50 ${STARTER_TONES[config.starter.tone].button}`}
-              >
-                {createLoading ? 'Adding...' : config.starter.button}
-              </button>
-              <button
-                onClick={() => setStarterDismissed(true)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
+        {config.starter && (
+          <Suggestions
+            heading={config.starter.heading}
+            question={config.starter.question}
+            noun={pluralLower}
+            items={config.starter.items}
+            existingTitles={tasks.map(task => task.title)}
+            onAdd={addSuggestions}
+            showPrompt={tasks.length === 0 && !starterDismissed}
+            onDismissPrompt={() => setStarterDismissed(true)}
+          />
         )}
 
         {(config.summary ?? !isTasks) && tasks.length > 0 && (

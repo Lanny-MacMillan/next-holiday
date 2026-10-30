@@ -791,48 +791,49 @@ describe('TasksPage as a decorations page', () => {
     ).toBeTruthy();
   });
 
-  describe('the starter list', () => {
+  describe('the suggestions', () => {
+    const choose = () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Choose suggestions' }));
+
     beforeEach(() => {
       shared.holidayData = { tasks: [] };
     });
 
-    it('is offered on an empty page that has one', () => {
+    it('are offered on an empty page that has a list, in its own words', () => {
       renderPage(decorationPageConfigs.kwanzaa);
 
       expect(screen.getByText('✨ Set Up Kwanzaa Decorations')).toBeTruthy();
       expect(
         screen.getByText('Would you like to add common Kwanzaa decoration tasks?'),
       ).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Add Default Tasks' })).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Choose suggestions' }),
+      ).toBeTruthy();
     });
 
-    it('is not offered on New Year, which has no traditional list', () => {
-      renderPage(decorationPageConfigs['new-year']);
-
-      expect(screen.queryByText(/Set Up/)).toBeNull();
-    });
-
-    it('is not offered on a page that has none', () => {
+    it('are not offered on a page that has none', () => {
       renderPage(decorationPageConfigs.thanksgiving);
 
       expect(screen.queryByText(/Set Up/)).toBeNull();
+      expect(screen.queryByText(/Suggestions/)).toBeNull();
     });
 
-    it('is not offered once there are decorations', () => {
-      shared.holidayData = {
-        tasks: [task('a', 'Hang lights', { category: 'Decorations' })],
-      };
+    it('open a picker with every suggestion ticked, to add all or only some', async () => {
       renderPage(decorationPageConfigs.kwanzaa);
 
-      expect(screen.queryByText(/Set Up/)).toBeNull();
-    });
-
-    it('adds every starter decoration, then goes away', async () => {
-      renderPage(decorationPageConfigs.kwanzaa);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Add Default Tasks' }));
-
+      choose();
       const items = decorationPageConfigs.kwanzaa.starter.items;
+      expect(
+        screen.getByRole('dialog', { name: 'Suggested decorations' }),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(`${items.length} of ${items.length} selected`),
+      ).toBeTruthy();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: `Add ${items.length} selected` }),
+      );
+
       await waitFor(() =>
         expect(mutations.createTask).toHaveBeenCalledTimes(items.length),
       );
@@ -846,14 +847,37 @@ describe('TasksPage as a decorations page', () => {
       await waitFor(() => expect(screen.queryByText(/Set Up/)).toBeNull());
     });
 
-    it('stays when adding fails, so it can be tried again', async () => {
+    it('add only the ones picked', async () => {
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      choose();
+      fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+      const items = decorationPageConfigs.kwanzaa.starter.items;
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: new RegExp(items[2].title) }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Add 1 selected' }));
+
+      await waitFor(() => expect(mutations.createTask).toHaveBeenCalledTimes(1));
+      expect(mutations.createTask.mock.calls[0][0].title).toBe(items[2].title);
+    });
+
+    it('stay when adding fails, so they can be tried again', async () => {
       mutations.createTask.mockRejectedValue(new Error('boom'));
       renderPage(decorationPageConfigs.kwanzaa);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Add Default Tasks' }));
+      choose();
+      const items = decorationPageConfigs.kwanzaa.starter.items;
+      fireEvent.click(
+        screen.getByRole('button', { name: `Add ${items.length} selected` }),
+      );
 
-      await waitFor(() => expect(console.error).toHaveBeenCalled());
-      expect(screen.getByText('✨ Set Up Kwanzaa Decorations')).toBeTruthy();
+      expect((await screen.findByRole('alert')).textContent).toMatch(
+        /Something went wrong/,
+      );
+      expect(
+        screen.getByRole('dialog', { name: 'Suggested decorations' }),
+      ).toBeTruthy();
     });
 
     it('can be skipped', () => {
@@ -865,13 +889,54 @@ describe('TasksPage as a decorations page', () => {
       expect(mutations.createTask).not.toHaveBeenCalled();
     });
 
-    it('does nothing while the holiday has not been found', () => {
+    it('add nothing while the holiday has not been found', async () => {
       shared.holidayId = null;
       renderPage(decorationPageConfigs.kwanzaa);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Add Default Tasks' }));
+      choose();
+      const items = decorationPageConfigs.kwanzaa.starter.items;
+      fireEvent.click(
+        screen.getByRole('button', { name: `Add ${items.length} selected` }),
+      );
 
+      expect(await screen.findByRole('alert')).toBeTruthy();
       expect(mutations.createTask).not.toHaveBeenCalled();
+    });
+
+    it('stay available as a small button once the page has some, for the ones not added', async () => {
+      const items = decorationPageConfigs.kwanzaa.starter.items;
+      shared.holidayData = {
+        tasks: [task('a', items[0].title, { category: 'Decorations' })],
+      };
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      expect(screen.queryByText(/Set Up/)).toBeNull();
+      fireEvent.click(
+        screen.getByRole('button', { name: `💡 Suggestions (${items.length - 1})` }),
+      );
+      expect(screen.getByText('Already added')).toBeTruthy();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: `Add ${items.length - 1} selected` }),
+      );
+      await waitFor(() =>
+        expect(mutations.createTask).toHaveBeenCalledTimes(items.length - 1),
+      );
+      expect(
+        mutations.createTask.mock.calls.map(([call]: any) => call.title),
+      ).not.toContain(items[0].title);
+    });
+
+    it('are gone once every one has been added', () => {
+      const items = decorationPageConfigs.kwanzaa.starter.items;
+      shared.holidayData = {
+        tasks: items.map((item, i) =>
+          task(`t${i}`, item.title, { category: 'Decorations' }),
+        ),
+      };
+      renderPage(decorationPageConfigs.kwanzaa);
+
+      expect(screen.queryByText(/Suggestions/)).toBeNull();
     });
   });
 
@@ -1030,12 +1095,12 @@ describe('TasksPage as the resolution tracker and reservations pages', () => {
     expect(screen.queryByText(/No completed/)).toBeNull();
   });
 
-  describe('the reservations starter list', () => {
+  describe('the reservations suggestions', () => {
     beforeEach(() => {
       shared.holidayData = { tasks: [] };
     });
 
-    it('is offered on an empty page, in its own words', () => {
+    it('are offered on an empty page, in its own words', () => {
       renderPage(checklistPageConfigs.reservations);
 
       expect(screen.getByText("💖 Set Up Valentine's Reservations")).toBeTruthy();
@@ -1044,17 +1109,16 @@ describe('TasksPage as the resolution tracker and reservations pages', () => {
           "Would you like to add some common Valentine's reservation planning tasks?",
         ),
       ).toBeTruthy();
-      expect(
-        screen.getByRole('button', { name: 'Add Default Reservations' }),
-      ).toBeTruthy();
     });
 
-    it('adds all ten reservations in the Reservations category', async () => {
+    it('add the ten reservations in the Reservations category', async () => {
       renderPage(checklistPageConfigs.reservations);
 
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Add Default Reservations' }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: 'Choose suggestions' }));
+      expect(
+        screen.getByRole('dialog', { name: 'Suggested reservations' }),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Add 10 selected' }));
 
       await waitFor(() => expect(mutations.createTask).toHaveBeenCalledTimes(10));
       for (const [call] of mutations.createTask.mock.calls) {
