@@ -65,7 +65,8 @@ test("the reservations page offers Valentine's starter list, and adding it fills
   const page = await context.newPage();
   await page.goto('/valentines/reservations');
   await expect(page.getByText("💖 Set Up Valentine's Reservations")).toBeVisible();
-  await page.getByRole('button', { name: 'Add Default Reservations' }).click();
+  await page.getByRole('button', { name: 'Choose suggestions' }).click();
+  await page.getByRole('button', { name: 'Add 10 selected' }).click();
 
   await expect(page.getByText("Valentine's Restaurant Reservation")).toBeVisible();
   await expect(page.getByText('Pending Reservations (10)')).toBeVisible();

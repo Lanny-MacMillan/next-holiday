@@ -1,8 +1,6 @@
 import type { TaskPageConfig } from '@/config/taskPageConfigs';
 import { KWANZAA_DECORATIONS } from '@/config/holidaySeeds';
 
-type StarterItems = NonNullable<TaskPageConfig['starter']>['items'];
-
 const common = {
   variant: 'decorations',
   taskCategory: 'Decorations',
@@ -71,8 +69,6 @@ export const decorationPageConfigs = {
     starter: {
       heading: '✨ Set Up Kwanzaa Decorations',
       question: 'Would you like to add common Kwanzaa decoration tasks?',
-      button: 'Add Default Tasks',
-      tone: 'blue',
       items: KWANZAA_DECORATIONS,
     },
   },

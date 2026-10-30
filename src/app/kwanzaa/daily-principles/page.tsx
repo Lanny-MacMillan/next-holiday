@@ -22,8 +22,15 @@ import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import { toDateOnlyString } from '@/lib/dates';
 import { KWANZAA_PRINCIPLES, nextKwanzaaStart } from '@/config/holidaySeeds';
+import Suggestions, { type Suggestion } from '@/components/common/Suggestions';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
+
+const suggestedPrinciples: Suggestion[] = KWANZAA_PRINCIPLES.map(principle => ({
+  title: principle.name,
+  description: principle.description,
+  priority: principle.priority,
+}));
 
 export default function DailyPrinciplesPage() {
   const dispatch = useAppDispatch();
@@ -91,7 +98,7 @@ export default function DailyPrinciplesPage() {
     if (displayTasks.length === 0 && homeInitialized) {
       setShowDefaultPrinciples(true);
     }
-  }, [displayTasks, homeInitialized]);
+  }, [displayTasks.length, homeInitialized]);
 
   const handleToggleTask = async (taskId: string) => {
     if (!holidayId || !auth0User) return;
@@ -159,37 +166,30 @@ export default function DailyPrinciplesPage() {
     }
   }
 
-  async function addDefaultPrinciples() {
-    if (!holidayId || !auth0User) return;
+  async function addPrincipleSuggestions(items: Suggestion[]) {
+    if (!holidayId || !auth0User) throw new Error('No holiday');
 
-    try {
-      // Add default principles one at a time
-      for (let i = 0; i < KWANZAA_PRINCIPLES.length; i++) {
-        const principle = KWANZAA_PRINCIPLES[i];
+    for (const item of items) {
+      const principle = KWANZAA_PRINCIPLES.find(p => p.name === item.title);
+      // Each principle falls on its day of the coming Kwanzaa
+      const dueDateString = new Date(
+        nextKwanzaaStart().getTime() +
+          ((principle?.dayNumber ?? 1) - 1) * 86_400_000,
+      )
+        .toISOString()
+        .split('T')[0];
 
-        // Each principle falls on its day of the coming Kwanzaa
-        const dueDateString = new Date(
-          nextKwanzaaStart().getTime() + (principle.dayNumber - 1) * 86_400_000,
-        )
-          .toISOString()
-          .split('T')[0];
+      const result = await createTask({
+        title: item.title,
+        description: item.description,
+        priority: item.priority,
+        assigned_to: undefined,
+        due_date: dueDateString,
+        category: 'Daily Principles',
+      });
 
-        const result = await createTask({
-          title: principle.name,
-          description: principle.description,
-          priority: principle.priority,
-          assigned_to: undefined,
-          due_date: dueDateString,
-          category: 'Daily Principles',
-        });
-
-        // Update Redux state immediately
-        dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
-      }
-
-      setShowDefaultPrinciples(false);
-    } catch (error) {
-      console.error('Failed to add default principles:', error);
+      // Update Redux state immediately
+      dispatch(addTaskToHomeData({ holidayId: holidayId, task: result }));
     }
   }
 
@@ -292,31 +292,18 @@ export default function DailyPrinciplesPage() {
       />
       <main className="w-full max-w-4xl flex flex-col gap-6">
         {/* Default Principles Prompt */}
-        {showDefaultPrinciples && (
-          <div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-            <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              🕯️ Set Up Kwanzaa Principles
-            </h3>
-            <p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
-              Would you like to add the seven traditional Kwanzaa principles to track
-              daily?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addDefaultPrinciples}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
-              >
-                Add Default Principles
-              </button>
-              <button
-                onClick={() => setShowDefaultPrinciples(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
+        <Suggestions
+          heading={'🕯️ Set Up Kwanzaa Principles'}
+          question={
+            'Would you like to add the seven traditional Kwanzaa principles to track daily?'
+          }
+          noun="Kwanzaa principles"
+          items={suggestedPrinciples}
+          existingTitles={displayTasks.map((task: any) => task.title)}
+          onAdd={addPrincipleSuggestions}
+          showPrompt={showDefaultPrinciples}
+          onDismissPrompt={() => setShowDefaultPrinciples(false)}
+        />
 
         <AddButton
           title="Principle"
