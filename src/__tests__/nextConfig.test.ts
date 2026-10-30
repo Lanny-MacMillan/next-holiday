@@ -18,10 +18,9 @@ describe('next.config security headers', () => {
     env.NODE_ENV = 'development';
     const headers = await headerValues('phase-production-build');
     expect(headers['Strict-Transport-Security']).toBe('max-age=31536000');
-    expect(headers['Content-Security-Policy-Report-Only']).not.toContain('ws:');
-    expect(headers['Content-Security-Policy-Report-Only']).not.toContain(
-      'unsafe-eval',
-    );
+    expect(headers['Content-Security-Policy']).not.toContain('ws:');
+    expect(headers['Content-Security-Policy']).not.toContain('unsafe-eval');
+    expect(headers['Content-Security-Policy-Report-Only']).toBeUndefined();
   });
 
   it('allow what the dev server needs under `next dev`', async () => {
