@@ -141,6 +141,30 @@ describe('logger', () => {
     });
   });
 
+  describe('hostile input', () => {
+    it('cannot change a prototype through a key such as __proto__', () => {
+      const hostile = JSON.parse(
+        '{"__proto__": {"polluted": true}, "path": "/api/x"}',
+      );
+
+      logger.info('Request body', hostile);
+
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+      const { detail } = lineOf(log);
+      expect(detail.path).toBe('/api/x');
+      expect(Object.keys(detail)).toContain('__proto__');
+      expect(detail.polluted).toBeUndefined();
+    });
+
+    it('redacts a sensitive field next to a hostile key', () => {
+      const hostile = JSON.parse('{"__proto__": {"x": 1}, "token": "t"}');
+
+      logger.info('Request body', hostile);
+
+      expect(lineOf(log).detail.token).toBe('[redacted]');
+    });
+  });
+
   describe('keeping lines small and safe to write', () => {
     it('shortens long text', () => {
       logger.info('x'.repeat(2000));

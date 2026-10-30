@@ -25,11 +25,13 @@ function clean(value: unknown, depth = 0): unknown {
   if (Array.isArray(value))
     return value.slice(0, MAX_ITEMS).map(v => clean(v, depth + 1));
 
-  const out: Record<string, unknown> = {};
-  for (const [key, inner] of Object.entries(value)) {
-    out[key] = SENSITIVE_KEY.test(key) ? '[redacted]' : clean(inner, depth + 1);
-  }
-  return out;
+  // fromEntries defines own properties, so a key such as __proto__ cannot reach the prototype
+  return Object.fromEntries(
+    Object.entries(value).map(([key, inner]) => [
+      key,
+      SENSITIVE_KEY.test(key) ? '[redacted]' : clean(inner, depth + 1),
+    ]),
+  );
 }
 
 function describeError(error: Error) {
