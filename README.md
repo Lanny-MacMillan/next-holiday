@@ -24,6 +24,7 @@ Next Holiday is a full-stack app for planning holidays alone or with family and 
 
 - **Multi-Tenant Architecture**: Account-based organization for families and households; every query is scoped to the caller's accounts and shares
 - **Database-Backed Persistence**: MySQL database with 20 tables
+- **Traditions built in**: Adding Hanukkah or Kwanzaa fills in the traditional items (candle lighting, the seven principles, decorations), and other pages offer optional suggestions you pick from
 - **Real-Time Notifications**: Microservice-based SSE notifications for instant updates across all devices
 - **Multi-User Collaboration**: Share holidays with family members and friends with role-based permissions
 - **15+ Holiday Types**: Comprehensive support from Christmas to Baby Showers, Anniversary to Kwanzaa
@@ -199,6 +200,9 @@ The SSE service handles:
 - **User Management**: Automated profile sync and account creation
 - **Session**: Auth0's browser session with refresh tokens; the app does not use its own session cookies
 - **Multi-Factor Authentication**: Optional MFA through Auth0 for enhanced security
+- **Security Headers**: A Content-Security-Policy is enforced in production (report-only under `next dev`), along with HSTS and the other standard headers; the app makes no calls to third-party IP lookups
+- **Rate Limiting**: Per-IP limit on `/api/*` (300 a minute by default, `RATE_LIMIT_PER_MINUTE` to change it)
+- **Email Verification**: A new account that hasn't verified its email gets a dialog explaining how to, and a notice if it still hasn't
 - **Logging**: Server logs are one JSON line per event with a level and no secrets (tokens, emails and similar fields are redacted); `LOG_LEVEL` sets how much is written, and every API response carries an `x-request-id` header to find a request in the logs
 
 ### Real-Time Infrastructure
@@ -216,7 +220,8 @@ The SSE service handles:
 
 - **Jest 29.7.0**: Testing framework with comprehensive test coverage
 - **React Testing Library**: Component and integration testing utilities
-- **Playwright**: Browser tests against a real Auth0 test tenant (sign-in, adding a gift, access isolation between users, sharing and accepting an invite, opening a page directly)
+- **Playwright**: About 50 browser tests against a real Auth0 test tenant and a throwaway MySQL database in CI: sign-in, every list type, access isolation between users, sharing and invites, Plus features, traditions and suggestions, accessibility and a clean console
+- **Shared page components**: Gift lists, cards, guest lists and task pages are each one component driven by a per-holiday config in `src/config`, so adding a holiday is a config entry (see [page unification](docs/page-unification.md))
 - **ESLint 9**: Code linting with Next.js and TypeScript rules
 - **Prettier 3.8.1**: Code formatting with consistent style
 - **TypeScript Strict Mode**: Full type checking across frontend and backend
@@ -312,7 +317,8 @@ The MySQL database consists of 20 tables designed for multi-tenant holiday plann
 
 - **AWS CloudWatch**: Application logs, metrics, and alarms
 - **Prisma Query Logging**: Database query performance monitoring (dev mode)
-- **Error Tracking**: Console-based error logging (integrate Sentry for production)
+- **Error Tracking**: Sentry, enabled by `NEXT_PUBLIC_SENTRY_DSN`. Setting `SENTRY_AUTH_TOKEN` at build time also uploads source maps, so production errors show real file and line numbers (a failed upload only warns)
+- **Health Check**: `GET /api/health` reports database and configuration status
 - **Performance Metrics**: Next.js analytics and Core Web Vitals tracking
 
 ## 🤝 Collaboration Features
@@ -379,6 +385,10 @@ Check it came up with `pm2 list` (status `online`) and `curl localhost:4000/heal
 - `API_SECRET` on the instance must equal the app's `SSE_API_SECRET`. The app uses it to sign stream tickets and to call `/api/notify`.
 - `CORS_ORIGINS` on the instance must list every origin the app is served from.
 - When both repos change, deploy the app first, then the service.
+
+### Monitoring (Sentry)
+
+Errors go to Sentry when `NEXT_PUBLIC_SENTRY_DSN` is set. To also get readable stack traces, create an organisation auth token in Sentry (Settings, Developer Settings, Organization Tokens) and add it in Amplify as `SENTRY_AUTH_TOKEN` (never a `NEXT_PUBLIC_` name), then redeploy. `SENTRY_ORG` and `SENTRY_PROJECT` override the defaults. See [design decisions](docs/decisions.md).
 
 ### Payments
 
