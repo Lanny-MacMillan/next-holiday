@@ -10,6 +10,7 @@ import {
   broadcastNotification,
 } from '@/lib/realTimeNotifications';
 import { validateAssigneeAccess } from '@/lib/assigneeValidation';
+import { logger } from '@/lib/logger';
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -89,7 +90,7 @@ export async function POST(
             );
           } catch (broadcastError) {
             // Silently log broadcast failures - they never affect the API
-            console.warn(
+            logger.warn(
               'Real-time notification broadcast failed (task assignment succeeded):',
               broadcastError,
             );
@@ -98,7 +99,7 @@ export async function POST(
       } catch (notificationError) {
         // CRITICAL: Even if database notification fails, task creation still succeeds
         // This maintains backward compatibility with existing behavior
-        console.error(
+        logger.error(
           'Notification system failed (task assignment succeeded):',
           notificationError,
         );
@@ -228,7 +229,7 @@ export async function PUT(
           }
         } catch (completionError) {
           // Silently log completion notification failures
-          console.warn(
+          logger.warn(
             'Completion notification failed (task completion succeeded):',
             completionError,
           );
@@ -386,7 +387,7 @@ export async function PATCH(
           }
         } catch (assignmentError) {
           // Silently log assignment notification failures
-          console.warn(
+          logger.warn(
             'Assignment change notification failed (task update succeeded):',
             assignmentError,
           );
@@ -427,7 +428,7 @@ export async function PATCH(
             );
           }
         } catch (completionError) {
-          console.warn(
+          logger.warn(
             'Completion notification failed (task completion succeeded):',
             completionError,
           );

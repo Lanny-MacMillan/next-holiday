@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { ok, badRequest, serverError } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/notifications
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     return ok(allNotifications);
   } catch (err) {
-    console.error('Error fetching notifications:', err);
+    logger.error('Error fetching notifications:', err);
     return serverError('Failed to fetch notifications');
   }
 }
@@ -184,7 +185,7 @@ export async function PATCH(request: NextRequest) {
       invitesHandled: inviteIds.length,
     });
   } catch (err) {
-    console.error('Error updating notifications:', err);
+    logger.error('Error updating notifications:', err);
     return serverError('Failed to update notifications');
   }
 }
@@ -216,7 +217,7 @@ export async function DELETE(request: NextRequest) {
       deletedCount: deleted.count,
     });
   } catch (err) {
-    console.error('Error deleting old notifications:', err);
+    logger.error('Error deleting old notifications:', err);
     return serverError('Failed to delete old notifications');
   }
 }

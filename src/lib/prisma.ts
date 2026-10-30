@@ -1,5 +1,6 @@
 import { PrismaClient } from '../generated/prisma';
 import { installPrismaTracer } from './tracePrisma';
+import { logger } from '@/lib/logger';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -29,7 +30,7 @@ if (process.env.NODE_ENV !== 'production') {
   try {
     installPrismaTracer(prisma);
   } catch (error) {
-    console.warn('[trace] Failed to install Prisma tracer:', error);
+    logger.warn('[trace] Failed to install Prisma tracer:', error);
   }
   globalForPrisma.prisma = prisma;
 }
@@ -42,7 +43,7 @@ process.on('beforeExit', async () => {
 // Ensure connection is established on startup
 if (process.env.NODE_ENV !== 'production') {
   prisma.$connect().catch(err => {
-    console.error('Failed to connect to database:', err);
+    logger.error('Failed to connect to database:', err);
   });
 }
 
@@ -56,13 +57,13 @@ export async function ensurePrismaConnection() {
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
-    console.error('Prisma connection check failed:', error);
+    logger.error('Prisma connection check failed:', error);
     // Try to reconnect
     try {
       await prisma.$connect();
       return true;
     } catch (reconnectError) {
-      console.error('Failed to reconnect to database:', reconnectError);
+      logger.error('Failed to reconnect to database:', reconnectError);
       return false;
     }
   }

@@ -67,6 +67,21 @@ const eslintConfig = [
     rules: { 'no-restricted-syntax': ['warn', ...dataLoadingRules] },
   },
   {
+    // Server code logs through the logger (one JSON line per event, no secrets)
+    files: [
+      'src/app/api/**',
+      'src/lib/auth.ts',
+      'src/lib/realTimeNotifications.ts',
+      'src/lib/server/**',
+      'src/lib/prisma.ts',
+      'src/lib/http.ts',
+      'src/lib/assigneeValidation.ts',
+      'src/middleware.ts',
+      'src/instrumentation.ts',
+    ],
+    rules: { 'no-console': 'error' },
+  },
+  {
     files: [
       '**/__tests__/**',
       '**/*.test.{ts,tsx}',

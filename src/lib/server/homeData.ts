@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { toPlain } from '@/lib/json';
 import { HomeData } from '@/types/home';
+import { logger } from '@/lib/logger';
 
 /**
  * Fetch all data needed for the home page on the server side
@@ -276,7 +277,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
       needsHolidaySelection: holidayPreferences.length === 0,
     };
   } catch (error) {
-    console.error('Error fetching home data:', error);
+    logger.error('Error fetching home data:', error);
     throw new Error('Failed to fetch home data');
   }
 }

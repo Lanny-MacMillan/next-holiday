@@ -7,6 +7,7 @@ import { requireAccountAccess } from '@/lib/rbac';
 import { toPlain } from '@/lib/json';
 import { dateOnlyToUTC, toDateOnlyString } from '@/lib/dates';
 import { ok, badRequest, serverError, routeError } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 // Validation schemas
 const HolidayPreferenceSchema = z.object({
@@ -262,11 +263,11 @@ export async function POST(request: NextRequest) {
     return ok(toPlain(results));
   } catch (error) {
     if (error instanceof Response) return error;
-    console.error('Error saving holiday preferences:', error);
+    logger.error('Error saving holiday preferences:', error);
 
     // Enhanced error logging
     if (error instanceof Error) {
-      console.error('Error details:', {
+      logger.error('Error details:', {
         name: error.name,
         message: error.message,
         stack: error.stack,

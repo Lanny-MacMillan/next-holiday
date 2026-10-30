@@ -6,6 +6,7 @@ import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { ok, badRequest, notFound, routeError } from '@/lib/http';
 import { getUserName } from '@/lib/notifications';
 import { broadcastAssignment } from '@/lib/realTimeNotifications';
+import { logger } from '@/lib/logger';
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -113,7 +114,7 @@ export async function PATCH(
             );
           }
         } catch (error) {
-          console.error(
+          logger.error(
             '💥 [TASK PATCH REAL] Assignment notification failed:',
             error,
           );

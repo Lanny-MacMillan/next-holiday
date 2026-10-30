@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, forbiddenResponse } from '@/lib/routeAuth';
 import { cleanupUserShareData } from '@/lib/server/shareCleanup';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -100,7 +101,7 @@ export async function POST(
         } catch (error: any) {
           // Ignore if already exists due to race condition
           if (error.code !== 'P2002') {
-            console.error('Error adding holiday owner to share:', error);
+            logger.error('Error adding holiday owner to share:', error);
           }
         }
       }
@@ -114,7 +115,7 @@ export async function POST(
 
     return NextResponse.json(updatedShare);
   } catch (error) {
-    console.error('Error adding member to share:', error);
+    logger.error('Error adding member to share:', error);
     return NextResponse.json(
       { error: 'Failed to add member to share' },
       { status: 500 },
@@ -221,7 +222,7 @@ export async function DELETE(
     try {
       await cleanupUserShareData(shareId, userId);
     } catch (cleanupError) {
-      console.error('Error during cleanup:', cleanupError);
+      logger.error('Error during cleanup:', cleanupError);
       // Don't fail the member removal if cleanup fails
     }
 
@@ -299,7 +300,7 @@ export async function DELETE(
 
     return NextResponse.json(responseShare);
   } catch (error) {
-    console.error('Error removing member from share:', error);
+    logger.error('Error removing member from share:', error);
     return NextResponse.json(
       { error: 'Failed to remove member from share' },
       { status: 500 },

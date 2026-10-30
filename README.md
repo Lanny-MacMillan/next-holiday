@@ -193,6 +193,7 @@ The SSE service handles:
 - **User Management**: Automated profile sync and account creation
 - **Session**: Auth0's browser session with refresh tokens; the app does not use its own session cookies
 - **Multi-Factor Authentication**: Optional MFA through Auth0 for enhanced security
+- **Logging**: Server logs are one JSON line per event with a level and no secrets (tokens, emails and similar fields are redacted); `LOG_LEVEL` sets how much is written, and every API response carries an `x-request-id` header to find a request in the logs
 
 ### Real-Time Infrastructure
 

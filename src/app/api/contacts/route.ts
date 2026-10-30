@@ -12,6 +12,7 @@ import {
   forbidden,
   serverError,
 } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 // Validation schemas
 const CreateContactSchema = z.object({
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof Error && error.message === 'Authentication required') {
       return unauthorized('Authentication required');
     }
-    console.error('Error fetching contacts:', error);
+    logger.error('Error fetching contacts:', error);
     return serverError('Failed to fetch contacts');
   }
 }
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === 'Authentication required') {
       return unauthorized('Authentication required');
     }
-    console.error('Error creating contact:', error);
+    logger.error('Error creating contact:', error);
     return serverError('Failed to create contact');
   }
 }
