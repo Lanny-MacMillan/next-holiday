@@ -8,6 +8,12 @@ A holiday planning app built with Next.js, MySQL and Prisma. Create, organize, a
 [![CodeQL](https://github.com/Lanny-MacMillan/next-holiday/actions/workflows/codeql.yml/badge.svg)](https://github.com/Lanny-MacMillan/next-holiday/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+![Next Holiday: light and dark themes with a countdown for every holiday](docs/screenshots/nextHoliday.png)
+
+| Plus features and the dashboards                                                                        | Holiday list and a holiday's page                                                                                     |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| ![Upgrade to Plus dialog over a collage of the app's screens](docs/screenshots/nextHolidayGameplay.png) | ![Dark holiday list beside a light Christmas page with a budget tracker](docs/screenshots/nextHolidayGameplayAlt.png) |
+
 How it fits together: [architecture](docs/architecture.md) (diagrams of the request, auth and live-notification flows) and [design decisions](docs/decisions.md).
 
 ## Overview
