@@ -17,6 +17,8 @@ export interface User {
   id?: string;
   isFirstLogin?: boolean;
   lastUpdated?: string;
+  // Set only when the user cancels in the app, so a stale server reply cannot undo it
+  downgradedAt?: string;
 }
 
 interface UserState {
