@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 const DEFAULT_NOTIFICATION_PREFERENCES = {
   assignmentNotifications: true,
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     return Response.json(preferences);
   } catch (error) {
-    console.error('Error fetching notification preferences:', error);
+    logger.error('Error fetching notification preferences:', error);
     return Response.json(
       { error: 'Failed to fetch notification preferences' },
       { status: 500 },
@@ -85,7 +86,7 @@ export async function PUT(request: NextRequest) {
 
     return Response.json(updatedPreferences);
   } catch (error) {
-    console.error('Error updating notification preferences:', error);
+    logger.error('Error updating notification preferences:', error);
     return Response.json(
       { error: 'Failed to update notification preferences' },
       { status: 500 },

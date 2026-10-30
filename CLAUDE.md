@@ -23,6 +23,7 @@ CI runs four parallel jobs on every PR: `lint` (also checks formatting and dead 
 - A user id from a request body, query string or header is never trusted. Use `authenticate()` from `src/lib/routeAuth.ts` and act as the verified user.
 - Every route that touches a resource must check the caller owns it or belongs to it (`assertHolidayAccess`, `isShareParticipant`, `src/lib/rbac.ts`). Look records up scoped to the authorised parent, not by id alone.
 - New API routes need tests covering the unauthenticated and wrong-user cases.
+- Server code logs through `logger` from `src/lib/logger.ts` (one JSON line per event, with a level; it redacts tokens, emails and similar fields). `no-console` is an error in API routes and server libs. Set `LOG_LEVEL` to `debug`, `info` (default), `warn` or `error`; debug lines are off by default. Every API response carries an `x-request-id` header, which the middleware's log lines also carry.
 - Files named `route.ts` may only export HTTP handlers (and Next route config). Exporting anything else breaks `next build`, which `typecheck` does not catch; keep shared constants in `src/lib`.
 
 ## Tests

@@ -32,6 +32,7 @@ frontend:
         - env | grep -e CLOUDWATCH_SECRET_ACCESS_KEY >> .env.production || true
         - env | grep -e PERFORMANCE_CLOUDWATCH_ENABLED >> .env.production || true
         - env | grep -e NEXT_PUBLIC_SENTRY_DSN >> .env.production || true
+        - env | grep -e LOG_LEVEL >> .env.production || true
         - env | grep -e NEXT_PUBLIC_UMAMI_WEBSITE_ID >> .env.production || true
         - env | grep -e NEXT_PUBLIC_UMAMI_SCRIPT_URL >> .env.production || true
         - npm run build

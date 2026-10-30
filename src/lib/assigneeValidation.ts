@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { logger } from '@/lib/logger';
 
 /**
  * Validates that a user exists and has access to a holiday
@@ -73,7 +74,7 @@ export async function validateAssigneeAccess(
       user,
     };
   } catch (error) {
-    console.error('💥 validateAssigneeAccess error:', error);
+    logger.error('💥 validateAssigneeAccess error:', error);
     return {
       valid: false,
       error: 'Failed to validate user access',

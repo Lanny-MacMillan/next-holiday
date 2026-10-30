@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 export interface DeleteHolidayDataParams {
   accountId: string;
@@ -106,7 +107,7 @@ export async function deleteHolidayData(
       holidayName: holiday.name,
     };
   } catch (error) {
-    console.error('Error in deleteHolidayData:', error);
+    logger.error('Error in deleteHolidayData:', error);
 
     return {
       dryRun,
@@ -238,7 +239,7 @@ async function countHolidayDependentRecords(
 
     return totals;
   } catch (error) {
-    console.error('Error counting dependent records:', error);
+    logger.error('Error counting dependent records:', error);
     throw new Error('Failed to count dependent records');
   }
 }
@@ -292,7 +293,7 @@ export async function validateHolidayDeletePermission(
       holiday,
     };
   } catch (error) {
-    console.error('Error validating holiday delete permission:', error);
+    logger.error('Error validating holiday delete permission:', error);
     return {
       canDelete: false,
       error: 'Failed to validate permissions',

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // When a user stops being on Plus they leave the holidays they were invited to,
 // and the people they shared with are removed (their own data stays).
@@ -40,7 +41,7 @@ export async function cleanupSharesOnDowngrade(userId: string) {
       });
       cleanup.sharesLeft++;
     } catch (error: any) {
-      console.error(`❌ Failed to leave share ${share.id}:`, error);
+      logger.error(`❌ Failed to leave share ${share.id}:`, error);
       cleanup.errors.push(
         `Failed to leave share for ${share.holiday.holidayType}: ${error.message}`,
       );
@@ -75,7 +76,7 @@ export async function cleanupSharesOnDowngrade(userId: string) {
         });
         cleanup.membersRemoved++;
       } catch (error: any) {
-        console.error(`❌ Failed to remove member from share ${share.id}:`, error);
+        logger.error(`❌ Failed to remove member from share ${share.id}:`, error);
         cleanup.errors.push(
           `Failed to remove member from ${share.holiday.holidayType}: ${error.message}`,
         );
@@ -91,7 +92,7 @@ export async function cleanupSharesOnDowngrade(userId: string) {
         },
       });
     } catch (error: any) {
-      console.error(
+      logger.error(
         `❌ Failed to delete pending invites for share ${share.id}:`,
         error,
       );

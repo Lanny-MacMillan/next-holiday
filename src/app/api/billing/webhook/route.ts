@@ -3,6 +3,7 @@ import { paymentsProvider } from '@/lib/payments';
 import { getStripe } from '@/lib/stripe';
 import { activatePlus, deactivatePlus } from '@/lib/server/billing';
 import { badRequest, notFound, serverError } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 // Stripe calls this, not a signed-in user: the signature is what authenticates it.
 export async function POST(request: NextRequest) {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     // A 500 makes Stripe retry later.
-    console.error('Error handling Stripe webhook:', error);
+    logger.error('Error handling Stripe webhook:', error);
     return serverError('Failed to process event');
   }
 }
