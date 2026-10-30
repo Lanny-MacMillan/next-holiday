@@ -16,7 +16,7 @@ describe('contentSecurityPolicy', () => {
     expect(csp).toMatch(/connect-src [^;]*https:\/\/sse\.example\.com(?!\/)/);
     expect(csp).toMatch(/script-src [^;]*https:\/\/stats\.example\.com/);
     expect(csp).toContain('frame-src https://tenant.us.auth0.com');
-    expect(csp).toMatch(/connect-src [^;]*https:\/\/ipapi\.co/);
+    expect(csp).not.toContain('ipapi.co');
     expect(csp).toMatch(/connect-src [^;]*https:\/\/o1\.ingest\.sentry\.io/);
   });
 
@@ -66,9 +66,20 @@ describe('securityHeaders', () => {
     expect(header('Permissions-Policy')).toContain('camera=()');
   });
 
-  it('keeps the CSP report-only for now', () => {
-    expect(header('Content-Security-Policy-Report-Only')).toBeTruthy();
-    expect(header('Content-Security-Policy')).toBeUndefined();
+  it('enforces the CSP in production', () => {
+    expect(header('Content-Security-Policy', env, false)).toContain(
+      "default-src 'self'",
+    );
+    expect(
+      header('Content-Security-Policy-Report-Only', env, false),
+    ).toBeUndefined();
+  });
+
+  it('only reports under next dev, so dev tooling is never blocked', () => {
+    expect(header('Content-Security-Policy-Report-Only', env, true)).toContain(
+      'ws:',
+    );
+    expect(header('Content-Security-Policy', env, true)).toBeUndefined();
   });
 
   it('sends HSTS outside development only', () => {
