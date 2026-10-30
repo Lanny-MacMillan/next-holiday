@@ -86,7 +86,7 @@ export default function CancelSubscriptionModal({
         }),
       );
 
-      // Set lastUpdated to track recent change
+      // Mark the downgrade so a home load right after does not undo it
       dispatch(
         setUser({
           sub: auth0User.sub!,
@@ -98,6 +98,7 @@ export default function CancelSubscriptionModal({
           subscriptionStartDate: undefined,
           subscriptionEndDate: undefined,
           lastUpdated: new Date().toISOString(),
+          downgradedAt: new Date().toISOString(),
         }),
       );
 

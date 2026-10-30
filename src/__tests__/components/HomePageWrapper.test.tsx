@@ -179,14 +179,14 @@ describe('HomePageWrapper', () => {
       expect(store.getState().user.user?.subscriptionPlan).toBe('free');
     });
 
-    it('keeps a downgrade made in the last 30 seconds instead of stale server data', async () => {
+    it('keeps a downgrade made in the app in the last 30 seconds instead of stale server data', async () => {
       act(() => {
         store.dispatch(
           setUser({
             sub: 'auth0|me',
             isInDb: true,
             subscriptionPlan: 'free',
-            lastUpdated: new Date().toISOString(),
+            downgradedAt: new Date().toISOString(),
           } as never),
         );
       });
@@ -206,7 +206,7 @@ describe('HomePageWrapper', () => {
             sub: 'auth0|me',
             isInDb: true,
             subscriptionPlan: 'free',
-            lastUpdated: new Date(Date.now() - 60_000).toISOString(),
+            downgradedAt: new Date(Date.now() - 60_000).toISOString(),
           } as never),
         );
       });
