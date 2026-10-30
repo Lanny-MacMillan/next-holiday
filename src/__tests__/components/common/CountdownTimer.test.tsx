@@ -203,6 +203,28 @@ describe('CountdownTimer with an active countdown', () => {
     expect(screen.getByText('Christmas is here!')).toBeInTheDocument();
   });
 
+  it.each(STATE_KEYS.filter(([holiday]) => holiday))(
+    'says %s is here once its date arrives',
+    (holiday, key) => {
+      jest.useFakeTimers().setSystemTime(NOW);
+      ({ unmount } = mount({ holiday }));
+      // earlier tests leave a saved date behind for some holidays
+      const set = screen.queryByRole('button', { name: /(Set|Enable) Countdown/ });
+      if (set) {
+        fireEvent.click(set);
+        fireEvent.click(screen.getByRole('button', { name: 'pick date' }));
+      }
+      expect(slice(key).isActive).toBe(true);
+
+      act(() => {
+        jest.setSystemTime(new Date(2031, 6, 1));
+        jest.advanceTimersByTime(1000);
+      });
+
+      expect(screen.getByText(`${holiday} is here!`)).toBeInTheDocument();
+    },
+  );
+
   it('clicking it reopens the picker with a delete option, and a new date replaces the old', () => {
     start(2 * DAY);
     fireEvent.click(screen.getByText(/\dd /));
