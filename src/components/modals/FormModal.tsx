@@ -301,7 +301,7 @@ export default function FormModal({
                       }
                       className="bg-blue-500 text-white px-2 sm:px-3 py-2 rounded text-xs sm:text-sm hover:bg-blue-600"
                     >
-                      📖
+                      Address book
                     </button>
                   </div>
                 )}

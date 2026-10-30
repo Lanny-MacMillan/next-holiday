@@ -22,27 +22,6 @@ export interface ToDoCardProps {
   disableInternalModal?: boolean; // Disable the card's internal delete modal
 }
 
-// Task-themed icons for gamified mode
-const TaskIcon = ({
-  priority,
-  className = '',
-}: {
-  priority: string;
-  className?: string;
-}) => {
-  const iconMap: { [key: string]: string } = {
-    high: '🔥',
-    medium: '⚡',
-    low: '🌱',
-  };
-
-  return (
-    <div className={`text-xl sm:text-2xl ${className}`}>
-      {iconMap[priority] || '📝'}
-    </div>
-  );
-};
-
 export default function ToDoCard({
   task,
   onToggleComplete,
@@ -213,11 +192,6 @@ export default function ToDoCard({
           <div className="relative z-10">
             {/* Main Card Content */}
             <div className="flex items-start space-x-3">
-              {/* Task Icon */}
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-                <TaskIcon priority={task.priority} />
-              </div>
-
               {/* Task Content */}
               <div className="flex-1 min-w-0">
                 {/* Task Title */}

@@ -237,7 +237,7 @@ describe('TasksPage', () => {
       shared.holidayData = { tasks: [] };
       renderPage(taskPageConfigs.birthday);
 
-      expect(screen.getByText('All tasks completed! 🎂')).toBeTruthy();
+      expect(screen.getByText('All tasks completed!')).toBeTruthy();
       expect(screen.getByText('No completed tasks yet.')).toBeTruthy();
     });
 

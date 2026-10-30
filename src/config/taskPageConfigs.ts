@@ -16,7 +16,6 @@ export interface TaskPageConfig {
     | 'yellow'
     | 'amber'
     | 'cyan';
-  doneEmoji: string;
   // Tasks of one category are shown and created; null shows every task and lets the user pick one
   taskCategory: string | null;
   // Accent for the checkboxes, left borders and buttons, where the holiday sets one
@@ -61,7 +60,6 @@ export const taskPageConfigs = {
     title: 'Anniversary Tasks',
     gradientClass: 'anniversary-gradient',
     addButton: 'pink',
-    doneEmoji: '💕',
   },
   'baby-shower': {
     ...common,
@@ -69,7 +67,6 @@ export const taskPageConfigs = {
     title: 'Baby Shower Tasks',
     gradientClass: 'baby-shower-gradient',
     addButton: 'cyan',
-    doneEmoji: '👶',
   },
   birthday: {
     ...common,
@@ -77,7 +74,6 @@ export const taskPageConfigs = {
     title: 'Birthday Tasks',
     gradientClass: 'birthday-gradient',
     addButton: 'yellow',
-    doneEmoji: '🎂',
   },
   christmas: {
     holidayKey: 'christmas',
@@ -86,7 +82,6 @@ export const taskPageConfigs = {
     gradientClass: 'christmas-tasks-gradient',
     headerColor: 'red-500',
     addButton: 'green',
-    doneEmoji: '🎉',
     taskCategory: null,
     accent: '#22c55e',
     border: 'rgb(var(--color-green-500))',
@@ -98,7 +93,6 @@ export const taskPageConfigs = {
     title: 'Easter Tasks',
     gradientClass: 'easter-gradient',
     addButton: 'purple',
-    doneEmoji: '🐰',
   },
   'fathers-day': {
     ...common,
@@ -106,7 +100,6 @@ export const taskPageConfigs = {
     title: "Father's Day Tasks",
     gradientClass: 'fathers-day-gradient',
     addButton: 'blue',
-    doneEmoji: '👨‍👧‍👦',
   },
   'fourth-of-july': {
     ...common,
@@ -114,7 +107,6 @@ export const taskPageConfigs = {
     title: 'Fourth of July Tasks',
     gradientClass: 'fourth-of-july-gradient',
     addButton: 'red',
-    doneEmoji: '🎆',
   },
   graduation: {
     ...common,
@@ -122,7 +114,6 @@ export const taskPageConfigs = {
     title: 'Graduation Tasks',
     gradientClass: 'graduation-gradient',
     addButton: 'purple',
-    doneEmoji: '🎓',
   },
   halloween: {
     ...common,
@@ -130,7 +121,6 @@ export const taskPageConfigs = {
     title: 'Halloween Tasks',
     gradientClass: 'halloween-gradient',
     addButton: 'orange',
-    doneEmoji: '🎃',
     taskCategory: 'To-Do',
   },
   hanukkah: {
@@ -139,7 +129,6 @@ export const taskPageConfigs = {
     title: 'Hanukkah Tasks',
     gradientClass: 'hanukkah-gradient',
     addButton: 'blue',
-    doneEmoji: '🕎',
   },
   kwanzaa: {
     ...common,
@@ -147,7 +136,6 @@ export const taskPageConfigs = {
     title: 'Kwanzaa Tasks',
     gradientClass: 'kwanzaa-gradient',
     addButton: 'red',
-    doneEmoji: '🕯️',
     submitColor: '#dc2626',
   },
   'mothers-day': {
@@ -156,7 +144,6 @@ export const taskPageConfigs = {
     title: "Mother's Day Tasks",
     gradientClass: 'mothers-day-gradient',
     addButton: 'pink',
-    doneEmoji: '🌸',
   },
   'new-year': {
     ...common,
@@ -165,7 +152,6 @@ export const taskPageConfigs = {
     gradientClass: 'new-year-gradient',
     headerColor: 'amber-600',
     addButton: 'yellow',
-    doneEmoji: '🎊',
   },
   thanksgiving: {
     ...common,
@@ -173,7 +159,6 @@ export const taskPageConfigs = {
     title: 'Thanksgiving Tasks',
     gradientClass: 'thanksgiving-gradient',
     addButton: 'amber',
-    doneEmoji: '🦃',
     taskCategory: 'To-Do',
   },
   valentines: {
@@ -182,6 +167,5 @@ export const taskPageConfigs = {
     title: "Valentine's Tasks",
     gradientClass: 'valentines-gradient',
     addButton: 'pink',
-    doneEmoji: '💕',
   },
 } satisfies Record<string, TaskPageConfig>;

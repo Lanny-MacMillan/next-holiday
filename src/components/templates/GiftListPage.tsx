@@ -293,7 +293,7 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
           title="Incomplete"
           items={incompleteGifts}
           isCompleted={false}
-          emptyMessage={`All ${itemPlural} completed! ${config.doneEmoji}`}
+          emptyMessage={`All ${itemPlural} completed!`}
           completedMessage=""
           renderItem={gift => renderGiftItem(gift, false)}
         />

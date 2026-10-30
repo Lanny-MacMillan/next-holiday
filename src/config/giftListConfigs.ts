@@ -9,7 +9,6 @@ export interface GiftListConfig {
   // What the list holds, e.g. "Gift" and "gifts"
   itemName: string;
   itemPlural: string;
-  doneEmoji: string;
   cardClassName?: string;
   // Supplies lists use the gift list with a form that has no recipient
   formType?: 'gifts' | 'supplies';
@@ -51,7 +50,6 @@ export const giftListConfigs = {
     gradientClass: 'anniversary-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'pink-500',
       addButton: 'pink',
@@ -69,7 +67,6 @@ export const giftListConfigs = {
     gradientClass: 'baby-shower-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'cyan-500',
       addButton: 'cyan',
@@ -87,7 +84,6 @@ export const giftListConfigs = {
     gradientClass: 'birthday-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'yellow-500',
       addButton: 'yellow',
@@ -106,7 +102,6 @@ export const giftListConfigs = {
     gradientClass: 'christmas-gifts-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'red-500',
       addButton: 'green',
@@ -124,7 +119,6 @@ export const giftListConfigs = {
     gradientClass: 'easter-gradient',
     itemName: 'Basket Item',
     itemPlural: 'basket items',
-    doneEmoji: '🎉',
     theme: {
       header: 'purple-500',
       addButton: 'purple',
@@ -142,7 +136,6 @@ export const giftListConfigs = {
     gradientClass: 'fathers-day-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'blue-500',
       addButton: 'blue',
@@ -160,7 +153,6 @@ export const giftListConfigs = {
     gradientClass: 'graduation-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     cardClassName: 'card-gifts-graduation',
     theme: purple,
   },
@@ -172,7 +164,6 @@ export const giftListConfigs = {
     gradientClass: 'halloween-tasks-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'orange-500',
       addButton: 'orange',
@@ -190,7 +181,6 @@ export const giftListConfigs = {
     gradientClass: 'hanukkah-gifts-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🕯️',
     theme: {
       header: 'blue-500',
       addButton: 'blue',
@@ -209,7 +199,6 @@ export const giftListConfigs = {
     gradientClass: 'kwanzaa-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🕯️',
     theme: {
       header: 'red-500',
       addButton: 'red',
@@ -227,7 +216,6 @@ export const giftListConfigs = {
     gradientClass: 'mothers-day-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '🎉',
     theme: {
       header: 'pink-500',
       addButton: 'pink',
@@ -245,7 +233,6 @@ export const giftListConfigs = {
     gradientClass: 'thanksgiving-gradient',
     itemName: 'Item',
     itemPlural: 'shopping items',
-    doneEmoji: '🎉',
     theme: {
       header: 'amber-500',
       addButton: 'amber',
@@ -263,7 +250,6 @@ export const giftListConfigs = {
     gradientClass: 'valentines-gradient',
     itemName: 'Gift',
     itemPlural: 'gifts',
-    doneEmoji: '💝',
     theme: {
       header: 'pink-500',
       addButton: 'pink',
@@ -281,7 +267,6 @@ export const giftListConfigs = {
     gradientClass: 'new-year-gradient',
     itemName: 'Supply',
     itemPlural: 'supplies',
-    doneEmoji: '🎉',
     formType: 'supplies',
     theme: {
       header: 'amber-500',
@@ -300,7 +285,6 @@ export const giftListConfigs = {
     gradientClass: 'fourth-of-july-gradient',
     itemName: 'Supply',
     itemPlural: 'supplies',
-    doneEmoji: '🎉',
     formType: 'supplies',
     theme: {
       header: 'red-500',

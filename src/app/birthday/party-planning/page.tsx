@@ -462,7 +462,7 @@ export default function BirthdayPartyPlanningPage() {
             title="Incomplete"
             items={incompletePartyPlanningTasks}
             isCompleted={false}
-            emptyMessage="All party planning tasks completed! 🎉"
+            emptyMessage="All party planning tasks completed!"
             completedMessage=""
             renderItem={task => (
               <ToDoCard

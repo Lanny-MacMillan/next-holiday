@@ -200,7 +200,7 @@ describe('CountdownTimer with an active countdown', () => {
     act(() => {
       jest.advanceTimersByTime(5000);
     });
-    expect(screen.getByText('Christmas is here! 🎄')).toBeInTheDocument();
+    expect(screen.getByText('Christmas is here!')).toBeInTheDocument();
   });
 
   it('clicking it reopens the picker with a delete option, and a new date replaces the old', () => {

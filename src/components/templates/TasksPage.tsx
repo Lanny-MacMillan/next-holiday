@@ -90,7 +90,7 @@ export default function TasksPage({ config }: { config: TaskPageConfig }) {
         plural: 'Tasks',
         pending: 'Incomplete',
         completed: 'Completed',
-        empty: `All tasks completed! ${config.doneEmoji}`,
+        empty: 'All tasks completed!',
         completedEmpty: 'No completed tasks yet.',
       },
       events: {
