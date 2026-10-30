@@ -127,7 +127,7 @@ export const checklistPageConfigs = {
       completedEmpty: '',
     },
     starter: {
-      heading: "💖 Set Up Valentine's Reservations",
+      heading: "Set Up Valentine's Reservations",
       question:
         "Would you like to add some common Valentine's reservation planning tasks?",
       items: [
