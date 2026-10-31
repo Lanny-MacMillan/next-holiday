@@ -60,18 +60,6 @@ const AddButton: React.FC<AddButtonProps> = ({
     }
   };
 
-  const getColorStyle = () => {
-    // For specific colors, let CSS classes handle the styling to allow hover effects
-    if (color !== 'holiday') {
-      return { color: 'white' };
-    }
-    // Only use inline background color for "holiday" which needs dynamic colors
-    return {
-      backgroundColor: getHolidayAccentColor(pathname),
-      color: 'white',
-    };
-  };
-
   // If gamified is true, render the playful design
   if (isGamified) {
     const isDarkMode = settings.theme === 'dark';

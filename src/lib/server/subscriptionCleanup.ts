@@ -85,7 +85,7 @@ export async function cleanupSharesOnDowngrade(userId: string) {
 
     // Also delete any pending invites for this share since user can't share anymore
     try {
-      const deletedInvites = await prisma.invite.deleteMany({
+      await prisma.invite.deleteMany({
         where: {
           shareId: share.id,
           status: 'pending',

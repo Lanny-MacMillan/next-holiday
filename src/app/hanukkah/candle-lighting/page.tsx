@@ -31,7 +31,6 @@ const defaultCandleTasks = CANDLE_LIGHTING_TASKS.map(task => ({
 
 export default function CandleLightingPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Use centralized holiday page data hook
@@ -72,7 +71,6 @@ export default function CandleLightingPage() {
     [holidayData?.tasks],
   );
   const isLoading = !homeInitialized;
-  const error = null;
 
   // State management
   const [showForm, setShowForm] = useState(false);

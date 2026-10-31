@@ -13,24 +13,6 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { getCardStyling } from '@/utils/cardShadows';
 import { getGamifiedBackgroundColor } from '@/utils/gamifiedUtils';
 
-import {
-  IconChristmas,
-  IconHanukkah,
-  IconKwanzaa,
-  IconNewYear,
-  IconValentines,
-  IconEaster,
-  IconThanksgiving,
-  IconHalloween,
-  IconMothersDay,
-  IconFathersDay,
-  IconFourthOfJuly,
-  IconBirthday,
-  IconAnniversary,
-  IconGraduation,
-  IconBabyShower,
-} from '../../../public/holiday-icons';
-
 import { HolidayShapes } from '@/data/holidayShapes';
 
 interface HolidayCardProps {
@@ -52,29 +34,6 @@ interface HolidayCardProps {
   holidayId?: string; // New prop for API-based countdown
   countdownTimer?: string | null; // New prop for countdown timer
 }
-
-// Function to get the appropriate holiday SVG icon for professional mode
-const getHolidaySvgIcon = (holidayId: string) => {
-  const iconMap: { [key: string]: React.ComponentType<any> } = {
-    christmas: IconChristmas,
-    hanukkah: IconHanukkah,
-    kwanzaa: IconKwanzaa,
-    'new-year': IconNewYear,
-    valentines: IconValentines,
-    easter: IconEaster,
-    thanksgiving: IconThanksgiving,
-    halloween: IconHalloween,
-    'mothers-day': IconMothersDay,
-    'fathers-day': IconFathersDay,
-    'fourth-of-july': IconFourthOfJuly,
-    birthday: IconBirthday,
-    anniversary: IconAnniversary,
-    graduation: IconGraduation,
-    'baby-shower': IconBabyShower,
-  };
-
-  return iconMap[holidayId] || IconChristmas; // Fallback to Christmas icon
-};
 
 // Function to get your custom holiday shapes for professional mode
 const getHolidayShapeIcon = (holidayId: string) => {
@@ -108,7 +67,6 @@ export default function HolidayCard({
   progress,
   completedItems,
   totalItems,
-  customBlobSvg,
   gamified = false,
   gamifiedBackgroundColor,
   holidayId,

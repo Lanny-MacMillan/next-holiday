@@ -370,8 +370,6 @@ export class PerformanceMonitor {
   }
 
   public async sendToCloudWatch(region: string = 'us-east-1') {
-    const summary = this.getSummary();
-
     console.log('CloudWatch Metrics Ready:', {
       namespace: 'NextHoliday_Performance',
       region,

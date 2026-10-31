@@ -39,14 +39,8 @@ export default function DailyPrinciplesPage() {
     useHolidayPageData();
 
   // Use standardized mutation hooks for task operations
-  const {
-    createTask,
-    updateTask,
-    deleteTask,
-    createLoading,
-    updateLoading,
-    deleteLoading,
-  } = useHolidayMutations({ holidayId, auth0User });
+  const { createTask, updateTask, deleteTask, createLoading, updateLoading } =
+    useHolidayMutations({ holidayId, auth0User });
 
   // Check if the holiday is shared to conditionally show assign to field
   const isHolidayShared = useAppSelector((state: any) =>
@@ -87,7 +81,6 @@ export default function DailyPrinciplesPage() {
 
   // State management
   const [showFormModal, setShowFormModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
   const [showDefaultPrinciples, setShowDefaultPrinciples] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [showSortModal, setShowSortModal] = useState(false);
@@ -107,7 +100,7 @@ export default function DailyPrinciplesPage() {
     if (!principle) return;
 
     try {
-      const result = await updateTask(taskId, {
+      await updateTask(taskId, {
         isCompleted: !principle.isCompleted,
       });
 

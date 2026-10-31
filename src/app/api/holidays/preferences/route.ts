@@ -125,7 +125,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Create sets of current and new holiday types for comparison
-    const currentHolidayTypes = new Set(currentHolidays.map(h => h.holidayType));
     const newHolidayTypes = new Set(deduplicatedPreferences.map(p => p.holiday));
 
     // Find holidays to remove (in current but not in new preferences)

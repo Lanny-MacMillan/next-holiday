@@ -44,7 +44,7 @@ export function HolidayPageTemplate({
   holidayColor,
 }: HolidayPageTemplateProps) {
   // All the common logic is now centralized in this hook
-  const { holidayData, getProgressData, holidayId } = useHolidayPageData();
+  const { getProgressData, holidayId } = useHolidayPageData();
 
   // Use the same budget calculation logic as BudgetDisplay component
   const budgetInfo = useBudgetInfo(holidayName, holidayId || undefined);

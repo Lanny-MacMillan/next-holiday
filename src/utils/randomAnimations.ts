@@ -12,31 +12,6 @@ interface RandomAnimationConfig {
 }
 
 /**
- * Generate a random timing function
- */
-function getRandomTimingFunction(): string {
-  const timingFunctions = [
-    'linear',
-    'ease',
-    'ease-in',
-    'ease-out',
-    'ease-in-out',
-    // Custom cubic-bezier functions for more chaos
-    'cubic-bezier(0.68, -0.55, 0.265, 1.55)', // Back easing
-    'cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Ease-out-quad
-    'cubic-bezier(0.55, 0.085, 0.68, 0.53)', // Ease-in-quad
-    'cubic-bezier(0.175, 0.885, 0.32, 1.275)', // Bounce-like
-    'cubic-bezier(0.6, -0.28, 0.735, 0.045)', // Ease-in-back
-    'cubic-bezier(0.68, -0.6, 0.32, 1.6)', // Elastic-like
-    'cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Smooth
-    'cubic-bezier(0.19, 1, 0.22, 1)', // Expo-out
-    'cubic-bezier(0.47, 0, 0.745, 0.715)', // Sine-in-out
-  ];
-
-  return timingFunctions[Math.floor(Math.random() * timingFunctions.length)];
-}
-
-/**
  * Generate random transform values for gentle, bouncing movement that stays within card boundaries
  */
 function getRandomTransform(baseScale: number = 1): string {

@@ -95,15 +95,11 @@ export const upgradeUser = createAsyncThunk(
   },
 );
 
-let setUserCallCount = 0;
-
 const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
     setUser: (state, action: PayloadAction<User | null>) => {
-      setUserCallCount++;
-
       if (!action.payload) {
         state.user = null;
         state.initialized = true;

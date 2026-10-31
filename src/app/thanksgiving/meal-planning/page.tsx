@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -84,7 +83,6 @@ export default function ThanksgivingMealPlanningPage() {
   // Use centralized holiday page data hook
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
-  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Use standardized mutation hooks
   const {
@@ -163,15 +161,8 @@ export default function ThanksgivingMealPlanningPage() {
       ).map(transformTaskWithAssignment),
     [holidayData?.tasks, shareMembers],
   );
-  const isLoading = !homeInitialized;
-  const error = null;
 
   // Delete modal handlers
-  const handleDeleteModalOpen = (task: any) => {
-    setTaskToDelete(task);
-    setShowDeleteModal(true);
-  };
-
   const handleDeleteModalClose = () => {
     setTaskToDelete(null);
     setShowDeleteModal(false);
@@ -232,7 +223,7 @@ export default function ThanksgivingMealPlanningPage() {
     if (!values.title?.trim() || !holidayId) return;
 
     try {
-      const result = await createTask({
+      await createTask({
         title: values.title,
         description: values.description,
         priority: values.priority,

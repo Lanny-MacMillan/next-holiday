@@ -521,13 +521,13 @@ const homeSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      .addCase(leaveShare.fulfilled, (state, action: any) => {
+      .addCase(leaveShare.fulfilled, state => {
         state.loading = true;
       })
-      .addCase(removeMemberFromShare.fulfilled, (state, action: any) => {
+      .addCase(removeMemberFromShare.fulfilled, state => {
         state.loading = true;
       })
-      .addCase(acceptInvite.fulfilled, (state, action: any) => {
+      .addCase(acceptInvite.fulfilled, state => {
         state.loading = true;
       })
       .addCase(toggleTheme, state => {
@@ -538,7 +538,7 @@ const homeSlice = createSlice({
           state.loading = true;
         }
       })
-      .addCase(updateUserPreferences.fulfilled, (state, action) => {
+      .addCase(updateUserPreferences.fulfilled, state => {
         state.loading = true;
       })
       .addCase(refreshHomeData.fulfilled, (state, action) => {
