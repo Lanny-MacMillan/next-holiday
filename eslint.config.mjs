@@ -29,7 +29,10 @@ const eslintConfig = [
     // Existing debt: surfaced as warnings so CI only fails on new real errors
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { ignoreRestSiblings: true, varsIgnorePattern: '^_' },
+      ],
       'react-hooks/exhaustive-deps': 'warn',
       'prefer-const': 'warn',
       'react/no-unescaped-entities': 'warn',
@@ -65,6 +68,21 @@ const eslintConfig = [
       'src/hooks/useFormModalMutation.ts',
     ],
     rules: { 'no-restricted-syntax': ['warn', ...dataLoadingRules] },
+  },
+  {
+    // Server code logs through the logger (one JSON line per event, no secrets)
+    files: [
+      'src/app/api/**',
+      'src/lib/auth.ts',
+      'src/lib/realTimeNotifications.ts',
+      'src/lib/server/**',
+      'src/lib/prisma.ts',
+      'src/lib/http.ts',
+      'src/lib/assigneeValidation.ts',
+      'src/middleware.ts',
+      'src/instrumentation.ts',
+    ],
+    rules: { 'no-console': 'error' },
   },
   {
     files: [

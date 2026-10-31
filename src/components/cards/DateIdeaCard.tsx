@@ -25,24 +25,6 @@ interface DateIdeaCardProps {
 }
 
 // Date-themed icons for gamified mode
-const DateIdeaIcon = ({
-  priority,
-  className = '',
-}: {
-  priority: string;
-  className?: string;
-}) => {
-  const getIcon = (priority: string) => {
-    if (priority === 'high') return '💕';
-    if (priority === 'medium') return '💝';
-    return '💖';
-  };
-
-  return (
-    <div className={`text-xl sm:text-2xl ${className}`}>{getIcon(priority)}</div>
-  );
-};
-
 export default function DateIdeaCard({
   task,
   onToggleCompletion,

@@ -3,15 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { toPlain } from '@/lib/json';
 import { HomeData } from '@/types/home';
+import { logger } from '@/lib/logger';
 
 /**
  * Fetch all data needed for the home page on the server side
  * This function handles all the data fetching logic that was previously done on the client
  */
 export async function getHomeData(request: Request): Promise<HomeData> {
-  // Add caching for read-mostly data
-  const cacheKey = `home-data-${request.headers.get('x-test-user') || 'anonymous'}`;
-
   // For now, use no-store since this is user-specific data
   // In production, you might want to use revalidate with tags for better performance
   try {
@@ -276,7 +274,7 @@ export async function getHomeData(request: Request): Promise<HomeData> {
       needsHolidaySelection: holidayPreferences.length === 0,
     };
   } catch (error) {
-    console.error('Error fetching home data:', error);
+    logger.error('Error fetching home data:', error);
     throw new Error('Failed to fetch home data');
   }
 }

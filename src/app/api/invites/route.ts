@@ -8,6 +8,7 @@ import {
   plusRequired,
 } from '@/lib/routeAuth';
 import { broadcastInvite } from '@/lib/realTimeNotifications';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,13 +149,13 @@ export async function POST(request: NextRequest) {
         );
       } catch (inviteError) {
         // Silently log invitation notification failures
-        console.warn(
+        logger.warn(
           'Invite notification failed (invite creation succeeded):',
           inviteError,
         );
       }
     } else {
-      console.error('[INVITE] No finalToUserId, skipping real-time notification', {
+      logger.error('[INVITE] No finalToUserId, skipping real-time notification', {
         originalToUserId: toUserId,
         originalToEmail: toEmail,
         userLookupStatus,
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error creating invite:', error);
+    logger.error('Error creating invite:', error);
     return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 });
   }
 }
@@ -206,7 +207,7 @@ export async function GET(request: NextRequest) {
         });
         internalUserId = user?.id || null;
       } catch {
-        console.error(
+        logger.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
       }
@@ -244,7 +245,7 @@ export async function GET(request: NextRequest) {
         });
         internalUserId = user?.id || null;
       } catch {
-        console.error(
+        logger.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
       }
@@ -280,7 +281,7 @@ export async function GET(request: NextRequest) {
         });
         internalUserId = user?.id || null;
       } catch {
-        console.error(
+        logger.error(
           'Could not find user by Auth0 sub, continuing with userId search',
         );
       }
@@ -311,7 +312,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ error: 'Missing query parameters' }, { status: 400 });
   } catch (error) {
-    console.error('Error fetching invites:', error);
+    logger.error('Error fetching invites:', error);
     return NextResponse.json({ error: 'Failed to fetch invites' }, { status: 500 });
   }
 }

@@ -57,7 +57,7 @@ export default function SharedUserList({
       <div
         className={`flex gap-1 ${className.includes('flex-row-reverse') ? 'flex-row-reverse' : ''}`}
       >
-        {visibleMembers.map((member, index) => (
+        {visibleMembers.map(member => (
           <UserAvatar
             key={member.userId}
             userId={member.userId}

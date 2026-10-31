@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, forbiddenResponse } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function POST(
 
     return NextResponse.json(updatedInvite);
   } catch (error) {
-    console.error('Error dismissing invite:', error);
+    logger.error('Error dismissing invite:', error);
     return NextResponse.json({ error: 'Failed to dismiss invite' }, { status: 500 });
   }
 }

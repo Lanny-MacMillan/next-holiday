@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import {
   useCreateTaskMutation,
   useCreateGiftMutation,
-  useCreateCardMutation,
   useCreateGuestMutation,
   useCreateDecorationMutation,
   useUpdateCardMutation,
@@ -65,7 +64,6 @@ export function useFormModalMutation() {
   // Get all mutations
   const [createTask, createTaskState] = useCreateTaskMutation();
   const [createGift, createGiftState] = useCreateGiftMutation();
-  const [createCard, createCardState] = useCreateCardMutation();
   const [updateCard, updateCardState] = useUpdateCardMutation();
   const [editCard, editCardState] = useEditCardMutation();
   const [deleteCard, deleteCardState] = useDeleteCardMutation();

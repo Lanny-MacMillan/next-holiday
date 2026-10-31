@@ -17,7 +17,7 @@ interface AuthWrapperProps {
 export default function AuthWrapper({ children }: AuthWrapperProps) {
   const { user, isAuthenticated, isLoading } = useAuth0();
   const dispatch = useAppDispatch();
-  const { user: reduxUser, loading } = useAppSelector((state: any) => state.user);
+  const { user: reduxUser } = useAppSelector((state: any) => state.user);
   const hasSetInitialUser = useRef(false); // Prevent multiple setUser calls
 
   useEffect(() => {

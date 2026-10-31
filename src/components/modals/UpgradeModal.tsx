@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch } from '@/store/hooks';
 import { upgradeUser } from '@/store/slices/userSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import { errorMessage } from '@/utils/errorMessage';
@@ -36,7 +36,6 @@ export default function UpgradeModal({
 
   const dispatch = useAppDispatch();
   const { user: auth0User } = useAuth0();
-  const userState = useAppSelector(state => state.user);
 
   // Reset modal state when it opens
   useEffect(() => {
@@ -189,7 +188,7 @@ export default function UpgradeModal({
       if (paymentResponse.ok && paymentResult.success) {
         paymentAccepted = true;
         // Step 2: Update user subscription in database via Redux
-        const upgradeResult = await dispatch(
+        await dispatch(
           upgradeUser({
             auth0Sub: auth0User.sub,
             plan: 'plus',

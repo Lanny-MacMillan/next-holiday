@@ -24,7 +24,7 @@ interface UseHolidayBudgetReturn {
 export function useHolidayBudget(
   args: UseHolidayBudgetArgs,
 ): UseHolidayBudgetReturn {
-  const { holidayId, slug } = args;
+  const { holidayId } = args;
 
   const budget = useAppSelector(state =>
     holidayId ? selectBudgetByHolidayId(state, holidayId) : null,

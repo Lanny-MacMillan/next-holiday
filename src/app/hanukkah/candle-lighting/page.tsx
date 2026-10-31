@@ -19,63 +19,18 @@ import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import { CANDLE_LIGHTING_TASKS } from '@/config/holidaySeeds';
+import Suggestions, { type Suggestion } from '@/components/common/Suggestions';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
-const defaultCandleTasks = [
-  {
-    title: 'Light 1st Candle',
-    description: 'First night of Hanukkah - Light the shamash and first candle',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 2nd Candle',
-    description: 'Second night of Hanukkah - Light the shamash and two candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 3rd Candle',
-    description: 'Third night of Hanukkah - Light the shamash and three candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 4th Candle',
-    description: 'Fourth night of Hanukkah - Light the shamash and four candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 5th Candle',
-    description: 'Fifth night of Hanukkah - Light the shamash and five candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 6th Candle',
-    description: 'Sixth night of Hanukkah - Light the shamash and six candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 7th Candle',
-    description: 'Seventh night of Hanukkah - Light the shamash and seven candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-  {
-    title: 'Light 8th Candle',
-    description: 'Eighth night of Hanukkah - Light the shamash and eight candles',
-    category: 'Candle Lighting',
-    priority: 'high' as const,
-  },
-];
+const defaultCandleTasks = CANDLE_LIGHTING_TASKS.map(task => ({
+  ...task,
+  category: 'Candle Lighting',
+}));
 
 export default function CandleLightingPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Use centralized holiday page data hook
@@ -116,7 +71,6 @@ export default function CandleLightingPage() {
     [holidayData?.tasks],
   );
   const isLoading = !homeInitialized;
-  const error = null;
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -138,7 +92,7 @@ export default function CandleLightingPage() {
     if (candleLighting.length === 0 && homeInitialized) {
       setShowDefaultTasks(true);
     }
-  }, [candleLighting, homeInitialized]);
+  }, [candleLighting.length, homeInitialized]);
 
   // CRUD Operations
   async function handleAddTask(values: Record<string, any>) {
@@ -167,29 +121,16 @@ export default function CandleLightingPage() {
     }
   }
 
-  async function addDefaultCandleTasks() {
-    if (!holidayId || !auth0User) return;
+  async function addCandleSuggestions(items: Suggestion[]) {
+    if (!holidayId || !auth0User) throw new Error('No holiday');
 
-    try {
-      // Add default candle tasks one at a time with full completion before next
-      for (let i = 0; i < defaultCandleTasks.length; i++) {
-        const task = defaultCandleTasks[i];
-
-        try {
-          await createTask({
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            category: task.category,
-          });
-        } catch (taskError) {
-          console.error(`❌ Error adding task ${i + 1}:`, taskError);
-        }
-      }
-
-      setShowDefaultTasks(false);
-    } catch (error) {
-      console.error('Failed to add default tasks:', error);
+    for (const task of items) {
+      await createTask({
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        category: 'Candle Lighting',
+      });
     }
   }
 
@@ -380,30 +321,18 @@ export default function CandleLightingPage() {
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Default Tasks Prompt */}
-        {showDefaultTasks && (
-          <div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-            <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              🕯️ Set Up Hanukkah Candle Lighting
-            </h3>
-            <p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
-              Would you like to add the 8 nights of Hanukkah candle lighting tasks?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addDefaultCandleTasks}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm"
-              >
-                Add Default Tasks
-              </button>
-              <button
-                onClick={() => setShowDefaultTasks(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
+        <Suggestions
+          heading={'Set Up Hanukkah Candle Lighting'}
+          question={
+            'Would you like to add the 8 nights of Hanukkah candle lighting tasks?'
+          }
+          noun="candle nights"
+          items={defaultCandleTasks}
+          existingTitles={candleLighting.map((task: any) => task.title)}
+          onAdd={addCandleSuggestions}
+          showPrompt={showDefaultTasks}
+          onDismissPrompt={() => setShowDefaultTasks(false)}
+        />
 
         <AddButton title="Candle Lighting Task" onClick={openForm} color="blue" />
 

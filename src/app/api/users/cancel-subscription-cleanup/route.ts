@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
 import { cleanupSharesOnDowngrade } from '@/lib/server/subscriptionCleanup';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/users/cancel-subscription-cleanup
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       cleanup,
     });
   } catch (error) {
-    console.error('Error in subscription cleanup:', error);
+    logger.error('Error in subscription cleanup:', error);
     return NextResponse.json(
       { error: 'Failed to process subscription cleanup' },
       { status: 500 },

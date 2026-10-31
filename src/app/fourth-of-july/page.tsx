@@ -46,8 +46,7 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-  const { holidayId, holidayData, auth0User, homeInitialized } =
-    useHolidayPageData();
+  const { holidayId, holidayData, homeInitialized } = useHolidayPageData();
   // Show message if holiday doesn't exist
   if (!holidayId) {
     return (
@@ -132,7 +131,7 @@ export default function FourthOfJulyPage() {
   return (
     <div className="min-h-screen fourth-of-july-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayHeader
-        holidayName="🎆 Fourth of July"
+        holidayName="Fourth of July"
         description="Celebrate independence and freedom!"
       />
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
@@ -163,12 +162,6 @@ export default function FourthOfJulyPage() {
               const remaining = budgetLimit - totalSpent;
               const budgetPercentage =
                 budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
-
-              const getBudgetStatus = () => {
-                if (budgetPercentage >= 80) return 'Budget nearly exhausted';
-                if (budgetPercentage >= 60) return 'Moderate budget remaining';
-                return 'Plenty of budget left';
-              };
 
               return (
                 <li key={section.name}>

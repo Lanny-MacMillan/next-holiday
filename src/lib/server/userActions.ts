@@ -3,6 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/lib/logger';
 
 /**
  * Server action to add a user to the database and create their account
@@ -120,16 +121,16 @@ export async function addUserToDb(auth0User: {
             const account = existingUser.accountMembers?.[0]?.account || null;
             return { success: true, data: { user: existingUser, account } };
           } else {
-            console.error(
+            logger.error(
               'User still not found after race condition, this is unexpected',
             );
           }
         } catch (findError) {
-          console.error('Error finding existing user after P2002:', findError);
+          logger.error('Error finding existing user after P2002:', findError);
         }
       }
 
-      console.error('Transaction error that could not be recovered:', {
+      logger.error('Transaction error that could not be recovered:', {
         code: transactionError.code,
         message: transactionError.message,
         target: transactionError.meta?.target,
@@ -137,7 +138,7 @@ export async function addUserToDb(auth0User: {
       throw transactionError;
     }
   } catch (error) {
-    console.error('Error adding user to database:', error);
+    logger.error('Error adding user to database:', error);
     return { success: false, error: 'Failed to add user to database' };
   }
 }

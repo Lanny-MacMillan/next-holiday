@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
 import { DEFAULT_USER_PREFERENCES } from '@/lib/constants/userPreferences';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/users/me/preferences
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     return Response.json(preferences);
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
+    logger.error('Error fetching user preferences:', error);
     return Response.json(
       { error: 'Failed to fetch user preferences' },
       { status: 500 },
@@ -119,7 +120,7 @@ export async function PUT(request: NextRequest) {
 
     return Response.json(updatedPreferences);
   } catch (error) {
-    console.error('Error updating user preferences:', error);
+    logger.error('Error updating user preferences:', error);
     return Response.json(
       { error: 'Failed to update user preferences' },
       { status: 500 },
