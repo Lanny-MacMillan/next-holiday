@@ -153,11 +153,11 @@ export default function PerformanceDashboard({
                 </p>
                 <ul className="text-yellow-200 text-xs mt-2 ml-4 space-y-1">
                   <li>• The page is still loading</li>
-                  <li>• Browser doesn't support Performance API</li>
+                  <li>• Browser doesn&apos;t support Performance API</li>
                   <li>• Network issues preventing data collection</li>
                 </ul>
                 <p className="text-yellow-300 text-xs mt-2">
-                  Try clicking "Log to Console" to force data collection.
+                  Try clicking &quot;Log to Console&quot; to force data collection.
                 </p>
               </div>
             ) : null}

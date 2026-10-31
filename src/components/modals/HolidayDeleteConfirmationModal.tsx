@@ -153,7 +153,7 @@ export default function HolidayDeleteConfirmationModal({
             </label>
             <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-3 mb-3">
               <p className="text-black font-bold font-mono text-base">
-                "{expectedConfirmText}"
+                &quot;{expectedConfirmText}&quot;
               </p>
             </div>
             <input

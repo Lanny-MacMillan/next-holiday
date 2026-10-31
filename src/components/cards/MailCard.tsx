@@ -109,7 +109,7 @@ export default function MailCard({
                     className="text-xs sm:text-sm text-black italic"
                     style={{ fontFamily: 'var(--font-family-fredoka)' }}
                   >
-                    "{card.message}"
+                    &quot;{card.message}&quot;
                   </p>
                 </div>
               )}
@@ -213,7 +213,7 @@ export default function MailCard({
             {card.message && (
               <div className={`mt-2 p-3 ${getMessageBackgroundColor()} rounded-lg`}>
                 <p className="text-xs sm:text-sm text-white dark:text-gray-300 italic">
-                  "{card.message}"
+                  &quot;{card.message}&quot;
                 </p>
               </div>
             )}

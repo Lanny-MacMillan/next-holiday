@@ -160,7 +160,7 @@ export default function CancelSubscriptionModal({
           {/* Cancellation Warning */}
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
             <div className="text-red-800 dark:text-red-200 font-medium mb-2">
-              You'll lose access to Plus features
+              You&apos;ll lose access to Plus features
             </div>
             <ul className="text-sm text-red-600 dark:text-red-300 space-y-1">
               <li>• Unlimited holiday invites</li>
@@ -176,7 +176,9 @@ export default function CancelSubscriptionModal({
               Sharing cleanup will occur
             </div>
             <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
-              <li>• You'll be removed from shared holidays you don't own</li>
+              <li>
+                • You&apos;ll be removed from shared holidays you don&apos;t own
+              </li>
               <li>• Others will be removed from holidays you own</li>
               <li>• Your personal holiday data will be preserved</li>
               <li>• Pending invites will be cancelled</li>
