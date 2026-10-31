@@ -149,7 +149,7 @@ export default function PerformanceDashboard({
             {metrics.length === 0 ? (
               <div className="bg-yellow-900 border border-yellow-700 p-4 rounded-lg mb-4">
                 <p className="text-yellow-300 text-sm">
-                  ⚠️ No performance metrics collected yet. This might happen if:
+                  No performance metrics collected yet. This might happen if:
                 </p>
                 <ul className="text-yellow-200 text-xs mt-2 ml-4 space-y-1">
                   <li>• The page is still loading</li>

@@ -8,6 +8,7 @@ import {
   requireAccountAdmin,
 } from '@/lib/rbac';
 import { ok, badRequest, forbidden, notFound, serverError } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 // Validation schemas
 const UpdateAccountSchema = z.object({
@@ -97,7 +98,7 @@ export async function GET(
     if (error instanceof Error && error.message.includes('Access denied')) {
       return forbidden(error.message);
     }
-    console.error('Error fetching account:', error);
+    logger.error('Error fetching account:', error);
     return serverError('Failed to fetch account');
   }
 }
@@ -168,7 +169,7 @@ export async function PUT(
     ) {
       return notFound('Account not found');
     }
-    console.error('Error updating account:', error);
+    logger.error('Error updating account:', error);
     return serverError('Failed to update account');
   }
 }
@@ -208,7 +209,7 @@ export async function DELETE(
     ) {
       return notFound('Account not found');
     }
-    console.error('Error deleting account:', error);
+    logger.error('Error deleting account:', error);
     return serverError('Failed to delete account');
   }
 }

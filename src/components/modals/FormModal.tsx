@@ -34,20 +34,13 @@ export default function FormModal({
   loading = false,
   submitText = 'Submit',
   cancelText = 'Cancel',
-  cardClassName = 'card',
   submitButtonColor = '#3b82f6',
-  showAddressBook = false,
   contacts = [],
-  onAddressBookSelect,
-  holidayId,
   shareMembers = [],
 }: FormModalProps) {
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [showAddressBookInternal, setShowAddressBookInternal] = useState(false);
   const [showAddressBookMessage, setShowAddressBookMessage] = useState(false);
-
-  // Check if any field has address book enabled
-  const hasAddressBookFields = fields.some(field => field.showAddressBook === true);
 
   // Populate assignTo field options with share members
   const fieldsWithOptions = useMemo(
@@ -301,7 +294,7 @@ export default function FormModal({
                       }
                       className="bg-blue-500 text-white px-2 sm:px-3 py-2 rounded text-xs sm:text-sm hover:bg-blue-600"
                     >
-                      📖
+                      Address book
                     </button>
                   </div>
                 )}

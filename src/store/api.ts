@@ -80,7 +80,7 @@ export const api = createApi({
       transformResponse: (response: { success: boolean; data: any[] }) => {
         return response.data || [];
       },
-      providesTags: result => [{ type: 'Gifts', id: 'LIST' }],
+      providesTags: () => [{ type: 'Gifts', id: 'LIST' }],
     }),
 
     getCards: builder.query<any[], { holidayId: string; auth0User?: any }>({
@@ -122,7 +122,7 @@ export const api = createApi({
       transformResponse: (response: { success: boolean; data: any[] }) => {
         return response.data || [];
       },
-      providesTags: result => [{ type: 'Cards', id: 'LIST' }],
+      providesTags: () => [{ type: 'Cards', id: 'LIST' }],
     }),
     getTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
       query: ({ holidayId, auth0User }) => ({
@@ -163,7 +163,7 @@ export const api = createApi({
       transformResponse: (response: { success: boolean; data: any[] }) => {
         return response.data || [];
       },
-      providesTags: result => [{ type: 'Tasks', id: 'LIST' }],
+      providesTags: () => [{ type: 'Tasks', id: 'LIST' }],
     }),
     getHanukkahTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
       query: ({ holidayId, auth0User }) => ({
@@ -516,10 +516,7 @@ export const api = createApi({
         { type: 'Tasks', id: holidayId },
       ],
       //   SAME PATTERN AS createGift: Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -566,10 +563,7 @@ export const api = createApi({
         { type: 'Tasks', id: holidayId },
       ],
       //   Traditional Redux pattern: wait for API success then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, updates, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response
           const { data: response } = await queryFulfilled;
@@ -616,10 +610,7 @@ export const api = createApi({
         { type: 'Tasks', id: holidayId },
       ],
       // Traditional Redux pattern: wait for API success then update state
-      async onQueryStarted(
-        { holidayId, taskId, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           // Wait for API to succeed
           await queryFulfilled;
@@ -668,10 +659,7 @@ export const api = createApi({
         { type: 'Tasks', id: holidayId },
       ],
       //   Traditional Redux pattern: wait for API success then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response
           const { data: response } = await queryFulfilled;
@@ -742,10 +730,7 @@ export const api = createApi({
         { type: 'Gifts', id: holidayId },
       ],
       //   SIMPLIFIED: Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -792,10 +777,7 @@ export const api = createApi({
         { type: 'Cards', id: holidayId },
       ],
       //   SAME PATTERN AS createGift: Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -945,10 +927,7 @@ export const api = createApi({
         { type: 'Cards', id: holidayId },
       ],
       //   SAME PATTERN AS updateGift: Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, cardId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, cardId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response
           const { data: response } = await queryFulfilled;
@@ -996,10 +975,7 @@ export const api = createApi({
         { type: 'Cards', id: holidayId },
       ],
       //   SAME PATTERN AS editGift: Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, cardId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, cardId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response
           const { data: response } = await queryFulfilled;
@@ -1114,10 +1090,7 @@ export const api = createApi({
             }
           : {},
       }),
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           // Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1164,10 +1137,7 @@ export const api = createApi({
         { type: 'Decorations', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1214,10 +1184,7 @@ export const api = createApi({
         { type: 'Events', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1264,10 +1231,7 @@ export const api = createApi({
         { type: 'CandleLighting', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1337,10 +1301,7 @@ export const api = createApi({
         { type: 'Resolutions', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1502,10 +1463,7 @@ export const api = createApi({
         { type: 'BabyShowerGames', id: holidayId },
       ],
       // Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           // Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1550,10 +1508,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'KwanzaaPrinciples', id: holidayId },
       ],
-      async onQueryStarted(
-        { holidayId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId }, { dispatch, queryFulfilled }) {
         try {
           // ✅ Wait for successful API response
           const { data: response } = await queryFulfilled;
@@ -1602,10 +1557,7 @@ export const api = createApi({
         { type: 'Gifts', id: holidayId },
       ],
       // Traditional Redux pattern: wait for API success then update state
-      async onQueryStarted(
-        { holidayId, giftId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, giftId }, { dispatch, queryFulfilled }) {
         try {
           // Wait for API to succeed
           const { data: response } = await queryFulfilled;
@@ -1655,10 +1607,7 @@ export const api = createApi({
         { type: 'Gifts', id: holidayId },
       ],
       //   SAME PATTERN AS createGift: Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, giftId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, giftId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1702,10 +1651,7 @@ export const api = createApi({
           : {},
       }),
       // Traditional Redux pattern: wait for API success then update state
-      async onQueryStarted(
-        { holidayId, giftId, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, giftId }, { dispatch, queryFulfilled }) {
         try {
           // Wait for API to succeed
           await queryFulfilled;
@@ -1754,10 +1700,7 @@ export const api = createApi({
         { type: 'Decorations', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1804,10 +1747,7 @@ export const api = createApi({
         { type: 'Decorations', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1914,10 +1854,7 @@ export const api = createApi({
         { type: 'Events', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -1963,10 +1900,7 @@ export const api = createApi({
         { type: 'Events', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           const { data: response } = await queryFulfilled;
 
@@ -2087,10 +2021,7 @@ export const api = createApi({
         { type: 'CandleLighting', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           const { data: response } = await queryFulfilled;
 
@@ -2135,10 +2066,7 @@ export const api = createApi({
         { type: 'CandleLighting', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -2264,10 +2192,7 @@ export const api = createApi({
         { type: 'Resolutions', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           //   Wait for successful API response (no optimistic updates)
           const { data: response } = await queryFulfilled;
@@ -2336,10 +2261,7 @@ export const api = createApi({
         { type: 'Resolutions', id: holidayId },
       ],
       //   Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           const { data: response } = await queryFulfilled;
 
@@ -2890,10 +2812,7 @@ export const api = createApi({
         { type: 'BabyShowerGames', id: holidayId },
       ],
       // Traditional Redux pattern: wait for API success then update state
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           // Wait for API to succeed
           const { data: response } = await queryFulfilled;
@@ -2964,10 +2883,7 @@ export const api = createApi({
         { type: 'BabyShowerGames', id: holidayId },
       ],
       // Traditional Redux pattern - wait for success, then update Home Slice
-      async onQueryStarted(
-        { holidayId, taskId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           const { data: response } = await queryFulfilled;
 
@@ -3103,10 +3019,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'KwanzaaPrinciples', id: holidayId },
       ],
-      async onQueryStarted(
-        { holidayId, taskId, isCompleted, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           const { data: response } = await queryFulfilled;
 
@@ -3148,10 +3061,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'KwanzaaPrinciples', id: holidayId },
       ],
-      async onQueryStarted(
-        { holidayId, taskId, payload, auth0User },
-        { dispatch, queryFulfilled },
-      ) {
+      async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
         try {
           const { data: response } = await queryFulfilled;
 
@@ -3348,9 +3258,6 @@ export const api = createApi({
         { holidayId, guestId, payload, auth0User },
         { dispatch, queryFulfilled },
       ) {
-        // Store original guest for rollback
-        let originalGuest: any = null;
-
         // 1. Optimistic RTK Query cache update only
         const patchResult = dispatch(
           api.util.updateQueryData(
@@ -3360,8 +3267,6 @@ export const api = createApi({
               if (draft) {
                 const guest = draft.find((g: any) => g.id === guestId);
                 if (guest) {
-                  // Store original for rollback
-                  originalGuest = { ...guest };
                   Object.assign(guest, payload);
                   guest.updatedAt = new Date().toISOString();
                 }
@@ -3371,9 +3276,7 @@ export const api = createApi({
         );
 
         try {
-          const { data: response } = await queryFulfilled;
-
-          const serverGuest = response.data;
+          await queryFulfilled;
         } catch (error) {
           patchResult.undo();
           console.error('❌ Guest edit failed:', error);

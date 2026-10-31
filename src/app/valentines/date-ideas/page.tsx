@@ -29,7 +29,6 @@ import TaskSection from '@/components/common/TaskSection';
 
 export default function ValentinesDateIdeasPage() {
   const dispatch = useAppDispatch();
-  const { contacts } = useAppSelector((state: any) => state.addressBook);
   const { isUserPlusMember, hasSubscription } = useSubscription();
 
   const { holidayId, holidayData, auth0User, homeInitialized } =
@@ -98,8 +97,6 @@ export default function ValentinesDateIdeasPage() {
       ).map(transformTaskWithAssignment),
     [holidayData?.tasks, shareMembers],
   );
-  const isLoading = !homeInitialized;
-  const error = null;
 
   const [editingTask, setEditingTask] = useState<any>(null);
   const [showSortModal, setShowSortModal] = useState(false);

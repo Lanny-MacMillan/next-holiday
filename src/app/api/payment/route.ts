@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { paymentsProvider } from '@/lib/payments';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/payment
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error('Payment processing error:', error);
+    logger.error('Payment processing error:', error);
     return Response.json(
       { error: 'Internal server error during payment processing' },
       { status: 500 },

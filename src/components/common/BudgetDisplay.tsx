@@ -1,11 +1,8 @@
 import { useAppSelector } from '@/store/hooks';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useHolidayBudget } from '@/hooks/useHolidayBudget';
 import { getCardStyling } from '@/utils/cardShadows';
-import { getHolidayAccentColor } from '@/utils/holidayUtils';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
-import { usePathname } from 'next/navigation';
 
 interface BudgetInfo {
   budgetLimit: number;
@@ -25,11 +22,7 @@ interface BudgetDisplayProps {
 }
 
 export function useBudgetInfo(holiday?: string, holidayId?: string): BudgetInfo {
-  // Fallback to old logic for backward compatibility
-  const { settings } = useAppSelector((state: any) => state.theme);
-
-  // Get auth0User and holiday preferences for RTK Query
-  const { user: auth0User } = useAuth0();
+  // Get holiday preferences for RTK Query
   const holidayPreferences = useAppSelector(
     (state: any) => state.home.data?.holidayPreferences || [],
   );
@@ -45,7 +38,7 @@ export function useBudgetInfo(holiday?: string, holidayId?: string): BudgetInfo 
   }
 
   // Use the new centralized budget hook (always call, hook handles undefined holidayId)
-  const { budget, loading, error } = useHolidayBudget({
+  const { budget } = useHolidayBudget({
     holidayId: queryHolidayId,
   });
 
@@ -157,7 +150,6 @@ export function BudgetDisplay({
 }: BudgetDisplayProps) {
   // Call ALL hooks first before any conditional logic
   const budgetInfo = useBudgetInfo(holiday, holidayId);
-  const pathname = usePathname();
   const { settings } = useAppSelector((state: any) => state.theme);
   const { preferences } = useAppSelector((state: any) => state.userPreferences);
   const { isUserPlusMember, hasSubscription } = useSubscription();
@@ -178,8 +170,6 @@ export function BudgetDisplay({
 
   // If gamified is true, render the playful design
   if (isGamified) {
-    const backgroundColor = holidayColor || getHolidayAccentColor(pathname);
-
     return (
       <div
         className={`relative card rounded-2xl p-3 sm:p-4 mb-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 overflow-hidden tracking-widest text-white ${holidayColor}`}

@@ -38,7 +38,6 @@ export function transformGiftPayload(
             member.uuid,
           );
         if (isValidMemberUUID) {
-          const oldAssignedTo = assignedTo;
           assignedTo = member.uuid; // Use the UUID for assignment
         } else {
           assignedTo = null; // Set to null if UUID is invalid
@@ -131,7 +130,6 @@ export function transformCardPayload(
       });
 
       if (member && member.uuid) {
-        const oldAssignedTo = assignedTo;
         assignedTo = member.uuid; // Use the UUID for assignment
       } else {
         assignedTo = null; // Set to null if we can't find the UUID

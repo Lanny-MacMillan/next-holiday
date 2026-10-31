@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 export function ok<T = unknown>(data?: T, headers?: Record<string, string>) {
   return NextResponse.json({ success: true, data }, { status: 200, headers });
@@ -51,6 +52,6 @@ export function routeError(error: unknown, label: string, message: string) {
     return unauthorized();
   }
   if ((error as { code?: string })?.code === 'P2025') return notFound();
-  console.error(label, error);
+  logger.error(label, error);
   return serverError(message);
 }

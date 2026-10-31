@@ -1,12 +1,13 @@
 // Real-time notification broadcasting utilities
 import { prisma } from './prisma';
+import { logger } from '@/lib/logger';
 
 /**
  * Send notification to external SSE service
  */
 async function sendToExternalSSEService(userId: string, notification: any) {
   if (!process.env.SSE_SERVICE_URL || !process.env.SSE_API_SECRET) {
-    console.warn(
+    logger.warn(
       '⚠️ [BROADCAST] External SSE service not configured - skipping real-time notification',
     );
     return false;
@@ -26,7 +27,7 @@ async function sendToExternalSSEService(userId: string, notification: any) {
     });
 
     if (!response.ok) {
-      console.error(
+      logger.error(
         '❌ [BROADCAST] External SSE service error:',
         response.status,
         response.statusText,
@@ -38,7 +39,7 @@ async function sendToExternalSSEService(userId: string, notification: any) {
       return true;
     }
   } catch (error) {
-    console.error('💥 [BROADCAST] External SSE service failed:', error);
+    logger.error('💥 [BROADCAST] External SSE service failed:', error);
     // Don't fallback to internal SSE - just fail
     // This prevents duplicate notifications
     return false;
@@ -119,7 +120,7 @@ export async function broadcastNotification(payload: NotificationPayload) {
       });
 
       if (!hasAccess) {
-        console.warn(
+        logger.warn(
           `❌ [BROADCAST] User ${payload.userId} does not have access to holiday ${payload.holidayId}, skipping notification`,
         );
         return false;
@@ -156,7 +157,7 @@ export async function broadcastNotification(payload: NotificationPayload) {
 
     // Validate the notification has valid data before sending
     if (!notification.title || !notification.message) {
-      console.warn(
+      logger.warn(
         'Skipping broadcast: notification missing title or message',
         payload,
       );
@@ -170,7 +171,7 @@ export async function broadcastNotification(payload: NotificationPayload) {
 
     return sent;
   } catch (error) {
-    console.error('Error broadcasting notification:', error);
+    logger.error('Error broadcasting notification:', error);
     return false;
   }
 }

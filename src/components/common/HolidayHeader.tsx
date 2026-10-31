@@ -24,7 +24,7 @@ export default function HolidayHeader({
 }: HolidayHeaderProps) {
   const { displayMode } = useAppSelector((state: any) => state.theme.settings);
   const [currentHolidayIndex, setCurrentHolidayIndex] = useState(0);
-  const [isIconCyclingEnabled, setIsIconCyclingEnabled] = useState(cycleIcons);
+  const [isIconCyclingEnabled] = useState(cycleIcons);
 
   const isGamified = displayMode === 'gamified';
 
@@ -81,54 +81,20 @@ export default function HolidayHeader({
       "valentine's day": '#db2777', // pink-600
       easter: '#9333ea', // purple-600
       halloween: '#ea580c', // orange-600
-      '🎃 halloween': '#ea580c', // orange-600 (with emoji)
       thanksgiving: '#d97706', // amber-600
-      '🦃 thanksgiving': '#d97706', // amber-600 (with emoji)
       'mothers-day': '#db2777', // pink-600
       "mother's day": '#db2777', // pink-600
-      "🌸 mother's day": '#db2777', // pink-600 (with emoji)
       'fathers-day': '#2563eb', // blue-600
       "father's day": '#2563eb', // blue-600
-      "👨 father's day": '#2563eb', // blue-600 (with emoji)
       'fourth-of-july': '#dc2626', // red-600
       'fourth of july': '#dc2626', // red-600
-      '🎆 fourth of july': '#dc2626', // red-600 (with emoji)
       birthday: '#eab308', // yellow-500
       anniversary: '#db2777', // pink-600
       graduation: '#9333ea', // purple-600
       'baby-shower': '#0891b2', // cyan-600
       'baby shower': '#0891b2', // cyan-600
-      '👶 baby shower': '#0891b2', // cyan-600 (with emoji)
     };
     return outlineColorMap[holidayName.toLowerCase()] || ''; // default fallback
-  };
-
-  // Get emoji for holiday
-  const getHolidayEmoji = () => {
-    const emojiMap: { [key: string]: string } = {
-      christmas: '🎄',
-      hanukkah: '🕎',
-      kwanzaa: '🕯️',
-      'new-year': '🎊',
-      'new year': '🎊',
-      valentines: '💕',
-      "valentine's day": '💕',
-      easter: '🐰',
-      halloween: '🎃',
-      thanksgiving: '🦃',
-      'mothers-day': '🌸',
-      "mother's day": '🌸',
-      'fathers-day': '👨',
-      "father's day": '👨',
-      'fourth-of-july': '🎆',
-      'fourth of july': '🎆',
-      birthday: '🎂',
-      anniversary: '💖',
-      graduation: '🎓',
-      'baby-shower': '👶',
-      'baby shower': '👶',
-    };
-    return emojiMap[holidayName.toLowerCase()] || '🎉';
   };
 
   // Get holiday SVG component
@@ -166,13 +132,6 @@ export default function HolidayHeader({
     return (
       <SvgComponent className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 mr-2 sm:mr-3 md:mr-4" />
     );
-  };
-
-  // Clean holiday name (remove existing emojis and extra spaces)
-  const getCleanHolidayName = () => {
-    return holidayName
-      .replace(/[🎄🕎🕯️🎊💕🐰🎃🦃🌸👨🎆🎂💖🎓👶🎉]/g, '') // Remove emojis
-      .trim(); // Remove extra spaces
   };
 
   return (
@@ -222,7 +181,7 @@ export default function HolidayHeader({
               }
             >
               <span className="flex items-center">
-                {getHolidaySvg()} {getCleanHolidayName()}
+                {getHolidaySvg()} {holidayName.trim()}
               </span>
             </h1>
           </div>

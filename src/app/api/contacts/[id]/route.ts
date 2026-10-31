@@ -11,6 +11,7 @@ import {
   notFound,
   serverError,
 } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 // Validation schema for updating contacts
 const UpdateContactSchema = z.object({
@@ -107,7 +108,7 @@ export async function PUT(
     if (error instanceof Error && error.message === 'Authentication required') {
       return unauthorized('Authentication required');
     }
-    console.error('Error updating contact:', error);
+    logger.error('Error updating contact:', error);
     return serverError('Failed to update contact');
   }
 }
@@ -161,7 +162,7 @@ export async function DELETE(
     if (error instanceof Error && error.message === 'Authentication required') {
       return unauthorized('Authentication required');
     }
-    console.error('Error deleting contact:', error);
+    logger.error('Error deleting contact:', error);
     return serverError('Failed to delete contact');
   }
 }

@@ -38,6 +38,7 @@ jest.mock('@/store/slices/sharesSlice', () => ({
 }));
 jest.mock('@/utils/formTransformers', () => ({
   transformGiftPayload: (values: any) => ({ ...values, transformed: true }),
+  transformSuppliesPayload: (values: any) => ({ ...values, supplies: true }),
 }));
 jest.mock('@/config/formConfigs', () => ({
   getFormConfigEnhanced: (type: string, mode: string) => ({
@@ -87,6 +88,12 @@ jest.mock('@/components/modals/FormModal', () => ({
         </button>
         <button onClick={() => onSubmit({ name: ' ', recipient: 'Ada' })}>
           submit blank {title}
+        </button>
+        <button onClick={() => onSubmit({ name: 'Tape' })}>
+          submit blank recipient {title}
+        </button>
+        <button onClick={() => onSubmit({ name: ' ' })}>
+          submit blank name {title}
         </button>
       </div>
     ) : null,
@@ -193,7 +200,7 @@ describe('GiftListPage', () => {
     pageData.holidayData = { gifts: [] };
     renderPage(giftListConfigs.hanukkah);
 
-    expect(screen.getByText('All gifts completed! 🕯️')).toBeTruthy();
+    expect(screen.getByText('All gifts completed!')).toBeTruthy();
     expect(screen.getByText('No completed gifts yet.')).toBeTruthy();
   });
 
@@ -428,5 +435,62 @@ describe('GiftListPage', () => {
         role: 'owner',
       },
     ]);
+  });
+});
+
+describe('GiftListPage as a supplies list', () => {
+  it('uses the supplies form and wording', () => {
+    renderPage(giftListConfigs['new-year-supplies']);
+
+    expect(screen.getByRole('heading', { name: 'Supply List' })).toBeTruthy();
+    expect(screen.getByText('Budget for New Year')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Supply' })).toBeTruthy();
+    expect(screen.getByText('Incomplete (2)')).toBeTruthy();
+  });
+
+  it('adds a supply with only a name, using the supplies payload', async () => {
+    renderPage(giftListConfigs['new-year-supplies']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Supply' }));
+    fireEvent.click(screen.getByText('submit blank recipient Add New Supply'));
+
+    await waitFor(() =>
+      expect(mutations.createGift).toHaveBeenCalledWith({
+        name: 'Tape',
+        supplies: true,
+      }),
+    );
+    expect(await screen.findByText('Supply added successfully!')).toBeTruthy();
+  });
+
+  it('asks for the item name when it is missing, without saving', async () => {
+    renderPage(giftListConfigs['fourth-of-july-supplies']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Supply' }));
+    fireEvent.click(screen.getByText('submit blank name Add New Supply'));
+
+    expect(
+      await screen.findByText('Please fill in the Item Name field'),
+    ).toBeTruthy();
+    expect(mutations.createGift).not.toHaveBeenCalled();
+  });
+
+  it('edits a supply with the supplies payload', async () => {
+    renderPage(giftListConfigs['new-year-supplies']);
+
+    fireEvent.click(screen.getByText('edit Gift a'));
+    fireEvent.click(screen.getByText('submit Edit Supply'));
+
+    await waitFor(() => expect(mutations.editGift).toHaveBeenCalled());
+    expect(mutations.editGift.mock.calls[0][1].supplies).toBe(true);
+  });
+
+  it('still needs a recipient on a gift list', () => {
+    renderPage(giftListConfigs.christmas);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Gift' }));
+    fireEvent.click(screen.getByText('submit blank recipient Add New Gift'));
+
+    expect(mutations.createGift).not.toHaveBeenCalled();
   });
 });

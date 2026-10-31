@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -20,6 +19,7 @@ import HolidayPageHeader from '@/components/common/HolidayPageHeader';
 import AddButton from '@/components/common/AddButton';
 import TaskSection from '@/components/common/TaskSection';
 import ToDoCard from '@/components/cards/to-do/ToDoCard';
+import Suggestions, { type Suggestion } from '@/components/common/Suggestions';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
@@ -103,8 +103,6 @@ export default function BirthdayPartyPlanningPage() {
         ]
       : baseMembers;
 
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
   const {
     createTask,
     updateTask,
@@ -122,10 +120,6 @@ export default function BirthdayPartyPlanningPage() {
       ) || [],
     [holidayData?.tasks],
   );
-
-  const isLoading = !homeInitialized;
-
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // State management
   const [showForm, setShowForm] = useState(false);
@@ -166,7 +160,7 @@ export default function BirthdayPartyPlanningPage() {
     if (partyPlanning.length === 0 && homeInitialized) {
       setShowDefaultTasks(true);
     }
-  }, [partyPlanning, homeInitialized]);
+  }, [partyPlanning.length, homeInitialized]);
 
   // Task sorting function from Kwanzaa
   function sortTasks(tasksToSort: any[]): any[] {
@@ -247,25 +241,18 @@ export default function BirthdayPartyPlanningPage() {
     }
   }
 
-  async function addDefaultPartyPlanningTasks() {
-    if (!holidayId || !auth0User) return;
+  async function addPartyPlanningSuggestions(items: Suggestion[]) {
+    if (!holidayId || !auth0User) throw new Error('No holiday');
 
-    try {
-      // Make all API calls using the hook
-      for (const task of defaultPartyPlanningTasks) {
-        await createTask({
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          assigned_to: undefined,
-          due_date: undefined,
-          category: 'Party Planning',
-        });
-      }
-
-      setShowDefaultTasks(false);
-    } catch (error) {
-      console.error('Failed to add default tasks:', error);
+    for (const task of items) {
+      await createTask({
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        assigned_to: undefined,
+        due_date: undefined,
+        category: 'Party Planning',
+      });
     }
   }
 
@@ -391,34 +378,18 @@ export default function BirthdayPartyPlanningPage() {
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Show default tasks prompt if no tasks exist */}
-        {showDefaultTasks && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Get Started with Party Planning
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Would you like to add some default party planning tasks to get started?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={addDefaultPartyPlanningTasks}
-                disabled={createLoading}
-                className="bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {createLoading && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-200"></div>
-                )}
-                {createLoading ? 'Adding Tasks...' : 'Add Default Tasks'}
-              </button>
-              <button
-                onClick={() => setShowDefaultTasks(false)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
+        <Suggestions
+          heading={'Get Started with Party Planning'}
+          question={
+            'Would you like to add some default party planning tasks to get started?'
+          }
+          noun="party planning tasks"
+          items={defaultPartyPlanningTasks}
+          existingTitles={partyPlanning.map((task: any) => task.title)}
+          onAdd={addPartyPlanningSuggestions}
+          showPrompt={showDefaultTasks}
+          onDismissPrompt={() => setShowDefaultTasks(false)}
+        />
 
         <AddButton
           title="Task"
@@ -484,7 +455,7 @@ export default function BirthdayPartyPlanningPage() {
             title="Incomplete"
             items={incompletePartyPlanningTasks}
             isCompleted={false}
-            emptyMessage="All party planning tasks completed! 🎉"
+            emptyMessage="All party planning tasks completed!"
             completedMessage=""
             renderItem={task => (
               <ToDoCard

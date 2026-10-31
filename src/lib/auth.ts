@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from './prisma';
 import { verifyIdToken } from './verifyAuth0Token';
+import { logger } from '@/lib/logger';
 
 // Auth0 session interface
 interface Auth0Session {
@@ -38,7 +39,7 @@ function getLegacyTestSession(request: NextRequest): Auth0Session | null {
     try {
       return toSession(testUser);
     } catch (parseError) {
-      console.error(`[${timestamp}] Error parsing x-test-user header:`, parseError);
+      logger.error(`[${timestamp}] Error parsing x-test-user header:`, parseError);
       return null;
     }
   }
@@ -49,10 +50,7 @@ function getLegacyTestSession(request: NextRequest): Auth0Session | null {
     try {
       return toSession(decodeURIComponent(queryTestUser));
     } catch (parseError) {
-      console.error(
-        `[${timestamp}] Error parsing testUser query param:`,
-        parseError,
-      );
+      logger.error(`[${timestamp}] Error parsing testUser query param:`, parseError);
     }
   }
 
@@ -72,7 +70,7 @@ async function getAuth0Session(request: NextRequest): Promise<Auth0Session | nul
       const claims = await verifyIdToken(match[1]);
       return { user: claims };
     } catch (error) {
-      console.warn(
+      logger.warn(
         'Auth0 token verification failed:',
         error instanceof Error ? error.message : 'unknown error',
       );
@@ -148,8 +146,8 @@ export async function getCurrentUser(
         },
       });
     } catch (prismaError) {
-      console.error('💥 PRISMA QUERY FAILED:', prismaError);
-      console.error('Prisma error details:', {
+      logger.error('💥 PRISMA QUERY FAILED:', prismaError);
+      logger.error('Prisma error details:', {
         message:
           prismaError instanceof Error
             ? prismaError.message
@@ -186,7 +184,7 @@ export async function getCurrentUser(
           },
         });
       } catch (createError) {
-        console.error('💥 USER CREATION FAILED:', createError);
+        logger.error('💥 USER CREATION FAILED:', createError);
         return null;
       }
     }
@@ -197,7 +195,7 @@ export async function getCurrentUser(
       session.user.emailVerified === true ? (session.user.email ?? null) : null;
     return { ...user, verifiedEmail };
   } catch (error) {
-    console.error('Error getting current user:', error);
+    logger.error('Error getting current user:', error);
     return null;
   }
 }
@@ -269,7 +267,7 @@ export async function assertHolidayAccess(
 
     return null; // Access granted
   } catch (error) {
-    console.error('Error checking holiday access:', error);
+    logger.error('Error checking holiday access:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'Internal server error' }),
       { status: 500 },

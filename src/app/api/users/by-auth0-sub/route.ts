@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error fetching user by Auth0 sub:', error);
+    logger.error('Error fetching user by Auth0 sub:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
