@@ -199,7 +199,8 @@ describe('FormModal', () => {
       },
       { id: 'c2', name: 'Alan' },
     ];
-    const open = () => fireEvent.click(screen.getByRole('button', { name: '📖' }));
+    const open = () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Address book' }));
 
     it('shows contacts, or an empty hint', () => {
       const { unmount } = setup({ contacts });

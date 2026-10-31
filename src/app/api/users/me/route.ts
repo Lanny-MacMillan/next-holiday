@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, claimsOtherUser, forbiddenResponse } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/users/me
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
     const { auth0Sub: _, ...userResponse } = user;
     return Response.json(userResponse);
   } catch (error) {
-    console.error('Error fetching current user:', error);
+    logger.error('Error fetching current user:', error);
     return Response.json({ error: 'Failed to fetch current user' }, { status: 500 });
   }
 }
@@ -119,7 +120,7 @@ export async function PUT(request: NextRequest) {
     const { auth0Sub: _, ...userResponse } = updatedUser;
     return Response.json(userResponse);
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    logger.error('Error updating user profile:', error);
     return Response.json(
       { error: 'Failed to update user profile' },
       { status: 500 },

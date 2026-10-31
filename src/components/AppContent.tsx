@@ -119,7 +119,7 @@ export default function AppContent({ children }: AppContentProps) {
             className="fixed bottom-4 right-4 z-[9998] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
             title="Open Performance Dashboard"
           >
-            📊
+            Metrics
           </button>
 
           <PerformanceDashboard

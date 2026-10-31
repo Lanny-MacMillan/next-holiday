@@ -60,16 +60,16 @@ export default function CancelSubscriptionModal({
         );
 
         if (!cleanupResponse.ok) {
-          const cleanupError = await cleanupResponse.json();
+          await cleanupResponse.json();
 
           // Don't throw here - we still want to proceed with cancellation
         } else {
-          const cleanupResult = await cleanupResponse.json();
+          await cleanupResponse.json();
         }
 
         // 2. Downgrade user to free in database
         setLoadingMessage('Updating subscription...');
-        const downgradeResult = await dispatch(
+        await dispatch(
           upgradeUser({
             auth0Sub: auth0User.sub,
             plan: 'free',
@@ -86,7 +86,7 @@ export default function CancelSubscriptionModal({
         }),
       );
 
-      // Set lastUpdated to track recent change
+      // Mark the downgrade so a home load right after does not undo it
       dispatch(
         setUser({
           sub: auth0User.sub!,
@@ -98,6 +98,7 @@ export default function CancelSubscriptionModal({
           subscriptionStartDate: undefined,
           subscriptionEndDate: undefined,
           lastUpdated: new Date().toISOString(),
+          downgradedAt: new Date().toISOString(),
         }),
       );
 

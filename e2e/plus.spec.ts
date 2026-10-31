@@ -22,15 +22,11 @@ test.describe('Plus features', () => {
 
     await setPlan(context, session, 'plus');
 
-    // A fresh browser, since the first one keeps the plan it just loaded for 30 seconds
-    const fresh = await browser.newContext();
-    await signIn(fresh, 'A');
-    const freshPage = await fresh.newPage();
-    await freshPage.goto('/');
+    // Reloading straight away must pick up the upgrade made on the server
+    await page.reload();
     await expect(
-      freshPage.getByRole('button', { name: 'Invite', exact: true }),
+      page.getByRole('button', { name: 'Invite', exact: true }),
     ).toBeVisible();
     await context.close();
-    await fresh.close();
   });
 });

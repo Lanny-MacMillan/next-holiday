@@ -155,6 +155,17 @@ describe('CancelSubscriptionModal', () => {
       expect(store.getState().user.user?.subscriptionPlan).toBe('free');
     });
 
+    it('marks the downgrade, so a home load a moment later cannot undo it', async () => {
+      respond();
+      renderModal();
+      confirm();
+      await waitFor(() => expect(props.onCancel).toHaveBeenCalled());
+
+      const markedAt = store.getState().user.user?.downgradedAt;
+      expect(markedAt).toBeTruthy();
+      expect(Date.now() - new Date(markedAt!).getTime()).toBeLessThan(30_000);
+    });
+
     it('locks the modal and shows progress while it works', async () => {
       let release!: (v: unknown) => void;
       mockFetch.mockImplementation(

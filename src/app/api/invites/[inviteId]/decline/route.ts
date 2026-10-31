@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, forbiddenResponse, isInviteRecipient } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -65,7 +66,7 @@ export async function POST(
 
     return NextResponse.json(updatedInvite);
   } catch (error) {
-    console.error('Error declining invite:', error);
+    logger.error('Error declining invite:', error);
     return NextResponse.json({ error: 'Failed to decline invite' }, { status: 500 });
   }
 }

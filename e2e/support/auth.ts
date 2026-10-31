@@ -49,9 +49,23 @@ function decode(idToken: string) {
   return { claims: { ...claims, __raw: idToken }, user: claims };
 }
 
+// Auth0 refuses repeated password logins for one user within a minute, and every
+// test signs in, so each user's tokens are fetched once per run and reused.
+const tokenCache = new Map<TestUser, ReturnType<typeof fetchTokens>>();
+
+function cachedTokens(user: TestUser) {
+  let tokens = tokenCache.get(user);
+  if (!tokens) {
+    tokens = fetchTokens(user);
+    tokenCache.set(user, tokens);
+    tokens.catch(() => tokenCache.delete(user));
+  }
+  return tokens;
+}
+
 // Writes the same localStorage entries auth0-spa-js writes after a login.
 export async function signIn(context: BrowserContext, user: TestUser) {
-  const tokens = await fetchTokens(user);
+  const tokens = await cachedTokens(user);
   const decodedToken = decode(tokens.id_token);
   const id = clientId();
   const prefix = '@@auth0spajs@@';

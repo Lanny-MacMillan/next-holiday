@@ -175,6 +175,49 @@ describe('POST /holidays', () => {
     });
   });
 
+  describe('traditional items', () => {
+    it('adds them to a new Hanukkah', async () => {
+      db.holiday.create.mockResolvedValue(
+        holidayRow({
+          id: 'new-h',
+          holidayType: 'Hanukkah',
+          startDate: new Date('2025-12-14T00:00:00Z'),
+        }),
+      );
+
+      await post({ ...valid, holidayType: 'Hanukkah' });
+
+      const { data } = db.task.createMany.mock.calls[0][0];
+      expect(data).toHaveLength(8);
+      expect(data[0]).toMatchObject({ holidayId: 'new-h', createdBy: ME });
+    });
+
+    it('adds nothing to an ordinary holiday', async () => {
+      db.holiday.create.mockResolvedValue(holidayRow());
+
+      await post(valid);
+
+      expect(db.task.createMany).not.toHaveBeenCalled();
+    });
+
+    it('still creates the holiday when the items cannot be added', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      db.holiday.create.mockResolvedValue(
+        holidayRow({
+          holidayType: 'Kwanzaa',
+          startDate: new Date('2025-12-26T00:00:00Z'),
+        }),
+      );
+      db.task.createMany.mockRejectedValue(new Error('db down'));
+
+      const { status } = await readJson(
+        await post({ ...valid, holidayType: 'Kwanzaa' }),
+      );
+
+      expect(status).toBe(201);
+    });
+  });
+
   it('leaves the end date empty when none is given', async () => {
     db.holiday.create.mockResolvedValue(holidayRow());
     await post(valid);
@@ -373,6 +416,58 @@ describe('POST /holidays/preferences', () => {
     expect(body.data).toHaveLength(1);
     expect(body.data[0].holiday.countdownTimer).toBe(when);
     expect(body.data[0].budget.totalBudget).toBe(300);
+  });
+
+  describe('traditional items', () => {
+    it('adds them to a newly created Hanukkah or Kwanzaa', async () => {
+      db.holiday.create.mockImplementation(async ({ data }: any) => ({
+        ...holidayRow(),
+        ...data,
+      }));
+
+      await save({
+        accountId: ACCOUNT,
+        preferences: [{ holiday: 'Hanukkah' }, { holiday: 'Kwanzaa' }],
+      });
+
+      expect(db.task.createMany).toHaveBeenCalledTimes(2);
+      const hanukkah = db.task.createMany.mock.calls[0][0].data;
+      const kwanzaa = db.task.createMany.mock.calls[1][0].data;
+      expect(hanukkah).toHaveLength(8);
+      expect(hanukkah.every((t: any) => t.createdBy === ME)).toBe(true);
+      expect(kwanzaa).toHaveLength(17);
+      expect(
+        new Set([...hanukkah, ...kwanzaa].map((t: any) => t.holidayId)).size,
+      ).toBe(2);
+    });
+
+    it('adds nothing to a holiday that has none', async () => {
+      await save({ accountId: ACCOUNT, preferences: [{ holiday: 'Christmas' }] });
+
+      expect(db.task.createMany).not.toHaveBeenCalled();
+    });
+
+    it('adds nothing again when the holiday already exists, so deleted items stay deleted', async () => {
+      db.holiday.findFirst.mockResolvedValue(
+        holidayRow({ holidayType: 'Hanukkah' }),
+      );
+
+      await save({ accountId: ACCOUNT, preferences: [{ holiday: 'Hanukkah' }] });
+
+      expect(db.holiday.create).not.toHaveBeenCalled();
+      expect(db.task.createMany).not.toHaveBeenCalled();
+    });
+
+    it('fails the whole save when the items cannot be added, so nothing half-exists', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      db.task.createMany.mockRejectedValue(new Error('db down'));
+
+      const { status } = await readJson(
+        await save({ accountId: ACCOUNT, preferences: [{ holiday: 'Hanukkah' }] }),
+      );
+
+      expect(status).toBeGreaterThanOrEqual(500);
+    });
   });
 
   it('updates the timer of a holiday that already exists, without creating another', async () => {

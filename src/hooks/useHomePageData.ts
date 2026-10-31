@@ -1,10 +1,7 @@
-import { useAuth0 } from '@auth0/auth0-react';
 import { useAppSelector } from '@/store/hooks';
 import { selectHomeData } from '@/store/selectors/home';
 
 export function useHomePageData(homeData?: any) {
-  const { user: auth0User } = useAuth0();
-
   // 🔥 CRITICAL FIX: Use Redux state instead of prop data for real-time updates
   // When shares are left, Redux state is updated but prop data remains stale
   const reduxHomeData = useAppSelector(selectHomeData);
@@ -12,8 +9,6 @@ export function useHomePageData(homeData?: any) {
 
   // Use holidayPreferences from Redux store for real-time updates
   const holidayPreferences = effectiveHomeData?.holidayPreferences || [];
-
-  const homeInitialized = useAppSelector((state: any) => state.home.initialized);
 
   // Use data from Redux store first, fallback to prop data
   // Extract all gifts, cards, and tasks from the effective home data

@@ -58,17 +58,20 @@ describe('loadHome', () => {
           data: { ...data, user: { ...data.user, subscriptionPlan } },
         }),
       });
-
-    it('shows a plan that has been on the server for a while', async () => {
-      serverSays('free');
-      await store.dispatch(loadHome(profile));
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    const downgradedInApp = (at: string) =>
       store.dispatch({
         type: 'user/setUser',
         payload: {
           ...store.getState().user.user,
-          lastUpdated: new Date(Date.now() - 60_000).toISOString(),
+          subscriptionPlan: 'free',
+          downgradedAt: at,
         },
       });
+
+    it('shows an upgrade made on the server right after a load', async () => {
+      serverSays('free');
+      await store.dispatch(loadHome(profile));
 
       serverSays('plus');
       await store.dispatch(loadHome(profile));
@@ -76,20 +79,43 @@ describe('loadHome', () => {
       expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
     });
 
-    // KNOWN ISSUE: every load stamps lastUpdated, and a free user updated in the last
-    // 30 seconds is treated as "just downgraded", so a plan that changed on the server
-    // (for example a Stripe upgrade) is ignored until 30 seconds after the last load.
-    it.failing(
-      'shows an upgrade made on the server right after a load',
-      async () => {
-        serverSays('free');
-        await store.dispatch(loadHome(profile));
+    it('shows a plan that has been on the server for a while', async () => {
+      serverSays('free');
+      await store.dispatch(loadHome(profile));
 
-        serverSays('plus');
-        await store.dispatch(loadHome(profile));
+      serverSays('plus');
+      await store.dispatch(loadHome(profile));
+      await store.dispatch(loadHome(profile));
 
-        expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
-      },
-    );
+      expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
+    });
+
+    it('keeps a downgrade made in the app in the last 30 seconds, until the server catches up', async () => {
+      serverSays('plus');
+      await store.dispatch(loadHome(profile));
+      downgradedInApp(ago(5_000));
+
+      await store.dispatch(loadHome(profile));
+
+      const user = store.getState().user.user;
+      expect(user?.subscriptionPlan).toBe('free');
+      expect(user?.subscriptionStartDate).toBeUndefined();
+    });
+
+    it('trusts the server again once that downgrade is more than 30 seconds old', async () => {
+      serverSays('plus');
+      await store.dispatch(loadHome(profile));
+      downgradedInApp(ago(60_000));
+
+      await store.dispatch(loadHome(profile));
+
+      expect(store.getState().user.user?.subscriptionPlan).toBe('plus');
+    });
+
+    it('does not treat a free user as just downgraded because the page loaded a moment ago', async () => {
+      serverSays('free');
+      await store.dispatch(loadHome(profile));
+      expect(store.getState().user.user?.downgradedAt).toBeUndefined();
+    });
   });
 });

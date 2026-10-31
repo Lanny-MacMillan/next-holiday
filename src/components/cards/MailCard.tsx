@@ -119,7 +119,7 @@ export default function MailCard({
                     className="text-xs text-white opacity-90"
                     style={{ fontFamily: 'var(--font-family-fredoka)' }}
                   >
-                    📍 {card.address}
+                    {card.address}
                   </p>
                 </div>
               )}
@@ -220,7 +220,7 @@ export default function MailCard({
             {card.address && (
               <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  📍 {card.address}
+                  {card.address}
                 </p>
               </div>
             )}

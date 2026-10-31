@@ -315,7 +315,7 @@ const editShoppingListFormConfig: FormConfig = {
 };
 
 // Guest list form configuration (simplified for current database schema)
-export const guestsFormConfig: FormConfig = {
+const guestsFormConfig: FormConfig = {
   title: 'Add New Guest',
   fields: [
     {
@@ -363,7 +363,7 @@ export const guestsFormConfig: FormConfig = {
   showAddressBook: true,
 };
 
-export const editGuestsFormConfig: FormConfig = {
+const editGuestsFormConfig: FormConfig = {
   ...guestsFormConfig,
   title: 'Edit Guest',
   submitText: 'Update Guest',

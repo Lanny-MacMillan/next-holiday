@@ -12,6 +12,8 @@ import {
   createPaginatedResponse,
 } from '@/lib/pagination';
 import { ok, created, badRequest, routeError } from '@/lib/http';
+import { seedHolidayTasks } from '@/lib/server/seedHoliday';
+import { logger } from '@/lib/logger';
 
 // Validation schemas
 const CreateHolidaySchema = z.object({
@@ -26,23 +28,6 @@ const CreateHolidaySchema = z.object({
     .optional(), // YYYY-MM-DD format
   colorLight: z.string().min(1),
   colorDark: z.string().min(1),
-  isCustom: z.boolean().optional(),
-});
-
-const UpdateHolidaySchema = z.object({
-  holidayType: z.string().min(1).optional(),
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().optional(),
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  endDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  colorLight: z.string().min(1).optional(),
-  colorDark: z.string().min(1).optional(),
   isCustom: z.boolean().optional(),
 });
 
@@ -191,6 +176,13 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // A holiday with traditional items gets them now; the holiday exists either way
+    try {
+      await seedHolidayTasks(prisma, holiday, user.id);
+    } catch (error) {
+      logger.error('Could not add the traditional items to the new holiday:', error);
+    }
 
     // Transform date fields to strings for API response
     const transformedHoliday = {

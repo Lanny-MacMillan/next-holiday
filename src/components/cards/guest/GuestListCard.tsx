@@ -161,24 +161,6 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
     };
   };
 
-  // Guest-themed icons for gamified mode
-  const GuestIcon = ({
-    count,
-    className = '',
-  }: {
-    count: number;
-    className?: string;
-  }) => {
-    const getIcon = (count: number) => {
-      if (count >= 20) return '🎉';
-      if (count >= 10) return '👥';
-      if (count >= 5) return '👨‍👩‍👧‍👦';
-      return '👤';
-    };
-
-    return <div className={`text-2xl ${className}`}>{getIcon(count)}</div>;
-  };
-
   if (isGamifiedMode) {
     // Gamified mode design
     const backgroundColor =
@@ -220,9 +202,6 @@ const GuestListCard: React.FC<GuestListCardProps> = ({
                 </p>
               </div>
               <div className="text-right flex-shrink-0 ml-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <GuestIcon count={totalGuests} />
-                </div>
                 <div
                   className="text-xl sm:text-2xl font-bold text-white mt-2"
                   style={{ fontFamily: 'var(--font-family-fredoka)' }}

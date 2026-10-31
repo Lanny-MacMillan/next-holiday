@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -20,6 +19,7 @@ import ToDoCard from '@/components/cards/to-do/ToDoCard';
 import DeleteModal from '@/components/modals/DeleteModal';
 import { getFormConfigEnhanced } from '@/config/formConfigs';
 import { getDeleteConfig } from '@/config/deleteModalConfigs';
+import Suggestions, { type Suggestion } from '@/components/common/Suggestions';
 
 type SortOption = 'priority' | 'dateDue' | 'assignedTo' | 'category' | 'none';
 
@@ -83,7 +83,6 @@ export default function ThanksgivingMealPlanningPage() {
   // Use centralized holiday page data hook
   const { holidayId, holidayData, auth0User, homeInitialized } =
     useHolidayPageData();
-  const { isUserPlusMember, hasSubscription } = useSubscription();
 
   // Use standardized mutation hooks
   const {
@@ -162,15 +161,8 @@ export default function ThanksgivingMealPlanningPage() {
       ).map(transformTaskWithAssignment),
     [holidayData?.tasks, shareMembers],
   );
-  const isLoading = !homeInitialized;
-  const error = null;
 
   // Delete modal handlers
-  const handleDeleteModalOpen = (task: any) => {
-    setTaskToDelete(task);
-    setShowDeleteModal(true);
-  };
-
   const handleDeleteModalClose = () => {
     setTaskToDelete(null);
     setShowDeleteModal(false);
@@ -210,27 +202,20 @@ export default function ThanksgivingMealPlanningPage() {
     if (mealPlanningTasks.length === 0 && homeInitialized) {
       setShowDefaultTasks(true);
     }
-  }, [mealPlanningTasks, homeInitialized]);
+  }, [mealPlanningTasks.length, homeInitialized]);
 
-  const addDefaultMealPlanningTasks = async () => {
-    if (!holidayId) return;
+  const addMealPlanningSuggestions = async (items: Suggestion[]) => {
+    if (!holidayId) throw new Error('No holiday');
 
-    try {
-      // Create all default tasks
-      for (const task of defaultMealPlanningTasks) {
-        await createTask({
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          assigned_to: undefined,
-          due_date: undefined,
-          category: 'Meal Planning',
-        });
-      }
-
-      setShowDefaultTasks(false);
-    } catch (error) {
-      console.error('Failed to add default tasks:', error);
+    for (const task of items) {
+      await createTask({
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        assigned_to: undefined,
+        due_date: undefined,
+        category: 'Meal Planning',
+      });
     }
   };
 
@@ -238,7 +223,7 @@ export default function ThanksgivingMealPlanningPage() {
     if (!values.title?.trim() || !holidayId) return;
 
     try {
-      const result = await createTask({
+      await createTask({
         title: values.title,
         description: values.description,
         priority: values.priority,
@@ -374,7 +359,7 @@ export default function ThanksgivingMealPlanningPage() {
   return (
     <div className="min-h-screen thanksgiving-gradient flex flex-col items-center p-4 sm:p-8 font-sans">
       <HolidayPageHeader
-        title="🍽️ Meal Planning"
+        title="Meal Planning"
         backHref="/thanksgiving"
         onSortClick={() => setShowSortModal(true)}
         description="Plan your Thanksgiving menu and dishes!"
@@ -384,34 +369,18 @@ export default function ThanksgivingMealPlanningPage() {
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
         {/* Default Tasks Prompt */}
-        {showDefaultTasks && (
-          <div className="card card-tasks rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-            <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              🍽️ Set Up Meal Planning
-            </h3>
-            <p className="text-blue-700 dark:text-blue-300 text-sm mb-3">
-              Would you like to add some common Thanksgiving meal planning tasks?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={addDefaultMealPlanningTasks}
-                disabled={createLoading}
-                className="bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {createLoading && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                )}
-                {createLoading ? 'Adding Tasks...' : 'Add Default Tasks'}
-              </button>
-              <button
-                onClick={() => setShowDefaultTasks(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
+        <Suggestions
+          heading={'Set Up Meal Planning'}
+          question={
+            'Would you like to add some common Thanksgiving meal planning tasks?'
+          }
+          noun="meal planning tasks"
+          items={defaultMealPlanningTasks}
+          existingTitles={mealPlanningTasks.map((task: any) => task.title)}
+          onAdd={addMealPlanningSuggestions}
+          showPrompt={showDefaultTasks}
+          onDismissPrompt={() => setShowDefaultTasks(false)}
+        />
 
         <AddButton title="Task" onClick={openForm} color="amber" />
 

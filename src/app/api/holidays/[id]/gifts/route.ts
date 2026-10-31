@@ -11,6 +11,7 @@ import {
   broadcastNotification,
 } from '@/lib/realTimeNotifications';
 import { validateAssigneeAccess } from '@/lib/assigneeValidation';
+import { logger } from '@/lib/logger';
 
 // Base schema without contact_id
 const baseSchema = z.object({
@@ -266,7 +267,7 @@ export async function POST(
             );
           } catch (broadcastError) {
             // Silently log broadcast failures - they never affect the API
-            console.warn(
+            logger.warn(
               'Real-time notification broadcast failed (gift assignment succeeded):',
               broadcastError,
             );
@@ -275,7 +276,7 @@ export async function POST(
       } catch (notificationError) {
         // CRITICAL: Even if database notification fails, gift creation still succeeds
         // This maintains backward compatibility with existing behavior
-        console.error(
+        logger.error(
           'Notification system failed (gift assignment succeeded):',
           notificationError,
         );
@@ -445,7 +446,7 @@ export async function PUT(
           }
         } catch (completionError) {
           // Silently log completion notification failures
-          console.warn(
+          logger.warn(
             'Completion notification failed (gift completion succeeded):',
             completionError,
           );
@@ -632,7 +633,7 @@ export async function PATCH(
           }
         } catch (assignmentError) {
           // Silently log assignment notification failures
-          console.warn(
+          logger.warn(
             'Assignment change notification failed (gift update succeeded):',
             assignmentError,
           );

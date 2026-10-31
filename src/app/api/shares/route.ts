@@ -6,6 +6,7 @@ import {
   forbiddenResponse,
   plusRequired,
 } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       message: `Created new ${holidayDisplayName} share`,
     });
   } catch (error) {
-    console.error('Error creating share:', error);
+    logger.error('Error creating share:', error);
     return NextResponse.json({ error: 'Failed to create share' }, { status: 500 });
   }
 }
@@ -370,7 +371,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ error: 'Missing query parameters' }, { status: 400 });
   } catch (error) {
-    console.error('Error fetching shares:', error);
+    logger.error('Error fetching shares:', error);
     return NextResponse.json({ error: 'Failed to fetch shares' }, { status: 500 });
   }
 }

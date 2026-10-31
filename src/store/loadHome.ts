@@ -41,11 +41,11 @@ export const loadHome = createAppThunk(
 
       // Dispatch user data to Redux store with subscription info
       if (data?.user) {
-        // Check if user was recently downgraded (within last 30 seconds)
+        // Keep a downgrade made in the app in the last 30 seconds; anything else the server says wins
         const wasRecentlyDowngraded =
           currentUser?.subscriptionPlan === 'free' &&
-          currentUser?.lastUpdated &&
-          Date.now() - new Date(currentUser.lastUpdated).getTime() < 30000;
+          currentUser?.downgradedAt &&
+          Date.now() - new Date(currentUser.downgradedAt).getTime() < 30000;
 
         const subscriptionPlan = wasRecentlyDowngraded
           ? 'free' // Preserve recent downgrade

@@ -16,6 +16,8 @@ Short notes on choices that are not obvious from the code, with the reason.
 
 **Browser tests use a real Auth0 tenant, isolated.** Mocked tokens would skip the part most likely to break. The tests use a dedicated Auth0 application and database connection that only they can use, and request tokens directly so they do not depend on the login page. There is no test-only path in the app.
 
+**Sentry source maps are uploaded only when a token is set.** With `SENTRY_AUTH_TOKEN` in the build environment (Amplify, as a secret), the build uploads source maps to Sentry so production stack traces show the real file and line, then deletes them from the build so they are never served. Without the token the build is untouched. A failed upload only warns and never stops a deploy. The organisation and project default to `next-holiday` and `javascript-nextjs` and can be overridden with `SENTRY_ORG` and `SENTRY_PROJECT`.
+
 **Rate limiting is per server instance.** It is held in memory, so with several instances the real ceiling is higher. It guards against abuse; it is not a billing quota.
 
-**The Content Security Policy starts in report-only mode.** The policy is built from the same environment variables the app uses, and a browser test fails if a normal visit breaks it. It is enforced only after production has been browsed with the console open.
+**The Content Security Policy is enforced in production.** The policy is built from the same environment variables the app uses, and a browser test fails if a normal signed-in visit breaks it. It ran in report-only mode first, until production had been browsed with the console open and showed no violations. Under `next dev` it only reports, so hot reload and other dev tooling are never blocked. It allows no IP-lookup service: the visitor's location on the performance dashboard comes from the browser's time zone only, so no visitor address is sent to a third party.
