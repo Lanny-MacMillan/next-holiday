@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { addUserToDb } from '@/lib/server/userActions';
 import { ok, serverError, badRequest } from '@/lib/http';
 import { authenticateClaims, forbiddenResponse } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
       }
       body = JSON.parse(text);
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      logger.error('JSON parse error:', parseError);
       return badRequest('Invalid JSON in request body');
     }
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       return serverError(result.error || 'Failed to set up user');
     }
   } catch (error) {
-    console.error('Error in user setup API:', error);
+    logger.error('Error in user setup API:', error);
     return serverError('Failed to set up user');
   }
 }

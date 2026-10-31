@@ -47,12 +47,6 @@ export default function InviteButton({
     user?.sub ? selectOutgoingInvites(state, user.sub) : [],
   );
 
-  // Memoize the selector parameters to prevent unnecessary re-renders
-  const isUserInShare = useMemo(() => {
-    if (!share || !user?.sub) return false;
-    return share.ownerUserId === user.sub || share.memberUserIds.includes(user.sub);
-  }, [share, user?.sub]);
-
   const isUserOwner = useMemo(() => {
     if (!user?.sub) return false;
     if (!share) return true; // No share exists, user can be considered owner

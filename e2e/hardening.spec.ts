@@ -12,14 +12,30 @@ test.describe('production hardening', () => {
     });
   });
 
+  test('every API response carries a request id, and a sent one is kept', async ({
+    request,
+    baseURL,
+  }) => {
+    const answered = await request.get(`${baseURL}/api/health`);
+    expect(answered.headers()['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+
+    const refused = await request.get(`${baseURL}/api/holidays`);
+    expect(refused.status()).toBe(401);
+    expect(refused.headers()['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+
+    const kept = await request.get(`${baseURL}/api/health`, {
+      headers: { 'x-request-id': 'e2e-request-12345' },
+    });
+    expect(kept.headers()['x-request-id']).toBe('e2e-request-12345');
+  });
+
   test('pages carry the security headers', async ({ request, baseURL }) => {
     const headers = (await request.get(`${baseURL}/`)).headers();
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['x-frame-options']).toBe('DENY');
     expect(headers['referrer-policy']).toBeTruthy();
-    expect(headers['content-security-policy-report-only']).toContain(
-      "frame-ancestors 'none'",
-    );
+    expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(headers['content-security-policy-report-only']).toBeUndefined();
   });
 
   test('a normal signed-in visit breaks no Content Security Policy rule', async ({

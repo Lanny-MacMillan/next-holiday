@@ -18,7 +18,6 @@ export default function HolidayDeleteConfirmationModal({
   onConfirm,
   holidayName,
   holidayId,
-  accountId,
 }: HolidayDeleteConfirmationModalProps) {
   const { user } = useAuth0();
   const [confirmText, setConfirmText] = useState('');
@@ -87,7 +86,7 @@ export default function HolidayDeleteConfirmationModal({
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-black">🗑️ Delete Holiday</h2>
+            <h2 className="text-xl font-bold text-black">Delete Holiday</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"

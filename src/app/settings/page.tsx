@@ -3,8 +3,6 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  selectUser,
-  selectUserSubscriptionPlan,
   selectIsUserPlusMember,
   selectUserSubscriptionData,
 } from '@/store/slices/userSlice';
@@ -60,8 +58,6 @@ export default function SettingsPage() {
   const budgetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get user subscription status from Redux using selectors
-  const currentUser = useAppSelector(selectUser);
-  const subscriptionPlan = useAppSelector(selectUserSubscriptionPlan);
   const isUserPlusMember = useAppSelector(selectIsUserPlusMember);
   const subscriptionData = useAppSelector(selectUserSubscriptionData);
 
@@ -547,10 +543,6 @@ export default function SettingsPage() {
     }, 1000);
   };
 
-  const handleSave = () => {
-    dispatch(updateSettings(localSettings));
-  };
-
   // Cascade delete modal handlers
   const handleDeleteModalClose = () => {
     setDeleteModalOpen(false);
@@ -596,8 +588,6 @@ export default function SettingsPage() {
   // Use preferences from database if available, otherwise fall back to local settings
   const currentTheme = preferences?.theme || localSettings.theme;
   const currentDisplayMode = preferences?.displayMode || localSettings.displayMode;
-  const currentReminders =
-    preferences?.reminderNotifications ?? localSettings.notifications.reminders;
   const currentAssignmentNotifications =
     homeData?.notificationPreferences?.assignmentNotifications ??
     localSettings.notifications.assignmentNotifications;
@@ -607,9 +597,6 @@ export default function SettingsPage() {
   const currentInviteNotifications =
     homeData?.notificationPreferences?.inviteNotifications ??
     localSettings.notifications.inviteNotifications;
-  const currentEmailNotifications =
-    homeData?.notificationPreferences?.emailNotifications ??
-    localSettings.notifications.emailNotifications;
 
   return (
     <div className="min-h-screen christmas-settings-gradient flex flex-col items-center p-4 sm:p-8 font-sans">

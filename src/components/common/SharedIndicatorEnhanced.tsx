@@ -10,10 +10,7 @@ import {
   leaveShare,
   refreshShares,
 } from '@/store/slices/sharesSlice';
-import {
-  selectOutgoingInvites,
-  selectPendingInvites,
-} from '@/store/slices/invitesSlice';
+import { selectPendingInvites } from '@/store/slices/invitesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useShareCleanup } from '@/hooks/useShareCleanup';
 import SharedUserList from './SharedUserList';
@@ -51,19 +48,9 @@ export default function SharedIndicatorEnhanced({
 
   const share = useAppSelector(state => selectShareByHolidayKey(state, holidayKey));
 
-  // Get home data to find holidayId for immediate removal on leave
-  const homeData = useAppSelector(state => state.home.data);
-
   // Check if user has pending invites for this holiday
   const pendingInvites = useAppSelector(state =>
     user?.sub ? selectPendingInvites(state, user.sub, user.email) : [],
-  );
-
-  // Debug: Also get ALL invites to see what's in the store
-  const allInvites = useAppSelector(state => state.invites.invites || []);
-  const fullInvitesState = useAppSelector(state => state.invites);
-  const outgoingInvites = useAppSelector(state =>
-    user?.sub ? selectOutgoingInvites(state, user.sub) : [],
   );
 
   const hasPendingInviteForHoliday = useMemo(() => {

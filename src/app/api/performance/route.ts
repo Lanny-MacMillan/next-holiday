@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 // Simple in-memory rate limiter (for production, use Redis or Upstash)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Check rate limit
     const rateLimit = checkRateLimit(clientIP);
     if (!rateLimit.allowed) {
-      console.warn(`Rate limit exceeded for IP: ${clientIP}`);
+      logger.warn(`Rate limit exceeded for IP: ${clientIP}`);
       return NextResponse.json(
         {
           success: false,
@@ -163,11 +164,11 @@ export async function POST(request: NextRequest) {
     try {
       pagePath = new URL(serverData.session.url).pathname;
     } catch {
-      console.warn('Invalid URL in performance data:', serverData.session.url);
+      logger.warn('Invalid URL in performance data:', serverData.session.url);
     }
 
     // Log to console
-    console.log('Performance Data Received:', {
+    logger.debug('Performance Data Received:', {
       sessionId: serverData.session.sessionId,
       location: `${serverData.session.location?.city}, ${serverData.session.location?.region}`,
       totalTime: `${serverData.session.totalTime.toFixed(2)}ms`,
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
     if (serverData.engagement || serverData.session.engagement) {
       const eng = serverData.engagement || serverData.session.engagement;
       if (eng) {
-        console.log('Engagement:', {
+        logger.debug('Engagement:', {
           timeOnPage: `${(eng.timeOnPage / 1000).toFixed(2)}s`,
           scrollDepth: `${eng.scrollDepth}%`,
           interactions: eng.interactions,
@@ -197,14 +198,14 @@ export async function POST(request: NextRequest) {
     // Log errors if any
     if (serverData.errors?.length || serverData.session.errors?.length) {
       const errors = serverData.errors || serverData.session.errors || [];
-      console.error('Errors Tracked:', errors.length, errors.slice(0, 3));
+      logger.error('Errors Tracked:', errors.length, errors.slice(0, 3));
     }
 
     // Log resource info
     if (serverData.resources || serverData.session.resources) {
       const res = serverData.resources || serverData.session.resources;
       if (res) {
-        console.log('Resources:', {
+        logger.debug('Resources:', {
           count: res.count,
           totalSize: `${(res.totalSize / 1024).toFixed(2)}KB`,
           cacheHitRate: `${((res.cacheHits / (res.cacheHits + res.cacheMisses)) * 100).toFixed(1)}%`,
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log detailed metrics for analysis
-    console.log(
+    logger.debug(
       'Detailed Metrics:',
       serverData.metrics.map(m => ({
         name: m.name,
@@ -225,7 +226,7 @@ export async function POST(request: NextRequest) {
 
     // Log Web Vitals
     if (serverData.vitals.length > 0) {
-      console.log(
+      logger.debug(
         'Web Vitals:',
         serverData.vitals.map(v => ({
           name: v.name,
@@ -249,7 +250,7 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error('Error processing performance data:', error);
+    logger.error('Error processing performance data:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to process performance data' },
       { status: 500 },

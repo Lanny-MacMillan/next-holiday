@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateClaims, forbiddenResponse } from '@/lib/routeAuth';
 import { DEFAULT_USER_PREFERENCES } from '@/lib/constants/userPreferences';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/users
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     const { auth0Sub: _, ...userResponse } = user;
     return Response.json(userResponse);
   } catch (error: any) {
-    console.error('Error creating/updating user:', error);
+    logger.error('Error creating/updating user:', error);
 
     // Handle the specific case where upsert fails due to concurrent requests
     if (error.code === 'P2002' && error.meta?.target?.includes('auth0_sub')) {
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
           return Response.json(userResponse);
         }
       } catch (findError) {
-        console.error(
+        logger.error(
           'Error finding existing user after constraint violation:',
           findError,
         );

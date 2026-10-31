@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { paymentsProvider } from '@/lib/payments';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/upgrade-user
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       message: `User successfully upgraded to ${plan} plan`,
     });
   } catch (error) {
-    console.error('User upgrade error:', error);
+    logger.error('User upgrade error:', error);
     return Response.json(
       { error: 'Internal server error during user upgrade' },
       { status: 500 },

@@ -20,24 +20,6 @@ export interface GiftCardItemProps {
   gamifiedBackgroundColor?: string; // New prop for background color
 }
 
-// Gift-themed icons for gamified mode
-const GiftIcon = ({
-  price,
-  className = '',
-}: {
-  price: number;
-  className?: string;
-}) => {
-  const getIcon = (price: number) => {
-    if (price >= 100) return '💎';
-    if (price >= 50) return '🎁';
-    if (price >= 25) return '🎀';
-    return '🎈';
-  };
-
-  return <div className={`text-xl sm:text-2xl ${className}`}>{getIcon(price)}</div>;
-};
-
 export default function GiftCardItem({
   gift,
   isCompleted = false,
@@ -124,11 +106,6 @@ export default function GiftCardItem({
 
         <div className="relative z-10">
           <div className="flex items-start space-x-3">
-            {/* Gift Icon */}
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-              <GiftIcon price={gift.price} />
-            </div>
-
             {/* Gift Content */}
             <div
               className="flex-1 min-w-0"
@@ -205,7 +182,7 @@ export default function GiftCardItem({
                 onClick={e => e.stopPropagation()}
                 className="text-white hover:text-red-200 text-xs bg-white bg-opacity-20 px-2 py-1 rounded transition-colors"
               >
-                🔗 Link
+                Link
               </a>
             )}
             <button
@@ -325,7 +302,7 @@ export default function GiftCardItem({
             onClick={e => e.stopPropagation()}
             className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
           >
-            🔗 Link
+            Link
           </a>
         )}
         <button

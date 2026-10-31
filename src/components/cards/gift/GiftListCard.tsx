@@ -5,7 +5,6 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useGetGiftsQuery } from '@/store/api';
 import { getCardStyling } from '@/utils/cardShadows';
 import { getGamifiedBackgroundColor } from '@/utils/gamifiedUtils';
-import { getHolidayGiftListConfig } from '@/utils/holidayGiftListConfig';
 import { getHolidayIdFromRoute } from '@/utils/holidayUtils';
 
 export interface GiftListCardProps {
@@ -53,13 +52,6 @@ function useGiftListCardData(
   providedHolidayId?: string,
   enabled = true,
 ) {
-  // Get holiday configuration
-  const config = getHolidayGiftListConfig(holiday);
-
-  // Determine data source based on holiday
-  const isThanksgiving =
-    holiday === 'Thanksgiving' || holiday?.includes('Thanksgiving');
-
   const { user: auth0User } = useAuth0();
   const giftHolidayPreferences = useAppSelector(
     (state: any) => state.home.data?.holidayPreferences || [],
@@ -94,14 +86,10 @@ function useGiftListCardData(
   // Get budget limit, preferring DB/Redux budgets; fallback to theme settings
   const { settings } = useAppSelector((state: any) => state.theme);
   let budgetLimit = 0;
-  let overrideSpent: number | undefined = undefined;
 
   if (budgetEntity) {
     budgetLimit =
       typeof budgetEntity.targetAmount === 'number' ? budgetEntity.targetAmount : 0;
-    if (typeof budgetEntity.spentAmount === 'number') {
-      overrideSpent = budgetEntity.spentAmount;
-    }
   } else {
     if (holiday) {
       const holidayChoice = settings.holidayChoices?.find(
@@ -174,13 +162,10 @@ export default function GiftListCard({
   theme = {},
   className = '',
   href,
-  gamified = false,
   gamifiedBackgroundColor,
 }: GiftListCardProps) {
   const {
     primaryColor = '#22c55e', // Default green
-    accentColor = '#eab308', // Default yellow
-    backgroundColor: themeBackgroundColor = 'white',
   } = theme;
 
   // Get display mode from Redux settings and user preferences
@@ -416,7 +401,7 @@ export default function GiftListCard({
                   : isEaster
                     ? 'Basket List'
                     : isNewYear
-                      ? '✨ Supplies List'
+                      ? 'Supplies List'
                       : isFourthOfJuly
                         ? 'Supplies List'
                         : 'Gift List'}
@@ -431,7 +416,7 @@ export default function GiftListCard({
                 : isEaster
                   ? 'Track your Easter basket items'
                   : isNewYear
-                    ? 'Track your ✨ New Year supplies'
+                    ? 'Track your New Year supplies'
                     : isFourthOfJuly
                       ? 'Track your Fourth of July supplies'
                       : `Track your ${displayHolidayName} gift ideas`}
@@ -545,7 +530,7 @@ export default function GiftListCard({
                 : isEaster
                   ? 'Basket List'
                   : isNewYear
-                    ? '✨ Supplies List'
+                    ? 'Supplies List'
                     : isFourthOfJuly
                       ? 'Supplies List'
                       : 'Gift List'}
@@ -564,7 +549,7 @@ export default function GiftListCard({
             {isThanksgiving
               ? 'Track your Thanksgiving shopping budget'
               : isNewYear
-                ? 'Track your ✨ New Year supplies'
+                ? 'Track your New Year supplies'
                 : isFourthOfJuly
                   ? 'Track your Fourth of July supplies'
                   : `Track your ${displayHolidayName} gift ideas`}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticate, forbiddenResponse, isInviteRecipient } from '@/lib/routeAuth';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -169,7 +170,7 @@ export async function POST(
 
     return NextResponse.json({ invite: updatedInvite, share: responseShare });
   } catch (error) {
-    console.error('Error accepting invite:', error);
+    logger.error('Error accepting invite:', error);
     return NextResponse.json({ error: 'Failed to accept invite' }, { status: 500 });
   }
 }

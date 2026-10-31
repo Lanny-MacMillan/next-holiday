@@ -16,16 +16,13 @@ interface RSVPSectionProps {
 }
 
 const RSVPSection: React.FC<RSVPSectionProps> = ({
-  title,
   items,
   rsvpStatus,
   emptyMessage,
   renderItem,
   cardClassName = '',
-  borderColor,
   customTitle,
   gamified = false,
-  holidayColor,
 }) => {
   // Get display mode from Redux settings (fallback to prop)
   const { settings } = useAppSelector((state: any) => state.theme);

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { toPlain } from '@/lib/json';
 import { ok, routeError } from '@/lib/http';
+import { logger } from '@/lib/logger';
 
 // GET /api/users/me/account - Get or create user's first account
 export async function GET(request: NextRequest) {
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
         return newAccount;
       });
     } else {
-      console.log('Found existing account:', account.id);
+      logger.debug('Found existing account:', account.id);
     }
 
     return ok(toPlain(account));
