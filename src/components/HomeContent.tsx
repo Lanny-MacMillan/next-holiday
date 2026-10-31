@@ -115,7 +115,8 @@ export default function HomeContent({ homeData }: HomeContentProps) {
         {filteredHolidays.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Welcome! To get started, select which holidays you'd like to plan for.
+              Welcome! To get started, select which holidays you&apos;d like to plan
+              for.
             </p>
             <Link
               href="/settings"

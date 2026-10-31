@@ -616,7 +616,7 @@ export default function SettingsPage() {
                     : 'Please wait...'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                  Please don't navigate away or add more holidays
+                  Please don&apos;t navigate away or add more holidays
                 </p>
               </div>
             </div>
@@ -1117,7 +1117,7 @@ export default function SettingsPage() {
                   Assignment Notifications
                 </label>
                 <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Get notified when you're assigned tasks or gifts
+                  Get notified when you&apos;re assigned tasks or gifts
                 </p>
               </div>
               <button
@@ -1185,7 +1185,7 @@ export default function SettingsPage() {
                   Invite Notifications
                 </label>
                 <p className="text-xs text-gray-800 dark:text-gray-400">
-                  Get notified when you're invited to join holidays
+                  Get notified when you&apos;re invited to join holidays
                 </p>
               </div>
               <button

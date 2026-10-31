@@ -390,7 +390,7 @@ export default function SharedIndicatorEnhanced({
                     'You are the owner of this shared holiday'
                   ) : (
                     <>
-                      You're a guest member
+                      You&apos;re a guest member
                       <br />
                       Only the holiday owner can invite or remove other members.
                     </>
