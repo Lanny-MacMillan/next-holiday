@@ -152,9 +152,7 @@ export default function CountdownTimer({
   const { targetDate, isActive } = countdownState;
 
   // API-based countdown state
-  const { loading, error, updatingHolidayId } = useAppSelector(
-    state => state.countdownTimer,
-  );
+  const { error, updatingHolidayId } = useAppSelector(state => state.countdownTimer);
   const isUpdating = updatingHolidayId === holidayId;
 
   // Get display mode from Redux settings - always call this hook first
@@ -497,13 +495,6 @@ export default function CountdownTimer({
 
   const holidayColor = getHolidayColor();
   const completionMessage = getCompletionMessage();
-  const isExpired =
-    timeLeft &&
-    timeLeft.days === 0 &&
-    timeLeft.hours === 0 &&
-    timeLeft.minutes === 0 &&
-    timeLeft.seconds === 0;
-
   // Show loading state for API-based countdown
   if (useApiCountdown && isUpdating) {
     return (

@@ -15,10 +15,6 @@ const CreateAccountSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
-const UpdateAccountSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-});
-
 const AccountQuerySchema = z.object({
   q: z.string().optional(),
   sortBy: z.enum(['name', 'createdAt']).optional(),

@@ -31,23 +31,6 @@ const CreateHolidaySchema = z.object({
   isCustom: z.boolean().optional(),
 });
 
-const UpdateHolidaySchema = z.object({
-  holidayType: z.string().min(1).optional(),
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().optional(),
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  endDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  colorLight: z.string().min(1).optional(),
-  colorDark: z.string().min(1).optional(),
-  isCustom: z.boolean().optional(),
-});
-
 const HolidayQuerySchema = z.object({
   accountId: z.string().optional(),
   holidayType: z.string().optional(),

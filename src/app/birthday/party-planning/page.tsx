@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
-import { useSubscription } from '@/hooks/useSubscription';
 import { fetchContacts } from '@/store/slices/addressBookSlice';
 import {
   selectIsHolidayShared,
@@ -104,8 +103,6 @@ export default function BirthdayPartyPlanningPage() {
         ]
       : baseMembers;
 
-  const { isUserPlusMember, hasSubscription } = useSubscription();
-
   const {
     createTask,
     updateTask,
@@ -123,10 +120,6 @@ export default function BirthdayPartyPlanningPage() {
       ) || [],
     [holidayData?.tasks],
   );
-
-  const isLoading = !homeInitialized;
-
-  const isAuthorizedForSharing = hasSubscription && isUserPlusMember;
 
   // State management
   const [showForm, setShowForm] = useState(false);

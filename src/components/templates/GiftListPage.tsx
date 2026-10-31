@@ -75,7 +75,6 @@ export default function GiftListPage({ config }: { config: GiftListConfig }) {
     editGift,
     updateGift,
     deleteGift,
-    createLoading,
     updateLoading,
     deleteLoading,
   } = useHolidayMutations({ holidayId, auth0User });

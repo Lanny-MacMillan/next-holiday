@@ -21,7 +21,6 @@ export interface HolidayTaskCardProps {
 }
 
 export default function HolidayTaskCard({
-  holidayName,
   sectionName,
   description,
   href,
@@ -29,12 +28,10 @@ export default function HolidayTaskCard({
   completedItems,
   theme = {},
   className = '',
-  gamified = false,
   gamifiedBackgroundColor,
 }: HolidayTaskCardProps) {
   const {
     primaryColor = '#22c55e', // Default green
-    accentColor = '#eab308', // Default yellow
     backgroundColor: themeBackgroundColor,
     progressColor = '#22c55e', // Default green for progress bar
   } = theme;

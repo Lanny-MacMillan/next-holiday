@@ -46,8 +46,7 @@ const fourthOfJulySubsections = [
 ];
 
 export default function FourthOfJulyPage() {
-  const { holidayId, holidayData, auth0User, homeInitialized } =
-    useHolidayPageData();
+  const { holidayId, holidayData, homeInitialized } = useHolidayPageData();
   // Show message if holiday doesn't exist
   if (!holidayId) {
     return (
@@ -163,12 +162,6 @@ export default function FourthOfJulyPage() {
               const remaining = budgetLimit - totalSpent;
               const budgetPercentage =
                 budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
-
-              const getBudgetStatus = () => {
-                if (budgetPercentage >= 80) return 'Budget nearly exhausted';
-                if (budgetPercentage >= 60) return 'Moderate budget remaining';
-                return 'Plenty of budget left';
-              };
 
               return (
                 <li key={section.name}>

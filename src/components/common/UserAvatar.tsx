@@ -32,11 +32,10 @@ export default function UserAvatar({
   email,
   picture,
   size = 'sm',
-  showTooltip = true,
   className = '',
 }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
-  const [showTooltipState, setShowTooltipState] = useState(false);
+  const [, setShowTooltipState] = useState(false);
 
   // Get initials from name or email
   const getInitials = () => {

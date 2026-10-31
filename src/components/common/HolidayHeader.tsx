@@ -24,7 +24,7 @@ export default function HolidayHeader({
 }: HolidayHeaderProps) {
   const { displayMode } = useAppSelector((state: any) => state.theme.settings);
   const [currentHolidayIndex, setCurrentHolidayIndex] = useState(0);
-  const [isIconCyclingEnabled, setIsIconCyclingEnabled] = useState(cycleIcons);
+  const [isIconCyclingEnabled] = useState(cycleIcons);
 
   const isGamified = displayMode === 'gamified';
 

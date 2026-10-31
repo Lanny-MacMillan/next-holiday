@@ -18,7 +18,6 @@ export default function HolidayDeleteConfirmationModal({
   onConfirm,
   holidayName,
   holidayId,
-  accountId,
 }: HolidayDeleteConfirmationModalProps) {
   const { user } = useAuth0();
   const [confirmText, setConfirmText] = useState('');

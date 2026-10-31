@@ -29,7 +29,10 @@ const eslintConfig = [
     // Existing debt: surfaced as warnings so CI only fails on new real errors
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { ignoreRestSiblings: true, varsIgnorePattern: '^_' },
+      ],
       'react-hooks/exhaustive-deps': 'warn',
       'prefer-const': 'warn',
       'react/no-unescaped-entities': 'warn',

@@ -762,17 +762,6 @@ export default function NotificationCenter({
     }
   };
 
-  const handleAcceptInvite = async (inviteId: string) => {
-    // Find the notification for this invite to check for existing holiday
-    const inviteNotification = notifications.find(n => n.entityId === inviteId);
-    if (inviteNotification) {
-      handleAcceptClick(inviteNotification);
-    } else {
-      // Fallback to direct acceptance if notification not found
-      handleConfirmAccept(inviteId);
-    }
-  };
-
   const handleDeclineInvite = async (inviteId: string) => {
     try {
       setLoading(true);
