@@ -20,12 +20,7 @@ import Footer from '@/components/common/Footer';
 import Suggestions, { type Suggestion } from '@/components/common/Suggestions';
 
 type SortOption =
-  | 'priority'
-  | 'dateDue'
-  | 'assignedTo'
-  | 'category'
-  | 'title'
-  | 'none';
+  'priority' | 'dateDue' | 'assignedTo' | 'category' | 'title' | 'none';
 type Priority = 'low' | 'medium' | 'high';
 
 interface Task {
