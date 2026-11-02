@@ -13,6 +13,9 @@ async function scan(page: import('@playwright/test').Page, name: string) {
     console.log(
       `A11Y ${name} [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodes)`,
     );
+    for (const node of v.nodes) {
+      console.log(`A11Y   ${node.target.join(' ')} ${node.any[0]?.message ?? ''}`);
+    }
   }
   return violations.filter(v => v.impact === 'critical');
 }
