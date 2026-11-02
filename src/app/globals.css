@@ -1190,10 +1190,18 @@ button.dark .hover\:bg-purple-500:hover {
 
 /* Countdown timer hover effects for professional mode */
 .countdown-timer-professional {
-  color: var(--holiday-color) !important;
+  color: color-mix(in srgb, var(--holiday-color) 55%, black) !important;
 }
 
 .countdown-timer-professional:hover {
+  color: color-mix(in srgb, var(--holiday-color) 40%, black) !important;
+}
+
+.dark .countdown-timer-professional {
+  color: var(--holiday-color) !important;
+}
+
+.dark .countdown-timer-professional:hover {
   color: var(--holiday-color-dark) !important;
 }
 
