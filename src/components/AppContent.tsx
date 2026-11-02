@@ -41,14 +41,14 @@ export default function AppContent({ children }: AppContentProps) {
     if (!initialized) {
       dispatch(initializeTheme());
     }
-  }, [initialized]);
+  }, [initialized, dispatch]);
 
   // Load user preferences when authenticated
   useEffect(() => {
     if (isAuthenticated && auth0User?.sub && !preferencesInitialized) {
       dispatch(getCurrentUserPreferences(auth0User.sub));
     }
-  }, [isAuthenticated, auth0User?.sub, preferencesInitialized]);
+  }, [isAuthenticated, auth0User?.sub, preferencesInitialized, dispatch]);
 
   // Clear cached data when user logs in to prevent seeing stale holiday preferences
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function AppContent({ children }: AppContentProps) {
       // Clear any cached holiday preferences from localStorage
       dispatch(clearCachedData());
     }
-  }, [isAuthenticated, auth0User]);
+  }, [isAuthenticated, auth0User, dispatch]);
 
   // Apply theme to document
   useEffect(() => {
