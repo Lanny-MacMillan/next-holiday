@@ -271,6 +271,18 @@ describe('/api/users/me/preferences', () => {
       });
     });
 
+    it('lets a user opt out of the leaderboard', async () => {
+      expect((await put({ showOnLeaderboard: false })).status).toBe(200);
+      expect(db.userPreferences.upsert.mock.calls[0][0].update).toMatchObject({
+        showOnLeaderboard: false,
+      });
+    });
+
+    it('rejects a non-boolean leaderboard setting', async () => {
+      expect((await put({ showOnLeaderboard: 'no' })).status).toBe(400);
+      expect(db.userPreferences.upsert).not.toHaveBeenCalled();
+    });
+
     it('refuses to update another user', async () => {
       expect((await put({ auth0Sub: 'auth0|other', theme: 'dark' })).status).toBe(
         403,

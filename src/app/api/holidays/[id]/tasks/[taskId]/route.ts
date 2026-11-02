@@ -7,6 +7,7 @@ import { ok, badRequest, notFound, routeError } from '@/lib/http';
 import { getUserName } from '@/lib/notifications';
 import { broadcastAssignment } from '@/lib/realTimeNotifications';
 import { logger } from '@/lib/logger';
+import { syncCompletionPoints } from '@/lib/server/points';
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -75,6 +76,17 @@ export async function PATCH(
         }),
         ...(data.isCompleted !== undefined && { isCompleted: data.isCompleted }),
       },
+    });
+
+    await syncCompletionPoints({
+      userId: user.id,
+      holidayId,
+      entityType: 'task',
+      entityId: taskId,
+      wasCompleted: existingTask.isCompleted,
+      isCompleted: updatedTask.isCompleted,
+      priority: updatedTask.priority,
+      dueDate: updatedTask.dueDate,
     });
 
     // Handle assignment change notifications

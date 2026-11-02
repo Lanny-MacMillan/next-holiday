@@ -1,6 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { createTracedBaseQuery, isRTKTracingEnabled } from '@/lib/traceRTK';
 
+import type { LeaderboardData } from '@/types/points';
+
 const baseQuery = fetchBaseQuery({
   baseUrl: '/api',
   credentials: 'include',
@@ -30,6 +32,7 @@ export const api = createApi({
     'KwanzaaPrinciples',
     'Resolutions',
     'Reservations',
+    'Leaderboard',
   ],
 
   // Performance optimizations
@@ -40,6 +43,20 @@ export const api = createApi({
 
   endpoints: builder => ({
     // Query endpoints
+    getLeaderboard: builder.query<
+      LeaderboardData,
+      { holidayId: string; year?: number }
+    >({
+      query: ({ holidayId, year }) => ({
+        url: `holidays/${holidayId}/leaderboard`,
+        params: year ? { year } : undefined,
+      }),
+      transformResponse: (response: { data: LeaderboardData }) => response.data,
+      providesTags: (_result, _error, { holidayId }) => [
+        { type: 'Leaderboard', id: holidayId },
+      ],
+    }),
+
     getGifts: builder.query<any[], { holidayId: string; auth0User?: any }>({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/gifts`,
@@ -561,6 +578,7 @@ export const api = createApi({
       }),
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
+        { type: 'Leaderboard', id: holidayId },
       ],
       //   Traditional Redux pattern: wait for API success then update Home Slice
       async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
@@ -657,6 +675,7 @@ export const api = createApi({
       }),
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
+        { type: 'Leaderboard', id: holidayId },
       ],
       //   Traditional Redux pattern: wait for API success then update Home Slice
       async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
@@ -925,6 +944,7 @@ export const api = createApi({
       }),
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Cards', id: holidayId },
+        { type: 'Leaderboard', id: holidayId },
       ],
       //   SAME PATTERN AS updateGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted({ holidayId, cardId }, { dispatch, queryFulfilled }) {
@@ -1555,6 +1575,7 @@ export const api = createApi({
       }),
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Gifts', id: holidayId },
+        { type: 'Leaderboard', id: holidayId },
       ],
       // Traditional Redux pattern: wait for API success then update state
       async onQueryStarted({ holidayId, giftId }, { dispatch, queryFulfilled }) {
@@ -3397,4 +3418,5 @@ export const {
   useGetGiftsQuery,
 
   useGetGuestListQuery,
+  useGetLeaderboardQuery,
 } = api;

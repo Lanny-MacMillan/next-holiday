@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { clearHomeData, setHomeData } from '@/store/slices/homeSlice';
+import { getCurrentUserPreferences } from '@/store/slices/userPreferencesSlice';
 import SettingsPage from '@/app/settings/page';
 
 const authValue = {
@@ -181,6 +182,59 @@ describe('Settings page', () => {
       );
       expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
       expect(calls('GET', '/api/home')).toHaveLength(0);
+    });
+  });
+
+  describe('leaderboard visibility', () => {
+    const toggle = () =>
+      screen.getByRole('switch', { name: 'Show me on shared leaderboards' });
+    const seedPreferences = () =>
+      act(() => {
+        store.dispatch({
+          type: getCurrentUserPreferences.fulfilled.type,
+          payload: {
+            theme: 'light',
+            displayMode: 'professional',
+            showOnLeaderboard: true,
+          },
+        });
+      });
+
+    it('is on by default and saves an opt-out', async () => {
+      loadHome();
+      seedPreferences();
+      serve({
+        'PUT /api/users/me/preferences': () => reply({ showOnLeaderboard: false }),
+      });
+      mount();
+      await screen.findByText('Assignment Notifications');
+      expect(toggle()).toHaveAttribute('aria-checked', 'true');
+
+      fireEvent.click(toggle());
+
+      await waitFor(() =>
+        expect(calls('PUT', '/api/users/me/preferences')).toHaveLength(1),
+      );
+      expect(bodyOf(calls('PUT', '/api/users/me/preferences')[0])).toEqual({
+        showOnLeaderboard: false,
+        auth0Sub: 'auth0|me',
+      });
+      await waitFor(() => expect(toggle()).toHaveAttribute('aria-checked', 'false'));
+    });
+
+    it('stays as it was when saving fails', async () => {
+      loadHome();
+      seedPreferences();
+      serve();
+      mount();
+      await screen.findByText('Assignment Notifications');
+
+      fireEvent.click(toggle());
+
+      await waitFor(() =>
+        expect(calls('PUT', '/api/users/me/preferences')).toHaveLength(1),
+      );
+      expect(toggle()).toHaveAttribute('aria-checked', 'true');
     });
   });
 

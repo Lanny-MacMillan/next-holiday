@@ -391,6 +391,21 @@ export default function SettingsPage() {
     }
   };
 
+  const showOnLeaderboard = preferences?.showOnLeaderboard ?? true;
+  const handleLeaderboardToggle = async () => {
+    if (!user?.sub) return;
+    try {
+      await dispatch(
+        updateUserPreferences({
+          preferencesData: { showOnLeaderboard: !showOnLeaderboard },
+          auth0Sub: user.sub,
+        }),
+      ).unwrap();
+    } catch (error) {
+      console.error('Failed to update leaderboard preference:', error);
+    }
+  };
+
   const handleHolidayPreferenceChange = async (
     holiday: string,
     isSelected: boolean,
@@ -1077,6 +1092,43 @@ export default function SettingsPage() {
                 })}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Leaderboard */}
+        <div className="card card-settings rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
+            Leaderboard
+          </h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <span
+                id="leaderboard-visibility-label"
+                className="text-sm font-medium text-gray-800 dark:text-gray-300"
+              >
+                Show me on shared leaderboards
+              </span>
+              <p className="text-xs text-gray-800 dark:text-gray-400">
+                When off, people you share a holiday with can&apos;t see your name or
+                points. You still earn points and see your own.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showOnLeaderboard}
+              aria-labelledby="leaderboard-visibility-label"
+              onClick={handleLeaderboardToggle}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                showOnLeaderboard ? 'bg-blue-600' : 'bg-gray-400'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showOnLeaderboard ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
         </div>
 

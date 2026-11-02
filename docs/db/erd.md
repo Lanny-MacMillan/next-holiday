@@ -41,6 +41,7 @@ erDiagram
         boolean reducedMotion
         boolean highContrast
         varchar191 fontSize
+        boolean showOnLeaderboard
         datetime3 createdAt
         datetime3 updatedAt
     }
@@ -281,7 +282,29 @@ erDiagram
         datetime3 updatedAt
     }
 
+    point_events {
+        char36 id PK
+        char36 userId FK
+        char36 holidayId FK
+        varchar20 entityType
+        char36 entityId
+        int points
+        varchar50 reason
+        datetime3 createdAt
+    }
+
+    user_achievements {
+        char36 id PK
+        char36 userId FK
+        varchar36 scope
+        varchar50 key
+        datetime3 earnedAt
+    }
+
     %% Core User Relationships
+    users ||--o{ point_events : "earns"
+    holidays ||--o{ point_events : "scores"
+    users ||--o{ user_achievements : "earns_badges"
     users ||--o| user_preferences : "has_preferences"
     users ||--o| notification_preferences : "has_notification_prefs"
     users ||--o{ accounts : "owns"

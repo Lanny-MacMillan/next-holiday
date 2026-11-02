@@ -307,7 +307,7 @@ describe('POST /clear-data', () => {
     expect(db.task.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("removes the holiday's tasks, gifts, cards, guests and budgets but keeps the holiday", async () => {
+  it("removes the holiday's tasks, gifts, cards, guests, budgets and points but keeps the holiday", async () => {
     const { status, body } = await readJson(await clear());
 
     expect(status).toBe(200);
@@ -316,7 +316,14 @@ describe('POST /clear-data', () => {
       message: 'Holiday data cleared successfully',
       holidayId: ID,
     });
-    for (const model of ['task', 'gift', 'card', 'guestList', 'budget']) {
+    for (const model of [
+      'task',
+      'gift',
+      'card',
+      'guestList',
+      'budget',
+      'pointEvent',
+    ]) {
       expect(db[model].deleteMany).toHaveBeenCalledWith({
         where: { holidayId: ID },
       });

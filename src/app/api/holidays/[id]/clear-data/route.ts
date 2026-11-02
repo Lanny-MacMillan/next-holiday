@@ -48,6 +48,10 @@ export async function POST(
       prisma.budget.deleteMany({
         where: { holidayId: id },
       }),
+      // Start the leaderboard over too
+      prisma.pointEvent.deleteMany({
+        where: { holidayId: id },
+      }),
     ]);
 
     return ok({

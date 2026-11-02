@@ -39,6 +39,8 @@ type Endpoint = {
   initiate: (arg: unknown) => unknown;
   select?: unknown;
 };
+// The server only reads the Bearer token, which window.fetch adds; these skip the legacy x-test-user header.
+const bearerOnly = new Set(['getLeaderboard']);
 const endpoints = Object.entries(
   api.endpoints as unknown as Record<string, Endpoint>,
 );
@@ -66,7 +68,11 @@ describe('every endpoint', () => {
       expect(sent()).toHaveLength(1);
       const request = sent()[0];
       expect(urlOf(request).pathname.startsWith('/api/')).toBe(true);
-      expect(JSON.parse(request.headers.get('x-test-user')!)).toEqual(auth0User);
+      if (bearerOnly.has(name)) {
+        expect(request.headers.has('x-test-user')).toBe(false);
+      } else {
+        expect(JSON.parse(request.headers.get('x-test-user')!)).toEqual(auth0User);
+      }
     },
   );
 
@@ -92,6 +98,49 @@ describe('request shape', () => {
     expect(request.method).toBe('GET');
     expect(path(request)).toBe('/api/holidays/h1/gifts');
   });
+
+  it('the leaderboard query asks for a year only when given one', async () => {
+    expect(path(await run('getLeaderboard', { holidayId: 'h1' }))).toBe(
+      '/api/holidays/h1/leaderboard',
+    );
+    expect(path(await run('getLeaderboard', { holidayId: 'h1', year: 2026 }))).toBe(
+      '/api/holidays/h1/leaderboard?year=2026',
+    );
+  });
+
+  it('the leaderboard query unwraps the response data', async () => {
+    mockFetch.mockImplementation(async () =>
+      json({ success: true, data: { entries: [], year: null } }),
+    );
+    const store = makeStore();
+    const result = await store.dispatch(
+      api.endpoints.getLeaderboard.initiate({ holidayId: 'h1' }) as never,
+    );
+    expect((result as { data: unknown }).data).toEqual({ entries: [], year: null });
+  });
+
+  it.each(['toggleTaskCompletion', 'updateTask', 'updateCard', 'updateGift'])(
+    '%s refreshes the leaderboard',
+    async name => {
+      mockFetch.mockImplementation(async () => json({ success: true, data: {} }));
+      const store = makeStore();
+      await store.dispatch(
+        api.endpoints.getLeaderboard.initiate({ holidayId: 'h1' }) as never,
+      );
+      mockFetch.mockClear();
+
+      await store.dispatch(
+        (api.endpoints as never as Record<string, Endpoint>)[name].initiate(
+          everything,
+        ) as never,
+      );
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      expect(
+        sent().some(r => urlOf(r).pathname === '/api/holidays/h1/leaderboard'),
+      ).toBe(true);
+    },
+  );
 
   it('cross-holiday queries hit the top-level collection', async () => {
     expect(path(await run('getAllGifts'))).toBe('/api/gifts');

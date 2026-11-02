@@ -12,6 +12,7 @@ import {
 } from '@/lib/realTimeNotifications';
 import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 import { logger } from '@/lib/logger';
+import { syncCompletionPoints } from '@/lib/server/points';
 
 // Base schema without contact_id
 const baseSchema = z.object({
@@ -390,6 +391,15 @@ export async function PUT(
         contact: true,
         assignedUser: true, // Include assigned user data
       },
+    });
+
+    await syncCompletionPoints({
+      userId: user.id,
+      holidayId: id,
+      entityType: 'gift',
+      entityId: giftId,
+      wasCompleted: existingGift.isCompleted,
+      isCompleted: updatedGift.isCompleted,
     });
 
     // Transform gift to match the expected UI interface (same as POST and PATCH methods)

@@ -50,6 +50,8 @@ model User {
   sentNotifications     Notification[]      @relation("NotificationSender")
   notificationPrefs     NotificationPreferences?
   preferences           UserPreferences?
+  pointEvents           PointEvent[]
+  achievements          UserAchievement[]
 
   @@index([email])
   @@map("users")
@@ -73,6 +75,7 @@ model UserPreferences {
   reducedMotion          Boolean  @default(false) @map("reduced_motion")
   highContrast           Boolean  @default(false) @map("high_contrast")
   fontSize               String   @default("medium") @map("font_size")
+  showOnLeaderboard      Boolean  @default(true) @map("show_on_leaderboard")
   createdAt              DateTime @default(now()) @map("created_at")
   updatedAt              DateTime @updatedAt @map("updated_at")
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -137,6 +140,7 @@ model Holiday {
   creator           User               @relation("HolidayCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   kwanzaaPrinciples KwanzaaPrinciple[]
   notifications     Notification[]
+  pointEvents       PointEvent[]
   shares            Share?
   tasks             Task[]
 
@@ -490,6 +494,39 @@ model NotificationPreferences {
 
   @@index([userId])
   @@map("notification_preferences")
+}
+
+// One row per completed item; un-completing the item deletes its row, so totals are always a sum.
+model PointEvent {
+  id         String   @id @default(uuid()) @db.Char(36)
+  userId     String   @map("user_id") @db.Char(36)
+  holidayId  String   @map("holiday_id") @db.Char(36)
+  entityType String   @map("entity_type") @db.VarChar(20)
+  entityId   String   @map("entity_id") @db.Char(36)
+  points     Int
+  reason     String   @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holiday    Holiday  @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId])
+  @@index([holidayId, userId])
+  @@index([userId, createdAt])
+  @@map("point_events")
+}
+
+// Badge definitions live in code; a row means the badge was earned and stays earned.
+// scope is a holiday id, or 'global'.
+model UserAchievement {
+  id       String   @id @default(uuid()) @db.Char(36)
+  userId   String   @map("user_id") @db.Char(36)
+  scope    String   @default("global") @db.VarChar(36)
+  key      String   @db.VarChar(50)
+  earnedAt DateTime @default(now()) @map("earned_at")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key, scope])
+  @@map("user_achievements")
 }
 
 enum TaskPriority {
