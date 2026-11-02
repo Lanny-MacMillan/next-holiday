@@ -7,6 +7,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
+import { addShare } from '@/store/slices/sharesSlice';
 import MealPlanningPage from '@/app/thanksgiving/meal-planning/page';
 import PartyPlanningPage from '@/app/birthday/party-planning/page';
 import CandleLightingPage from '@/app/hanukkah/candle-lighting/page';
@@ -259,5 +260,36 @@ describe.each(pages)('$name prompt', ({ Page }) => {
     // give any effect a chance to bring it back
     await new Promise(resolve => setTimeout(resolve, 50));
     expect(screen.queryByRole('button', { name: 'Choose suggestions' })).toBeNull();
+  });
+});
+
+describe('Kwanzaa daily principles assignee names', () => {
+  it('shows the name of the member a principle is assigned to', async () => {
+    store.dispatch(
+      addShare({
+        shareId: 's1',
+        holidayId: 'h1',
+        holidayKey: 'kwanzaa',
+        ownerUserId: 'u1',
+        memberUserIds: ['u-sam'],
+        members: [{ uuid: 'u-sam', name: 'Sam', email: 'sam@x.com' }] as any,
+        createdAt: '',
+        updatedAt: '',
+      }),
+    );
+    holidayData = {
+      tasks: [
+        { ...task('Umoja (Unity)', 'Daily Principles'), assignedTo: 'u-sam' },
+        {
+          ...task('Kujichagulia (Self-Determination)', 'Daily Principles'),
+          assignedTo: 'u-gone',
+        },
+      ],
+    };
+
+    mount(DailyPrinciplesPage);
+
+    expect(await screen.findByText(/Sam/)).toBeTruthy();
+    expect(screen.getByText(/u-gone/)).toBeTruthy();
   });
 });
