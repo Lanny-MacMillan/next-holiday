@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useHolidayPageData } from '@/hooks/useHolidayPageData';
 import { useHolidayMutations } from '@/hooks/useHolidayMutations';
@@ -51,21 +51,27 @@ export default function DailyPrinciplesPage() {
   const shareData = useAppSelector(state =>
     selectShareByHolidayKey(state, 'kwanzaa'),
   );
-  const shareMembers = shareData?.members || [];
+  const shareMembers = useMemo(() => shareData?.members || [], [shareData?.members]);
 
   // Helper function to resolve assignedTo UUID to user name
-  const getAssignedUserName = (assignedToUuid: string): string | null => {
-    if (!assignedToUuid || !shareMembers.length) return null;
+  const getAssignedUserName = useCallback(
+    (assignedToUuid: string): string | null => {
+      if (!assignedToUuid || !shareMembers.length) return null;
 
-    const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
-    return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
-  };
+      const member = shareMembers.find((m: any) => m.uuid === assignedToUuid);
+      return member ? member.name || member.email || 'Unknown User' : assignedToUuid;
+    },
+    [shareMembers],
+  );
 
   // Transform tasks to include assignedToName for display
-  const transformTaskWithAssignment = (task: any) => ({
-    ...task,
-    assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
-  });
+  const transformTaskWithAssignment = useCallback(
+    (task: any) => ({
+      ...task,
+      assignedToName: task.assignedTo ? getAssignedUserName(task.assignedTo) : null,
+    }),
+    [getAssignedUserName],
+  );
 
   // Redux data access - daily principles are stored as tasks with category "Daily Principles"
   const displayTasks = useMemo(
@@ -75,7 +81,7 @@ export default function DailyPrinciplesPage() {
           (task: any) => task.category === 'Daily Principles',
         ) || []
       ).map(transformTaskWithAssignment),
-    [holidayData?.tasks, shareMembers],
+    [holidayData?.tasks, transformTaskWithAssignment],
   );
   const isLoading = !homeInitialized;
 

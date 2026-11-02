@@ -153,7 +153,7 @@ export default function BirthdayPartyPlanningPage() {
     if (isHolidayShared && auth0User) {
       dispatch(fetchContacts(auth0User.sub));
     }
-  }, [isHolidayShared, auth0User]);
+  }, [isHolidayShared, auth0User, dispatch]);
 
   // Check if default party planning tasks exist
   useEffect(() => {

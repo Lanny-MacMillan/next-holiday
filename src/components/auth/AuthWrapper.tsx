@@ -59,7 +59,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
       // Clear RTK Query cache to prevent cross-tenant data leakage
       dispatch(api.util.resetApiState());
     }
-  }, [isAuthenticated, user, reduxUser]);
+  }, [isAuthenticated, user, reduxUser, dispatch]);
 
   // Handle user switching (different user logs in)
   useEffect(() => {
