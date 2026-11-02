@@ -63,6 +63,7 @@ export function HolidayPageTemplate({
       <HolidayHeader holidayName={holidayName} description={description} />
 
       <main className="flex-1 w-full max-w-4xl flex flex-col gap-6 mt-4">
+        <Leaderboard holidayId={holidayId} holidayName={holidayName} />
         <ul className="flex flex-col gap-4">
           {subsections.map(section => {
             // Only apply category formatting for tasks sliceKey to avoid breaking existing holidays
@@ -129,7 +130,6 @@ export function HolidayPageTemplate({
             );
           })}
         </ul>
-        <Leaderboard holidayId={holidayId} holidayName={holidayName} />
       </main>
 
       <Footer />

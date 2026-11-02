@@ -30,6 +30,7 @@ import fathersDayCountdownReducer from './slices/fathers-day/fathersDayCountdown
 import mothersDayCountdownReducer from './slices/mothers-day/mothersDayCountdownSlice';
 import christmasCountdownReducer from './slices/christmas/christmasCountdownSlice';
 import userPreferencesReducer from './slices/userPreferencesSlice';
+import leaderboardUiReducer from './slices/leaderboardUiSlice';
 import countdownTimerReducer from './slices/countdownTimerSlice';
 
 // Check if we should disable serializable checks in development
@@ -47,6 +48,7 @@ const persistConfig = {
     'userPreferences',
     'theme',
     'holidayPreferences',
+    'leaderboardUi',
     'budgets',
     'user', // Persist user subscription data for authorization checks
   ],
@@ -86,6 +88,7 @@ const rootReducer = combineReducers({
   userPreferences: userPreferencesReducer,
   holidayPreferences: holidayPreferencesReducer,
   countdownTimer: countdownTimerReducer,
+  leaderboardUi: leaderboardUiReducer,
 });
 
 // Create persisted reducer
