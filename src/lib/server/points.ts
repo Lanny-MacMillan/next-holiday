@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import {
+  badgeStatuses,
+  badgeStats,
+  holidayComplete,
+  newlyEarned,
+} from '@/lib/badges';
+import {
   buildLeaderboard,
   capAward,
   levelFor,
@@ -61,8 +67,62 @@ export async function syncCompletionPoints(change: CompletionChange): Promise<vo
       },
       update: {},
     });
+    await awardBadges(change.userId, change.holidayId);
   } catch (error) {
     logger.warn('Points sync failed (completion succeeded):', error);
+  }
+}
+
+async function holidayTotals(holidayId: string) {
+  const [tasks, tasksDone, gifts, giftsDone, cards, cardsDone] = await Promise.all([
+    prisma.task.count({ where: { holidayId } }),
+    prisma.task.count({ where: { holidayId, isCompleted: true } }),
+    prisma.gift.count({ where: { holidayId } }),
+    prisma.gift.count({ where: { holidayId, isCompleted: true } }),
+    prisma.card.count({ where: { holidayId } }),
+    prisma.card.count({ where: { holidayId, isCompleted: true } }),
+  ]);
+  return {
+    completed: tasksDone + giftsDone + cardsDone,
+    total: tasks + gifts + cards,
+  };
+}
+
+const userLedger = (userId: string) =>
+  prisma.pointEvent.findMany({
+    where: { userId },
+    select: { entityType: true, reason: true, points: true, createdAt: true },
+  });
+
+// Runs after an award. Badges stay earned once given, so only new ones are written.
+async function awardBadges(userId: string, holidayId: string): Promise<void> {
+  try {
+    const [rows, earned] = await Promise.all([
+      userLedger(userId),
+      prisma.userAchievement.findMany({
+        where: { userId },
+        select: { key: true, scope: true },
+      }),
+    ]);
+
+    const heroEarned = earned.some(
+      e => e.key === 'holiday_hero' && e.scope === holidayId,
+    );
+    const totals = heroEarned ? null : await holidayTotals(holidayId);
+    const stats = badgeStats(
+      rows,
+      new Date(),
+      !!totals && holidayComplete(totals.completed, totals.total),
+    );
+
+    const fresh = newlyEarned(stats, holidayId, earned);
+    if (fresh.length === 0) return;
+    await prisma.userAchievement.createMany({
+      data: fresh.map(b => ({ userId, key: b.key, scope: b.scope })),
+      skipDuplicates: true,
+    });
+  } catch (error) {
+    logger.warn('Badge check failed (points awarded):', error);
   }
 }
 
@@ -151,19 +211,26 @@ export async function getLeaderboard(
   const entries = buildLeaderboard([...members.values()], rows, viewerId, now);
   const me = entries.find(e => e.isYou) ?? null;
 
-  const [tasks, tasksDone, gifts, giftsDone, cards, cardsDone] = await Promise.all([
-    prisma.task.count({ where: { holidayId } }),
-    prisma.task.count({ where: { holidayId, isCompleted: true } }),
-    prisma.gift.count({ where: { holidayId } }),
-    prisma.gift.count({ where: { holidayId, isCompleted: true } }),
-    prisma.card.count({ where: { holidayId } }),
-    prisma.card.count({ where: { holidayId, isCompleted: true } }),
+  const [totals, ledger, achievements] = await Promise.all([
+    holidayTotals(holidayId),
+    userLedger(viewerId),
+    prisma.userAchievement.findMany({
+      where: { userId: viewerId, scope: { in: ['global', holidayId] } },
+      select: { key: true, scope: true, earnedAt: true },
+    }),
   ]);
+  const stats = badgeStats(
+    ledger,
+    now,
+    holidayComplete(totals.completed, totals.total),
+  );
 
   return {
     year: year ?? null,
+    shared: (holiday.shares?.members.length ?? 0) > 0,
     entries,
     me: me && { ...me, levelInfo: levelFor(me.points) },
-    team: teamGoal(tasksDone + giftsDone + cardsDone, tasks + gifts + cards),
+    team: teamGoal(totals.completed, totals.total),
+    badges: badgeStatuses(stats, holidayId, achievements),
   };
 }

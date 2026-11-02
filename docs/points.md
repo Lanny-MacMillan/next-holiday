@@ -29,15 +29,37 @@ Level, streak, rank and team goal are worked out from the ledger when asked for.
 
 - `syncCompletionPoints` (`src/lib/server/points.ts`) is called after every write that can change `isCompleted`: task PUT, PATCH and PATCH-by-id, gift PUT and PATCH-by-id, and both card PUT formats. It compares before and after, never throws, and logs a warning if it fails, so a points problem cannot fail a completion. `completion-points.test.ts` checks every one of those routes calls it.
 - `GET /api/holidays/[id]/leaderboard[?year=2026]` returns the ranking, the caller's level and the team goal. It uses `assertHolidayAccess`, so only people with access to the holiday can read it, and it lists only that holiday's account members, share owner and share members.
-- `Leaderboard` (`src/components/common/Leaderboard.tsx`) is shown on the holiday landing page. With nobody else on the holiday it shows just your level, progress and streak.
+- `Leaderboard` (`src/components/common/Leaderboard.tsx`) is the first card on the holiday landing page. It only appears on a holiday that is shared, meaning the share has at least one member besides the owner (`shared` in the API response). It can be collapsed to a one-line summary, and the choice is remembered in the persisted `leaderboardUi` slice. If everyone else on the share has opted out, you see just your own level, progress and streak.
 
 ## Privacy
 
 `user_preferences.show_on_leaderboard` (default on, toggle in Settings) hides a person from other people's boards. They still earn points and see their own row. Only the name and picture are exposed, never the email.
 
+## Badges
+
+Definitions are in `src/config/badgeConfigs.ts`: a key, name, description, a stat and a target. Add a badge by adding an entry (and a glyph in `BadgeIcon.tsx`).
+
+| Badge        | Earned by                                                           |
+| ------------ | ------------------------------------------------------------------- |
+| First Step   | Completing your first item                                          |
+| Task Tackler | 10 tasks                                                            |
+| Gift Guru    | 10 gifts                                                            |
+| Pen Pal      | 10 cards                                                            |
+| Early Bird   | 5 tasks finished before their due date                              |
+| On a Roll    | 3-day streak                                                        |
+| Week Warrior | 7-day streak                                                        |
+| Rising Star  | Level 5                                                             |
+| Holiday Hero | Everything on a holiday done (at least 3 items); earned per holiday |
+
+- Stats come from the user's whole ledger (`badgeStats` in `src/lib/badges.ts`). Holiday Hero is the only per-holiday badge; the rest are earned once per person.
+- Badges are checked after every award (`awardBadges`, in the same file as the sync) and written to `user_achievements`, with `scope` set to `global` or the holiday id. A badge stays earned even if the items behind it are later un-completed or deleted. A badge failure is logged and never affects the points or the completion.
+- The leaderboard response includes the viewer's badges with progress (`3/10`). A badge earned in the last 48 hours is marked New. Badges are drawn as SVG icons and, like the leaderboard, only show on shared holidays.
+- Other people's badges are not shown.
+
 ## Not built yet
 
-- **Badges.** The `user_achievements` table exists (`userId`, `key`, `scope`, `earnedAt`, unique per user, key and scope). Nothing awards or shows them. Definitions are meant to live in a config file, like the page configs.
+- A notice at the moment a badge is earned (today it shows up, marked New, the next time the card loads).
+- Other people's badges on the leaderboard.
 - **Quests, kudos, unlockable themes.** Each needs its own tables.
 - Points on items that are created already completed are not awarded.
 - Deleting a single completed item keeps its points. Clearing a holiday's data clears its points too.

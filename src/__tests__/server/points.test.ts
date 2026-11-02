@@ -24,6 +24,12 @@ beforeEach(() => {
   db.pointEvent.aggregate.mockResolvedValue({ _sum: { points: 0 } });
   db.pointEvent.upsert.mockResolvedValue({});
   db.pointEvent.deleteMany.mockResolvedValue({ count: 1 });
+  db.pointEvent.findMany.mockResolvedValue([]);
+  db.userAchievement.findMany.mockResolvedValue([]);
+  db.userAchievement.createMany.mockResolvedValue({ count: 0 });
+  for (const model of ['task', 'gift', 'card']) {
+    db[model].count.mockResolvedValue(0);
+  }
 });
 
 describe('syncCompletionPoints', () => {
@@ -74,6 +80,72 @@ describe('syncCompletionPoints', () => {
   });
 });
 
+describe('badges after an award', () => {
+  const ledger = (n: number, over = {}) =>
+    Array.from({ length: n }, () => ({
+      entityType: 'task',
+      reason: 'task_low',
+      points: 5,
+      createdAt: new Date(),
+      ...over,
+    }));
+
+  it('gives First Step for the first completed item', async () => {
+    db.pointEvent.findMany.mockResolvedValue(ledger(1));
+    await syncCompletionPoints(base);
+
+    expect(db.userAchievement.createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'u1', key: 'first_step', scope: 'global' }],
+      skipDuplicates: true,
+    });
+  });
+
+  it('only writes badges that are new', async () => {
+    db.pointEvent.findMany.mockResolvedValue(ledger(1));
+    db.userAchievement.findMany.mockResolvedValue([
+      { key: 'first_step', scope: 'global' },
+    ]);
+    await syncCompletionPoints(base);
+    expect(db.userAchievement.createMany).not.toHaveBeenCalled();
+  });
+
+  it('gives Holiday Hero, scoped to the holiday, when everything is done', async () => {
+    db.pointEvent.findMany.mockResolvedValue(ledger(3));
+    db.userAchievement.findMany.mockResolvedValue([
+      { key: 'first_step', scope: 'global' },
+    ]);
+    db.task.count.mockResolvedValue(3);
+    await syncCompletionPoints(base);
+
+    expect(db.userAchievement.createMany.mock.calls[0][0].data).toEqual([
+      { userId: 'u1', key: 'holiday_hero', scope: 'h1' },
+    ]);
+  });
+
+  it('skips the holiday counts once Holiday Hero is already earned there', async () => {
+    db.pointEvent.findMany.mockResolvedValue(ledger(1));
+    db.userAchievement.findMany.mockResolvedValue([
+      { key: 'holiday_hero', scope: 'h1' },
+      { key: 'first_step', scope: 'global' },
+    ]);
+    await syncCompletionPoints(base);
+    expect(db.task.count).not.toHaveBeenCalled();
+  });
+
+  it('does not check badges when the item was un-completed or nothing was awarded', async () => {
+    await syncCompletionPoints({ ...base, wasCompleted: true, isCompleted: false });
+    db.pointEvent.aggregate.mockResolvedValue({ _sum: { points: 200 } });
+    await syncCompletionPoints(base);
+    expect(db.userAchievement.findMany).not.toHaveBeenCalled();
+  });
+
+  it('a badge failure keeps the points and does not throw', async () => {
+    db.userAchievement.findMany.mockRejectedValue(new Error('db down'));
+    await expect(syncCompletionPoints(base)).resolves.toBeUndefined();
+    expect(db.pointEvent.upsert).toHaveBeenCalled();
+  });
+});
+
 describe('getLeaderboard', () => {
   const person = (id: string, name: string, show?: boolean) => ({
     id,
@@ -87,8 +159,20 @@ describe('getLeaderboard', () => {
     db.gift.count.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
     db.card.count.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
     db.pointEvent.findMany.mockResolvedValue([
-      { userId: 'me', points: 10, createdAt: new Date() },
-      { userId: 'friend', points: 25, createdAt: new Date() },
+      {
+        userId: 'me',
+        points: 10,
+        createdAt: new Date(),
+        entityType: 'task',
+        reason: 'task_medium',
+      },
+      {
+        userId: 'friend',
+        points: 25,
+        createdAt: new Date(),
+        entityType: 'gift',
+        reason: 'gift',
+      },
     ]);
   });
 
@@ -118,9 +202,48 @@ describe('getLeaderboard', () => {
       percent: 60,
       reached: false,
     });
+    expect(board?.shared).toBe(true);
     expect(db.pointEvent.findMany.mock.calls[0][0].where.userId).toEqual({
       in: ['me', 'friend'],
     });
+  });
+
+  it('is not shared until someone else has joined the share', async () => {
+    db.holiday.findUnique.mockResolvedValue({
+      account: { members: [{ user: person('me', 'Me') }] },
+      shares: { owner: person('me', 'Me'), members: [] },
+    });
+    expect((await getLeaderboard('h1', 'me'))?.shared).toBe(false);
+
+    db.holiday.findUnique.mockResolvedValue({
+      account: { members: [{ user: person('me', 'Me') }] },
+      shares: null,
+    });
+    expect((await getLeaderboard('h1', 'me'))?.shared).toBe(false);
+  });
+
+  it("reports the viewer's badge progress, with this holiday's and global badges", async () => {
+    db.holiday.findUnique.mockResolvedValue({
+      account: { members: [{ user: person('me', 'Me') }] },
+      shares: {
+        owner: person('me', 'Me'),
+        members: [{ user: person('friend', 'Friend') }],
+      },
+    });
+    const earnedAt = new Date('2026-12-01T00:00:00.000Z');
+    db.userAchievement.findMany.mockResolvedValue([
+      { key: 'first_step', scope: 'global', earnedAt },
+    ]);
+    const board = await getLeaderboard('h1', 'me');
+
+    expect(db.userAchievement.findMany.mock.calls[0][0].where).toEqual({
+      userId: 'me',
+      scope: { in: ['global', 'h1'] },
+    });
+    const first = board?.badges.find(b => b.key === 'first_step');
+    expect(first).toMatchObject({ earned: true, earnedAt: earnedAt.toISOString() });
+    const tackler = board?.badges.find(b => b.key === 'task_tackler');
+    expect(tackler).toMatchObject({ earned: false, current: 1, target: 10 });
   });
 
   it('hides members who opted out, but always shows the viewer to themselves', async () => {

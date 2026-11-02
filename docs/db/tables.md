@@ -807,7 +807,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 
 **Purpose**: Badges a user has earned
 
-**Description**: Badge definitions live in code; a row means the badge was earned and stays earned even if the item behind it is later removed. Nothing awards badges yet; the table is in place for it.
+**Description**: Badge definitions live in code; a row means the badge was earned and stays earned even if the item behind it is later removed. Definitions are in `src/config/badgeConfigs.ts` and badges are awarded after each completion; see `docs/points.md`.
 
 **Columns**:
 
