@@ -95,6 +95,7 @@ This document outlines the current MySQL schema for the Next Holiday application
 | reducedMotion          | BOOLEAN      | No       | false          | Accessibility: reduced motion               |
 | highContrast           | BOOLEAN      | No       | false          | Accessibility: high contrast                |
 | fontSize               | VARCHAR(191) | No       | 'medium'       | Font size preference (small, medium, large) |
+| showOnLeaderboard      | BOOLEAN      | No       | true           | Appear on shared holiday leaderboards       |
 | createdAt              | DATETIME(3)  | No       | now()          | Record creation timestamp                   |
 | updatedAt              | DATETIME(3)  | No       | now()          | Last update timestamp                       |
 
@@ -769,6 +770,63 @@ This document outlines the current MySQL schema for the Next Holiday application
 **Relationships**:
 
 - belongs_to: Account
+- belongs_to: User
+
+### point_events
+
+**Purpose**: Ledger of points earned by completing tasks, gifts and cards
+
+**Description**: One row per completed item. Un-completing the item deletes its row, so a user's points are always the sum of their rows. See `docs/points.md` for the rules.
+
+**Columns**:
+
+| Column     | Type        | Nullable | Default | Description                                          |
+| ---------- | ----------- | -------- | ------- | ---------------------------------------------------- |
+| id         | CHAR(36)    | No       | uuid()  | Primary key UUID                                     |
+| userId     | CHAR(36)    | No       | -       | User who completed the item and earned the points    |
+| holidayId  | CHAR(36)    | No       | -       | Holiday the item belongs to                          |
+| entityType | VARCHAR(20) | No       | -       | `task`, `gift` or `card`                             |
+| entityId   | CHAR(36)    | No       | -       | The completed item (not a foreign key)               |
+| points     | INT         | No       | -       | Points awarded, after the daily cap                  |
+| reason     | VARCHAR(50) | No       | -       | How the award was worked out, e.g. `task_high+early` |
+| createdAt  | DATETIME(3) | No       | now()   | When the points were earned                          |
+
+**Constraints**:
+
+- Primary Key: `id`
+- Unique Constraints: `(entityType, entityId)` (one award per item, so toggling cannot farm points)
+- Foreign Keys: `userId` → `users(id)` ON DELETE CASCADE, `holidayId` → `holidays(id)` ON DELETE CASCADE
+- Indexes: `(holidayId, userId)`, `(userId, createdAt)`
+
+**Relationships**:
+
+- belongs_to: User
+- belongs_to: Holiday
+
+### user_achievements
+
+**Purpose**: Badges a user has earned
+
+**Description**: Badge definitions live in code; a row means the badge was earned and stays earned even if the item behind it is later removed. Nothing awards badges yet; the table is in place for it.
+
+**Columns**:
+
+| Column   | Type        | Nullable | Default  | Description                    |
+| -------- | ----------- | -------- | -------- | ------------------------------ |
+| id       | CHAR(36)    | No       | uuid()   | Primary key UUID               |
+| userId   | CHAR(36)    | No       | -        | User who earned the badge      |
+| scope    | VARCHAR(36) | No       | 'global' | A holiday id, or `global`      |
+| key      | VARCHAR(50) | No       | -        | Badge identifier from the code |
+| earnedAt | DATETIME(3) | No       | now()    | When the badge was earned      |
+
+**Constraints**:
+
+- Primary Key: `id`
+- Unique Constraints: `(userId, key, scope)`
+- Foreign Keys: `userId` → `users(id)` ON DELETE CASCADE
+
+**Relationships**:
+
 - belongs_to: User
 
 ---

@@ -6,6 +6,7 @@ import HolidayTaskCard from '@/components/cards/holiday-task/HolidayTaskCard';
 import GuestListCard from '@/components/cards/guest/GuestListCard';
 import HolidayHeader from '@/components/common/HolidayHeader';
 import Footer from '@/components/common/Footer';
+import Leaderboard from '@/components/common/Leaderboard';
 
 interface HolidaySubsection {
   name: string;
@@ -128,6 +129,7 @@ export function HolidayPageTemplate({
             );
           })}
         </ul>
+        <Leaderboard holidayId={holidayId} holidayName={holidayName} />
       </main>
 
       <Footer />

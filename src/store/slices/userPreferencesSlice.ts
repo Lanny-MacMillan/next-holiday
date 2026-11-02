@@ -18,6 +18,7 @@ export interface UserPreferences {
   reducedMotion: boolean;
   highContrast: boolean;
   fontSize: 'small' | 'medium' | 'large';
+  showOnLeaderboard: boolean;
   createdAt: string;
   updatedAt: string;
 }

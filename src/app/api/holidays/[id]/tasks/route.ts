@@ -11,6 +11,7 @@ import {
 } from '@/lib/realTimeNotifications';
 import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 import { logger } from '@/lib/logger';
+import { syncCompletionPoints } from '@/lib/server/points';
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -171,6 +172,8 @@ export async function PUT(
         assignedTo: true,
         createdBy: true,
         title: true,
+        priority: true,
+        dueDate: true,
       },
     });
 
@@ -196,6 +199,17 @@ export async function PUT(
         isCompleted,
         completedDate: isCompleted ? localDate : null,
       },
+    });
+
+    await syncCompletionPoints({
+      userId: user.id,
+      holidayId: id,
+      entityType: 'task',
+      entityId: taskId,
+      wasCompleted: existingTask.isCompleted,
+      isCompleted: task.isCompleted,
+      priority: task.priority,
+      dueDate: task.dueDate,
     });
 
     // Send completion notification if task was just completed
@@ -335,6 +349,17 @@ export async function PATCH(
         holidayId: id,
       },
       data: filteredData,
+    });
+
+    await syncCompletionPoints({
+      userId: user.id,
+      holidayId: id,
+      entityType: 'task',
+      entityId: taskId,
+      wasCompleted: existingTask.isCompleted,
+      isCompleted: task.isCompleted,
+      priority: task.priority,
+      dueDate: task.dueDate,
     });
 
     // Handle assignment change notifications

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, assertHolidayAccess } from '@/lib/auth';
 import { ok, badRequest, notFound, routeError } from '@/lib/http';
+import { syncCompletionPoints } from '@/lib/server/points';
 
 const updateGiftSchema = z.object({
   name: z.string().min(1).optional(),
@@ -72,6 +73,15 @@ export async function PATCH(
         }),
         ...(data.isCompleted !== undefined && { isCompleted: data.isCompleted }),
       },
+    });
+
+    await syncCompletionPoints({
+      userId: user.id,
+      holidayId,
+      entityType: 'gift',
+      entityId: giftId,
+      wasCompleted: existingGift.isCompleted,
+      isCompleted: updatedGift.isCompleted,
     });
 
     return ok(updatedGift, {

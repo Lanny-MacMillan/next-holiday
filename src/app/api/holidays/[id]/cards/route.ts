@@ -11,6 +11,7 @@ import {
 } from '@/lib/realTimeNotifications';
 import { validateAssigneeAccess } from '@/lib/assigneeValidation';
 import { logger } from '@/lib/logger';
+import { syncCompletionPoints } from '@/lib/server/points';
 
 const createBodySchema = z.object({
   recipient: z.string().min(1),
@@ -190,6 +191,15 @@ export async function PUT(
         },
       });
 
+      await syncCompletionPoints({
+        userId: user.id,
+        holidayId: id,
+        entityType: 'card',
+        entityId: cardId,
+        wasCompleted: existingCard.isCompleted,
+        isCompleted: card.isCompleted,
+      });
+
       //  Transform data for UI (like gifts)
       const transformedCard = {
         ...card,
@@ -301,6 +311,15 @@ export async function PUT(
           contact: true,
           assignedUser: true,
         },
+      });
+
+      await syncCompletionPoints({
+        userId: user.id,
+        holidayId: id,
+        entityType: 'card',
+        entityId: data.id,
+        wasCompleted: existingCard.isCompleted,
+        isCompleted: card.isCompleted,
       });
 
       //  Transform data for UI (like gifts)

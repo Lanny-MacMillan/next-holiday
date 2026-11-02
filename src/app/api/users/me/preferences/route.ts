@@ -94,6 +94,7 @@ export async function PUT(request: NextRequest) {
       'reducedMotion',
       'highContrast',
       'fontSize',
+      'showOnLeaderboard',
     ];
 
     // Filter out any fields that aren't allowed
@@ -103,6 +104,16 @@ export async function PUT(request: NextRequest) {
         obj[key] = preferencesData[key];
         return obj;
       }, {} as any);
+
+    if (
+      'showOnLeaderboard' in filteredData &&
+      typeof filteredData.showOnLeaderboard !== 'boolean'
+    ) {
+      return Response.json(
+        { error: 'showOnLeaderboard must be true or false' },
+        { status: 400 },
+      );
+    }
 
     // Add updatedAt timestamp
     filteredData.updatedAt = new Date();
