@@ -25,43 +25,42 @@ export function useSharedHoliday(holidayKey: string) {
     baseHolidayData;
 
   const baseMembers = shareData?.members;
+  const hasUser = Boolean(auth0User);
+  const userSub = auth0User?.sub;
+  const userId = auth0User?.id;
+  const userName = auth0User?.name;
+  const userEmail = auth0User?.email;
   const shareMembers = useMemo(() => {
     const members = baseMembers || [];
-    if (!auth0User) return members;
+    if (!hasUser) return members;
     return [
       // The current user is always assignable, listed first as the owner
       ...members
-        .filter((member: any) => member.userId === auth0User.sub)
+        .filter((member: any) => member.userId === userSub)
         .map((member: any) => ({
           ...member,
           uuid: member.uuid || member.userId,
           role: 'owner' as const,
         })),
-      ...(members.find((member: any) => member.userId === auth0User.sub)
+      ...(members.find((member: any) => member.userId === userSub)
         ? []
         : [
             {
-              userId: auth0User.sub || '',
-              uuid: auth0User.id || '',
-              name: auth0User.name || 'Me',
-              email: auth0User.email || '',
+              userId: userSub || '',
+              uuid: userId || '',
+              name: userName || 'Me',
+              email: userEmail || '',
               role: 'owner' as const,
             },
           ]),
       ...members
-        .filter((member: any) => member.userId !== auth0User.sub)
+        .filter((member: any) => member.userId !== userSub)
         .map((member: any) => ({
           ...member,
           uuid: member.uuid || member.userId,
         })),
     ];
-  }, [
-    baseMembers,
-    auth0User?.sub,
-    auth0User?.id,
-    auth0User?.name,
-    auth0User?.email,
-  ]);
+  }, [baseMembers, hasUser, userSub, userId, userName, userEmail]);
 
   return { holidayId, holidayData, auth0User, homeInitialized, shareMembers };
 }
