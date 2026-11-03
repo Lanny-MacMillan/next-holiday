@@ -3,6 +3,21 @@ import { createTracedBaseQuery, isRTKTracingEnabled } from '@/lib/traceRTK';
 
 import type { LeaderboardData, UserProgress } from '@/types/points';
 
+interface Auth0User {
+  sub?: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+}
+
+// A list item as the API returns it; pages read the fields they need.
+interface Row {
+  id: string;
+  [key: string]: unknown;
+}
+
+type Payload = { id?: string; action?: string; [key: string]: unknown };
+
 const baseQuery = fetchBaseQuery({
   baseUrl: '/api',
   credentials: 'include',
@@ -63,7 +78,7 @@ export const api = createApi({
       providesTags: [{ type: 'Leaderboard', id: 'me' }],
     }),
 
-    getGifts: builder.query<any[], { holidayId: string; auth0User?: any }>({
+    getGifts: builder.query<Row[], { holidayId: string; auth0User?: Auth0User }>({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/gifts`,
         headers: auth0User
@@ -77,7 +92,7 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         return response.data || [];
       },
       providesTags: (result, error, { holidayId }) => [
@@ -86,7 +101,7 @@ export const api = createApi({
     }),
 
     // Query to get all gifts for a user across all holidays
-    getAllGifts: builder.query<any[], { auth0User?: any }>({
+    getAllGifts: builder.query<Row[], { auth0User?: Auth0User }>({
       query: ({ auth0User }) => ({
         url: `gifts`,
         headers: auth0User
@@ -100,13 +115,13 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         return response.data || [];
       },
       providesTags: () => [{ type: 'Gifts', id: 'LIST' }],
     }),
 
-    getCards: builder.query<any[], { holidayId: string; auth0User?: any }>({
+    getCards: builder.query<Row[], { holidayId: string; auth0User?: Auth0User }>({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/cards`,
         headers: auth0User
@@ -120,7 +135,7 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         return response.data || [];
       },
       providesTags: (result, error, { holidayId }) => [
@@ -128,7 +143,7 @@ export const api = createApi({
       ],
     }),
     // Query to get all cards for a user across all holidays
-    getAllCards: builder.query<any[], { auth0User?: any }>({
+    getAllCards: builder.query<Row[], { auth0User?: Auth0User }>({
       query: ({ auth0User }) => ({
         url: `cards`,
         headers: auth0User
@@ -142,12 +157,12 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         return response.data || [];
       },
       providesTags: () => [{ type: 'Cards', id: 'LIST' }],
     }),
-    getTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
+    getTasks: builder.query<Row[], { holidayId: string; auth0User?: Auth0User }>({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
         headers: auth0User
@@ -161,7 +176,7 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         return response.data || [];
       },
       providesTags: (result, error, { holidayId }) => [
@@ -169,7 +184,7 @@ export const api = createApi({
       ],
     }),
     // Query to get all tasks for a user across all holidays
-    getAllTasks: builder.query<any[], { auth0User?: any }>({
+    getAllTasks: builder.query<Row[], { auth0User?: Auth0User }>({
       query: ({ auth0User }) => ({
         url: `tasks`,
         headers: auth0User
@@ -183,194 +198,14 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         return response.data || [];
       },
       providesTags: () => [{ type: 'Tasks', id: 'LIST' }],
     }),
-    getHanukkahTasks: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        return response.data || [];
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'Tasks', id: holidayId },
-      ],
-    }),
-    getGuestList: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/guest-lists`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        return response.data || [];
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'GuestList', id: holidayId },
-      ],
-    }),
-    getDecorations: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for decorations category
-        const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Decorations');
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'Decorations', id: holidayId },
-      ],
-    }),
-    getEvents: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for events category
-        const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Events');
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'Events', id: holidayId },
-      ],
-    }),
-    getCandleLighting: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for candle lighting category
-        const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Candle Lighting');
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'CandleLighting', id: holidayId },
-      ],
-    }),
-    getDateIdeas: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for date ideas category
-        const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Date Ideas');
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'DateIdeas', id: holidayId },
-      ],
-    }),
-    getResolutions: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for resolutions category
-        const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Resolutions');
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'Resolutions', id: holidayId },
-      ],
-    }),
-    getCostumeIdeas: builder.query<any[], { holidayId: string; auth0User?: any }>({
-      query: ({ holidayId, auth0User }) => ({
-        url: `holidays/${holidayId}/tasks`,
-        headers: auth0User
-          ? {
-              'x-test-user': JSON.stringify({
-                sub: auth0User.sub,
-                email: auth0User.email,
-                name: auth0User.name,
-                picture: auth0User.picture,
-              }),
-            }
-          : {},
-      }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for costume ideas category
-        const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Costume Ideas');
-      },
-      providesTags: (result, error, { holidayId }) => [
-        { type: 'CostumeIdeas', id: holidayId },
-      ],
-    }),
-    getTrickOrTreatPrep: builder.query<
-      any[],
-      { holidayId: string; auth0User?: any }
+    getHanukkahTasks: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -385,18 +220,40 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for trick or treat prep category
-        const allTasks = response.data || [];
-        return allTasks.filter(
-          (task: any) => task.category === 'Trick or Treat Prep',
-        );
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        return response.data || [];
       },
       providesTags: (result, error, { holidayId }) => [
-        { type: 'TrickOrTreatPrep', id: holidayId },
+        { type: 'Tasks', id: holidayId },
       ],
     }),
-    getMealPlanning: builder.query<any[], { holidayId: string; auth0User?: any }>({
+    getGuestList: builder.query<Row[], { holidayId: string; auth0User?: Auth0User }>(
+      {
+        query: ({ holidayId, auth0User }) => ({
+          url: `holidays/${holidayId}/guest-lists`,
+          headers: auth0User
+            ? {
+                'x-test-user': JSON.stringify({
+                  sub: auth0User.sub,
+                  email: auth0User.email,
+                  name: auth0User.name,
+                  picture: auth0User.picture,
+                }),
+              }
+            : {},
+        }),
+        transformResponse: (response: { success: boolean; data: Row[] }) => {
+          return response.data || [];
+        },
+        providesTags: (result, error, { holidayId }) => [
+          { type: 'GuestList', id: holidayId },
+        ],
+      },
+    ),
+    getDecorations: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
         headers: auth0User
@@ -410,16 +267,16 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for meal planning category
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for decorations category
         const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Meal Planning');
+        return allTasks.filter((task: Row) => task.category === 'Decorations');
       },
       providesTags: (result, error, { holidayId }) => [
-        { type: 'MealPlanning', id: holidayId },
+        { type: 'Decorations', id: holidayId },
       ],
     }),
-    getPartyPlanning: builder.query<any[], { holidayId: string; auth0User?: any }>({
+    getEvents: builder.query<Row[], { holidayId: string; auth0User?: Auth0User }>({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
         headers: auth0User
@@ -433,16 +290,42 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for party planning category
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for events category
         const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Party Planning');
+        return allTasks.filter((task: Row) => task.category === 'Events');
       },
       providesTags: (result, error, { holidayId }) => [
-        { type: 'PartyPlanning', id: holidayId },
+        { type: 'Events', id: holidayId },
       ],
     }),
-    getBabyShowerGames: builder.query<any[], { holidayId: string; auth0User?: any }>(
+    getCandleLighting: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for candle lighting category
+        const allTasks = response.data || [];
+        return allTasks.filter((task: Row) => task.category === 'Candle Lighting');
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'CandleLighting', id: holidayId },
+      ],
+    }),
+    getDateIdeas: builder.query<Row[], { holidayId: string; auth0User?: Auth0User }>(
       {
         query: ({ holidayId, auth0User }) => ({
           url: `holidays/${holidayId}/tasks`,
@@ -457,19 +340,19 @@ export const api = createApi({
               }
             : {},
         }),
-        transformResponse: (response: { success: boolean; data: any[] }) => {
-          // Filter for baby shower games category
+        transformResponse: (response: { success: boolean; data: Row[] }) => {
+          // Filter for date ideas category
           const allTasks = response.data || [];
-          return allTasks.filter((task: any) => task.category === 'Games');
+          return allTasks.filter((task: Row) => task.category === 'Date Ideas');
         },
         providesTags: (result, error, { holidayId }) => [
-          { type: 'BabyShowerGames', id: holidayId },
+          { type: 'DateIdeas', id: holidayId },
         ],
       },
     ),
-    getKwanzaaPrinciples: builder.query<
-      any[],
-      { holidayId: string; auth0User?: any }
+    getResolutions: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -484,16 +367,19 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
-        // Filter for daily principles category
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for resolutions category
         const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Daily Principles');
+        return allTasks.filter((task: Row) => task.category === 'Resolutions');
       },
       providesTags: (result, error, { holidayId }) => [
-        { type: 'KwanzaaPrinciples', id: holidayId },
+        { type: 'Resolutions', id: holidayId },
       ],
     }),
-    getReservations: builder.query<any[], { holidayId: string; auth0User?: any }>({
+    getCostumeIdeas: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
       query: ({ holidayId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
         headers: auth0User
@@ -507,10 +393,168 @@ export const api = createApi({
             }
           : {},
       }),
-      transformResponse: (response: { success: boolean; data: any[] }) => {
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for costume ideas category
+        const allTasks = response.data || [];
+        return allTasks.filter((task: Row) => task.category === 'Costume Ideas');
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'CostumeIdeas', id: holidayId },
+      ],
+    }),
+    getTrickOrTreatPrep: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for trick or treat prep category
+        const allTasks = response.data || [];
+        return allTasks.filter(
+          (task: Row) => task.category === 'Trick or Treat Prep',
+        );
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'TrickOrTreatPrep', id: holidayId },
+      ],
+    }),
+    getMealPlanning: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for meal planning category
+        const allTasks = response.data || [];
+        return allTasks.filter((task: Row) => task.category === 'Meal Planning');
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'MealPlanning', id: holidayId },
+      ],
+    }),
+    getPartyPlanning: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for party planning category
+        const allTasks = response.data || [];
+        return allTasks.filter((task: Row) => task.category === 'Party Planning');
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'PartyPlanning', id: holidayId },
+      ],
+    }),
+    getBabyShowerGames: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for baby shower games category
+        const allTasks = response.data || [];
+        return allTasks.filter((task: Row) => task.category === 'Games');
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'BabyShowerGames', id: holidayId },
+      ],
+    }),
+    getKwanzaaPrinciples: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
+        // Filter for daily principles category
+        const allTasks = response.data || [];
+        return allTasks.filter((task: Row) => task.category === 'Daily Principles');
+      },
+      providesTags: (result, error, { holidayId }) => [
+        { type: 'KwanzaaPrinciples', id: holidayId },
+      ],
+    }),
+    getReservations: builder.query<
+      Row[],
+      { holidayId: string; auth0User?: Auth0User }
+    >({
+      query: ({ holidayId, auth0User }) => ({
+        url: `holidays/${holidayId}/tasks`,
+        headers: auth0User
+          ? {
+              'x-test-user': JSON.stringify({
+                sub: auth0User.sub,
+                email: auth0User.email,
+                name: auth0User.name,
+                picture: auth0User.picture,
+              }),
+            }
+          : {},
+      }),
+      transformResponse: (response: { success: boolean; data: Row[] }) => {
         // Filter for reservations category
         const allTasks = response.data || [];
-        return allTasks.filter((task: any) => task.category === 'Reservations');
+        return allTasks.filter((task: Row) => task.category === 'Reservations');
       },
       providesTags: (result, error, { holidayId }) => [
         { type: 'Reservations', id: holidayId },
@@ -518,7 +562,7 @@ export const api = createApi({
     }),
     createTask: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -565,7 +609,7 @@ export const api = createApi({
     }),
     updateTask: builder.mutation<
       any,
-      { holidayId: string; taskId: string; updates: any; auth0User?: any }
+      { holidayId: string; taskId: string; updates: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, updates, auth0User }) => ({
         url: `holidays/${holidayId}/tasks/${taskId}`,
@@ -615,7 +659,7 @@ export const api = createApi({
     }),
     deleteTask: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -662,7 +706,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -713,7 +757,7 @@ export const api = createApi({
     }),
     createHanukkahTask: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -736,7 +780,7 @@ export const api = createApi({
     }),
     createGift: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/gifts`,
@@ -783,7 +827,7 @@ export const api = createApi({
     }),
     createCard: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/cards`,
@@ -831,7 +875,7 @@ export const api = createApi({
     // Generic card mutation that handles all operations
     cardOperation: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => {
         // Handle different operations
@@ -905,7 +949,7 @@ export const api = createApi({
           const patchResult = dispatch(
             api.util.updateQueryData('getCards', { holidayId, auth0User }, draft => {
               if (draft) {
-                const index = draft.findIndex((card: any) => card.id === payload.id);
+                const index = draft.findIndex((card: Row) => card.id === payload.id);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -932,7 +976,7 @@ export const api = createApi({
         holidayId: string;
         cardId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, cardId, isCompleted, auth0User }) => ({
@@ -983,7 +1027,7 @@ export const api = createApi({
     }),
     editCard: builder.mutation<
       any,
-      { holidayId: string; cardId: string; payload: any; auth0User?: any }
+      { holidayId: string; cardId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, cardId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/cards`,
@@ -1030,7 +1074,7 @@ export const api = createApi({
     }),
     deleteCard: builder.mutation<
       any,
-      { holidayId: string; cardId: string; auth0User?: any }
+      { holidayId: string; cardId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, cardId, auth0User }) => ({
         url: `holidays/${holidayId}/cards?cardId=${cardId}`,
@@ -1056,13 +1100,13 @@ export const api = createApi({
           await import('./syncUtils');
 
         // Store the deleted card data for rollback
-        let deletedCard: any = null;
+        let deletedCard = null as Row | null;
 
         // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData('getCards', { holidayId, auth0User }, draft => {
             if (draft) {
-              const index = draft.findIndex((card: any) => card.id === cardId);
+              const index = draft.findIndex((card: Row) => card.id === cardId);
 
               if (index !== -1) {
                 // Store the card data before removal
@@ -1102,7 +1146,7 @@ export const api = createApi({
     }),
     createGuest: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/guest-lists`,
@@ -1145,7 +1189,7 @@ export const api = createApi({
     }),
     createDecoration: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1192,7 +1236,7 @@ export const api = createApi({
     }),
     createEvent: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1239,7 +1283,7 @@ export const api = createApi({
     }),
     createCandleLighting: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1286,7 +1330,7 @@ export const api = createApi({
     }),
     createDateIdeas: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1309,7 +1353,7 @@ export const api = createApi({
     }),
     createResolutions: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1356,7 +1400,7 @@ export const api = createApi({
     }),
     createReservations: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1379,7 +1423,7 @@ export const api = createApi({
     }),
     createCostumeIdeas: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1402,7 +1446,7 @@ export const api = createApi({
     }),
     createTrickOrTreatPrep: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1425,7 +1469,7 @@ export const api = createApi({
     }),
     createMealPlanning: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1448,7 +1492,7 @@ export const api = createApi({
     }),
     createPartyPlanning: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1471,7 +1515,7 @@ export const api = createApi({
     }),
     createBabyShowerGames: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1517,7 +1561,7 @@ export const api = createApi({
     }),
     createKwanzaaPrinciples: builder.mutation<
       any,
-      { holidayId: string; payload: any; auth0User?: any }
+      { holidayId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1564,7 +1608,7 @@ export const api = createApi({
         holidayId: string;
         giftId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, giftId, isCompleted, auth0User }) => ({
@@ -1617,7 +1661,7 @@ export const api = createApi({
     }),
     editGift: builder.mutation<
       any,
-      { holidayId: string; giftId: string; payload: any; auth0User?: any }
+      { holidayId: string; giftId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, giftId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/gifts`,
@@ -1665,7 +1709,7 @@ export const api = createApi({
     }),
     deleteGift: builder.mutation<
       any,
-      { holidayId: string; giftId: string; auth0User?: any }
+      { holidayId: string; giftId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, giftId, auth0User }) => ({
         url: `holidays/${holidayId}/gifts?giftId=${giftId}`,
@@ -1709,7 +1753,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -1757,7 +1801,7 @@ export const api = createApi({
     }),
     editDecoration: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1804,7 +1848,7 @@ export const api = createApi({
     }),
     deleteDecoration: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -1833,7 +1877,7 @@ export const api = createApi({
             draft => {
               if (draft) {
                 const index = draft.findIndex(
-                  (decoration: any) => decoration.id === taskId,
+                  (decoration: Row) => decoration.id === taskId,
                 );
                 if (index !== -1) {
                   draft.splice(index, 1);
@@ -1863,7 +1907,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -1910,7 +1954,7 @@ export const api = createApi({
     }),
     editEvent: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -1955,7 +1999,7 @@ export const api = createApi({
     }),
     deleteEvent: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -1981,13 +2025,13 @@ export const api = createApi({
           await import('./syncUtils');
 
         // Store the deleted event data for rollback
-        let deletedEvent: any = null;
+        let deletedEvent = null as Row | null;
 
         // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
           api.util.updateQueryData('getEvents', { holidayId, auth0User }, draft => {
             if (draft) {
-              const index = draft.findIndex((event: any) => event.id === taskId);
+              const index = draft.findIndex((event: Row) => event.id === taskId);
               if (index !== -1) {
                 // Store the event data before removal
                 deletedEvent = { ...draft[index] };
@@ -2030,7 +2074,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2076,7 +2120,7 @@ export const api = createApi({
     }),
     editCandleLighting: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2123,7 +2167,7 @@ export const api = createApi({
     }),
     deleteCandleLighting: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2149,7 +2193,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2172,7 +2216,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2201,7 +2245,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2248,7 +2292,7 @@ export const api = createApi({
     }),
     editDateIdeas: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2271,7 +2315,7 @@ export const api = createApi({
     }),
     editResolutions: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2316,7 +2360,7 @@ export const api = createApi({
     }),
     deleteDateIdeas: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2342,7 +2386,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2360,7 +2404,7 @@ export const api = createApi({
     }),
     deleteResolutions: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2386,7 +2430,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2409,7 +2453,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2433,7 +2477,7 @@ export const api = createApi({
     }),
     editReservations: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2456,7 +2500,7 @@ export const api = createApi({
     }),
     deleteReservations: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2482,7 +2526,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2505,7 +2549,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2529,7 +2573,7 @@ export const api = createApi({
     }),
     editCostumeIdeas: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2552,7 +2596,7 @@ export const api = createApi({
     }),
     deleteCostumeIdeas: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2578,7 +2622,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2601,7 +2645,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2625,7 +2669,7 @@ export const api = createApi({
     }),
     editTrickOrTreatPrep: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2648,7 +2692,7 @@ export const api = createApi({
     }),
     deleteTrickOrTreatPrep: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2674,7 +2718,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2697,7 +2741,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2721,7 +2765,7 @@ export const api = createApi({
     }),
     editMealPlanning: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2744,7 +2788,7 @@ export const api = createApi({
     }),
     deleteMealPlanning: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2770,7 +2814,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2793,7 +2837,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2821,7 +2865,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -2870,7 +2914,7 @@ export const api = createApi({
     }),
     editPartyPlanning: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2893,7 +2937,7 @@ export const api = createApi({
     }),
     editBabyShowerGames: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -2936,7 +2980,7 @@ export const api = createApi({
     }),
     deletePartyPlanning: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -2962,7 +3006,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -2980,7 +3024,7 @@ export const api = createApi({
     }),
     deleteBabyShowerGames: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -3006,7 +3050,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -3029,7 +3073,7 @@ export const api = createApi({
         holidayId: string;
         taskId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, taskId, isCompleted, auth0User }) => ({
@@ -3072,7 +3116,7 @@ export const api = createApi({
     }),
     editKwanzaaPrinciples: builder.mutation<
       any,
-      { holidayId: string; taskId: string; payload: any; auth0User?: any }
+      { holidayId: string; taskId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/tasks`,
@@ -3114,7 +3158,7 @@ export const api = createApi({
     }),
     deleteKwanzaaPrinciples: builder.mutation<
       any,
-      { holidayId: string; taskId: string; auth0User?: any }
+      { holidayId: string; taskId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, taskId, auth0User }) => ({
         url: `holidays/${holidayId}/tasks?taskId=${taskId}`,
@@ -3140,7 +3184,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((task: any) => task.id === taskId);
+                const index = draft.findIndex((task: Row) => task.id === taskId);
                 if (index !== -1) {
                   draft.splice(index, 1);
                 }
@@ -3163,7 +3207,7 @@ export const api = createApi({
         holidayId: string;
         guestId: string;
         isCompleted: boolean;
-        auth0User?: any;
+        auth0User?: Auth0User;
       }
     >({
       query: ({ holidayId, guestId, isCompleted, auth0User }) => ({
@@ -3191,7 +3235,7 @@ export const api = createApi({
         const { syncUpdateInHomeSlice } = await import('./syncUtils');
 
         // Store original guest for rollback
-        let originalGuest: any = null;
+        let originalGuest = null as Row | null;
 
         // 1.   Optimistic RTK Query cache update
         const patchResult = dispatch(
@@ -3200,7 +3244,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const guest = draft.find((g: any) => g.id === guestId);
+                const guest = draft.find((g: Row) => g.id === guestId);
                 if (guest) {
                   // Store original for rollback
                   originalGuest = { ...guest };
@@ -3266,7 +3310,7 @@ export const api = createApi({
     }),
     editGuest: builder.mutation<
       any,
-      { holidayId: string; guestId: string; payload: any; auth0User?: any }
+      { holidayId: string; guestId: string; payload: Payload; auth0User?: Auth0User }
     >({
       query: ({ holidayId, guestId, payload, auth0User }) => ({
         url: `holidays/${holidayId}/guest-lists`,
@@ -3296,7 +3340,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const guest = draft.find((g: any) => g.id === guestId);
+                const guest = draft.find((g: Row) => g.id === guestId);
                 if (guest) {
                   Object.assign(guest, payload);
                   guest.updatedAt = new Date().toISOString();
@@ -3316,7 +3360,7 @@ export const api = createApi({
     }),
     deleteGuest: builder.mutation<
       any,
-      { holidayId: string; guestId: string; auth0User?: any }
+      { holidayId: string; guestId: string; auth0User?: Auth0User }
     >({
       query: ({ holidayId, guestId, auth0User }) => ({
         url: `holidays/${holidayId}/guest-lists?guestId=${guestId}`,
@@ -3342,7 +3386,7 @@ export const api = createApi({
           await import('./syncUtils');
 
         // Store the deleted guest data for rollback
-        let deletedGuest: any = null;
+        let deletedGuest = null as Row | null;
 
         const patchResult = dispatch(
           api.util.updateQueryData(
@@ -3350,7 +3394,7 @@ export const api = createApi({
             { holidayId, auth0User },
             draft => {
               if (draft) {
-                const index = draft.findIndex((guest: any) => guest.id === guestId);
+                const index = draft.findIndex((guest: Row) => guest.id === guestId);
                 if (index !== -1) {
                   // Store the guest data before removal
                   deletedGuest = { ...draft[index] };
