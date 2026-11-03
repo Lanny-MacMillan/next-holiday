@@ -1103,7 +1103,7 @@ export default function SettingsPage() {
           <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white  border-b border-gray-200 dark:border-gray-700 pb-4">
             Leaderboard
           </h2>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <span
                 id="leaderboard-visibility-label"
@@ -1122,7 +1122,7 @@ export default function SettingsPage() {
               aria-checked={showOnLeaderboard}
               aria-labelledby="leaderboard-visibility-label"
               onClick={handleLeaderboardToggle}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                 showOnLeaderboard ? 'bg-blue-600' : 'bg-gray-400'
               }`}
             >
