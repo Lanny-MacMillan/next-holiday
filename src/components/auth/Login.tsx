@@ -31,20 +31,43 @@ function isUnverifiedEmail(error?: Error) {
   return code === 'access_denied' && /verify your email/i.test(description ?? '');
 }
 
+// After the email link is clicked, Auth0 sends the browser back with success=true or false.
+function verifyResult(): 'verified' | 'failed' | null {
+  const success = new URLSearchParams(window.location.search).get('success');
+  if (success === 'true') return 'verified';
+  if (success === 'false') return 'failed';
+  return null;
+}
+
 export default function Login() {
   const { loginWithRedirect, error } = useAuth0();
   const [dismissed, setDismissed] = useState(false);
   const showVerifyEmail = isUnverifiedEmail(error) && !dismissed;
   const [triedAlready] = useState(triedBefore);
+  const [result, setResult] = useState(verifyResult);
 
   useEffect(() => {
     if (!isUnverifiedEmail(error)) setTried(false);
   }, [error]);
 
+  // Auth0 usually still has the browser's session, so this signs them straight in
+  // without asking for credentials again. The address is cleaned first to avoid a loop.
+  useEffect(() => {
+    if (result !== 'verified') return;
+    window.history.replaceState({}, '', window.location.pathname);
+    loginWithRedirect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const closeVerifyEmail = () => {
     setTried(false);
     window.history.replaceState({}, '', window.location.pathname);
     setDismissed(true);
+  };
+
+  const dismissResult = () => {
+    window.history.replaceState({}, '', window.location.pathname);
+    setResult(null);
   };
 
   const signInAfterVerifying = () => {
@@ -62,6 +85,28 @@ export default function Login() {
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-6 sm:mb-8">
             Plan your holidays with ease and keep track of everything in one place.
           </p>
+
+          {result && (
+            <div
+              role="status"
+              className={`text-sm rounded-lg p-3 mb-4 text-left ${
+                result === 'verified'
+                  ? 'bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-100'
+                  : 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+              }`}
+            >
+              {result === 'verified'
+                ? 'Your email is verified. Signing you in...'
+                : "We couldn't verify your email. The link may have expired. Sign in and we'll send you a new one."}
+              <button
+                onClick={dismissResult}
+                className="ml-2 underline font-medium"
+                aria-label="Dismiss message"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
           <button
             onClick={() => loginWithRedirect()}

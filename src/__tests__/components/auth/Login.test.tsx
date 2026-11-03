@@ -22,6 +22,35 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
+describe('Login after the email link', () => {
+  afterEach(() => window.history.replaceState({}, '', '/'));
+
+  it('says the email is verified and signs the user in once, without a loop', () => {
+    window.history.replaceState({}, '', '/?success=true&code=success&message=ok');
+    render(<Login />);
+    expect(screen.getByRole('status').textContent).toMatch(/email is verified/);
+    expect(loginWithRedirect).toHaveBeenCalledTimes(1);
+    expect(window.location.search).toBe('');
+  });
+
+  it('says the link may have expired when Auth0 reports failure', () => {
+    window.history.replaceState({}, '', '/?success=false&code=invalid_link');
+    render(<Login />);
+    expect(screen.getByRole('status').textContent).toMatch(/may have expired/);
+    expect(loginWithRedirect).not.toHaveBeenCalled();
+  });
+
+  it('shows nothing on a normal visit, and clears the address when dismissed', () => {
+    render(<Login />);
+    expect(screen.queryByRole('status')).toBeNull();
+
+    window.history.replaceState({}, '', '/?success=false');
+    render(<Login />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss message' }));
+    expect(window.location.search).toBe('');
+  });
+});
+
 describe('Login', () => {
   it('shows the sign-in button and no dialog on a normal visit', () => {
     render(<Login />);
