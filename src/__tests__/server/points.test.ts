@@ -1,6 +1,10 @@
 /** @jest-environment node */
 import { prismaMock as db, resetPrismaMock } from '@/__tests__/support/api';
-import { getLeaderboard, syncCompletionPoints } from '@/lib/server/points';
+import {
+  getLeaderboard,
+  getUserProgress,
+  syncCompletionPoints,
+} from '@/lib/server/points';
 
 jest.mock('@/lib/prisma', () => ({
   prisma: require('@/__tests__/support/api').prismaMock,
@@ -268,6 +272,32 @@ describe('getLeaderboard', () => {
     expect(db.pointEvent.findMany.mock.calls[0][0].where.createdAt).toEqual({
       gte: new Date('2026-01-01T00:00:00.000Z'),
       lt: new Date('2027-01-01T00:00:00.000Z'),
+    });
+  });
+});
+
+describe('getUserProgress', () => {
+  it('summarises the whole ledger with global badges and holidays completed', async () => {
+    const earnedAt = new Date('2026-12-01T00:00:00.000Z');
+    db.pointEvent.findMany.mockResolvedValue([
+      { entityType: 'task', reason: 'task_high', points: 20, createdAt: new Date() },
+      { entityType: 'gift', reason: 'gift', points: 10, createdAt: new Date() },
+    ]);
+    db.userAchievement.findMany.mockResolvedValue([
+      { key: 'first_step', scope: 'global', earnedAt },
+      { key: 'holiday_hero', scope: 'h1', earnedAt },
+      { key: 'holiday_hero', scope: 'h2', earnedAt },
+    ]);
+    const progress = await getUserProgress('me');
+
+    expect(db.pointEvent.findMany.mock.calls[0][0].where).toEqual({ userId: 'me' });
+    expect(progress).toMatchObject({ points: 30, streak: 1, holidaysCompleted: 2 });
+    expect(progress.levelInfo.level).toBe(1);
+    expect(progress.badges.some(b => b.key === 'holiday_hero')).toBe(false);
+    expect(progress.badges.find(b => b.key === 'first_step')?.earned).toBe(true);
+    expect(progress.badges.find(b => b.key === 'task_tackler')).toMatchObject({
+      earned: false,
+      current: 1,
     });
   });
 });

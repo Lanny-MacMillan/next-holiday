@@ -30,6 +30,7 @@ Level, streak, rank and team goal are worked out from the ledger when asked for.
 - `syncCompletionPoints` (`src/lib/server/points.ts`) is called after every write that can change `isCompleted`: task PUT, PATCH and PATCH-by-id, gift PUT and PATCH-by-id, and both card PUT formats. It compares before and after, never throws, and logs a warning if it fails, so a points problem cannot fail a completion. `completion-points.test.ts` checks every one of those routes calls it.
 - `GET /api/holidays/[id]/leaderboard[?year=2026]` returns the ranking, the caller's level and the team goal. It uses `assertHolidayAccess`, so only people with access to the holiday can read it, and it lists only that holiday's account members, share owner and share members.
 - `Leaderboard` (`src/components/common/Leaderboard.tsx`) is the first card on the holiday landing page. It only appears on a holiday that is shared, meaning the share has at least one member besides the owner (`shared` in the API response). It can be collapsed to a one-line summary, and the choice is remembered in the persisted `leaderboardUi` slice. If everyone else on the share has opted out, you see just your own level, progress and streak.
+- `GET /api/users/me/progress` returns the caller's own account-wide level, streak, holidays completed and global badges. The "Your progress" card on Settings (`ProgressCard`) shows it, so badges are visible even when no holiday is shared.
 
 ## Privacy
 
