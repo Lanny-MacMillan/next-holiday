@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { BADGES } from '@/config/badgeConfigs';
 import {
   badgeStatuses,
   badgeStats,
@@ -232,5 +233,32 @@ export async function getLeaderboard(
     me: me && { ...me, levelInfo: levelFor(me.points) },
     team: teamGoal(totals.completed, totals.total),
     badges: badgeStatuses(stats, holidayId, achievements),
+  };
+}
+
+// Account-wide progress, for people whose holidays aren't shared (no leaderboard card there).
+export async function getUserProgress(userId: string) {
+  const now = new Date();
+  const [ledger, achievements] = await Promise.all([
+    userLedger(userId),
+    prisma.userAchievement.findMany({
+      where: { userId },
+      select: { key: true, scope: true, earnedAt: true },
+    }),
+  ]);
+  const points = ledger.reduce((sum, r) => sum + r.points, 0);
+  const stats = badgeStats(ledger, now, false);
+  const globalKeys = new Set(
+    BADGES.filter(b => b.scope === 'global').map(b => b.key),
+  );
+
+  return {
+    points,
+    levelInfo: levelFor(points),
+    streak: stats.streak,
+    holidaysCompleted: achievements.filter(a => a.key === 'holiday_hero').length,
+    badges: badgeStatuses(stats, 'global', achievements).filter(b =>
+      globalKeys.has(b.key),
+    ),
   };
 }

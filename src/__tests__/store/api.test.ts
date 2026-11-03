@@ -40,7 +40,7 @@ type Endpoint = {
   select?: unknown;
 };
 // The server only reads the Bearer token, which window.fetch adds; these skip the legacy x-test-user header.
-const bearerOnly = new Set(['getLeaderboard']);
+const bearerOnly = new Set(['getLeaderboard', 'getUserProgress']);
 const endpoints = Object.entries(
   api.endpoints as unknown as Record<string, Endpoint>,
 );
@@ -117,6 +117,10 @@ describe('request shape', () => {
       api.endpoints.getLeaderboard.initiate({ holidayId: 'h1' }) as never,
     );
     expect((result as { data: unknown }).data).toEqual({ entries: [], year: null });
+  });
+
+  it('the progress query reads the account-wide endpoint', async () => {
+    expect(path(await run('getUserProgress'))).toBe('/api/users/me/progress');
   });
 
   it.each(['toggleTaskCompletion', 'updateTask', 'updateCard', 'updateGift'])(

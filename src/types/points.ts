@@ -10,3 +10,11 @@ export interface LeaderboardData {
   team: TeamGoal;
   badges: BadgeStatus[];
 }
+
+export interface UserProgress {
+  points: number;
+  levelInfo: Level;
+  streak: number;
+  holidaysCompleted: number;
+  badges: BadgeStatus[];
+}

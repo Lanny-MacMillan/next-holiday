@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { createTracedBaseQuery, isRTKTracingEnabled } from '@/lib/traceRTK';
 
-import type { LeaderboardData } from '@/types/points';
+import type { LeaderboardData, UserProgress } from '@/types/points';
 
 const baseQuery = fetchBaseQuery({
   baseUrl: '/api',
@@ -55,6 +55,12 @@ export const api = createApi({
       providesTags: (_result, _error, { holidayId }) => [
         { type: 'Leaderboard', id: holidayId },
       ],
+    }),
+
+    getUserProgress: builder.query<UserProgress, void>({
+      query: () => ({ url: 'users/me/progress' }),
+      transformResponse: (response: { data: UserProgress }) => response.data,
+      providesTags: [{ type: 'Leaderboard', id: 'me' }],
     }),
 
     getGifts: builder.query<any[], { holidayId: string; auth0User?: any }>({
@@ -579,6 +585,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
         { type: 'Leaderboard', id: holidayId },
+        { type: 'Leaderboard', id: 'me' },
       ],
       //   Traditional Redux pattern: wait for API success then update Home Slice
       async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
@@ -676,6 +683,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Tasks', id: holidayId },
         { type: 'Leaderboard', id: holidayId },
+        { type: 'Leaderboard', id: 'me' },
       ],
       //   Traditional Redux pattern: wait for API success then update Home Slice
       async onQueryStarted({ holidayId, taskId }, { dispatch, queryFulfilled }) {
@@ -945,6 +953,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Cards', id: holidayId },
         { type: 'Leaderboard', id: holidayId },
+        { type: 'Leaderboard', id: 'me' },
       ],
       //   SAME PATTERN AS updateGift: Traditional Redux pattern - wait for success, then update Home Slice
       async onQueryStarted({ holidayId, cardId }, { dispatch, queryFulfilled }) {
@@ -1576,6 +1585,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { holidayId }) => [
         { type: 'Gifts', id: holidayId },
         { type: 'Leaderboard', id: holidayId },
+        { type: 'Leaderboard', id: 'me' },
       ],
       // Traditional Redux pattern: wait for API success then update state
       async onQueryStarted({ holidayId, giftId }, { dispatch, queryFulfilled }) {
@@ -3419,4 +3429,5 @@ export const {
 
   useGetGuestListQuery,
   useGetLeaderboardQuery,
+  useGetUserProgressQuery,
 } = api;

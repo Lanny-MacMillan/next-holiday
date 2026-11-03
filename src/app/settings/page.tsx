@@ -15,6 +15,7 @@ import Link from 'next/link';
 import HolidayDeleteConfirmationModal from '@/components/modals/HolidayDeleteConfirmationModal';
 import CancelSubscriptionModal from '@/components/modals/CancelSubscriptionModal';
 import UpgradeModal from '@/components/modals/UpgradeModal';
+import ProgressCard from '@/components/common/ProgressCard';
 
 export default function SettingsPage() {
   const { user } = useAuth0();
@@ -1094,6 +1095,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <ProgressCard />
 
         {/* Leaderboard */}
         <div className="card card-settings rounded-lg p-6">
