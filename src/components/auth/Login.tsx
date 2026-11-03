@@ -116,6 +116,17 @@ export default function Login() {
                 : "I've verified my email, sign in"}
             </button>
             <button
+              onClick={signInAfterVerifying}
+              className="w-full mt-3 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Send me a new verification email
+            </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              You&apos;ll be asked to sign in again, and we&apos;ll email a fresh
+              link. If we sent one in the last few minutes, check your inbox and spam
+              first.
+            </p>
+            <button
               onClick={closeVerifyEmail}
               className="w-full mt-3 px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >

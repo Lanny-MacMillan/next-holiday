@@ -50,6 +50,17 @@ describe('Login', () => {
     expect(loginWithRedirect).toHaveBeenCalledTimes(1);
   });
 
+  it('offers a new verification email, which signs in again so Auth0 can send one', () => {
+    authError = unverified();
+    render(<Login />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Send me a new verification email' }),
+    );
+    expect(loginWithRedirect).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem('verifyEmailTried')).toBe('1');
+  });
+
   it('remembers the attempt, so the next visit can say it is still unverified', () => {
     authError = unverified();
     render(<Login />);
