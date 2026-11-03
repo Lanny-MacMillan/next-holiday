@@ -31,6 +31,7 @@ Level, streak, rank and team goal are worked out from the ledger when asked for.
 - `GET /api/holidays/[id]/leaderboard[?year=2026]` returns the ranking, the caller's level and the team goal. It uses `assertHolidayAccess`, so only people with access to the holiday can read it, and it lists only that holiday's account members, share owner and share members.
 - `Leaderboard` (`src/components/common/Leaderboard.tsx`) is the first card on the holiday landing page. It only appears on a holiday that is shared, meaning the share has at least one member besides the owner (`shared` in the API response). It can be collapsed to a one-line summary, and the choice is remembered in the persisted `leaderboardUi` slice. If everyone else on the share has opted out, you see just your own level, progress and streak.
 - `GET /api/users/me/progress` returns the caller's own account-wide level, streak, holidays completed and global badges. The "Your progress" card on Settings (`ProgressCard`) shows it, so badges are visible even when no holiday is shared.
+- `BadgeEarnedNotice` (mounted in `AppContent`) watches the progress query. When a completion refreshes it and a badge or completed holiday has appeared since the last load, it shows a short "Badge earned" notice. It stays quiet on the first load, so badges earned earlier or in another tab only show as New on the card.
 
 ## Privacy
 
@@ -59,7 +60,6 @@ Definitions are in `src/config/badgeConfigs.ts`: a key, name, description, a sta
 
 ## Not built yet
 
-- A notice at the moment a badge is earned (today it shows up, marked New, the next time the card loads).
 - Other people's badges on the leaderboard.
 - **Quests, kudos, unlockable themes.** Each needs its own tables.
 - Points on items that are created already completed are not awarded.

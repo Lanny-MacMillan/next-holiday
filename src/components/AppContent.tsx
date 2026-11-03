@@ -9,6 +9,7 @@ import AuthWrapper from './auth/AuthWrapper';
 import Header from './common/Header';
 import Login from './auth/Login';
 import DataInitializer from './DataInitializer';
+import BadgeEarnedNotice from './common/BadgeEarnedNotice';
 import PerformanceDashboard from './common/PerformanceDashboard';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { ReactNode } from 'react';
@@ -108,6 +109,7 @@ export default function AppContent({ children }: AppContentProps) {
   return (
     <>
       <DataInitializer />
+      <BadgeEarnedNotice />
       <Header />
       <AuthWrapper>{children}</AuthWrapper>
 
